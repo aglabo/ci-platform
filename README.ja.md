@@ -1,13 +1,13 @@
 # 📦 OSS向けプロジェクトテンプレート（日本語版）
 
-このテンプレートは、モダンなOSS開発のための初期構成を素早く立ち上げられるように設計されています。
+このテンプレートは、モダンな OSS 開発のための初期構成を素早く立ち上げられるように設計されています。
 
 ---
 
 ## 🛠 特徴
 
-- PowerShellスクリプトによる簡単な開発環境セットアップ
-  - Scoop & pnpm を使った、Windowsでの軽量なセットアップ
+- PowerShell スクリプトによる簡単な開発環境セットアップ
+  - Scoop & pnpm を使った、Windows での軽量なセットアップ
 - EditorConfig、.gitignore などプロジェクト開始時に必要なファイルを完備
   - ミニマムな設定で、後からの拡張も可能
 - lefthook による軽量な Git Hook 環境
@@ -20,7 +20,7 @@
 1. このテンプレートリポジトリを、自分の GitHub にフォークします。
 2. 自分の環境に合わせて書き換えます（例: LICENSE の名前を自分のハンドル名に変更）。
 3. GitHub 上で新規リポジトリを作成する際に、フォークしたテンプレートから生成します。
-4. 必要な設定ファイルが揃ったリポジトリが自動で作成されます。
+4. 必要な設定ファイルを含んだリポジトリが自動で作成されます。
 
 ---
 
@@ -39,6 +39,53 @@
 > ⚠️ **注意事項**
 > これらのツールは、Scoop や pnpm によりプロジェクトとは独立にインストールされます。
 > バージョン管理やアップデートは、利用者自身で行ってください。
+
+---
+
+## 🧪 テスト
+
+このプロジェクトは [ShellSpec](https://shellspec.info/) を使用してシェルスクリプトのテストを行います。
+
+### テストの実行
+
+```bash
+# 開発環境のセットアップ（ShellSpecを含む）
+./scripts/setup-dev-env.sh
+
+# すべてのテストを実行
+./scripts/run-specs.sh
+
+# 特定のテストファイルを実行
+./scripts/run-specs.sh scripts/__tests__/greeting.spec.sh
+
+# フォーカスモードで実行
+./scripts/run-specs.sh --focus
+```
+
+### テスト構造
+
+テストは次のような `__tests__` サブディレクトリパターンに従います。
+
+```text
+scripts/
+├── greeting.sh              # 実装スクリプト
+├── __tests__/
+│   └── greeting.spec.sh     # greeting.sh のテスト
+├── setup-dev-env.sh         # 実装スクリプト
+└── __tests__/
+    └── setup-dev-env.spec.sh  # setup-dev-env.sh のテスト（将来）
+```
+
+### テストの書き方
+
+参考実装として `scripts/__tests__/greeting.spec.sh` を確認してください。
+
+主要パターンは次のとおりです。
+
+- テストファイルの配置: `<script_dir>/__tests__/<name>.spec.sh`
+- ソースのインポート: `Include ../script.sh`
+- `Describe` → `Context` → `It` の階層構造を使用
+- output、stderr、終了コードを検証
 
 ---
 
