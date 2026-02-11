@@ -13,6 +13,6 @@
     "check:spells": "cspell  --config .vscode/cspell.json --cache --cache-location .cache/cspell/cSpellCache",
     "lint:text": "pnpm exec textlint --config ./configs/textlintrc.yaml --cache --cache-location .cache/textlintcache ",
     "lint:markdown": "pnpm exec markdownlint-cli2 --config ./configs/.markdownlint.yaml ",
-    "test:sh": "bash scripts/run-specs.sh --default-path "
+    "test:sh": "bash scripts/run-specs.sh "
   }
 }
