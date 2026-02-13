@@ -55,28 +55,37 @@
 
 set -euo pipefail
 
-# Safe output file handling - fallback to /dev/null if not in GitHub Actions
-GITHUB_OUTPUT_FILE="${GITHUB_OUTPUT:-/dev/null}"
+# Safe output file handling - use function to support dynamic evaluation in tests
+get_github_output_file() {
+  echo "${GITHUB_OUTPUT:-/dev/null}"
+}
 
 # Fail-fast mode: INTERNAL ONLY (not exposed as action input)
 # This action is a gate - errors mean the workflow cannot continue
 # Always defaults to true (fail on first error)
 FAIL_FAST="${FAIL_FAST:-true}"
 
-# Error tracking (used only when FAIL_FAST=false for internal testing/debugging)
-# Changed to associative array: key=app_name, value=error_message
-declare -A VALIDATION_ERRORS=()
 
 # Applications to validate (populated by initialize_apps_list function)
 declare -a APPS=()
 
-# Validated applications (populated by validate_apps function)
-declare -a VALIDATED_APPS=()        # Application names only
-declare -a VALIDATED_VERSIONS=()    # Version strings only
-
-# Parallel JSON storage (new - coexists with arrays above)
+# Validation results storage (JSON-based)
 declare -a VALIDATION_RESULTS=()    # Array of JSON strings
 VALIDATION_INDEX=0                  # Sequential index counter
+
+# @description Check if jq is available (required for JSON processing)
+# @exitcode 0 jq is available
+# @exitcode 1 jq is not installed
+# @stderr Error message with installation instructions
+check_jq() {
+  if ! command -v jq >/dev/null 2>&1; then
+    echo "::error::jq is required for JSON processing" >&2
+    echo "::error::Install: sudo apt-get install jq  (or: brew install jq)" >&2
+    echo "::error::See README.md for details" >&2
+    return 1
+  fi
+  return 0
+}
 
 # Extract version number from full version string
 # Parameters: $1=full_version (e.g., "git version 2.52.0"), $2=version_extractor
@@ -265,11 +274,19 @@ validate_app_exists() {
   local cmd="$1"
   local app_name="$2"
 
+  # Security: Reject relative paths (./  and ../)
+  # These can be used for directory traversal attacks
+  if [[ "$cmd" == ./* ]] || [[ "$cmd" == ../* ]] || [[ "$cmd" == */./* ]] || [[ "$cmd" == */../* ]]; then
+    echo "ERROR:Invalid command name contains shell metacharacters: $cmd"
+    echo "::error::Invalid command name contains shell metacharacters: $cmd" >&2
+    return 1
+  fi
+
   # Security: Validate command name (reject shell metacharacters)
   # This prevents command injection via malicious app definitions
   #
   # Rejected: ; | & $ ` ( ) space tab (common injection vectors)
-  # Intentionally allowed: / . - _ (for paths like /usr/bin/gh or ./bin/tool)
+  # Intentionally allowed: / - _ (for absolute paths like /usr/bin/gh)
   # Design: Balance security with practicality for legitimate command names
   if [[ "$cmd" =~  [\;\|\&\$\`\(\)[:space:]] ]]; then
     echo "ERROR:Invalid command name contains shell metacharacters: $cmd"
@@ -446,6 +463,56 @@ validate_app_format() {
   return 0
 }
 
+# @description Validate application line (format + control characters)
+# @arg $1 string Application definition line (pipe-delimited)
+# @exitcode 0 Line is valid
+# @exitcode 1 Line is invalid (format error or control characters detected)
+# @stderr Error messages
+# Validates:
+#   1. Field count (2 or 4 fields via validate_app_format)
+#   2. Control characters in cmd (newline/CR/tab)
+#   3. Control characters in app_name (newline/CR/tab)
+# Security: Prevents command injection and log injection attacks
+validate_app_line() {
+  local line="$1"
+
+  # 1. Validate format (field count) first
+  local format_output format_exit_code format_status_line format_status format_message
+  format_output=$(validate_app_format "$line")
+  format_exit_code=$?
+  format_status_line=$(echo "$format_output" | head -1)
+  format_status="${format_status_line%%:*}"
+  format_message="${format_status_line#*:}"
+
+  if [ "$format_exit_code" -ne 0 ] || [ "$format_status" = "ERROR" ]; then
+    echo "::error::${format_message}" >&2
+    return 1
+  fi
+
+  # 2. Extract fields for control character validation
+  # Use parameter expansion instead of read to preserve control characters
+  local cmd app_name
+  cmd="${line%%|*}"                    # Extract first field (everything before first |)
+  local remaining="${line#*|}"         # Remove first field and delimiter
+  app_name="${remaining%%|*}"          # Extract second field
+
+  # 3. Validate cmd for control characters (security: prevent command injection)
+  if [[ "$cmd" =~ $'\n'|$'\r'|$'\t' ]]; then
+    echo "::error::Invalid command name '${cmd}': contains control characters (newline/CR/tab)" >&2
+    echo "::error::This indicates malicious input or data corruption" >&2
+    return 1
+  fi
+
+  # 4. Validate app_name for control characters (security: prevent log injection)
+  if [[ "$app_name" =~ $'\n'|$'\r'|$'\t' ]]; then
+    echo "::error::Invalid app_name '${app_name}': contains control characters (newline/CR/tab)" >&2
+    echo "::error::This indicates malicious input or data corruption" >&2
+    return 1
+  fi
+
+  return 0
+}
+
 # @description Add validation result to JSON array (unified storage)
 # @arg $1 string Command name
 # @arg $2 string Application name
@@ -460,6 +527,13 @@ add_validation_result() {
   local status="$3"
   local version="$4"
   local message="$5"
+
+  # Validate: app_name must not contain control characters (security: prevent log injection)
+  if [[ "$app_name" =~ $'\n'|$'\r'|$'\t' ]]; then
+    echo "::error::Invalid app_name '${app_name}': contains control characters (newline/CR/tab)" >&2
+    echo "::error::This indicates a bug in data retrieval or a potential security issue" >&2
+    return 1
+  fi
 
   local result_json
   if [ "$status" = "error" ]; then
@@ -483,6 +557,38 @@ add_validation_result() {
 
   VALIDATION_RESULTS+=("$result_json")
   VALIDATION_INDEX=$((VALIDATION_INDEX + 1))
+}
+
+# @description Extract app names from VALIDATION_RESULTS JSON array by status
+# @arg $1 nameref to VALIDATION_RESULTS array (read-only)
+# @arg $2 status filter ("success" or "error")
+# @arg $3 nameref to output array (write)
+extract_apps_by_status() {
+  local -n results_ref=$1
+  local status_filter="$2"
+  local -n output_ref=$3
+
+  mapfile -d '' -t output_ref < <(
+    printf '%s\n' "${results_ref[@]}" \
+      | jq -jr "select(.status == \"$status_filter\") | (.app, \"\\u0000\")" \
+      | tr -d '\r'
+  )
+}
+
+# @description Extract versions from VALIDATION_RESULTS JSON array by status
+# @arg $1 nameref to VALIDATION_RESULTS array (read-only)
+# @arg $2 status filter ("success" or "error")
+# @arg $3 nameref to output array (write)
+extract_versions_by_status() {
+  local -n results_ref=$1
+  local status_filter="$2"
+  local -n output_ref=$3
+
+  mapfile -d '' -t output_ref < <(
+    printf '%s\n' "${results_ref[@]}" \
+      | jq -jr "select(.status == \"$status_filter\") | (.version, \"\\u0000\")" \
+      | tr -d '\r'
+  )
 }
 
 # @description Handle validation error with fail-fast or error collection
@@ -510,11 +616,8 @@ handle_validation_error() {
       echo "status=error"
       echo "message=${error_message}"
       echo "failed_apps=${app_name}"
-    } >> "$GITHUB_OUTPUT_FILE"
+    } >> "$(get_github_output_file)"
     return 1  # Return error code instead of exit (caller will exit)
-  else
-    VALIDATION_ERRORS["$app_name"]="$error_message"
-    return 0
   fi
 }
 
@@ -535,8 +638,11 @@ initialize_apps_list() {
   # Clear and rebuild APPS array
   APPS=()
 
-  # Add default apps first (no validation needed - trusted internal data)
+  # Add default apps first (with validation for defense-in-depth)
   for app in "${default_apps[@]}"; do
+    if ! validate_app_line "$app"; then
+      return 1  # Fail-fast on validation error
+    fi
     APPS+=("$app")
   done
 
@@ -556,16 +662,8 @@ initialize_apps_list() {
 
         # 3. Skip empty lines (after comment removal and whitespace stripping)
         if [ -n "$line" ]; then
-          # Validate format and capture output
-          local format_output format_exit_code format_status_line format_status format_message
-          format_output=$(validate_app_format "$line")
-          format_exit_code=$?
-          format_status_line=$(echo "$format_output" | head -1)
-          format_status="${format_status_line%%:*}"
-          format_message="${format_status_line#*:}"
-
-          if [ "$format_exit_code" -ne 0 ] || [ "$format_status" = "ERROR" ]; then
-            echo "::error::${format_message}" >&2
+          # Validate line (format + control characters)
+          if ! validate_app_line "$line"; then
             return 1  # Fail-fast on validation error
           fi
 
@@ -586,14 +684,40 @@ initialize_apps_list() {
 # @arg $2 nameref to VALIDATED_VERSIONS array (read-only)
 # @exitcode 0 Always returns success
 # @set GITHUB_OUTPUT Writes status=success, message, validated_apps, validated_count, failed_count=0, results_json
-output_validation_success() {
-  local -n validated_apps_ref=$1
-  local -n validated_versions_ref=$2
+# @description Output validation success to GITHUB_OUTPUT using JSON array
+# @arg $1 nameref to VALIDATION_RESULTS array (read-only)
+# @exitcode 0 Always returns success
+# @set GITHUB_OUTPUT Writes status=success, message, validated_apps, validated_count, failed_count=0
+output_validation_success_json() {
+  local -n results_ref=$1
 
-  # Build summary with 2-space indentation
+  # Extract successful validations from JSON array using jq pipeline
+  # Pattern: Array expansion → jq filter → mapfile (functional approach)
+  # Note: Use null-terminated strings to handle newlines in values
+  # Note: tr -d '\r' strips Windows CRLF to match Unix LF format
+  declare -a validated_apps_from_json=()
+  mapfile -d '' -t validated_apps_from_json < <(
+    printf '%s\n' "${results_ref[@]}" \
+      | jq -jr 'select(.status == "success") | (.app, "\u0000")' \
+      | tr -d '\r'
+  )
+
+  declare -a validated_versions_from_json=()
+  mapfile -d '' -t validated_versions_from_json < <(
+    printf '%s\n' "${results_ref[@]}" \
+      | jq -jr 'select(.status == "success") | (.version, "\u0000")' \
+      | tr -d '\r'
+  )
+
+  # Control character validation removed (already validated in add_validation_result)
+  # Data integrity guaranteed by upstream validation layers:
+  #   1. initialize_apps_list() - rejects control chars in stdin input
+  #   2. add_validation_result() - final safety check before JSON storage
+
+  # Build summary with 2-space indentation (matching output_validation_success format)
   declare -a summary_parts=()
-  for i in "${!validated_apps_ref[@]}"; do
-    summary_parts+=("  ${validated_apps_ref[$i]} ${validated_versions_ref[$i]}")
+  for i in "${!validated_apps_from_json[@]}"; do
+    summary_parts+=("  ${validated_apps_from_json[$i]} ${validated_versions_from_json[$i]}")
   done
 
   # Format summary using printf (no IFS manipulation)
@@ -602,7 +726,7 @@ output_validation_success() {
 
   echo "=== Application validation passed ===" >&2
 
-  # Machine-readable output for GitHub Actions
+  # Machine-readable output for GitHub Actions (identical format to output_validation_success)
   {
     echo "status=success"
     cat <<EOF
@@ -611,89 +735,47 @@ Applications validated:
 ${all_versions}
 MULTILINE_EOF
 EOF
-    ( IFS=','; echo "validated_apps=${validated_apps_ref[*]}" )
-    echo "validated_count=${#validated_apps_ref[@]}"
+    ( IFS=','; echo "validated_apps=${validated_apps_from_json[*]}" )
+    echo "validated_count=${#validated_apps_from_json[@]}"
     echo "failed_count=0"
-  } >> "$GITHUB_OUTPUT_FILE"
+  } >> "$(get_github_output_file)"
 
   return 0
 }
 
-# @description Output validation errors to GITHUB_OUTPUT and stderr
-# @arg $1 nameref to VALIDATION_ERRORS associative array [app_name]=error_message (read-only)
-# @arg $2 nameref to VALIDATED_APPS array (read-only)
-# @exitcode 1 Always returns failure (called when validation failed)
-# @stderr Error messages with ::error:: prefix
-# @set GITHUB_OUTPUT Writes status=error, message, failed_apps, failed_count, validated_count
-output_validation_errors() {
-  local -n errors_ref=$1
-  local -n validated_ref=$2
-
-  # Build arrays from associative array using functional-style mapping
-  declare -a FAILED_APPS=()
-  declare -a error_messages=()
-
-  for app_name in "${!errors_ref[@]}"; do
-    FAILED_APPS+=("$app_name")
-    error_messages+=("${errors_ref[$app_name]}")
-  done
-
-  # Output header to stderr
-  echo "=== Application validation failed ===" >&2
-  echo "::error::Application validation failed with ${#errors_ref[@]} error(s):" >&2
-
-  # Output each error to stderr using printf (functional-style transformation)
-  printf '::error::  - %s\n' "${error_messages[@]}" >&2
-
-  # Format error summary with indentation using printf transformation
-  local error_summary
-  error_summary=$(printf '  %s\n' "${error_messages[@]}")
-
-  # Machine-readable output for GitHub Actions
-  {
-    echo "status=error"
-    cat <<EOF
-message<<MULTILINE_EOF
-Application validation failed:
-${error_summary}
-MULTILINE_EOF
-EOF
-    ( IFS=','; echo "failed_apps=${FAILED_APPS[*]}" )
-    echo "failed_count=${#FAILED_APPS[@]}"
-    echo "validated_count=${#validated_ref[@]}"
-  } >> "$GITHUB_OUTPUT_FILE"
-
-  return 1
-}
-
 # @description Output validation errors from JSON array (JSON-based version)
 # @arg $1 nameref VALIDATION_RESULTS array Array of JSON strings from add_validation_result
-# @arg $2 nameref VALIDATED_APPS array Array of validated application names
 # @exitcode 1 Always returns failure (called when errors exist)
 # @stderr Error summary with ::error:: prefixes
 # @stdout None (outputs to GITHUB_OUTPUT_FILE)
 # @see add_validation_result() for JSON structure
 output_validation_errors_json() {
   local -n results_ref=$1
-  local -n validated_ref=$2
 
   # Functional approach: Array expansion → jq filter → mapfile
   # Extract failed apps in single pass using pipeline composition
-  declare -a FAILED_APPS=()
-  mapfile -t FAILED_APPS < <(
+  # Note: Use null-terminated strings to handle newlines in values
+  declare -a failed_apps=()
+  mapfile -d '' -t failed_apps < <(
     printf '%s\n' "${results_ref[@]}" \
-      | jq -r 'select(.status == "error") | .app'
+      | jq -jr 'select(.status == "error") | (.app, "\u0000")'
   )
 
   # Extract error messages in single pass using pipeline composition
+  # Note: Use null-terminated strings to handle newlines in values
   declare -a error_messages=()
-  mapfile -t error_messages < <(
+  mapfile -d '' -t error_messages < <(
     printf '%s\n' "${results_ref[@]}" \
-      | jq -r 'select(.status == "error") | .message'
+      | jq -jr 'select(.status == "error") | (.message, "\u0000")'
   )
 
   # Calculate error count from filtered arrays
-  local error_count=${#FAILED_APPS[@]}
+  local error_count=${#failed_apps[@]}
+
+  # Control character validation removed (already validated in add_validation_result)
+  # Data integrity guaranteed by upstream validation layers:
+  #   1. initialize_apps_list() - rejects control chars in stdin input
+  #   2. add_validation_result() - final safety check before JSON storage
 
   # Output header to stderr
   echo "=== Application validation failed ===" >&2
@@ -706,6 +788,15 @@ output_validation_errors_json() {
   local error_summary
   error_summary=$(printf '  %s\n' "${error_messages[@]}")
 
+  # Calculate validated count from JSON (count successful validations)
+  local validated_count
+<<<<<<< HEAD
+  validated_count=$(printf '%s\n' "${results_ref[@]}" | jq -r 'select(.status == "success")' | wc -l)
+||||||| parent of 7c6aee3 (feat(validate-apps): migrate to JSON-based validation and harden command checks)
+=======
+  validated_count=$(printf '%s\n' "${results_ref[@]}" | jq -c 'select(.status == "success")' | wc -l)
+>>>>>>> 7c6aee3 (feat(validate-apps): migrate to JSON-based validation and harden command checks)
+
   # Machine-readable output for GitHub Actions
   {
     echo "status=error"
@@ -715,10 +806,19 @@ Application validation failed:
 ${error_summary}
 MULTILINE_EOF
 EOF
+    ( IFS=','; echo "failed_apps=${failed_apps[*]}" )
+    echo "failed_count=${#failed_apps[@]}"
+    echo "validated_count=${validated_count}"
+<<<<<<< HEAD
+  } >> "$GITHUB_OUTPUT_FILE"
+||||||| parent of 7c6aee3 (feat(validate-apps): migrate to JSON-based validation and harden command checks)
     ( IFS=','; echo "failed_apps=${FAILED_APPS[*]}" )
     echo "failed_count=${#FAILED_APPS[@]}"
     echo "validated_count=${#validated_ref[@]}"
   } >> "$GITHUB_OUTPUT_FILE"
+=======
+  } >> "$(get_github_output_file)"
+>>>>>>> 7c6aee3 (feat(validate-apps): migrate to JSON-based validation and harden command checks)
 
   return 1
 }
@@ -744,9 +844,9 @@ EOF
 
     # Extract version string early (for structured data consistency)
     # Note: Executed before validation for data alignment with cmd/app_name/etc.
-    local VERSION=""
+    local version=""
     if command -v "$cmd" &> /dev/null 2>&1; then
-      VERSION=$("$cmd" --version 2>&1 | head -1)
+      version=$("$cmd" --version 2>&1 | head -1)
     fi
 
     # Validate format: must be 2-field (cmd|app_name) or 4-field (cmd|app_name|extractor|version)
@@ -758,7 +858,7 @@ EOF
     format_message="${format_status_line#*:}"
 
     if [ $format_exit_code -ne 0 ] || [ "$format_status" = "ERROR" ]; then
-      handle_validation_error "$cmd" "$app_name" "$VERSION" "$format_message" || return 1
+      handle_validation_error "$cmd" "$app_name" "$version" "$format_message" || return 1
       continue
     fi
 
@@ -771,7 +871,7 @@ EOF
     exists_message="${exists_status_line#*:}"
 
     if [ $exists_exit_code -ne 0 ] || [ "$exists_status" = "ERROR" ]; then
-      handle_validation_error "$cmd" "$app_name" "$VERSION" "$exists_message" || return 1
+      handle_validation_error "$cmd" "$app_name" "$version" "$exists_message" || return 1
       continue
     fi
 
@@ -784,7 +884,7 @@ EOF
     version_message="${version_status_line#*:}"
 
     if [ $version_exit_code -ne 0 ] || [ "$version_status" = "ERROR" ]; then
-      handle_validation_error "$cmd" "$app_name" "$VERSION" "$version_message" || return 1
+      handle_validation_error "$cmd" "$app_name" "$version" "$version_message" || return 1
       continue
     elif [ "$version_status" = "WARNING" ]; then
       # WARNING status - log but continue
@@ -800,17 +900,14 @@ EOF
     special_message="${special_status_line#*:}"
 
     if [ $special_exit_code -ne 0 ] || [ "$special_status" = "ERROR" ]; then
-      handle_validation_error "$cmd" "$app_name" "$VERSION" "$special_message" || return 1
+      handle_validation_error "$cmd" "$app_name" "$version" "$special_message" || return 1
       continue
     fi
 
     # Store app name and version separately (structured data)
     # Note: Stored after all validations pass to ensure data integrity
-    VALIDATED_APPS+=("${app_name}")
-    VALIDATED_VERSIONS+=("${VERSION}")
-
-    # Parallel: Store as JSON (for future migration)
-    add_validation_result "$cmd" "$app_name" "success" "$VERSION" "-"
+    # Store validation result as JSON
+    add_validation_result "$cmd" "$app_name" "success" "$version" "-"
   done
 }
 
@@ -822,57 +919,57 @@ main() {
   echo "=== Validating Required Applications ==="
   echo ""
 
-# Default application definitions: cmd|app_name|version_extractor|min_version
-# Format: "command|app_name|version_extractor|min_version"
-# - command: The command to check (e.g., "git", "curl")
-# - app_name: Display name for the application (e.g., "Git", "curl")
-# - version_extractor: Safe extraction method (NO EVAL):
-#     * field:N = Extract Nth field (space-delimited, 1-indexed)
-#     * regex:PATTERN = sed -E regex with capture group (\1)
-#     * Empty string = auto-extract semver (X.Y or X.Y.Z)
-# - min_version: Minimum required version (triggers ERROR and exit 1 if lower)
-#     * Empty string = skip version check
-#
-# Delimiter: | (pipe) to avoid conflicts with regex patterns
-#
-# Examples:
-#   "git|Git|field:3|2.30"                              - Extract 3rd field, check min 2.30
-#   "curl|curl||"                                       - No version check (both empty)
-#   "gh|gh|regex:version ([0-9.]+)|2.0"                 - sed regex with capture group
-#   "node|Node.js|regex:v([0-9.]+)|18.0"                - Extract after 'v' prefix
-#
-# Security advantages:
-#   - NO eval usage - prevents arbitrary code execution
-#   - sed only - safe and standard
-#   - Prefix-typed extractors (field:/regex:) - explicit and auditable
-#   - Pipe delimiter - no conflict with regex patterns or colons
-declare -a DEFAULT_APPS=(
-  "git|Git|field:3|2.30"                   # Extract 3rd field, check min 2.30
-  "curl|curl||"                            # No version check
-)
+  # First: check jq availability (required for JSON processing)
+  check_jq || exit 1
 
-# Build apps list from defaults + stdin (with format validation)
-# stdin is used for additional-apps input in action.yml
-# Sets global APPS array
-if ! initialize_apps_list "${DEFAULT_APPS[@]}"; then
-  echo "::error::Failed to build apps list from defaults/stdin" >&2
-  exit 1
-fi
 
-# Validate all applications (populates VALIDATED_VERSIONS and VALIDATION_ERRORS arrays)
-if ! validate_apps "${APPS[@]}"; then
-  exit 1
-fi
+  # Default application definitions: cmd|app_name|version_extractor|min_version
+  # Format: "command|app_name|version_extractor|min_version"
+  # - command: The command to check (e.g., "git", "curl")
+  # - app_name: Display name for the application (e.g., "Git", "curl")
+  # - version_extractor: Safe extraction method (NO EVAL):
+  #     * field:N = Extract Nth field (space-delimited, 1-indexed)
+  #     * regex:PATTERN = sed -E regex with capture group (\1)
+  #     * Empty string = auto-extract semver (X.Y or X.Y.Z)
+  # - min_version: Minimum required version (triggers ERROR and exit 1 if lower)
+  #     * Empty string = skip version check
+  #
+  # Delimiter: | (pipe) to avoid conflicts with regex patterns
+  #
+  # Examples:
+  #   "git|Git|field:3|2.30"                              - Extract 3rd field, check min 2.30
+  #   "curl|curl||"                                       - No version check (both empty)
+  #   "gh|gh|regex:version ([0-9.]+)|2.0"                 - sed regex with capture group
+  #   "node|Node.js|regex:v([0-9.]+)|18.0"                - Extract after 'v' prefix
+  #
+  # Security advantages:
+  #   - NO eval usage - prevents arbitrary code execution
+  #   - sed only - safe and standard
+  #   - Prefix-typed extractors (field:/regex:) - explicit and auditable
+  #   - Pipe delimiter - no conflict with regex patterns or colons
+  declare -a default_apps=(
+    "git|Git|field:3|2.30"                   # Extract 3rd field, check min 2.30
+    "curl|curl||"                            # No version check
+  )
 
-# Check for collected errors (in collect-errors mode)
-if [ ${#VALIDATION_ERRORS[@]} -gt 0 ]; then
-  output_validation_errors VALIDATION_ERRORS VALIDATED_APPS
-  exit 1
-fi
+  # Build apps list from defaults + stdin (with format validation)
+  # stdin is used for additional-apps input in action.yml
+  # Sets global APPS array
+  if ! initialize_apps_list "${default_apps[@]}"; then
+    echo "::error::Failed to build apps list from defaults/stdin" >&2
+    exit 1
+  fi
 
-# Output success
-output_validation_success VALIDATED_APPS VALIDATED_VERSIONS
-exit 0
+  # Validate all applications (populates VALIDATION_RESULTS array via add_validation_result)
+  if ! validate_apps "${APPS[@]}"; then
+    output_validation_errors_json VALIDATION_RESULTS
+    exit 1
+  fi
+
+  # Output success (JSON-based)
+  output_validation_success_json VALIDATION_RESULTS
+
+  exit 0
 }
 
 # Only run main if script is executed directly (not sourced/included)
