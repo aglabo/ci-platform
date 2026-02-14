@@ -16,14 +16,14 @@ Describe 'output_validation_success_json()'
   # Setup and teardown for each test
   BeforeEach 'setup_test'
   setup_test() {
-    GITHUB_OUTPUT_FILE=$(mktemp)
+    GITHUB_OUTPUT=$(mktemp)
     declare -ga VALIDATION_RESULTS=()
     VALIDATION_INDEX=0
   }
 
   AfterEach 'cleanup_test'
   cleanup_test() {
-    rm -f "$GITHUB_OUTPUT_FILE"
+    rm -f "$GITHUB_OUTPUT"
   }
 
   # ========================================
@@ -40,20 +40,20 @@ Describe 'output_validation_success_json()'
       The stderr should include "=== Application validation passed ==="
 
       # GITHUB_OUTPUT: status field
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "status=success"
+      The contents of file "$GITHUB_OUTPUT" should include "status=success"
 
       # GITHUB_OUTPUT: message field with multiline EOF
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "message<<MULTILINE_EOF"
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "Applications validated:"
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "  Git git version 2.52.0"
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "MULTILINE_EOF"
+      The contents of file "$GITHUB_OUTPUT" should include "message<<MULTILINE_EOF"
+      The contents of file "$GITHUB_OUTPUT" should include "Applications validated:"
+      The contents of file "$GITHUB_OUTPUT" should include "  Git git version 2.52.0"
+      The contents of file "$GITHUB_OUTPUT" should include "MULTILINE_EOF"
 
       # GITHUB_OUTPUT: validated_apps field
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "validated_apps=Git"
+      The contents of file "$GITHUB_OUTPUT" should include "validated_apps=Git"
 
       # GITHUB_OUTPUT: count fields
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "validated_count=1"
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "failed_count=0"
+      The contents of file "$GITHUB_OUTPUT" should include "validated_count=1"
+      The contents of file "$GITHUB_OUTPUT" should include "failed_count=0"
     End
   End
 
@@ -73,13 +73,13 @@ Describe 'output_validation_success_json()'
       The stderr should include "=== Application validation passed ==="
 
       # GITHUB_OUTPUT: All apps in message field with indentation
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "  Git git version 2.52.0"
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "  curl curl 8.0.1"
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "  gh gh version 2.40.0"
+      The contents of file "$GITHUB_OUTPUT" should include "  Git git version 2.52.0"
+      The contents of file "$GITHUB_OUTPUT" should include "  curl curl 8.0.1"
+      The contents of file "$GITHUB_OUTPUT" should include "  gh gh version 2.40.0"
 
       # GITHUB_OUTPUT: Count fields
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "validated_count=3"
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "failed_count=0"
+      The contents of file "$GITHUB_OUTPUT" should include "validated_count=3"
+      The contents of file "$GITHUB_OUTPUT" should include "failed_count=0"
     End
 
     It 'includes all app names in validated_apps (comma-separated)'
@@ -90,9 +90,12 @@ Describe 'output_validation_success_json()'
       When call output_validation_success_json VALIDATION_RESULTS
       The status should be success
 
+      # stderr: Header
+      The stderr should include "=== Application validation passed ==="
+
       # GITHUB_OUTPUT: validated_apps contains all apps (comma-separated)
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "validated_apps=Git,curl,gh"
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "validated_count=3"
+      The contents of file "$GITHUB_OUTPUT" should include "validated_apps=Git,curl,gh"
+      The contents of file "$GITHUB_OUTPUT" should include "validated_count=3"
     End
   End
 
@@ -107,10 +110,13 @@ Describe 'output_validation_success_json()'
       When call output_validation_success_json VALIDATION_RESULTS
       The status should be success
 
+      # stderr: Header
+      The stderr should include "=== Application validation passed ==="
+
       # GITHUB_OUTPUT: Entries indented with exactly 2 spaces (not 3+)
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "  App1 version 1.0"
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "  App2 version 2.0"
-      The contents of file "$GITHUB_OUTPUT_FILE" should not include "   App1"
+      The contents of file "$GITHUB_OUTPUT" should include "  App1 version 1.0"
+      The contents of file "$GITHUB_OUTPUT" should include "  App2 version 2.0"
+      The contents of file "$GITHUB_OUTPUT" should not include "   App1"
     End
 
     It 'separates app name and version with single space'
@@ -119,9 +125,12 @@ Describe 'output_validation_success_json()'
       When call output_validation_success_json VALIDATION_RESULTS
       The status should be success
 
+      # stderr: Header
+      The stderr should include "=== Application validation passed ==="
+
       # GITHUB_OUTPUT: Single space between app name and version
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "  TestApp test version 3.5.1"
-      The contents of file "$GITHUB_OUTPUT_FILE" should not include "  TestApp  test"
+      The contents of file "$GITHUB_OUTPUT" should include "  TestApp test version 3.5.1"
+      The contents of file "$GITHUB_OUTPUT" should not include "  TestApp  test"
     End
   End
 
@@ -136,12 +145,15 @@ Describe 'output_validation_success_json()'
       When call output_validation_success_json VALIDATION_RESULTS
       The status should be success
 
+      # stderr: Header
+      The stderr should include "=== Application validation passed ==="
+
       # GITHUB_OUTPUT: Full version strings preserved
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "  Git git version 2.52.0"
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "  Node.js Node.js v18.16.0 (release)"
+      The contents of file "$GITHUB_OUTPUT" should include "  Git git version 2.52.0"
+      The contents of file "$GITHUB_OUTPUT" should include "  Node.js Node.js v18.16.0 (release)"
 
       # GITHUB_OUTPUT: Counts
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "validated_count=2"
+      The contents of file "$GITHUB_OUTPUT" should include "validated_count=2"
     End
 
     It 'handles version strings with special characters'
@@ -151,9 +163,12 @@ Describe 'output_validation_success_json()'
       When call output_validation_success_json VALIDATION_RESULTS
       The status should be success
 
+      # stderr: Header
+      The stderr should include "=== Application validation passed ==="
+
       # GITHUB_OUTPUT: Special characters preserved
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "  tool-1 version 1.0-beta"
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "  tool.v2 v2.3.4-rc1 (build-2024)"
+      The contents of file "$GITHUB_OUTPUT" should include "  tool-1 version 1.0-beta"
+      The contents of file "$GITHUB_OUTPUT" should include "  tool.v2 v2.3.4-rc1 (build-2024)"
     End
   End
 
@@ -171,15 +186,15 @@ Describe 'output_validation_success_json()'
       The stderr should include "=== Application validation passed ==="
 
       # GITHUB_OUTPUT: Zero validated
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "status=success"
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "validated_count=0"
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "failed_count=0"
+      The contents of file "$GITHUB_OUTPUT" should include "status=success"
+      The contents of file "$GITHUB_OUTPUT" should include "validated_count=0"
+      The contents of file "$GITHUB_OUTPUT" should include "failed_count=0"
 
       # GITHUB_OUTPUT: Empty validated_apps
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "validated_apps="
+      The contents of file "$GITHUB_OUTPUT" should include "validated_apps="
 
       # GITHUB_OUTPUT: Message still formatted correctly
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "Applications validated:"
+      The contents of file "$GITHUB_OUTPUT" should include "Applications validated:"
     End
   End
 
@@ -196,17 +211,20 @@ Describe 'output_validation_success_json()'
       When call output_validation_success_json VALIDATION_RESULTS
       The status should be success
 
+      # stderr: Header
+      The stderr should include "=== Application validation passed ==="
+
       # GITHUB_OUTPUT: Correct count
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "validated_count=15"
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "failed_count=0"
+      The contents of file "$GITHUB_OUTPUT" should include "validated_count=15"
+      The contents of file "$GITHUB_OUTPUT" should include "failed_count=0"
 
       # Verify all apps are present in output (sample check)
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "  App1 version 1.0.0"
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "  App15 version 15.0.0"
+      The contents of file "$GITHUB_OUTPUT" should include "  App1 version 1.0.0"
+      The contents of file "$GITHUB_OUTPUT" should include "  App15 version 15.0.0"
 
       # GITHUB_OUTPUT: All apps in comma-separated list
-      The contents of file "$GITHUB_OUTPUT_FILE" should match pattern "*validated_apps=*App1*"
-      The contents of file "$GITHUB_OUTPUT_FILE" should match pattern "*validated_apps=*App15*"
+      The contents of file "$GITHUB_OUTPUT" should match pattern "*validated_apps=*App1*"
+      The contents of file "$GITHUB_OUTPUT" should match pattern "*validated_apps=*App15*"
     End
   End
 
@@ -221,8 +239,11 @@ Describe 'output_validation_success_json()'
       When call output_validation_success_json VALIDATION_RESULTS
       The status should be success
 
+      # stderr: Header
+      The stderr should include "=== Application validation passed ==="
+
       # GITHUB_OUTPUT: Full long version preserved
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "  Bash $long_version"
+      The contents of file "$GITHUB_OUTPUT" should include "  Bash $long_version"
     End
   End
 
@@ -238,15 +259,18 @@ Describe 'output_validation_success_json()'
       When call output_validation_success_json VALIDATION_RESULTS
       The status should be success
 
+      # stderr: Header
+      The stderr should include "=== Application validation passed ==="
+
       # GITHUB_OUTPUT: All special characters preserved
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "  my-app.v2 v2.1.0"
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "  Node.js v18.0.0"
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "  tool/bin version 1.0"
+      The contents of file "$GITHUB_OUTPUT" should include "  my-app.v2 v2.1.0"
+      The contents of file "$GITHUB_OUTPUT" should include "  Node.js v18.0.0"
+      The contents of file "$GITHUB_OUTPUT" should include "  tool/bin version 1.0"
 
       # GITHUB_OUTPUT: validated_apps contains all (order preserved)
-      The contents of file "$GITHUB_OUTPUT_FILE" should match pattern "*validated_apps=*my-app.v2*"
-      The contents of file "$GITHUB_OUTPUT_FILE" should match pattern "*validated_apps=*Node.js*"
-      The contents of file "$GITHUB_OUTPUT_FILE" should match pattern "*validated_apps=*tool/bin*"
+      The contents of file "$GITHUB_OUTPUT" should match pattern "*validated_apps=*my-app.v2*"
+      The contents of file "$GITHUB_OUTPUT" should match pattern "*validated_apps=*Node.js*"
+      The contents of file "$GITHUB_OUTPUT" should match pattern "*validated_apps=*tool/bin*"
     End
 
     It 'handles app names with spaces'
@@ -255,9 +279,12 @@ Describe 'output_validation_success_json()'
       When call output_validation_success_json VALIDATION_RESULTS
       The status should be success
 
+      # stderr: Header
+      The stderr should include "=== Application validation passed ==="
+
       # GITHUB_OUTPUT: Spaces in app name preserved
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "  Git CLI Tool version 2.0"
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "validated_apps=Git CLI Tool"
+      The contents of file "$GITHUB_OUTPUT" should include "  Git CLI Tool version 2.0"
+      The contents of file "$GITHUB_OUTPUT" should include "validated_apps=Git CLI Tool"
     End
   End
 
@@ -271,11 +298,14 @@ Describe 'output_validation_success_json()'
       When call output_validation_success_json VALIDATION_RESULTS
       The status should be success
 
+      # stderr: Header
+      The stderr should include "=== Application validation passed ==="
+
       # GITHUB_OUTPUT: Verify EOF delimiter structure
-      The line 2 of contents of file "$GITHUB_OUTPUT_FILE" should equal "message<<MULTILINE_EOF"
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "Applications validated:"
+      The line 2 of contents of file "$GITHUB_OUTPUT" should equal "message<<MULTILINE_EOF"
+      The contents of file "$GITHUB_OUTPUT" should include "Applications validated:"
       # Verify closing delimiter exists
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "MULTILINE_EOF"
+      The contents of file "$GITHUB_OUTPUT" should include "MULTILINE_EOF"
     End
   End
 
@@ -317,12 +347,15 @@ Describe 'output_validation_success_json()'
       When call output_validation_success_json VALIDATION_RESULTS
       The status should be success
 
+      # stderr: Header
+      The stderr should include "=== Application validation passed ==="
+
       # All 5 required fields must be present
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "status=success"
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "message<<MULTILINE_EOF"
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "validated_apps="
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "validated_count="
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "failed_count=0"
+      The contents of file "$GITHUB_OUTPUT" should include "status=success"
+      The contents of file "$GITHUB_OUTPUT" should include "message<<MULTILINE_EOF"
+      The contents of file "$GITHUB_OUTPUT" should include "validated_apps="
+      The contents of file "$GITHUB_OUTPUT" should include "validated_count="
+      The contents of file "$GITHUB_OUTPUT" should include "failed_count=0"
     End
 
     It 'always sets failed_count to 0'
@@ -333,9 +366,12 @@ Describe 'output_validation_success_json()'
       When call output_validation_success_json VALIDATION_RESULTS
       The status should be success
 
+      # stderr: Header
+      The stderr should include "=== Application validation passed ==="
+
       # failed_count is always 0 for success case
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "failed_count=0"
-      The contents of file "$GITHUB_OUTPUT_FILE" should not include "failed_count=1"
+      The contents of file "$GITHUB_OUTPUT" should include "failed_count=0"
+      The contents of file "$GITHUB_OUTPUT" should not include "failed_count=1"
     End
   End
 
@@ -385,9 +421,12 @@ Describe 'output_validation_success_json()'
       When call output_validation_success_json VALIDATION_RESULTS
       The status should be success
 
+      # stderr: Header
+      The stderr should include "=== Application validation passed ==="
+
       # Comma separation without spaces
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "validated_apps=App1,App2,App3"
-      The contents of file "$GITHUB_OUTPUT_FILE" should not include "validated_apps=App1, App2"
+      The contents of file "$GITHUB_OUTPUT" should include "validated_apps=App1,App2,App3"
+      The contents of file "$GITHUB_OUTPUT" should not include "validated_apps=App1, App2"
     End
   End
 
@@ -403,11 +442,14 @@ Describe 'output_validation_success_json()'
       When call output_validation_success_json VALIDATION_RESULTS
       The status should be success
 
+      # stderr: Header
+      The stderr should include "=== Application validation passed ==="
+
       # Order preserved in message (not alphabetically sorted)
-      The contents of file "$GITHUB_OUTPUT_FILE" should match pattern "*Zebra z1*Alpha a1*Beta b1*"
+      The contents of file "$GITHUB_OUTPUT" should match pattern "*Zebra z1*Alpha a1*Beta b1*"
 
       # Order preserved in validated_apps
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "validated_apps=Zebra,Alpha,Beta"
+      The contents of file "$GITHUB_OUTPUT" should include "validated_apps=Zebra,Alpha,Beta"
     End
   End
 
@@ -423,9 +465,12 @@ Describe 'output_validation_success_json()'
       When call output_validation_success_json VALIDATION_RESULTS
       The status should be success
 
+      # stderr: Header
+      The stderr should include "=== Application validation passed ==="
+
       # Single chars preserved
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "validated_apps=a,b,c"
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "  a v1"
+      The contents of file "$GITHUB_OUTPUT" should include "validated_apps=a,b,c"
+      The contents of file "$GITHUB_OUTPUT" should include "  a v1"
     End
 
     It 'handles single-character versions'
@@ -435,9 +480,12 @@ Describe 'output_validation_success_json()'
       When call output_validation_success_json VALIDATION_RESULTS
       The status should be success
 
+      # stderr: Header
+      The stderr should include "=== Application validation passed ==="
+
       # Single char versions preserved
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "  App1 1"
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "  App2 2"
+      The contents of file "$GITHUB_OUTPUT" should include "  App1 1"
+      The contents of file "$GITHUB_OUTPUT" should include "  App2 2"
     End
   End
 
@@ -454,13 +502,16 @@ Describe 'output_validation_success_json()'
       When call output_validation_success_json VALIDATION_RESULTS
       The status should be success
 
+      # stderr: Header
+      The stderr should include "=== Application validation passed ==="
+
       # Verify count
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "validated_count=150"
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "failed_count=0"
+      The contents of file "$GITHUB_OUTPUT" should include "validated_count=150"
+      The contents of file "$GITHUB_OUTPUT" should include "failed_count=0"
 
       # Spot check first and last
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "  App1 v1.0.0"
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "  App150 v150.0.0"
+      The contents of file "$GITHUB_OUTPUT" should include "  App1 v1.0.0"
+      The contents of file "$GITHUB_OUTPUT" should include "  App150 v150.0.0"
     End
 
     It 'handles very long app name (200 characters)'
@@ -470,8 +521,11 @@ Describe 'output_validation_success_json()'
       When call output_validation_success_json VALIDATION_RESULTS
       The status should be success
 
+      # stderr: Header
+      The stderr should include "=== Application validation passed ==="
+
       # Long name preserved
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "validated_apps=${long_name}"
+      The contents of file "$GITHUB_OUTPUT" should include "validated_apps=${long_name}"
     End
   End
 
@@ -494,8 +548,11 @@ Describe 'output_validation_success_json()'
       When call output_validation_success_json VALIDATION_RESULTS
       The status should be success
 
+      # stderr: Header
+      The stderr should include "=== Application validation passed ==="
+
       # Quotes should be preserved or escaped properly
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "validated_count=2"
+      The contents of file "$GITHUB_OUTPUT" should include "validated_count=2"
     End
 
     It 'handles dollar signs in version string'
@@ -504,9 +561,12 @@ Describe 'output_validation_success_json()'
       When call output_validation_success_json VALIDATION_RESULTS
       The status should be success
 
+      # stderr: Header
+      The stderr should include "=== Application validation passed ==="
+
       # Dollar signs should not be expanded
-      The contents of file "$GITHUB_OUTPUT_FILE" should include '$1.0'
-      The contents of file "$GITHUB_OUTPUT_FILE" should include '$100'
+      The contents of file "$GITHUB_OUTPUT" should include '$1.0'
+      The contents of file "$GITHUB_OUTPUT" should include '$100'
     End
 
     It 'handles backticks in version string'
@@ -515,9 +575,12 @@ Describe 'output_validation_success_json()'
       When call output_validation_success_json VALIDATION_RESULTS
       The status should be success
 
+      # stderr: Header
+      The stderr should include "=== Application validation passed ==="
+
       # Backticks should not be executed
-      The contents of file "$GITHUB_OUTPUT_FILE" should include '`1.0`'
-      The contents of file "$GITHUB_OUTPUT_FILE" should include '`date`'
+      The contents of file "$GITHUB_OUTPUT" should include '`1.0`'
+      The contents of file "$GITHUB_OUTPUT" should include '`date`'
     End
 
     It 'handles semicolons and pipes in version'
@@ -526,8 +589,11 @@ Describe 'output_validation_success_json()'
       When call output_validation_success_json VALIDATION_RESULTS
       The status should be success
 
+      # stderr: Header
+      The stderr should include "=== Application validation passed ==="
+
       # Shell metacharacters should not be executed
-      The contents of file "$GITHUB_OUTPUT_FILE" should include 'v1.0; echo'
+      The contents of file "$GITHUB_OUTPUT" should include 'v1.0; echo'
     End
   End
 
@@ -541,8 +607,11 @@ Describe 'output_validation_success_json()'
       When call output_validation_success_json VALIDATION_RESULTS
       The status should be success
 
+      # stderr: Header
+      The stderr should include "=== Application validation passed ==="
+
       # Leading space preserved
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "validated_apps=  LeadingSpace"
+      The contents of file "$GITHUB_OUTPUT" should include "validated_apps=  LeadingSpace"
     End
 
     It 'handles trailing whitespace in app name'
@@ -551,8 +620,11 @@ Describe 'output_validation_success_json()'
       When call output_validation_success_json VALIDATION_RESULTS
       The status should be success
 
+      # stderr: Header
+      The stderr should include "=== Application validation passed ==="
+
       # Trailing space preserved
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "validated_apps=TrailingSpace  "
+      The contents of file "$GITHUB_OUTPUT" should include "validated_apps=TrailingSpace  "
     End
 
     It 'handles multiple consecutive spaces in app name'
@@ -561,8 +633,11 @@ Describe 'output_validation_success_json()'
       When call output_validation_success_json VALIDATION_RESULTS
       The status should be success
 
+      # stderr: Header
+      The stderr should include "=== Application validation passed ==="
+
       # Multiple spaces preserved
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "App    With    Spaces"
+      The contents of file "$GITHUB_OUTPUT" should include "App    With    Spaces"
     End
 
     It 'rejects tab characters in app name (security: prevent log injection)'
@@ -584,8 +659,11 @@ Describe 'output_validation_success_json()'
       When call output_validation_success_json VALIDATION_RESULTS
       The status should be success
 
+      # stderr: Header
+      The stderr should include "=== Application validation passed ==="
+
       # Empty app name case
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "validated_count=1"
+      The contents of file "$GITHUB_OUTPUT" should include "validated_count=1"
     End
 
     It 'handles empty string in version'
@@ -594,8 +672,11 @@ Describe 'output_validation_success_json()'
       When call output_validation_success_json VALIDATION_RESULTS
       The status should be success
 
+      # stderr: Header
+      The stderr should include "=== Application validation passed ==="
+
       # Empty version string
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "  App "
+      The contents of file "$GITHUB_OUTPUT" should include "  App "
     End
 
     It 'handles all empty strings'
@@ -606,8 +687,11 @@ Describe 'output_validation_success_json()'
       When call output_validation_success_json VALIDATION_RESULTS
       The status should be success
 
+      # stderr: Header
+      The stderr should include "=== Application validation passed ==="
+
       # All empty
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "validated_count=3"
+      The contents of file "$GITHUB_OUTPUT" should include "validated_count=3"
     End
   End
 
@@ -622,9 +706,12 @@ Describe 'output_validation_success_json()'
       When call output_validation_success_json VALIDATION_RESULTS
       The status should be success
 
+      # stderr: Header
+      The stderr should include "=== Application validation passed ==="
+
       # Japanese chars preserved
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "アプリ"
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "バージョン1.0"
+      The contents of file "$GITHUB_OUTPUT" should include "アプリ"
+      The contents of file "$GITHUB_OUTPUT" should include "バージョン1.0"
     End
 
     It 'handles emoji in app name'
@@ -634,9 +721,12 @@ Describe 'output_validation_success_json()'
       When call output_validation_success_json VALIDATION_RESULTS
       The status should be success
 
+      # stderr: Header
+      The stderr should include "=== Application validation passed ==="
+
       # Emoji preserved
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "App🚀"
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "Tool⚡"
+      The contents of file "$GITHUB_OUTPUT" should include "App🚀"
+      The contents of file "$GITHUB_OUTPUT" should include "Tool⚡"
     End
 
     It 'handles accented characters'
@@ -647,10 +737,13 @@ Describe 'output_validation_success_json()'
       When call output_validation_success_json VALIDATION_RESULTS
       The status should be success
 
+      # stderr: Header
+      The stderr should include "=== Application validation passed ==="
+
       # Accents preserved
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "Café"
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "Naïve"
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "Résumé"
+      The contents of file "$GITHUB_OUTPUT" should include "Café"
+      The contents of file "$GITHUB_OUTPUT" should include "Naïve"
+      The contents of file "$GITHUB_OUTPUT" should include "Résumé"
     End
   End
 
@@ -659,25 +752,28 @@ Describe 'output_validation_success_json()'
   # ========================================
   Context 'output: file operations'
     It 'creates output file if not exists'
-      rm -f "$GITHUB_OUTPUT_FILE"
+      rm -f "$GITHUB_OUTPUT"
       add_validation_result "app" "App" "success" "v1" ""
 
       When call output_validation_success_json VALIDATION_RESULTS
       The status should be success
-      The path "$GITHUB_OUTPUT_FILE" should be exist
+      The path "$GITHUB_OUTPUT" should be exist
     End
 
     It 'appends to existing output file'
-      echo "existing=content" > "$GITHUB_OUTPUT_FILE"
+      echo "existing=content" > "$GITHUB_OUTPUT"
       add_validation_result "app" "App" "success" "v1" ""
 
       When call output_validation_success_json VALIDATION_RESULTS
       The status should be success
 
+      # stderr: Header
+      The stderr should include "=== Application validation passed ==="
+
       # Previous content preserved
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "existing=content"
+      The contents of file "$GITHUB_OUTPUT" should include "existing=content"
       # New content added
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "status=success"
+      The contents of file "$GITHUB_OUTPUT" should include "status=success"
     End
   End
 
@@ -691,13 +787,13 @@ Describe 'output_validation_success_json()'
 
       # First call (redirect stderr)
       output_validation_success_json VALIDATION_RESULTS 2>/dev/null
-      local first_output=$(cat "$GITHUB_OUTPUT_FILE")
+      local first_output=$(cat "$GITHUB_OUTPUT")
 
       # Clear and second call (redirect stderr)
-      rm "$GITHUB_OUTPUT_FILE"
-      touch "$GITHUB_OUTPUT_FILE"
+      rm "$GITHUB_OUTPUT"
+      touch "$GITHUB_OUTPUT"
       output_validation_success_json VALIDATION_RESULTS 2>/dev/null
-      local second_output=$(cat "$GITHUB_OUTPUT_FILE")
+      local second_output=$(cat "$GITHUB_OUTPUT")
 
       # Outputs should be identical
       When call test "$first_output" = "$second_output"
@@ -718,8 +814,11 @@ Describe 'output_validation_success_json()'
       When call output_validation_success_json VALIDATION_RESULTS
       The status should be success
 
+      # stderr: Header
+      The stderr should include "=== Application validation passed ==="
+
       # Verify count
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "validated_count=500"
+      The contents of file "$GITHUB_OUTPUT" should include "validated_count=500"
     End
   End
 
@@ -733,6 +832,9 @@ Describe 'output_validation_success_json()'
 
       When call output_validation_success_json VALIDATION_RESULTS
       The status should be success
+
+      # stderr: Header
+      The stderr should include "=== Application validation passed ==="
 
       # Stderr should only contain header
       The stderr should equal "=== Application validation passed ==="
@@ -763,17 +865,17 @@ Describe 'output_validation_success_json()'
       The stderr should equal "=== Application validation passed ==="
 
       # GITHUB_OUTPUT: Only success apps
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "  Git git version 2.52.0"
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "  curl curl 8.0.1"
-      The contents of file "$GITHUB_OUTPUT_FILE" should not include "gh is not installed"
-      The contents of file "$GITHUB_OUTPUT_FILE" should not include "Node.js version too old"
+      The contents of file "$GITHUB_OUTPUT" should include "  Git git version 2.52.0"
+      The contents of file "$GITHUB_OUTPUT" should include "  curl curl 8.0.1"
+      The contents of file "$GITHUB_OUTPUT" should not include "gh is not installed"
+      The contents of file "$GITHUB_OUTPUT" should not include "Node.js version too old"
 
       # GITHUB_OUTPUT: Only success count
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "validated_count=2"
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "failed_count=0"
+      The contents of file "$GITHUB_OUTPUT" should include "validated_count=2"
+      The contents of file "$GITHUB_OUTPUT" should include "failed_count=0"
 
       # GITHUB_OUTPUT: validated_apps contains only success apps
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "validated_apps=Git,curl"
+      The contents of file "$GITHUB_OUTPUT" should include "validated_apps=Git,curl"
     End
   End
 
@@ -790,11 +892,14 @@ Describe 'output_validation_success_json()'
       When call output_validation_success_json VALIDATION_RESULTS
       The status should be success
 
+      # stderr: Header
+      The stderr should include "=== Application validation passed ==="
+
       # Order preserved in message
-      The contents of file "$GITHUB_OUTPUT_FILE" should match pattern "*App1 v1.0*App2 v2.0*App3 v3.0*"
+      The contents of file "$GITHUB_OUTPUT" should match pattern "*App1 v1.0*App2 v2.0*App3 v3.0*"
 
       # Order preserved in validated_apps
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "validated_apps=App1,App2,App3"
+      The contents of file "$GITHUB_OUTPUT" should include "validated_apps=App1,App2,App3"
     End
   End
 
@@ -814,13 +919,16 @@ Describe 'output_validation_success_json()'
       When call output_validation_success_json VALIDATION_RESULTS
       The status should be success
 
+      # stderr: Header
+      The stderr should include "=== Application validation passed ==="
+
       # All success entries processed
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "  App1 v1.0"
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "  App3 v3.0"
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "  App6 v6.0"
+      The contents of file "$GITHUB_OUTPUT" should include "  App1 v1.0"
+      The contents of file "$GITHUB_OUTPUT" should include "  App3 v3.0"
+      The contents of file "$GITHUB_OUTPUT" should include "  App6 v6.0"
 
       # Correct count (3 successes)
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "validated_count=3"
+      The contents of file "$GITHUB_OUTPUT" should include "validated_count=3"
     End
   End
 
@@ -836,10 +944,13 @@ Describe 'output_validation_success_json()'
       When call output_validation_success_json VALIDATION_RESULTS
       The status should be success
 
+      # stderr: Header
+      The stderr should include "=== Application validation passed ==="
+
       # No success entries
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "validated_count=0"
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "failed_count=0"
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "validated_apps="
+      The contents of file "$GITHUB_OUTPUT" should include "validated_count=0"
+      The contents of file "$GITHUB_OUTPUT" should include "failed_count=0"
+      The contents of file "$GITHUB_OUTPUT" should include "validated_apps="
     End
   End
 End
