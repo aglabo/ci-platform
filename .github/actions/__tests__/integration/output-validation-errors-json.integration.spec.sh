@@ -16,7 +16,7 @@ Describe 'output_validation_errors_json()'
   # Setup and teardown for each test
   BeforeEach 'setup_test'
   setup_test() {
-    GITHUB_OUTPUT_FILE=$(mktemp)
+    GITHUB_OUTPUT=$(mktemp)
     # Direct assignment to clear global array (don't use unset or declare)
     VALIDATION_RESULTS=()
     VALIDATION_INDEX=0
@@ -24,7 +24,7 @@ Describe 'output_validation_errors_json()'
 
   AfterEach 'cleanup_test'
   cleanup_test() {
-    rm -f "$GITHUB_OUTPUT_FILE"
+    rm -f "$GITHUB_OUTPUT"
   }
 
   # ========================================
@@ -45,20 +45,20 @@ Describe 'output_validation_errors_json()'
       The stderr should include "::error::  - Git is not installed"
 
       # GITHUB_OUTPUT: status field
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "status=error"
+      The contents of file "$GITHUB_OUTPUT" should include "status=error"
 
       # GITHUB_OUTPUT: message field with multiline EOF
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "message<<MULTILINE_EOF"
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "Application validation failed:"
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "  Git is not installed"
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "MULTILINE_EOF"
+      The contents of file "$GITHUB_OUTPUT" should include "message<<MULTILINE_EOF"
+      The contents of file "$GITHUB_OUTPUT" should include "Application validation failed:"
+      The contents of file "$GITHUB_OUTPUT" should include "  Git is not installed"
+      The contents of file "$GITHUB_OUTPUT" should include "MULTILINE_EOF"
 
       # GITHUB_OUTPUT: failed_apps field
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "failed_apps=Git"
+      The contents of file "$GITHUB_OUTPUT" should include "failed_apps=Git"
 
       # GITHUB_OUTPUT: count fields
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "failed_count=1"
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "validated_count=0"
+      The contents of file "$GITHUB_OUTPUT" should include "failed_count=1"
+      The contents of file "$GITHUB_OUTPUT" should include "validated_count=0"
     End
   End
 
@@ -82,12 +82,12 @@ Describe 'output_validation_errors_json()'
       The stderr should include "::error::  - gh version 1.5 is below minimum required 2.0"
 
       # GITHUB_OUTPUT: Both errors in message field with indentation
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "  curl is not installed"
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "  gh version 1.5 is below minimum required 2.0"
+      The contents of file "$GITHUB_OUTPUT" should include "  curl is not installed"
+      The contents of file "$GITHUB_OUTPUT" should include "  gh version 1.5 is below minimum required 2.0"
 
       # GITHUB_OUTPUT: Count fields
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "failed_count=2"
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "validated_count=7"
+      The contents of file "$GITHUB_OUTPUT" should include "failed_count=2"
+      The contents of file "$GITHUB_OUTPUT" should include "validated_count=1"
     End
 
     It 'includes both app names in failed_apps (comma-separated)'
@@ -99,9 +99,9 @@ Describe 'output_validation_errors_json()'
       The stderr should include "::error::"
 
       # GITHUB_OUTPUT: failed_apps contains both (order may vary)
-      The contents of file "$GITHUB_OUTPUT_FILE" should match pattern "*failed_apps=*curl*"
-      The contents of file "$GITHUB_OUTPUT_FILE" should match pattern "*failed_apps=*gh*"
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "failed_count=2"
+      The contents of file "$GITHUB_OUTPUT" should match pattern "*failed_apps=*curl*"
+      The contents of file "$GITHUB_OUTPUT" should match pattern "*failed_apps=*gh*"
+      The contents of file "$GITHUB_OUTPUT" should include "failed_count=2"
     End
   End
 
@@ -118,9 +118,9 @@ Describe 'output_validation_errors_json()'
       The stderr should include "::error::"
 
       # GITHUB_OUTPUT: Messages indented with exactly 2 spaces (not 3+)
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "  Error message 1"
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "  Error message 2"
-      The contents of file "$GITHUB_OUTPUT_FILE" should not include "   Error message"
+      The contents of file "$GITHUB_OUTPUT" should include "  Error message 1"
+      The contents of file "$GITHUB_OUTPUT" should include "  Error message 2"
+      The contents of file "$GITHUB_OUTPUT" should not include "   Error message"
     End
 
     It 'prefixes stderr messages with "::error::  - "'
@@ -152,8 +152,8 @@ Describe 'output_validation_errors_json()'
       The stderr should include "Node.js version 16.0 is below minimum required 18.0"
 
       # GITHUB_OUTPUT: Counts
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "failed_count=2"
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "validated_count=14"
+      The contents of file "$GITHUB_OUTPUT" should include "failed_count=2"
+      The contents of file "$GITHUB_OUTPUT" should include "validated_count=2"
     End
 
     It 'handles authentication error messages'
@@ -168,11 +168,11 @@ Describe 'output_validation_errors_json()'
       The stderr should include "gh is not authenticated. Run 'gh auth login' to authenticate."
 
       # GITHUB_OUTPUT: Full message preserved
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "  gh is not authenticated. Run 'gh auth login' to authenticate."
+      The contents of file "$GITHUB_OUTPUT" should include "  gh is not authenticated. Run 'gh auth login' to authenticate."
 
       # GITHUB_OUTPUT: Counts
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "failed_count=1"
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "validated_count=14"
+      The contents of file "$GITHUB_OUTPUT" should include "failed_count=1"
+      The contents of file "$GITHUB_OUTPUT" should include "validated_count=2"
     End
 
     It 'handles error messages with special characters'
@@ -185,7 +185,7 @@ Describe 'output_validation_errors_json()'
       The stderr should include "Error: Command failed with exit code (127) - not found"
 
       # GITHUB_OUTPUT: Special characters preserved
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "  Error: Command failed with exit code (127) - not found"
+      The contents of file "$GITHUB_OUTPUT" should include "  Error: Command failed with exit code (127) - not found"
     End
   End
 
@@ -202,8 +202,8 @@ Describe 'output_validation_errors_json()'
       The stderr should include "Some error"
 
       # GITHUB_OUTPUT: Zero validated
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "validated_count=0"
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "failed_count=1"
+      The contents of file "$GITHUB_OUTPUT" should include "validated_count=0"
+      The contents of file "$GITHUB_OUTPUT" should include "failed_count=1"
     End
   End
 
@@ -226,12 +226,12 @@ Describe 'output_validation_errors_json()'
       The stderr should include "::error::Application validation failed with 15 error(s):"
 
       # GITHUB_OUTPUT: Counts
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "failed_count=15"
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "validated_count=14"
+      The contents of file "$GITHUB_OUTPUT" should include "failed_count=15"
+      The contents of file "$GITHUB_OUTPUT" should include "validated_count=2"
 
       # Verify all errors are present in output (sample check)
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "  Error message 1"
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "  Error message 15"
+      The contents of file "$GITHUB_OUTPUT" should include "  Error message 1"
+      The contents of file "$GITHUB_OUTPUT" should include "  Error message 15"
     End
   End
 
@@ -250,7 +250,7 @@ Describe 'output_validation_errors_json()'
       The stderr should include "$long_msg"
 
       # GITHUB_OUTPUT: Full message with indentation
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "  $long_msg"
+      The contents of file "$GITHUB_OUTPUT" should include "  $long_msg"
     End
   End
 
@@ -267,9 +267,9 @@ Describe 'output_validation_errors_json()'
       The stderr should include "::error::"
 
       # GITHUB_OUTPUT: failed_apps contains both app names (order may vary)
-      The contents of file "$GITHUB_OUTPUT_FILE" should match pattern "*failed_apps=*my-app.v2*"
-      The contents of file "$GITHUB_OUTPUT_FILE" should match pattern "*failed_apps=*Node.js*"
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "failed_count=2"
+      The contents of file "$GITHUB_OUTPUT" should match pattern "*failed_apps=*my-app.v2*"
+      The contents of file "$GITHUB_OUTPUT" should match pattern "*failed_apps=*Node.js*"
+      The contents of file "$GITHUB_OUTPUT" should include "failed_count=2"
     End
   End
 
@@ -285,10 +285,10 @@ Describe 'output_validation_errors_json()'
       The stderr should include "::error::"
 
       # GITHUB_OUTPUT: Verify EOF delimiter structure
-      The line 2 of contents of file "$GITHUB_OUTPUT_FILE" should equal "message<<MULTILINE_EOF"
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "Application validation failed:"
+      The line 2 of contents of file "$GITHUB_OUTPUT" should equal "message<<MULTILINE_EOF"
+      The contents of file "$GITHUB_OUTPUT" should include "Application validation failed:"
       # Verify closing delimiter exists
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "MULTILINE_EOF"
+      The contents of file "$GITHUB_OUTPUT" should include "MULTILINE_EOF"
     End
   End
 
@@ -331,11 +331,11 @@ Describe 'output_validation_errors_json()'
       The stderr should include "::error::"
 
       # All 5 required fields must be present
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "status=error"
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "message<<MULTILINE_EOF"
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "failed_apps="
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "failed_count="
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "validated_count="
+      The contents of file "$GITHUB_OUTPUT" should include "status=error"
+      The contents of file "$GITHUB_OUTPUT" should include "message<<MULTILINE_EOF"
+      The contents of file "$GITHUB_OUTPUT" should include "failed_apps="
+      The contents of file "$GITHUB_OUTPUT" should include "failed_count="
+      The contents of file "$GITHUB_OUTPUT" should include "validated_count="
     End
   End
 
@@ -368,12 +368,12 @@ Describe 'output_validation_errors_json()'
       The stderr should not include "curl 8.0.1"
 
       # GITHUB_OUTPUT: Only error count
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "failed_count=2"
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "validated_count=98"
+      The contents of file "$GITHUB_OUTPUT" should include "failed_count=2"
+      The contents of file "$GITHUB_OUTPUT" should include "validated_count=14"
 
       # GITHUB_OUTPUT: failed_apps contains only errors
-      The contents of file "$GITHUB_OUTPUT_FILE" should match pattern "*failed_apps=*gh*"
-      The contents of file "$GITHUB_OUTPUT_FILE" should match pattern "*failed_apps=*Node.js*"
+      The contents of file "$GITHUB_OUTPUT" should match pattern "*failed_apps=*gh*"
+      The contents of file "$GITHUB_OUTPUT" should match pattern "*failed_apps=*Node.js*"
     End
   End
 
@@ -390,16 +390,19 @@ Describe 'output_validation_errors_json()'
       When call output_validation_errors_json VALIDATION_RESULTS
       The status should be failure
 
+      # stderr: Header
+      The stderr should include "=== Application validation failed ==="
+
       # All errors present in output
       The stderr should include "First error"
       The stderr should include "Second error"
       The stderr should include "Third error"
 
       # GITHUB_OUTPUT: All errors present
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "  First error"
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "  Second error"
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "  Third error"
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "failed_count=3"
+      The contents of file "$GITHUB_OUTPUT" should include "  First error"
+      The contents of file "$GITHUB_OUTPUT" should include "  Second error"
+      The contents of file "$GITHUB_OUTPUT" should include "  Third error"
+      The contents of file "$GITHUB_OUTPUT" should include "failed_count=3"
     End
   End
 
@@ -415,9 +418,12 @@ Describe 'output_validation_errors_json()'
       When call output_validation_errors_json VALIDATION_RESULTS
       The status should be failure
 
+      # stderr: Header
+      The stderr should include "=== Application validation failed ==="
+
       # Comma separation without spaces
-      The contents of file "$GITHUB_OUTPUT_FILE" should match pattern "*failed_apps=*App1*App2*App3*"
-      The contents of file "$GITHUB_OUTPUT_FILE" should not include "failed_apps=App1, App2"
+      The contents of file "$GITHUB_OUTPUT" should match pattern "*failed_apps=*App1*App2*App3*"
+      The contents of file "$GITHUB_OUTPUT" should not include "failed_apps=App1, App2"
     End
   End
 
@@ -433,10 +439,13 @@ Describe 'output_validation_errors_json()'
       When call output_validation_errors_json VALIDATION_RESULTS
       The status should be failure
 
+      # stderr: Header
+      The stderr should include "=== Application validation failed ==="
+
       # Single chars preserved
-      The contents of file "$GITHUB_OUTPUT_FILE" should match pattern "*failed_apps=*a*"
-      The contents of file "$GITHUB_OUTPUT_FILE" should match pattern "*failed_apps=*b*"
-      The contents of file "$GITHUB_OUTPUT_FILE" should match pattern "*failed_apps=*c*"
+      The contents of file "$GITHUB_OUTPUT" should match pattern "*failed_apps=*a*"
+      The contents of file "$GITHUB_OUTPUT" should match pattern "*failed_apps=*b*"
+      The contents of file "$GITHUB_OUTPUT" should match pattern "*failed_apps=*c*"
     End
 
     It 'handles single-character error messages'
@@ -446,9 +455,12 @@ Describe 'output_validation_errors_json()'
       When call output_validation_errors_json VALIDATION_RESULTS
       The status should be failure
 
+      # stderr: Header
+      The stderr should include "=== Application validation failed ==="
+
       # Single char messages preserved
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "  1"
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "  2"
+      The contents of file "$GITHUB_OUTPUT" should include "  1"
+      The contents of file "$GITHUB_OUTPUT" should include "  2"
     End
   End
 
@@ -465,13 +477,16 @@ Describe 'output_validation_errors_json()'
       When call output_validation_errors_json VALIDATION_RESULTS
       The status should be failure
 
+      # stderr: Header
+      The stderr should include "=== Application validation failed ==="
+
       # Verify count
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "failed_count=150"
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "validated_count=0"
+      The contents of file "$GITHUB_OUTPUT" should include "failed_count=150"
+      The contents of file "$GITHUB_OUTPUT" should include "validated_count=0"
 
       # Spot check first and last
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "  Error 1"
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "  Error 150"
+      The contents of file "$GITHUB_OUTPUT" should include "  Error 1"
+      The contents of file "$GITHUB_OUTPUT" should include "  Error 150"
     End
 
     It 'handles very long app name (200 characters)'
@@ -481,8 +496,11 @@ Describe 'output_validation_errors_json()'
       When call output_validation_errors_json VALIDATION_RESULTS
       The status should be failure
 
+      # stderr: Header
+      The stderr should include "=== Application validation failed ==="
+
       # Long name preserved
-      The contents of file "$GITHUB_OUTPUT_FILE" should match pattern "*failed_apps=*${long_name}*"
+      The contents of file "$GITHUB_OUTPUT" should match pattern "*failed_apps=*${long_name}*"
     End
   End
 
@@ -505,8 +523,11 @@ Describe 'output_validation_errors_json()'
       When call output_validation_errors_json VALIDATION_RESULTS
       The status should be failure
 
+      # stderr: Header
+      The stderr should include "=== Application validation failed ==="
+
       # Quotes should be preserved
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "failed_count=2"
+      The contents of file "$GITHUB_OUTPUT" should include "failed_count=2"
     End
 
     It 'handles dollar signs in error message'
@@ -515,9 +536,12 @@ Describe 'output_validation_errors_json()'
       When call output_validation_errors_json VALIDATION_RESULTS
       The status should be failure
 
+      # stderr: Header
+      The stderr should include "=== Application validation failed ==="
+
       # Dollar signs should not be expanded
-      The contents of file "$GITHUB_OUTPUT_FILE" should include '$1.0'
-      The contents of file "$GITHUB_OUTPUT_FILE" should include '$100'
+      The contents of file "$GITHUB_OUTPUT" should include '$1.0'
+      The contents of file "$GITHUB_OUTPUT" should include '$100'
     End
 
     It 'handles backticks in error message'
@@ -526,8 +550,11 @@ Describe 'output_validation_errors_json()'
       When call output_validation_errors_json VALIDATION_RESULTS
       The status should be failure
 
+      # stderr: Header
+      The stderr should include "=== Application validation failed ==="
+
       # Backticks should not be executed
-      The contents of file "$GITHUB_OUTPUT_FILE" should include '`command`'
+      The contents of file "$GITHUB_OUTPUT" should include '`command`'
     End
 
     It 'handles semicolons and pipes in error message'
@@ -536,8 +563,11 @@ Describe 'output_validation_errors_json()'
       When call output_validation_errors_json VALIDATION_RESULTS
       The status should be failure
 
+      # stderr: Header
+      The stderr should include "=== Application validation failed ==="
+
       # Shell metacharacters should not be executed
-      The contents of file "$GITHUB_OUTPUT_FILE" should include 'Error; echo'
+      The contents of file "$GITHUB_OUTPUT" should include 'Error; echo'
     End
   End
 
@@ -551,8 +581,11 @@ Describe 'output_validation_errors_json()'
       When call output_validation_errors_json VALIDATION_RESULTS
       The status should be failure
 
+      # stderr: Header
+      The stderr should include "=== Application validation failed ==="
+
       # Leading space preserved
-      The contents of file "$GITHUB_OUTPUT_FILE" should match pattern "*failed_apps=*  LeadingSpace*"
+      The contents of file "$GITHUB_OUTPUT" should match pattern "*failed_apps=*  LeadingSpace*"
     End
 
     It 'handles trailing whitespace in app name'
@@ -561,8 +594,11 @@ Describe 'output_validation_errors_json()'
       When call output_validation_errors_json VALIDATION_RESULTS
       The status should be failure
 
+      # stderr: Header
+      The stderr should include "=== Application validation failed ==="
+
       # Trailing space preserved
-      The contents of file "$GITHUB_OUTPUT_FILE" should match pattern "*failed_apps=*TrailingSpace  *"
+      The contents of file "$GITHUB_OUTPUT" should match pattern "*failed_apps=*TrailingSpace  *"
     End
 
     It 'handles multiple consecutive spaces in app name'
@@ -571,8 +607,11 @@ Describe 'output_validation_errors_json()'
       When call output_validation_errors_json VALIDATION_RESULTS
       The status should be failure
 
+      # stderr: Header
+      The stderr should include "=== Application validation failed ==="
+
       # Multiple spaces preserved
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "App    With    Spaces"
+      The contents of file "$GITHUB_OUTPUT" should include "App    With    Spaces"
     End
 
     It 'rejects tab characters in app name (security: prevent log injection)'
@@ -594,8 +633,11 @@ Describe 'output_validation_errors_json()'
       When call output_validation_errors_json VALIDATION_RESULTS
       The status should be failure
 
+      # stderr: Header
+      The stderr should include "=== Application validation failed ==="
+
       # Empty app name case
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "failed_count=1"
+      The contents of file "$GITHUB_OUTPUT" should include "failed_count=1"
     End
 
     It 'handles empty string in error message'
@@ -604,8 +646,11 @@ Describe 'output_validation_errors_json()'
       When call output_validation_errors_json VALIDATION_RESULTS
       The status should be failure
 
+      # stderr: Header
+      The stderr should include "=== Application validation failed ==="
+
       # Empty error message
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "failed_count=1"
+      The contents of file "$GITHUB_OUTPUT" should include "failed_count=1"
     End
 
     It 'handles all empty strings'
@@ -616,8 +661,11 @@ Describe 'output_validation_errors_json()'
       When call output_validation_errors_json VALIDATION_RESULTS
       The status should be failure
 
+      # stderr: Header
+      The stderr should include "=== Application validation failed ==="
+
       # All empty
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "failed_count=3"
+      The contents of file "$GITHUB_OUTPUT" should include "failed_count=3"
     End
   End
 
@@ -632,9 +680,12 @@ Describe 'output_validation_errors_json()'
       When call output_validation_errors_json VALIDATION_RESULTS
       The status should be failure
 
+      # stderr: Header
+      The stderr should include "=== Application validation failed ==="
+
       # Japanese chars preserved
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "アプリ"
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "エラーメッセージ"
+      The contents of file "$GITHUB_OUTPUT" should include "アプリ"
+      The contents of file "$GITHUB_OUTPUT" should include "エラーメッセージ"
     End
 
     It 'handles emoji in app name'
@@ -644,9 +695,12 @@ Describe 'output_validation_errors_json()'
       When call output_validation_errors_json VALIDATION_RESULTS
       The status should be failure
 
+      # stderr: Header
+      The stderr should include "=== Application validation failed ==="
+
       # Emoji preserved
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "App🚀"
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "Tool⚡"
+      The contents of file "$GITHUB_OUTPUT" should include "App🚀"
+      The contents of file "$GITHUB_OUTPUT" should include "Tool⚡"
     End
 
     It 'handles accented characters'
@@ -657,10 +711,13 @@ Describe 'output_validation_errors_json()'
       When call output_validation_errors_json VALIDATION_RESULTS
       The status should be failure
 
+      # stderr: Header
+      The stderr should include "=== Application validation failed ==="
+
       # Accents preserved
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "Café"
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "Naïve"
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "Résumé"
+      The contents of file "$GITHUB_OUTPUT" should include "Café"
+      The contents of file "$GITHUB_OUTPUT" should include "Naïve"
+      The contents of file "$GITHUB_OUTPUT" should include "Résumé"
     End
   End
 
@@ -669,25 +726,28 @@ Describe 'output_validation_errors_json()'
   # ========================================
   Context 'output: file operations'
     It 'creates output file if not exists'
-      rm -f "$GITHUB_OUTPUT_FILE"
+      rm -f "$GITHUB_OUTPUT"
       add_validation_result "app" "App" "error" "" "Error message"
 
       When call output_validation_errors_json VALIDATION_RESULTS
       The status should be failure
-      The path "$GITHUB_OUTPUT_FILE" should be exist
+      The path "$GITHUB_OUTPUT" should be exist
     End
 
     It 'appends to existing output file'
-      echo "existing=content" > "$GITHUB_OUTPUT_FILE"
+      echo "existing=content" > "$GITHUB_OUTPUT"
       add_validation_result "app" "App" "error" "" "Error message"
 
       When call output_validation_errors_json VALIDATION_RESULTS
       The status should be failure
 
+      # stderr: Header
+      The stderr should include "=== Application validation failed ==="
+
       # Previous content preserved
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "existing=content"
+      The contents of file "$GITHUB_OUTPUT" should include "existing=content"
       # New content added
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "status=error"
+      The contents of file "$GITHUB_OUTPUT" should include "status=error"
     End
   End
 
@@ -701,13 +761,13 @@ Describe 'output_validation_errors_json()'
 
       # First call (redirect stderr)
       output_validation_errors_json VALIDATION_RESULTS VALIDATED_APPS 2>/dev/null
-      first_output=$(cat "$GITHUB_OUTPUT_FILE")
+      first_output=$(cat "$GITHUB_OUTPUT")
 
       # Clear and second call (redirect stderr)
-      rm "$GITHUB_OUTPUT_FILE"
-      touch "$GITHUB_OUTPUT_FILE"
+      rm "$GITHUB_OUTPUT"
+      touch "$GITHUB_OUTPUT"
       output_validation_errors_json VALIDATION_RESULTS VALIDATED_APPS 2>/dev/null
-      second_output=$(cat "$GITHUB_OUTPUT_FILE")
+      second_output=$(cat "$GITHUB_OUTPUT")
 
       # Compare outputs
       test "$first_output" = "$second_output"
@@ -732,8 +792,11 @@ Describe 'output_validation_errors_json()'
       When call output_validation_errors_json VALIDATION_RESULTS
       The status should be failure
 
+      # stderr: Header
+      The stderr should include "=== Application validation failed ==="
+
       # Verify count
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "failed_count=500"
+      The contents of file "$GITHUB_OUTPUT" should include "failed_count=500"
     End
   End
 End
