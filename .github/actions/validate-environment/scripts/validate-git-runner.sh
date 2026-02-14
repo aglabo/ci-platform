@@ -58,6 +58,20 @@ detect_architecture() {
   echo "${1:-$(uname -m)}"
 }
 
+# @description Detect operating system
+# @exitcode 0 Always succeeds
+# @stdout Normalized OS name (lowercase)
+detect_os() {
+  uname -s | tr '[:upper:]' '[:lower:]'
+}
+
+# @description Detect system architecture
+# @exitcode 0 Always succeeds
+# @stdout Raw architecture name from uname -m
+detect_architecture() {
+  uname -m
+}
+
 # @description Normalize architecture to canonical form
 # @arg $1 string Raw architecture name (e.g., "x86_64", "aarch64")
 # @exitcode 0 Valid architecture
