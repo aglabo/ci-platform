@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "fossil-mcp": {
+      "type": "stdio",
+      "command": "fossil-mcp"
+    }
+  }
+}
