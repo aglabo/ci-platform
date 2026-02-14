@@ -24,6 +24,14 @@ inputs:
     description: "Expected runner architecture (canonical format): 'amd64' or 'arm64'. Script normalizes uname -m output (x86_64→amd64, aarch64→arm64). Default: amd64"
     required: false
     default: "amd64"
+  pr-actions:
+    description: "Check permissions for PR operations (contents: write, pull-requests: write). Set to 'true' for workflows that create/update pull requests."
+    required: false
+    default: "false"
+  commit-actions:
+    description: "Check permissions for commit operations (contents: write). Set to 'true' for workflows that commit changes."
+    required: false
+    default: "false"
   additional-apps:
     description: |
       Additional applications to validate beyond default (Git, curl).
@@ -54,6 +62,12 @@ outputs:
   runner-message:
     description: "Runner validation message"
     value: ${{ steps.validate-runner.outputs.message }}
+  permissions-status:
+    description: "Permissions validation status (success or error, empty if not checked)"
+    value: ${{ steps.validate-permissions.outputs.status }}
+  permissions-message:
+    description: "Permissions validation message (empty if not checked)"
+    value: ${{ steps.validate-permissions.outputs.message }}
   apps-status:
     description: "Applications validation status (success or error)"
     value: ${{ steps.validate-apps.outputs.status }}
@@ -88,6 +102,18 @@ runs:
       run: |
         set -euo pipefail
         bash "${GITHUB_ACTION_PATH}/scripts/validate-git-runner.sh"
+      # Outputs: status, message (written to $GITHUB_OUTPUT by script)
+
+    - name: "Validate GitHub permissions"
+      id: validate-permissions
+      if: ${{ inputs.pr-actions == 'true' || inputs.commit-actions == 'true' }}
+      shell: bash
+      env:
+        PR_ACTIONS: ${{ inputs.pr-actions }}
+        COMMIT_ACTIONS: ${{ inputs.commit-actions }}
+      run: |
+        set -euo pipefail
+        bash "${GITHUB_ACTION_PATH}/scripts/validate-permissions.sh"
       # Outputs: status, message (written to $GITHUB_OUTPUT by script)
 
     - name: "Validate required applications"
