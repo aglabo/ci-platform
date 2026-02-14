@@ -29,10 +29,16 @@ main() {
     set -- "."
   fi
 
+  # Normalize path separators (\ → /) for Windows compatibility
+  # Windows paths with backslashes need conversion for bash/Unix tools
+  # Bash の配列展開で全引数を一括変換（ループ不要）
+  local -a args=("$@")
+  normalized_args=("${args[@]//\\//}")
+
   # Run ShellSpec from project root using subshell
   # Subshell ensures caller's directory remains unchanged
   # ShellSpec automatically loads .shellspec and resolves paths
-  (cd "$PROJECT_ROOT" && bash "$SHELLSPEC" "$@")
+  (cd "$PROJECT_ROOT" && bash "$SHELLSPEC" "${normalized_args[@]}")
 }
 
 # Execute main only if script is run directly (not sourced)
