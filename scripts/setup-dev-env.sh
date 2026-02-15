@@ -2,7 +2,7 @@
 # src: ./scripts/setup-dev-env.sh
 # @(#) : Install lefthook in local development environment only
 #
-# Copyright (c) 2025 atsushifx <http://github.com/atsushifx>
+# Copyright (c) 2025- atsushifx <http://github.com/atsushifx>
 #
 # This software is released under the MIT License.
 # https://opensource.org/licenses/MIT
