@@ -2,7 +2,7 @@
 # src: ./scripts/run-specs.sh
 # @(#) : shellspec runner
 #
-# Copyright (c) 2025 atsushifx <https://github.com/atsushifx>
+# Copyright (c) 2025- atsushifx <https://github.com/atsushifx>
 #
 # This software is released under the MIT License.
 # https://opensource.org/licenses/MIT
@@ -31,7 +31,7 @@ main() {
 
   # Normalize path separators (\ → /) for Windows compatibility
   # Windows paths with backslashes need conversion for bash/Unix tools
-  # Bash の配列展開で全引数を一括変換（ループ不要）
+  # Bash の配列展開で全引数を一括変換（ﾙ恐[ﾌﾟv不要）
   local -a args=("$@")
   normalized_args=("${args[@]//\\//}")
 
