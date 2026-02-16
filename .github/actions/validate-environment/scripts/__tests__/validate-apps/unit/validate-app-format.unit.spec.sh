@@ -46,6 +46,13 @@ Describe 'validate_app_format()'
       The line 1 of output should start with "SUCCESS:"
       The lines of output should equal 1
     End
+
+    It 'accepts app_name with unicode characters'
+      When call validate_app_format "app|アプリ||"
+      The status should be success
+      The line 1 of output should start with "SUCCESS:"
+      The lines of output should equal 1
+    End
   End
 
   Context 'invalid formats'
@@ -122,6 +129,8 @@ Describe 'validate_app_format()'
       The status should be failure
       The line 1 of output should start with "ERROR:"
       The line 1 of output should include "got 6"
+      The stderr should include "::error::"
+      The stderr should include "one|two|three|four|five|six"
     End
   End
 
@@ -218,14 +227,6 @@ Describe 'validate_app_format()'
       The stderr should include "::error::"
     End
 
-    It 'rejects tab in command name'
-      When call validate_app_format "git	tab|App"
-      The status should be failure
-      The line 1 of output should start with "ERROR:"
-      The line 1 of output should include "control characters"
-      The stderr should include "::error::"
-    End
-
     It 'allows hyphens in command name'
       When call validate_app_format "node-gyp|Node GYP"
       The status should be success
@@ -242,6 +243,83 @@ Describe 'validate_app_format()'
       When call validate_app_format "/usr/local/bin/gh|GitHub CLI"
       The status should be success
       The line 1 of output should start with "SUCCESS:"
+    End
+  End
+
+  Context 'control characters in cmd'
+    It 'rejects cmd with newline character'
+      When call validate_app_format "$(printf 'git\nmalicious')|App||"
+      The status should be failure
+      The line 1 of output should start with "ERROR:"
+      The line 1 of output should include "Invalid command name contains control characters"
+      The stderr should include "Invalid command name"
+      The stderr should include "contains control characters"
+    End
+
+    It 'rejects cmd with carriage return'
+      When call validate_app_format "$(printf 'git\rmalicious')|App||"
+      The status should be failure
+      The line 1 of output should start with "ERROR:"
+      The line 1 of output should include "Invalid command name contains control characters"
+      The stderr should include "Invalid command name"
+      The stderr should include "contains control characters"
+    End
+
+    It 'rejects cmd with tab character'
+      When call validate_app_format "$(printf 'git\tmalicious')|App||"
+      The status should be failure
+      The line 1 of output should start with "ERROR:"
+      The line 1 of output should include "Invalid command name contains control characters"
+      The stderr should include "Invalid command name"
+      The stderr should include "contains control characters"
+    End
+  End
+
+  Context 'control characters in app_name'
+    It 'rejects app_name with newline character'
+      When call validate_app_format "git|$(printf 'App\nName')||"
+      The status should be failure
+      The line 1 of output should start with "ERROR:"
+      The line 1 of output should include "Invalid app name contains control characters"
+      The stderr should include "Invalid app_name"
+      The stderr should include "contains control characters"
+    End
+
+    It 'rejects app_name with carriage return'
+      When call validate_app_format "git|$(printf 'App\rName')||"
+      The status should be failure
+      The line 1 of output should start with "ERROR:"
+      The line 1 of output should include "Invalid app name contains control characters"
+      The stderr should include "Invalid app_name"
+      The stderr should include "contains control characters"
+    End
+
+    It 'rejects app_name with tab character'
+      When call validate_app_format "git|$(printf 'App\tName')||"
+      The status should be failure
+      The line 1 of output should start with "ERROR:"
+      The line 1 of output should include "Invalid app name contains control characters"
+      The stderr should include "Invalid app_name"
+      The stderr should include "contains control characters"
+    End
+  End
+
+  Context 'error message clarity'
+    It 'distinguishes cmd vs app_name in error messages'
+      When call validate_app_format "$(printf 'bad\ncmd')|GoodApp||"
+      The status should be failure
+      The line 1 of output should start with "ERROR:"
+      The line 1 of output should include "Invalid command name contains control characters"
+      The stderr should include "command name"
+      The stderr should not include "app_name"
+    End
+
+    It 'reports malicious input context'
+      When call validate_app_format "git|$(printf 'Bad\nApp')||"
+      The status should be failure
+      The line 1 of output should start with "ERROR:"
+      The line 1 of output should include "Invalid app name contains control characters"
+      The stderr should include "malicious input or data corruption"
     End
   End
 End
