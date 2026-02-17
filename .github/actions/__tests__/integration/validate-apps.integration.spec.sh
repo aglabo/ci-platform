@@ -76,6 +76,7 @@ Describe 'validate_apps()'
     It 'validates multiple 2-field apps successfully'
       When call validate_apps "git|Git" "bash|Bash"
       The status should be success
+      The stderr should include "Checking"
       The value "$(get_validated_app_at 0)" should equal "Git"
       The value "$(get_validated_app_at 1)" should equal "Bash"
     End
@@ -83,6 +84,7 @@ Describe 'validate_apps()'
     It 'stores app names in VALIDATED_APPS array'
       When call validate_apps "curl|cURL" "git|Git"
       The status should be success
+      The stderr should include "Checking"
       The value "$(get_validated_app_at 0)" should equal "cURL"
       The value "$(get_validated_app_at 1)" should equal "Git"
     End
@@ -99,12 +101,14 @@ Describe 'validate_apps()'
     It 'validates single 4-field app successfully'
       When call validate_apps "git|Git|field:3|2.0"
       The status should be success
+      The stderr should include "Checking"
       The value "$(get_validated_apps)" should equal "Git"
     End
 
     It 'validates multiple 4-field apps successfully'
       When call validate_apps "git|Git|field:3|2.0" "bash|Bash|regex:version ([0-9.]+)|4.0"
       The status should be success
+      The stderr should include "Checking"
       The value "$(get_validated_app_at 0)" should equal "Git"
       The value "$(get_validated_app_at 1)" should equal "Bash"
     End
@@ -121,6 +125,7 @@ Describe 'validate_apps()'
     It 'validates mix of 2-field and 4-field apps'
       When call validate_apps "curl|cURL" "git|Git|field:3|2.0"
       The status should be success
+      The stderr should include "Checking"
       The value "$(get_validated_app_at 0)" should equal "cURL"
       The value "$(get_validated_app_at 1)" should equal "Git"
     End
@@ -128,6 +133,7 @@ Describe 'validate_apps()'
     It 'handles empty version_extractor (auto semver detection)'
       When call validate_apps "git|Git||2.0"
       The status should be success
+      The stderr should include "Checking"
       The value "$(get_validated_apps)" should equal "Git"
     End
 
@@ -144,6 +150,7 @@ Describe 'validate_apps()'
     It 'populates VALIDATED_APPS with app names'
       When call validate_apps "git|Git" "bash|Bash"
       The status should be success
+      The stderr should include "Checking"
       The value "$(get_validated_app_at 0)" should equal "Git"
       The value "$(get_validated_app_at 1)" should equal "Bash"
     End
@@ -151,12 +158,14 @@ Describe 'validate_apps()'
     It 'populates VALIDATED_VERSIONS with version strings'
       When call validate_apps "git|Git"
       The status should be success
+      The stderr should include "Checking"
       The value "$(get_validated_version_at 0)" should include "git version"
     End
 
     It 'arrays have matching indices for multiple apps'
       When call validate_apps "git|Git" "bash|Bash"
       The status should be success
+      The stderr should include "Checking"
       The value "$(get_validated_app_at 0)" should equal "Git"
       The value "$(get_validated_app_at 1)" should equal "Bash"
       The value "$(get_validated_version_at 0)" should include "git"
@@ -188,18 +197,21 @@ Describe 'validate_apps()'
     It 'handles app name with spaces'
       When call validate_apps "git|Git CLI Tool"
       The status should be success
+      The stderr should include "Checking"
       The value "$(get_validated_apps)" should equal "Git CLI Tool"
     End
 
     It 'handles version extractor with regex special chars'
       When call validate_apps "git|Git|regex:version ([0-9.]+)|2.0"
       The status should be success
+      The stderr should include "Checking"
       The value "$(get_validated_apps)" should equal "Git"
     End
 
     It 'handles multiple consecutive validations'
       When call validate_apps "git|Git" "curl|cURL" "bash|Bash"
       The status should be success
+      The stderr should include "Checking"
       The value "$(get_validated_app_at 0)" should equal "Git"
       The value "$(get_validated_app_at 1)" should equal "cURL"
       The value "$(get_validated_app_at 2)" should equal "Bash"
@@ -234,6 +246,7 @@ Describe 'validate_apps()'
       # First app has invalid format, second is valid
       When call validate_apps "git|Git|field:3" "bash|Bash"
       The status should be failure
+      The stderr should include "::error::"
       # bash should NOT be validated due to fail-fast
       The value "$(get_validated_count)" should equal "0"
     End
@@ -276,11 +289,13 @@ Describe 'validate_apps()'
       # This should fail format validation
       When call validate_apps "git|Git | Tool"
       The status should be failure
+      The stderr should include "::error::"
     End
 
     It 'handles empty app name'
       When call validate_apps "git|"
       The status should be success
+      The stderr should include "Checking"
       The value "$(get_validated_apps)" should equal ""
     End
   End
