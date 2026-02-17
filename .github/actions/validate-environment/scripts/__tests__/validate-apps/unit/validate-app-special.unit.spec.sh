@@ -99,6 +99,73 @@ Describe 'validate_app_special()'
       When call validate_app_special "git" "Git"
       The status should equal 0
       The line 1 of output should start with "SUCCESS:"
+      The stderr should be blank
+    End
+  End
+
+  Context 'empty cmd argument'
+    It 'returns SUCCESS for empty cmd (no special validation needed)'
+      When call validate_app_special "" "Unknown App"
+      The status should be success
+      The line 1 of output should start with "SUCCESS:"
+    End
+
+    It 'outputs nothing to stderr for empty cmd'
+      When call validate_app_special "" ""
+      The status should be success
+      The line 1 of output should start with "SUCCESS:"
+      The stderr should be blank
+    End
+  End
+
+  Context 'gh authentication failure - error message format'
+    check_gh_authentication() { return 1; }
+
+    It 'includes gh auth login instruction in stderr'
+      When call validate_app_special "gh" "GitHub CLI"
+      The status should be failure
+      The line 1 of output should start with "ERROR:"
+      The stderr should include "gh auth login"
+    End
+
+    It 'includes ::error:: prefix in stderr'
+      When call validate_app_special "gh" "GitHub CLI"
+      The status should be failure
+      The line 1 of output should start with "ERROR:"
+      The stderr should include "::error::"
+    End
+
+    It 'stderr error message mentions app_name'
+      When call validate_app_special "gh" "GitHub CLI"
+      The status should be failure
+      The line 1 of output should start with "ERROR:"
+      The stderr should include "GitHub CLI"
+    End
+  End
+
+  Context 'gh authentication success - stderr content'
+    check_gh_authentication() { return 0; }
+
+    It 'includes checkmark symbol in stderr on success'
+      When call validate_app_special "gh" "GitHub CLI"
+      The status should be success
+      The line 1 of output should start with "SUCCESS:"
+      The stderr should include "✓ GitHub CLI is authenticated"
+    End
+
+    It 'includes authentication checking message in stderr'
+      When call validate_app_special "gh" "GitHub CLI"
+      The status should be success
+      The line 1 of output should start with "SUCCESS:"
+      The stderr should include "Checking GitHub CLI authentication..."
+    End
+
+    It 'outputs SUCCESS on line 1 and nothing on line 2'
+      When call validate_app_special "gh" "GitHub CLI"
+      The status should be success
+      The line 1 of output should start with "SUCCESS:"
+      The line 2 of output should be undefined
+      The stderr should not be blank
     End
   End
 End
