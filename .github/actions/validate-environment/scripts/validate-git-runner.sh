@@ -43,31 +43,19 @@ DETECTED_ARCH=""
 # ============================================================================
 
 # @description Detect operating system
+# @arg $1 string Optional OS name override (for testing/debugging)
 # @exitcode 0 Always succeeds
 # @stdout Normalized OS name (lowercase)
 detect_os() {
-  uname -s | tr '[:upper:]' '[:lower:]'
+  echo "${1:-$(uname -s)}" | tr '[:upper:]' '[:lower:]'
 }
 
 # @description Detect system architecture
+# @arg $1 string Optional architecture name override (for testing/debugging)
 # @exitcode 0 Always succeeds
-# @stdout Raw architecture name from uname -m
+# @stdout Raw architecture name
 detect_architecture() {
-  uname -m
-}
-
-# @description Detect operating system
-# @exitcode 0 Always succeeds
-# @stdout Normalized OS name (lowercase)
-detect_os() {
-  uname -s | tr '[:upper:]' '[:lower:]'
-}
-
-# @description Detect system architecture
-# @exitcode 0 Always succeeds
-# @stdout Raw architecture name from uname -m
-detect_architecture() {
-  uname -m
+  echo "${1:-$(uname -m)}"
 }
 
 # @description Normalize architecture to canonical form
