@@ -318,6 +318,7 @@ Describe 'output_validation_success_json()'
 
       When call output_validation_success_json VALIDATION_RESULTS
       The status should equal 0
+      The stderr should include "Application validation"
     End
 
     It 'returns success even with empty arrays'
@@ -325,6 +326,7 @@ Describe 'output_validation_success_json()'
 
       When call output_validation_success_json VALIDATION_RESULTS
       The status should equal 0
+      The stderr should include "Application validation"
     End
 
     It 'returns success with large number of validations'
@@ -334,6 +336,7 @@ Describe 'output_validation_success_json()'
 
       When call output_validation_success_json VALIDATION_RESULTS
       The status should equal 0
+      The stderr should include "Application validation"
     End
   End
 
@@ -406,6 +409,7 @@ Describe 'output_validation_success_json()'
       When call output_validation_success_json VALIDATION_RESULTS
       The status should be success
       The stdout should be blank
+      The stderr should include "Application validation"
     End
   End
 
@@ -757,6 +761,7 @@ Describe 'output_validation_success_json()'
 
       When call output_validation_success_json VALIDATION_RESULTS
       The status should be success
+      The stderr should include "Application validation"
       The path "$GITHUB_OUTPUT" should be exist
     End
 
@@ -798,27 +803,6 @@ Describe 'output_validation_success_json()'
       # Outputs should be identical
       When call test "$first_output" = "$second_output"
       The status should be success
-    End
-  End
-
-  # ========================================
-  # Performance: Large Data
-  # ========================================
-  Context 'performance: large data sets'
-    It 'handles 500+ validations without error'
-      # Create 500 validated apps
-      for i in $(seq 1 500); do
-        add_validation_result "app${i}" "Application${i}" "success" "version${i}.0.0" ""
-      done
-
-      When call output_validation_success_json VALIDATION_RESULTS
-      The status should be success
-
-      # stderr: Header
-      The stderr should include "=== Application validation passed ==="
-
-      # Verify count
-      The contents of file "$GITHUB_OUTPUT" should include "validated_count=500"
     End
   End
 

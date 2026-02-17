@@ -3,7 +3,9 @@
 # shellcheck disable=SC2034,SC2154
 
 # Test suite for validate_app_format function
-# Tests field count validation (2 or 4 pipe-delimited fields only)
+# Tests:
+#   1. Field count validation (2 or 4 pipe-delimited fields)
+#   2. Command name security (relative paths, shell metacharacters)
 
 Describe 'validate_app_format()'
   # Get absolute path to script
@@ -40,6 +42,13 @@ Describe 'validate_app_format()'
 
     It 'allows empty fields in 4-field format (cmd|app||min)'
       When call validate_app_format "curl|cURL||7.0"
+      The status should be success
+      The line 1 of output should start with "SUCCESS:"
+      The lines of output should equal 1
+    End
+
+    It 'accepts app_name with unicode characters'
+      When call validate_app_format "app|アプリ||"
       The status should be success
       The line 1 of output should start with "SUCCESS:"
       The lines of output should equal 1
@@ -120,6 +129,197 @@ Describe 'validate_app_format()'
       The status should be failure
       The line 1 of output should start with "ERROR:"
       The line 1 of output should include "got 6"
+      The stderr should include "::error::"
+      The stderr should include "one|two|three|four|five|six"
+    End
+  End
+
+  Context 'security: relative path rejection'
+    It 'rejects relative path with ./ prefix'
+      When call validate_app_format "./malicious|App"
+      The status should be failure
+      The line 1 of output should start with "ERROR:"
+      The line 1 of output should include "relative path"
+      The stderr should include "::error::"
+    End
+
+    It 'rejects relative path with ../ prefix'
+      When call validate_app_format "../malicious|App"
+      The status should be failure
+      The line 1 of output should start with "ERROR:"
+      The line 1 of output should include "relative path"
+      The stderr should include "::error::"
+    End
+
+    It 'rejects embedded ./ in path'
+      When call validate_app_format "/usr/./bin/malicious|App"
+      The status should be failure
+      The line 1 of output should start with "ERROR:"
+      The line 1 of output should include "relative path"
+      The stderr should include "::error::"
+    End
+
+    It 'rejects embedded ../ in path'
+      When call validate_app_format "/usr/../bin/malicious|App"
+      The status should be failure
+      The line 1 of output should start with "ERROR:"
+      The line 1 of output should include "relative path"
+      The stderr should include "::error::"
+    End
+
+    It 'allows absolute paths without relative components'
+      When call validate_app_format "/usr/bin/git|Git"
+      The status should be success
+      The line 1 of output should start with "SUCCESS:"
+    End
+  End
+
+  Context 'security: shell metacharacter rejection'
+    It 'rejects semicolon in command name'
+      When call validate_app_format "git;rm -rf|Malicious"
+      The status should be failure
+      The line 1 of output should start with "ERROR:"
+      The line 1 of output should include "metacharacters"
+      The stderr should include "::error::"
+    End
+
+    # Note: Pipe character (|) test is omitted because it's used as field delimiter
+    # A pipe in the cmd field would be interpreted as delimiter, causing field count error
+    # This is structurally prevented by the pipe-delimited format itself
+
+    It 'rejects ampersand in command name'
+      When call validate_app_format "git&|App"
+      The status should be failure
+      The line 1 of output should start with "ERROR:"
+      The line 1 of output should include "metacharacters"
+      The stderr should include "::error::"
+    End
+
+    It 'rejects dollar sign in command name'
+      When call validate_app_format "\$malicious|App"
+      The status should be failure
+      The line 1 of output should start with "ERROR:"
+      The line 1 of output should include "metacharacters"
+      The stderr should include "::error::"
+    End
+
+    It 'rejects backtick in command name'
+      When call validate_app_format "\`malicious\`|App"
+      The status should be failure
+      The line 1 of output should start with "ERROR:"
+      The line 1 of output should include "metacharacters"
+      The stderr should include "::error::"
+    End
+
+    It 'rejects parentheses in command name'
+      When call validate_app_format "git()|App"
+      The status should be failure
+      The line 1 of output should start with "ERROR:"
+      The line 1 of output should include "metacharacters"
+      The stderr should include "::error::"
+    End
+
+    It 'rejects space in command name'
+      When call validate_app_format "git pull|App"
+      The status should be failure
+      The line 1 of output should start with "ERROR:"
+      The line 1 of output should include "metacharacters"
+      The stderr should include "::error::"
+    End
+
+    It 'allows hyphens in command name'
+      When call validate_app_format "node-gyp|Node GYP"
+      The status should be success
+      The line 1 of output should start with "SUCCESS:"
+    End
+
+    It 'allows underscores in command name'
+      When call validate_app_format "my_command|My Command"
+      The status should be success
+      The line 1 of output should start with "SUCCESS:"
+    End
+
+    It 'allows forward slashes in absolute paths'
+      When call validate_app_format "/usr/local/bin/gh|GitHub CLI"
+      The status should be success
+      The line 1 of output should start with "SUCCESS:"
+    End
+  End
+
+  Context 'control characters in cmd'
+    It 'rejects cmd with newline character'
+      When call validate_app_format "$(printf 'git\nmalicious')|App||"
+      The status should be failure
+      The line 1 of output should start with "ERROR:"
+      The line 1 of output should include "Invalid command name contains control characters"
+      The stderr should include "Invalid command name"
+      The stderr should include "contains control characters"
+    End
+
+    It 'rejects cmd with carriage return'
+      When call validate_app_format "$(printf 'git\rmalicious')|App||"
+      The status should be failure
+      The line 1 of output should start with "ERROR:"
+      The line 1 of output should include "Invalid command name contains control characters"
+      The stderr should include "Invalid command name"
+      The stderr should include "contains control characters"
+    End
+
+    It 'rejects cmd with tab character'
+      When call validate_app_format "$(printf 'git\tmalicious')|App||"
+      The status should be failure
+      The line 1 of output should start with "ERROR:"
+      The line 1 of output should include "Invalid command name contains control characters"
+      The stderr should include "Invalid command name"
+      The stderr should include "contains control characters"
+    End
+  End
+
+  Context 'control characters in app_name'
+    It 'rejects app_name with newline character'
+      When call validate_app_format "git|$(printf 'App\nName')||"
+      The status should be failure
+      The line 1 of output should start with "ERROR:"
+      The line 1 of output should include "Invalid app name contains control characters"
+      The stderr should include "Invalid app_name"
+      The stderr should include "contains control characters"
+    End
+
+    It 'rejects app_name with carriage return'
+      When call validate_app_format "git|$(printf 'App\rName')||"
+      The status should be failure
+      The line 1 of output should start with "ERROR:"
+      The line 1 of output should include "Invalid app name contains control characters"
+      The stderr should include "Invalid app_name"
+      The stderr should include "contains control characters"
+    End
+
+    It 'rejects app_name with tab character'
+      When call validate_app_format "git|$(printf 'App\tName')||"
+      The status should be failure
+      The line 1 of output should start with "ERROR:"
+      The line 1 of output should include "Invalid app name contains control characters"
+      The stderr should include "Invalid app_name"
+      The stderr should include "contains control characters"
+    End
+  End
+
+  Context 'error message clarity'
+    It 'distinguishes cmd vs app_name in error messages'
+      When call validate_app_format "$(printf 'bad\ncmd')|GoodApp||"
+      The status should be failure
+      The line 1 of output should start with "ERROR:"
+      The line 1 of output should include "Invalid command name contains control characters"
+      The stderr should include "command name"
+      The stderr should not include "app_name"
+    End
+
+    It 'reports malicious input context'
+      When call validate_app_format "git|$(printf 'Bad\nApp')||"
+      The status should be failure
+      The line 1 of output should start with "ERROR:"
+      The line 1 of output should include "Invalid app name contains control characters"
+      The stderr should include "malicious input or data corruption"
     End
   End
 End

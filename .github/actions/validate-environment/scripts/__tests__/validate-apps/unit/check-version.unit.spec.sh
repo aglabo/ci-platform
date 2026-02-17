@@ -73,4 +73,70 @@ Describe 'check_version()'
       The line 1 of output should equal "SUCCESS"
     End
   End
+
+  Context 'single component versions'
+    It 'returns SUCCESS for single component version meeting minimum'
+      When call check_version "3" "2"
+      The status should be success
+      The line 1 of output should equal "SUCCESS"
+    End
+
+    It 'returns FAILURE for single component version below minimum'
+      When call check_version "1" "2"
+      The status should be failure
+      The line 1 of output should equal "FAILURE"
+    End
+
+    It 'returns SUCCESS when single component versions are equal'
+      When call check_version "5" "5"
+      The status should be success
+      The line 1 of output should equal "SUCCESS"
+    End
+
+    It 'returns SUCCESS comparing X.Y.Z version with single component min_ver'
+      When call check_version "2.30.0" "2"
+      The status should be success
+      The line 1 of output should equal "SUCCESS"
+    End
+  End
+
+  Context 'four component versions'
+    It 'returns SUCCESS for four component version meeting minimum'
+      When call check_version "2.30.1.5" "2.30.1.4"
+      The status should be success
+      The line 1 of output should equal "SUCCESS"
+    End
+
+    It 'returns FAILURE for four component version below minimum'
+      When call check_version "2.30.1.3" "2.30.1.4"
+      The status should be failure
+      The line 1 of output should equal "FAILURE"
+    End
+
+    It 'returns SUCCESS when four component versions are equal'
+      When call check_version "2.30.1.4" "2.30.1.4"
+      The status should be success
+      The line 1 of output should equal "SUCCESS"
+    End
+  End
+
+  Context 'zero version boundaries'
+    It 'returns SUCCESS for 0.0.1 meeting minimum 0.0.0'
+      When call check_version "0.0.1" "0.0.0"
+      The status should be success
+      The line 1 of output should equal "SUCCESS"
+    End
+
+    It 'returns SUCCESS when both versions are 0.0.0'
+      When call check_version "0.0.0" "0.0.0"
+      The status should be success
+      The line 1 of output should equal "SUCCESS"
+    End
+
+    It 'returns FAILURE for 0.0.0 below minimum 0.0.1'
+      When call check_version "0.0.0" "0.0.1"
+      The status should be failure
+      The line 1 of output should equal "FAILURE"
+    End
+  End
 End
