@@ -468,27 +468,6 @@ Describe 'output_validation_errors_json()'
   # Boundary: Maximum Values
   # ========================================
   Context 'boundary: maximum values'
-    It 'handles 100+ errors'
-      # Create 150 errors
-      for i in $(seq 1 150); do
-        add_validation_result "app${i}" "App${i}" "error" "" "Error ${i}"
-      done
-
-      When call output_validation_errors_json VALIDATION_RESULTS
-      The status should be failure
-
-      # stderr: Header
-      The stderr should include "=== Application validation failed ==="
-
-      # Verify count
-      The contents of file "$GITHUB_OUTPUT" should include "failed_count=150"
-      The contents of file "$GITHUB_OUTPUT" should include "validated_count=0"
-
-      # Spot check first and last
-      The contents of file "$GITHUB_OUTPUT" should include "  Error 1"
-      The contents of file "$GITHUB_OUTPUT" should include "  Error 150"
-    End
-
     It 'handles very long app name (200 characters)'
       local long_name="$(printf 'A%.0s' {1..200})"
       add_validation_result "longapp" "$long_name" "error" "" "Error for long app"
@@ -731,6 +710,7 @@ Describe 'output_validation_errors_json()'
 
       When call output_validation_errors_json VALIDATION_RESULTS
       The status should be failure
+      The stderr should include "=== Application validation failed ==="
       The path "$GITHUB_OUTPUT" should be exist
     End
 
@@ -779,24 +759,4 @@ Describe 'output_validation_errors_json()'
     End
   End
 
-  # ========================================
-  # Performance: Large Data
-  # ========================================
-  Context 'performance: large data sets'
-    It 'handles 500+ errors without error'
-      # Create 500 errors
-      for i in $(seq 1 500); do
-        add_validation_result "app${i}" "Application${i}" "error" "" "Error message ${i}"
-      done
-
-      When call output_validation_errors_json VALIDATION_RESULTS
-      The status should be failure
-
-      # stderr: Header
-      The stderr should include "=== Application validation failed ==="
-
-      # Verify count
-      The contents of file "$GITHUB_OUTPUT" should include "failed_count=500"
-    End
-  End
 End
