@@ -36,6 +36,22 @@ Describe 'validate-git-runner.sh - Architecture Unit'
         The output should eq "linux"
       End
     End
+
+    Context 'with Windows MINGW64 string'
+      It 'normalizes to lowercase'
+        When call detect_os "MINGW64_NT-10.0-19045"
+        The status should be success
+        The output should eq "mingw64_nt-10.0-19045"
+      End
+    End
+
+    Context 'with Cygwin string'
+      It 'normalizes to lowercase'
+        When call detect_os "CYGWIN_NT-10.0"
+        The status should be success
+        The output should eq "cygwin_nt-10.0"
+      End
+    End
   End
 
   # ============================================================================
@@ -56,6 +72,22 @@ Describe 'validate-git-runner.sh - Architecture Unit'
         When call detect_architecture "aarch64"
         The status should be success
         The output should eq "aarch64"
+      End
+    End
+
+    Context 'with 32bit ARM argument'
+      It 'returns arm'
+        When call detect_architecture "arm"
+        The status should be success
+        The output should eq "arm"
+      End
+    End
+
+    Context 'with 32bit x86 argument'
+      It 'returns i686'
+        When call detect_architecture "i686"
+        The status should be success
+        The output should eq "i686"
       End
     End
   End
