@@ -99,5 +99,31 @@ Describe 'validate-git-runner.sh - Environment Unit'
         The status should be success
       End
     End
+
+    Context 'special value types'
+      AfterEach 'cleanup_special_type_var'
+
+      cleanup_special_type_var() {
+        unset TEST_VAR
+      }
+
+      It 'returns success when variable is space-only (non-empty)'
+        export TEST_VAR=" "
+        When call check_env_var "TEST_VAR"
+        The status should be success
+      End
+
+      It 'returns success for numeric value'
+        export TEST_VAR="42"
+        When call check_env_var "TEST_VAR"
+        The status should be success
+      End
+
+      It 'returns success when value with spaces matches expected'
+        export TEST_VAR="hello world"
+        When call check_env_var "TEST_VAR" "hello world"
+        The status should be success
+      End
+    End
   End
 End
