@@ -10,7 +10,7 @@ title = "Gitleaks config"
 
 [[allowlists]]
 paths = [
-    "'''node_modules/.*'''"
+	"'''node_modules/.*'''"
 ]
 
 level = "warn"

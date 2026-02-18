@@ -41,6 +41,13 @@ $~*
 .env*
 .env.*
 
+## Development tools (installed locally)
+.tools/
+
+## Worktrees
+# worktree base dir
+.worktrees/
+
 ## AI generated files
 
 ## Coding AI depended
@@ -63,10 +70,6 @@ temp/
 tmp/
 **/temp/
 **/tmp/
-
-
-## Development tools (installed locally)
-.tools/
 
 # lock file
 pnpm*lock.yaml
