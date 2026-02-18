@@ -23,6 +23,7 @@ GitHub Actions と Git Hooks を統合した品質管理テンプレートを提
 - 明確な指示→質問せず最もシンプルなアプローチで実行
 
 **IDD Framework スキル** (Issue/PR/コミット管理は必ずスキル経由):
+
 参照先: `C:\Users\atsushifx\.claude\plugins\marketplaces\claude-idd-framework-marketplace`
 
 - Issue 作成: `/claude-idd-framework:\idd\issue:new`
@@ -40,6 +41,7 @@ GitHub Actions と Git Hooks を統合した品質管理テンプレートを提
 - gitleaks/secretlint 除外設定の追加
 
 **保護領域** (変更時は理由明記):
+
 `configs/gitleaks.toml`, `configs/secretlint.config.yaml`, `lefthook.yml`, `.github/workflows/*.yml`
 
 ## 技術スタック
@@ -50,7 +52,7 @@ GitHub Actions と Git Hooks を統合した品質管理テンプレートを提
 
 **ディレクトリ構成**:
 
-```
+```bash
 .github/workflows/      # GitHub Actions ワークフロー（ci-scan-all.yml）
 .github/actions/        # Composite Actions（validate-environment）
 configs/                # 品質ツール設定ファイル
