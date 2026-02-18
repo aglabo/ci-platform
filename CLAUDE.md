@@ -2,276 +2,114 @@
 
 <!-- textlint-disable ja-technical-writing/max-comma -->
 
-## コア原則 (第1層)
+## プロジェクト概要
 
-### プロジェクト哲学
+**ミッション**: OSS 開発のための包括的 CI/品質管理基盤テンプレート。
 
-**ミッション**: OSS 開発のための包括的 CI/品質管理基盤を提供します。
-
-このプロジェクトは、GitHub Actions と Git Hooks を統合した品質管理テンプレートを提供します。
+GitHub Actions と Git Hooks を統合した品質管理テンプレートを提供する。
 
 **コア機能**:
 
-- ローカル品質管理: lefthook による Git Hook 統合（gitleaks/secretlint/commitlint/AI 生成コミットメッセージ）
+- ローカル品質管理: lefthook（gitleaks/secretlint/commitlint/AI コミットメッセージ）
 - CI/CD 基盤: GitHub Actions 再利用可能ワークフロー（actionlint/ghalint/gitleaks）
-- ドキュメント品質: textlint/markdownlint/dprint による自動検証
-- 開発環境: セットアップスクリプトと ShellSpec テストフレームワーク
+- ドキュメント品質: textlint/markdownlint/dprint
+- テストフレームワーク: ShellSpec（Bash）
 
-### AI協働の絶対ルール
+## AI協働ルール
 
 **即座に実行**:
 
 - 特定箇所の編集指示→即実行（探索不要）
 - 明確な指示→質問せず最もシンプルなアプローチで実行
-- テスト実行→必ず `./scripts/run-specs.sh` を使用（`shellspec` 直接実行禁止）
 
-**IDD Framework スキル使用**:
+**IDD Framework スキル** (Issue/PR/コミット管理は必ずスキル経由):
+参照先: `C:\Users\atsushifx\.claude\plugins\marketplaces\claude-idd-framework-marketplace`
 
-Issue/PR/コミット管理には必ず IDD Framework スキルを使用:
-
-- Issue 作成: `/idd:issue:new` (タイトル指定で自動生成)
-- Issue 編集: `/idd:issue:edit` (対話的編集)
-- Issue 一覧: `/idd:issue:list` (選択可能)
-- Issue Push: `/idd:issue:push` (GitHub 登録)
-- PR 作成: `/idd-pr new` (pr-generator エージェント起動)
-- PR Push: `/idd-pr push` (GitHub PR 作成)
-- コミット: `/idd-commit-message` (Conventional Commits 準拠)
-
-詳細は以下ディレクトリ配下を参照してください。
-`C:\Users\atsushifx\.claude\plugins\marketplaces\claude-idd-framework-marketplace\.claude\commands\`
+- Issue 作成: `/claude-idd-framework:\idd\issue:new`
+- Issue 編集: `/claude-idd-framework:\idd\issue:edit`
+- Issue 一覧: `/claude-idd-framework:\idd\issue:list`
+- Issue Push: `/claude-idd-framework:\idd\issue:push`
+- PR 作成/Push: `/claude-idd-framework:idd-pr new` / `/claude-idd-framework:idd-pr push`
+- コミットメッセージ: `/claude-idd-framework:idd-commit-message`
 
 **絶対禁止**:
 
-- テストファイル (`spec/**/*_spec.sh`) の変更（明示的指示がない限り）
-- Issue/PR 作成時のコード実装（ドキュメント作成のみ）
-- IDD スキル使用せずに手動で Issue/PR/コミット作成
-- セキュリティパーミッション (`contents: write`, `id-token: write`) の安易な追加
-- gitleaks/secretlint 除外設定の追加（真に必要な場合のみ）
+- テストファイル (`__tests__/**/*.spec.sh`) の変更（明示的指示がない限り）
+- IDD スキルを使わずに手動で Issue/PR/コミット作成
+- `contents: write`、`id-token: write` の安易な追加
+- gitleaks/secretlint 除外設定の追加
 
 **保護領域** (変更時は理由明記):
+`configs/gitleaks.toml`, `configs/secretlint.config.yaml`, `lefthook.yml`, `.github/workflows/*.yml`
 
-- `configs/gitleaks.toml`
-- `configs/secretlint.config.yaml`
-- `lefthook.yml`
-- `.github/workflows/*.yml`
+## 技術スタック
 
-### ShellSpec固有ルール
+**コア**: GitHub Actions (再利用可能ワークフロー), lefthook (Git Hook 統合), ShellSpec (Bash テスト)
 
-**構文**:
-
-- グロブパターン使用（正規表現ではない）
-- `#|` は ShellSpec 固有コメント
-- `.shellspecrc` 設定必ず確認
-
-**テスト修正禁止**:
-
-- ソースコード修正でテスト通過させる
-- テストは変更しない
-- グローバル配列使用時は BeforeEach/AfterEach による setup/teardown 必須
-
-**テストパターン**:
-
-```bash
-#shellcheck shell=sh
-
-Describe 'script-name.sh'
-  Include ../script-name.sh
-
-  Describe 'function_name()'
-    Context 'with valid input'
-      It 'describes expected behavior'
-        When call function_name "arg"
-        The output should eq "expected"
-        The status should be success
-      End
-    End
-  End
-End
-```
-
-**グローバル配列の扱い**:
-
-```bash
-BeforeEach 'setup_globals'
-AfterEach 'teardown_globals'
-
-setup_globals() {
-  declare -a MY_ARRAY=()
-}
-
-teardown_globals() {
-  unset MY_ARRAY
-}
-```
-
-### GitHub Actions必須パターン
-
-**Validation Dependencies**:
-
-```yaml
-if: steps.previous_step.outcome == 'success'  # 正しい
-if: steps.previous_step.outputs.status != 'error'  # 禁止（bypass可能）
-```
-
-**Note**: これは将来の Composite Actions 実装時の設計原則です。
-
-## 技術コンテキスト (第2層)
-
-### 技術スタック
-
-```yaml
-コア技術:
-  - GitHub Actions (再利用可能ワークフロー)
-  - lefthook (Git Hook統合)
-  - ShellSpec (Bashテストフレームワーク)
-
-品質ツール:
-  - actionlint, ghalint (Actions検証)
-  - gitleaks, secretlint (シークレット検出)
-  - textlint, markdownlint (ドキュメント校正)
-  - dprint (フォーマッター)
-  - commitlint (コミットメッセージ検証)
-
-将来の拡張:
-  - Composite Actions開発
-```
-
-### アーキテクチャ
-
-**アーキテクチャ構成**:
-
-**現在の実装**:
-
-1. **GitHub Actionsワークフロー**:
-   - `ci-scan-all.yml` - 外部再利用可能ワークフローを呼び出し（actionlint/ghalint/gitleaks）
-   - `aglabo/.github` リポジトリのワークフローを活用
-
-2. **Git Hook統合** (lefthook):
-   - `pre-commit`: gitleaks, secretlint
-   - `prepare-commit-msg`: AI 自動生成（Claude/GPT 対応）
-   - `commit-msg`: commitlint 検証
-
-3. **開発ツール**:
-   - `setup-dev-env.sh`: lefthook + ShellSpec 環境構築
-   - `prepare-commit-msg.sh`: AI 駆動コミットメッセージ生成
-   - `run-specs.sh`: ShellSpec テスト実行
+**品質ツール**: actionlint, ghalint, gitleaks, secretlint, textlint, markdownlint, dprint, commitlint
 
 **ディレクトリ構成**:
 
-```bash
-.github/workflows/        # GitHub Actionsワークフロー
-configs/                  # 品質ツール設定ファイル
-scripts/                  # 開発環境セットアップスクリプト
-.claude/agents/           # AI協働エージェント設定
+```
+.github/workflows/      # GitHub Actions ワークフロー（ci-scan-all.yml）
+.github/actions/        # Composite Actions（validate-environment）
+configs/                # 品質ツール設定ファイル
+scripts/                # 開発スクリプト（run-specs/setup/prepare-commit-msg）
+.serena/memories/       # Serena MCP 技術メモリー
 ```
 
-### 開発ワークフロー
-
-**セットアップ**:
+## 主要コマンド
 
 ```bash
-./scripts/setup-dev-env.sh  # 開発環境セットアップ（lefthook + ShellSpec）
-```
+# 開発環境セットアップ
+bash ./scripts/setup-dev-env.sh           # lefthook + ShellSpec インストール
 
-**コミットフロー**:
+# テスト実行（shellspec 直接呼び出し禁止、run-specs.sh 経由のみ）
+bash ./scripts/run-specs.sh               # 全テスト
+bash ./scripts/run-specs.sh --focus       # フォーカスモード
+bash ./scripts/run-specs.sh scripts/__tests__  # ディレクトリ指定
+pnpm test:sh                              # pnpm 経由
 
-```bash
-git add .
-git commit
-  → [pre-commit] gitleaks + secretlint
-  → [prepare-commit-msg] AI自動生成（Claude/GPT対応）
-  → [commit-msg] commitlint検証
-```
+# ドキュメント検証
+pnpm run lint:text                        # textlint 検証
+pnpm run lint:text -- --fix               # 自動修正
+dprint fmt                                # フォーマット
 
-**ブランチ戦略**: `main` (安定), `releases` (リリース), `feature/*`, `fix/*`, `docs/*`, `refactor/*`, `test/*`
-
-**コミット形式**: Conventional Commits (`feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`, `ci`)
-
-**テスト実行**:
-
-```bash
-# すべてのテストを実行
-./scripts/run-specs.sh
-
-# 特定のテストファイルを実行
-./scripts/run-specs.sh scripts/__tests__/greeting.spec.sh
-
-# フォーカスモード（f-prefixed examples のみ）
-./scripts/run-specs.sh --focus
-```
-
-**テスト構造**:
-
-- テストファイルの配置: `<script_dir>/__tests__/<name>.spec.sh`
-- 設定ファイル: `configs/.shellspecrc`
-- インポートパターン: `Include ../script.sh` (相対パス)
-- グローバル配列使用時: `BeforeEach`/`AfterEach` による setup/teardown 必須
-
-### 主要コマンド
-
-```bash
-# ShellSpec テスト実行
-./scripts/run-specs.sh                    # すべてのテストを実行
-./scripts/run-specs.sh --focus            # フォーカスモード（focused examples のみ）
-./scripts/run-specs.sh scripts/__tests__  # 明示的にディレクトリ指定
-pnpm test:sh                              # npm script 経由
-
-# CI検証
+# CI 検証（ローカル）
 actionlint -config-file ./configs/actionlint.yaml .github/workflows/*.yml
 ghalint run --config ./configs/ghalint.yaml
 gitleaks detect --source . --verbose
 
-# ドキュメント検証
-pnpm run lint:text  # textlint によるドキュメント品質チェック
-pnpm run lint:text -- --fix  # 自動修正
-
-# フォーマット
-dprint fmt
+# トラブルシューティング
+lefthook uninstall && lefthook install    # lefthook 再設定
 ```
 
-### コードスタイル
+## コーディング規約
 
-**Actions設計**:
+**GitHub Actions**:
 
+- `permissions` セクション必須（最小権限: `contents: read`）
+- Validation: `if: steps.X.outcome == 'success'`（`outputs.status != 'error'` は禁止）
 - 入力パラメータは明示的デフォルト値設定
-- セキュリティパーミッション最小限
-- エラーメッセージは具体的に
 
-**YAML**:
+**コミット形式**: Conventional Commits（ヘッダー 72 文字以内）
 
-- `permissions` セクション必須
-- 依存関係は `needs` で明示
+- 型: `feat`, `fix`, `docs`, `test`, `refactor`, `perf`, `ci`, `config`, `release`, `merge`, `build`, `style`, `deps`, `chore`
 
-**日本語**:
+**ブランチ戦略**: `main` (安定), `releases` (リリース), `feature/*`, `fix/*`, `docs/*`, `refactor/*`, `test/*`
 
-- 一文 100 文字以内（textlint 検証）
-- 技術用語統一
+**テスト配置**: `<script_dir>/__tests__/<name>.<tier>.spec.sh`
 
-## ドキュメント参照 (第3層)
+- ティア: `unit`, `functional`, `integration`, `e2e`
+- インポートパターン: `Include ../script.sh`（相対パス）
+- グローバル配列使用時: `BeforeEach`/`AfterEach` による setup/teardown 必須
 
-### 詳細仕様
+## ドキュメント参照
 
-- `README.md` / `README.ja.md` - プロジェクト概要とセットアップガイド
-- `.github/SECURITY.md` - セキュリティポリシー
-- `.claude/agents/*.md` - AI 協働エージェント設定
+- `README.md` / `README.ja.md` - プロジェクト概要・セットアップガイド
+- `.serena/memories/` - Serena MCP 技術メモリー（構造・テスト・スクリプト・設定）
 - `configs/*` - 品質ツール設定ファイル
 - `lefthook.yml` - Git Hook 統合設定
+- `.claude/agents/*.md` - AI エージェント設定
 
-**Note**: `.serena/memories/` および `CONTRIBUTING.md` は未作成（作成推奨）
-
-### トラブルシューティング
-
-```bash
-# lefthook再設定
-lefthook uninstall && lefthook install
-
-# AI CLIデバッグ
-scripts/prepare-commit-msg.sh
-```
-
-### 情報探索優先順位
-
-1. この CLAUDE.md（協働ルール、禁止事項）
-2. Actions README（パラメータ仕様）
-3. Serena メモリー（詳細技術情報）
-4. CONTRIBUTING（開発プロセス）
+**情報探索優先順位**: CLAUDE.md → `.serena/memories/` → `README.md` → `configs/`
