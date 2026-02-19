@@ -27,14 +27,17 @@
 
 set -euo pipefail
 
-# Global variables for validation results
+# ============================================================================
+# Section 1: GLOBAL VARIABLES
+# ============================================================================
+
 GITHUB_OUTPUT="${GITHUB_OUTPUT:-/dev/null}"
 ACTIONS_TYPE="${ACTIONS_TYPE:-read}"
 TOKEN_SCOPES=""       # GitHub API から取得したトークンスコープ
 MISSING_SCOPES=""     # 不足しているスコープのリスト
 
 # ============================================================================
-# Helper Functions
+# Section 2: UTILITY FUNCTIONS
 # ============================================================================
 
 # @description Check environment variable existence and value
@@ -52,6 +55,28 @@ check_env_var() {
 
   # If expected value provided, check if it matches
   [ -z "$expected_value" ] || [ "$var_value" = "$expected_value" ] || return 1
+
+  return 0
+}
+
+# ============================================================================
+# Section 3: GITHUB API LAYER
+# ============================================================================
+
+# @description Call GitHub API and retrieve response headers
+# @arg $1 string API endpoint path (default: "/")
+# @arg $2 string Output file path for response headers
+# @exitcode 0 API call succeeded
+# @exitcode 1 Network error or API failure
+call_github_api() {
+  local endpoint="${1:-/}"
+  local output_file="$2"
+
+  if ! curl -fsSL -I \
+       -H "Authorization: token ${GITHUB_TOKEN}" \
+       "https://api.github.com${endpoint}" > "$output_file" 2>&1; then
+    return 1
+  fi
 
   return 0
 }
@@ -113,26 +138,8 @@ check_required_scopes() {
   return "$has_missing"
 }
 
-# @description Call GitHub API and retrieve response headers
-# @arg $1 string API endpoint path (default: "/")
-# @arg $2 string Output file path for response headers
-# @exitcode 0 API call succeeded
-# @exitcode 1 Network error or API failure
-call_github_api() {
-  local endpoint="${1:-/}"
-  local output_file="$2"
-
-  if ! curl -fsSL -I \
-       -H "Authorization: token ${GITHUB_TOKEN}" \
-       "https://api.github.com${endpoint}" > "$output_file" 2>&1; then
-    return 1
-  fi
-
-  return 0
-}
-
 # ============================================================================
-# Validation Functions
+# Section 4: VALIDATION FUNCTIONS
 # ============================================================================
 
 # @description Validate GitHub token is available
@@ -222,7 +229,7 @@ validate_token_scopes() {
 }
 
 # ============================================================================
-# Main Orchestrator Function
+# Section 5: MAIN ORCHESTRATOR
 # ============================================================================
 
 # @description Main permissions validation orchestrator
@@ -322,7 +329,7 @@ validate_permissions() {
 }
 
 # ============================================================================
-# Script Entry Point
+# Section 6: SCRIPT ENTRY POINT
 # ============================================================================
 
 # Only execute when script is run directly (not when sourced for testing)
