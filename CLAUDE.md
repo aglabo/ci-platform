@@ -72,17 +72,18 @@ scripts/                # 開発スクリプト（run-specs/setup/prepare-commit
 **正しい実行パターン**（Bash tool からテスト結果を確認する唯一の方法）:
 
 ```bash
-# 1. ファイルにリダイレクトして実行
+# 1. mktemp で一意ファイルを作成してテスト実行（Unix/Windows パスを両方出力）
+_spec_out=$(mktemp)
 PROJECT_ROOT="/c/Users/atsushifx/workspaces/develop/ci-platform" \
 bash "/c/Users/atsushifx/workspaces/develop/ci-platform/scripts/run-specs.sh" \
-  "<relative-spec-path>" --format tap --no-color \
-  > "${TEMP}/shellspec-out.txt" 2>&1
+  "<relative-spec-path>" --format tap --no-color > "$_spec_out" 2>&1
+echo "exit:$?"; echo "win:$(cygpath -w "$_spec_out")"; echo "unix:$_spec_out"
 
-# 2. Read ツールで結果を確認
-# Read: W:\temp\shellspec-out.txt
+# 2. Read ツールで結果を確認（win: 行の Windows パスを使用）
+# Read: W:\temp\tmp.XXXXXXXXXX
 
-# 3. 確認後に削除
-rm "${TEMP}/shellspec-out.txt"
+# 3. 確認後に削除（unix: 行の Unix パスを使用）
+rm /w/temp/tmp.XXXXXXXXXX
 ```
 
 **確認ポイント**: `ok N - ...` が全件並び、`not ok` がなければ PASS。
