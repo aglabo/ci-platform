@@ -60,6 +60,35 @@ scripts/                # 開発スクリプト（run-specs/setup/prepare-commit
 .serena/memories/       # Serena MCP 技術メモリー
 ```
 
+## Claude Code から ShellSpec を実行する方法
+
+**Bash tool の制約（Windows 環境）**:
+
+- `cd` を使うと後続コマンドが失敗する → **`cd` 禁止**
+- `C:/...` 形式のパスは shellspec が `C.` と誤解釈する → **Unix 形式 `/c/...` を使用**
+- ShellSpec のデフォルト出力は TTY に直接書き込む → `2>&1 | cat` では捕捉不可
+- `pnpm run test:sh` 経由ではサブプロセスの出力が見えない
+
+**正しい実行パターン**（Bash tool からテスト結果を確認する唯一の方法）:
+
+```bash
+# 1. ファイルにリダイレクトして実行
+PROJECT_ROOT="/c/Users/atsushifx/workspaces/develop/ci-platform" \
+bash "/c/Users/atsushifx/workspaces/develop/ci-platform/scripts/run-specs.sh" \
+  "<relative-spec-path>" --format tap --no-color \
+  > "${TEMP}/shellspec-out.txt" 2>&1
+
+# 2. Read ツールで結果を確認
+# Read: W:\temp\shellspec-out.txt
+
+# 3. 確認後に削除
+rm "${TEMP}/shellspec-out.txt"
+```
+
+**確認ポイント**: `ok N - ...` が全件並び、`not ok` がなければ PASS。
+
+---
+
 ## 主要コマンド
 
 ```bash
