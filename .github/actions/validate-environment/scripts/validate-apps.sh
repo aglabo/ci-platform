@@ -40,10 +40,6 @@
 #   **Outputs (machine-readable):**
 #   - status: "success" or "error"
 #   - message: Human-readable summary
-#   - validated_apps: Comma-separated list of validated app names
-#   - validated_count: Number of successfully validated apps
-#   - failed_apps: Comma-separated list of failed app names (on error)
-#   - failed_count: Number of failed apps
 #
 # @exitcode 0 Application validation successful
 # @exitcode 1 Application validation failed (one or more apps missing or invalid)
@@ -166,12 +162,16 @@ extract_version_by_regex() {
 # Note: Safe extraction using sed only - no eval, prefix-typed extractors only
 #
 # Supported formats (prefix-typed):
+#   auto            - Explicit: extract semver (X.Y or X.Y.Z)
 #   field:N         - Extract Nth field (space-delimited, 1-indexed)
 #   regex:PATTERN   - sed -E 's/PATTERN/\1/' with capture group
-#   (empty)         - Default: extract semver (X.Y or X.Y.Z)
+#   (empty)         - Default: same as auto (extract semver)
 #
 # Examples:
 #   extract_version_number "git version 2.52.0" "field:3"
+#   → 2.52.0
+#
+#   extract_version_number "git version 2.52.0" "auto"
 #   → 2.52.0
 #
 #   extract_version_number "unknown" ""
@@ -181,19 +181,9 @@ extract_version_number() {
   local full_version="$1"
   local version_extractor="$2"
 
-  # Default: extract semver (X.Y or X.Y.Z) if extractor is empty
+  # Default: treat empty extractor as "auto" (extract semver)
   if [ -z "$version_extractor" ]; then
-    local extracted
-    extracted=$(echo "$full_version" | grep -oE '[0-9]+\.[0-9]+(\.[0-9]+)?' | head -1)
-
-    if [ -z "$extracted" ]; then
-      echo "ERROR"
-      echo "::error::No semver pattern found in: $full_version"
-      return 1
-    fi
-
-    echo "$extracted"
-    return 0
+    version_extractor="auto"
   fi
 
   # Parse extractor format: method:argument
@@ -201,6 +191,21 @@ extract_version_number() {
   local argument="${version_extractor#*:}"
 
   case "$method" in
+    auto)
+      # Extract semver (X.Y or X.Y.Z)
+      local extracted
+      extracted=$(echo "$full_version" | grep -oE '[0-9]{1,3}\.[0-9]+(\.[0-9]+)?' | head -1)
+
+      if [ -z "$extracted" ]; then
+        echo "ERROR"
+        echo "::error::No semver pattern found in: $full_version"
+        return 1
+      fi
+
+      echo "$extracted"
+      return 0
+      ;;
+
     field)
       # Extract Nth field (space-delimited)
       if [[ ! "$argument" =~ ^[0-9]+$ ]]; then
@@ -222,7 +227,7 @@ extract_version_number() {
 
     *)
       echo "ERROR"
-      echo "::error::Unknown extraction method: $method (expected: field, regex, or empty)"
+      echo "::error::Unknown extraction method: $method (expected: auto, field, or regex)"
       return 1
       ;;
   esac
@@ -503,37 +508,17 @@ check_gh_authentication() {
 }
 
 # @description Handle validation error (fail-fast: immediate output and return 1)
-# @arg $1 string Command name
-# @arg $2 string Application name
-# @arg $3 string Version string (empty if version unavailable)
-# @arg $4 string Error message
+# @arg $1 string Error message
 # @exitcode 1 Always (fail-fast mode)
-# @global VALIDATION_RESULTS array Count of successfully validated apps so far
 # @global GITHUB_OUTPUT string Path to GitHub Actions output file
 handle_validation_error() {
-  local cmd="$1"
-  local app_name="$2"
-  local version="$3"
-  local error_message="$4"
+  local error_message="$1"
 
   echo "::error::${error_message}" >&2
   {
     echo "status=error"
     echo "message=${error_message}"
-    echo "failed_apps=${app_name}"
-    echo "failed_count=1"
-    echo "validated_count=${#VALIDATION_RESULTS[@]}"
   } >> "$(out_status)"
-
-  # Append JSON error entry to structured results array
-  local json_entry
-  json_entry=$(jq -n \
-    --arg status "error" \
-    --arg app "$app_name" \
-    --arg version "$version" \
-    --arg message "$error_message" \
-    '{"status": $status, "app": $app, "version": $version, "message": $message}')
-  VALIDATION_RESULTS+=("$json_entry")
   return 1
 }
 
@@ -608,7 +593,7 @@ initialize_apps_list() {
 # @description Output validation success to GITHUB_OUTPUT
 # @exitcode 0 Always returns success
 # @global VALIDATION_RESULTS array JSON-structured validation results
-# @set GITHUB_OUTPUT Writes status=success, message, validated_apps, validated_count, failed_count=0
+# @set GITHUB_OUTPUT Writes status=success, message
 output_success() {
   echo "=== Application validation passed ===" >&2
 
@@ -617,10 +602,8 @@ output_success() {
   results_json=$(printf '%s\n' "${VALIDATION_RESULTS[@]}" \
     | jq -s '[.[] | select(.status == "success")]')
 
-  local all_versions validated_apps_csv validated_count
+  local all_versions
   all_versions=$(printf '%s' "$results_json" | jq -r '.[] | "  " + .app + " " + .version')
-  validated_apps_csv=$(printf '%s' "$results_json" | jq -r '[.[].app] | join(",")')
-  validated_count=$(printf '%s' "$results_json" | jq -r 'length')
 
   {
     echo "status=success"
@@ -630,9 +613,6 @@ Applications validated:
 ${all_versions}
 MULTILINE_EOF
 HEREDOC
-    echo "validated_apps=${validated_apps_csv}"
-    echo "validated_count=${validated_count}"
-    echo "failed_count=0"
   } >> "$(out_status)"
 }
 
@@ -645,7 +625,7 @@ HEREDOC
 # @exitcode 0 All applications validated successfully
 # @exitcode 1 One or more applications failed validation (fail-fast mode)
 # @set VALIDATION_RESULTS Array of JSON-structured validation results
-# @set GITHUB_OUTPUT Writes status, message, validated_apps, validated_count, etc.
+# @set GITHUB_OUTPUT Writes status, message
 validate_apps() {
   local -a app_list=("$@")
 
@@ -662,14 +642,34 @@ EOF
     local format_output format_message
     if ! format_output=$(validate_app_format "$app_def"); then
       format_message="${format_output#ERROR:}"
-      handle_validation_error "$cmd" "$app_name" "" "$format_message" || return 1
+      local err_entry
+      err_entry=$(jq -n \
+        --arg status "error" \
+        --arg app "${app_name:-}" \
+        --arg version "" \
+        --argjson index "$VALIDATION_INDEX" \
+        '{"status": $status, "app": $app, "version": $version, "index": $index}')
+      VALIDATION_RESULTS+=("$err_entry")
+      VALIDATION_INDEX=$(( VALIDATION_INDEX + 1 ))
+      handle_validation_error "$format_message" || return 1
+      continue
     fi
 
     # Validate application exists (includes security check)
     local exists_output exists_message
     if ! exists_output=$(validate_app_exists "$cmd" "$app_name"); then
       exists_message="${exists_output#ERROR:}"
-      handle_validation_error "$cmd" "$app_name" "" "$exists_message" || return 1
+      local err_entry
+      err_entry=$(jq -n \
+        --arg status "error" \
+        --arg app "$app_name" \
+        --arg version "" \
+        --argjson index "$VALIDATION_INDEX" \
+        '{"status": $status, "app": $app, "version": $version, "index": $index}')
+      VALIDATION_RESULTS+=("$err_entry")
+      VALIDATION_INDEX=$(( VALIDATION_INDEX + 1 ))
+      handle_validation_error "$exists_message" || return 1
+      continue
     fi
 
     # Get version once (used for validate_app_version and JSON entry)
@@ -686,14 +686,34 @@ EOF
       fi
     else
       version_message="${version_output#ERROR:}"
-      handle_validation_error "$cmd" "$app_name" "$version" "$version_message" || return 1
+      local err_entry
+      err_entry=$(jq -n \
+        --arg status "error" \
+        --arg app "$app_name" \
+        --arg version "$version" \
+        --argjson index "$VALIDATION_INDEX" \
+        '{"status": $status, "app": $app, "version": $version, "index": $index}')
+      VALIDATION_RESULTS+=("$err_entry")
+      VALIDATION_INDEX=$(( VALIDATION_INDEX + 1 ))
+      handle_validation_error "$version_message" || return 1
+      continue
     fi
 
     # Perform tool-specific validation checks (e.g., gh auth check)
     local special_output special_message
     if ! special_output=$(validate_app_special "$cmd" "$app_name"); then
       special_message="${special_output#ERROR:}"
-      handle_validation_error "$cmd" "$app_name" "$version" "$special_message" || return 1
+      local err_entry
+      err_entry=$(jq -n \
+        --arg status "error" \
+        --arg app "$app_name" \
+        --arg version "$version" \
+        --argjson index "$VALIDATION_INDEX" \
+        '{"status": $status, "app": $app, "version": $version, "index": $index}')
+      VALIDATION_RESULTS+=("$err_entry")
+      VALIDATION_INDEX=$(( VALIDATION_INDEX + 1 ))
+      handle_validation_error "$special_message" || return 1
+      continue
     fi
 
     # Append JSON success entry to structured results array

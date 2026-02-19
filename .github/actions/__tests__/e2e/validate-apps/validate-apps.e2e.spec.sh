@@ -13,6 +13,7 @@ Describe 'main() - E2E'
   setup_test() {
     GITHUB_OUTPUT_FILE=$(mktemp)
     export GITHUB_OUTPUT="$GITHUB_OUTPUT_FILE"
+    _OUTPUT_FILE="$GITHUB_OUTPUT_FILE"
     VALIDATION_RESULTS=()
     VALIDATION_INDEX=0
     APPS=()
