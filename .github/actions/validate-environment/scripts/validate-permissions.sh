@@ -11,18 +11,21 @@
 # @brief Validate GitHub token permissions based on action requirements
 # @description
 #   Validates GitHub token permissions for different action types.
-#   Supports read (contents: read), commit (contents: write), and PR (contents: write + pull-requests: write) operations.
+#   Supports read (contents: read), commit (contents: write), and PR
+#   (contents: write + pull-requests: write) operations.
 #
 #   **Checks:**
 #   1. GITHUB_TOKEN existence (always)
-#   2. Token scopes based on action type (read, commit, or pr)
-#   3. OIDC permissions (optional, not used by this action)
+#   2. Write permissions via API execution probe (commit or pr)
+#      - Sends a POST request that will be rejected as 422 if permitted,
+#        or 403 if the token lacks the required permission.
+#      - No resources are actually created (invalid payload triggers 422).
 #
 # @exitcode 0 Permission validation successful
 # @exitcode 1 Permission validation failed
 #
 # @author   atsushifx
-# @version  1.0.0
+# @version  0.1.0
 # @license  MIT
 
 set -euo pipefail
@@ -31,14 +34,18 @@ set -euo pipefail
 # Section 1: GLOBAL VARIABLES
 # ============================================================================
 
-GITHUB_OUTPUT="${GITHUB_OUTPUT:-/dev/null}"
 ACTIONS_TYPE="${ACTIONS_TYPE:-read}"
-TOKEN_SCOPES=""       # GitHub API から取得したトークンスコープ
-MISSING_SCOPES=""     # 不足しているスコープのリスト
 
 # ============================================================================
 # Section 2: UTILITY FUNCTIONS
 # ============================================================================
+
+# @description Return GITHUB_OUTPUT path for grouped redirect
+# @stdout Path to GITHUB_OUTPUT (fallback: /dev/null)
+# @example { echo "status=success"; echo "message=OK"; } >> "$(out_status)"
+out_status() {
+  echo "${GITHUB_OUTPUT:-/dev/null}"
+}
 
 # @description Check environment variable existence and value
 # @arg $1 string Variable name to check
@@ -63,83 +70,116 @@ check_env_var() {
 # Section 3: GITHUB API LAYER
 # ============================================================================
 
-# @description Call GitHub API and retrieve response headers
-# @arg $1 string API endpoint path (default: "/")
-# @arg $2 string Output file path for response headers
-# @exitcode 0 API call succeeded
-# @exitcode 1 Network error or API failure
-call_github_api() {
-  local endpoint="${1:-/}"
-  local output_file="$2"
+# @description Send POST request to GitHub API and return HTTP status code only
+# @arg $1 string API endpoint path (e.g., "/repos/owner/repo/git/refs")
+# @arg $2 string JSON payload to send
+# @stdout HTTP status code (e.g., "422", "403", "201")
+# @exitcode 0 Always (HTTP errors indicated via stdout status code)
+github_api_post() {
+  local endpoint="$1"
+  local json_payload="$2"
 
-  if ! curl -fsSL -I \
-       -H "Authorization: token ${GITHUB_TOKEN}" \
-       "https://api.github.com${endpoint}" > "$output_file" 2>&1; then
-    return 1
-  fi
-
-  return 0
+  local http_status
+  http_status=$(curl -s -o /dev/null -w "%{http_status}" \
+    -X POST \
+    -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+    -H "Accept: application/vnd.github+json" \
+    -H "Content-Type: application/json" \
+    "https://api.github.com${endpoint}" \
+    --data "${json_payload}") || http_status="000"  # "000": Network error (curl failed)
+  echo "$http_status"
 }
 
-# @description Parse token scopes from GitHub API response headers
-# @arg $1 string Path to file containing curl response headers
-# @exitcode 0 X-OAuth-Scopes header found and parsed
-# @exitcode 1 Header not found or file does not exist
-# @set TOKEN_SCOPES Space-separated list of scopes from X-OAuth-Scopes header
-parse_oauth_scopes() {
-  local header_file="$1"
-
-  # Check if header file exists
-  if [ ! -f "$header_file" ]; then
-    return 1
+# @description Get the default branch for the current repository
+# @stdout Branch name
+# @exitcode 0 Always
+# Priority: GITHUB_REF_NAME → GET /repos API → fallback "main"
+get_default_branch() {
+  if [ -n "${GITHUB_REF_NAME:-}" ]; then
+    echo "${GITHUB_REF_NAME}"
+    return 0
   fi
 
-  # Extract X-OAuth-Scopes header value
-  local scopes_line
-  scopes_line=$(grep -i "^X-OAuth-Scopes:" "$header_file" 2>/dev/null || echo "")
+  local branch
+  branch=$(curl -s \
+    -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+    -H "Accept: application/vnd.github+json" \
+    "https://api.github.com/repos/${GITHUB_REPOSITORY}" \
+    | jq -r '.default_branch // empty' | tr -d '\r')
 
-  if [ -z "$scopes_line" ]; then
-    return 1
+  if [ -n "$branch" ]; then
+    echo "$branch"
+    return 0
   fi
 
-  # Extract scopes (remove header name, replace commas with spaces, trim whitespace)
-  TOKEN_SCOPES=$(echo "$scopes_line" | sed 's/^X-OAuth-Scopes://i' | sed 's/,/ /g' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | tr -s ' ')
-
-  return 0
-}
-
-# @description Check if all required scopes are present in TOKEN_SCOPES
-# @arg $@ list Required scope names to check
-# @exitcode 0 All required scopes are present
-# @exitcode 1 One or more scopes are missing
-# @set MISSING_SCOPES Space-separated list of missing scopes
-check_required_scopes() {
-  MISSING_SCOPES=""
-
-  # If TOKEN_SCOPES is empty, all scopes are missing
-  if [ -z "$TOKEN_SCOPES" ]; then
-    MISSING_SCOPES="$*"
-    return 1
-  fi
-
-  # Convert TOKEN_SCOPES to array-like string for checking
-  local has_missing=0
-  for required_scope in "$@"; do
-    # Check if scope exists in TOKEN_SCOPES (word boundary matching)
-    if ! echo " $TOKEN_SCOPES " | grep -q " $required_scope "; then
-      MISSING_SCOPES="${MISSING_SCOPES}${required_scope} "
-      has_missing=1
-    fi
-  done
-
-  # Trim trailing space from MISSING_SCOPES
-  MISSING_SCOPES=$(echo "$MISSING_SCOPES" | sed 's/[[:space:]]*$//')
-
-  return "$has_missing"
+  echo "main"
 }
 
 # ============================================================================
-# Section 4: VALIDATION FUNCTIONS
+# Section 4: PERMISSION PROBE
+# ============================================================================
+
+# @description Probe GitHub write permissions via API execution (no side effects)
+# @arg $1 string Operation type: "commit" or "pr"
+# @exitcode 0 Permission granted (HTTP 201/422/409 — API accepted the request)
+# @exitcode 1 Permission denied (HTTP 403/401) or unknown operation
+probe_github_write_permission() {
+  local operation="$1"
+  local owner_repo="${GITHUB_REPOSITORY}"
+  if [ -z "$owner_repo" ]; then
+    echo "::error::GITHUB_REPOSITORY is not set" >&2
+    return 1
+  fi
+  local http_status
+
+  case "$operation" in
+    commit)
+      local timestamp
+      timestamp=$(date +%s)
+      local payload
+      payload="{\"ref\": \"refs/heads/permission-probe-${timestamp}\", \"sha\": \"0000000000000000000000000000000000000000\"}"
+      http_status=$(github_api_post "/repos/${owner_repo}/git/refs" "$payload")
+      ;;
+    pr)
+      local timestamp
+      timestamp=$(date +%s)
+      local default_branch
+      default_branch=$(get_default_branch)
+      local payload
+      payload="{\"title\": \"permission-probe\", \"head\": \"permission-probe-${timestamp}\", \"base\": \"${default_branch}\"}"
+      http_status=$(github_api_post "/repos/${owner_repo}/pulls" "$payload")
+      ;;
+    *)
+      echo "::error::Unknown operation: ${operation}" >&2
+      return 1
+      ;;
+  esac
+
+  case "$http_status" in
+    403)
+      echo "::error::Permission denied (403): ${operation} permission not granted." >&2
+      return 1
+      ;;
+    422|409|201)
+      return 0  # Permission granted (API accepted; invalid payload caused rejection)
+      ;;
+    401)
+      echo "::error::Authentication failed (401). Check GITHUB_TOKEN validity." >&2
+      return 1
+      ;;
+    000) # Network error (curl failed)
+      echo "::error::Network error: unable to reach GitHub API (curl failed)." >&2
+      return 1
+      ;;
+    *)
+      echo "::error::Unexpected HTTP response: ${http_status}" >&2
+      return 1
+      ;;
+  esac
+}
+
+# ============================================================================
+# Section 5: VALIDATION FUNCTIONS
 # ============================================================================
 
 # @description Validate GitHub token is available
@@ -176,60 +216,8 @@ validate_id_token_permissions() {
   return 0
 }
 
-# @description Validate GitHub token has required scopes via API
-# @arg $@ list Required scope names (e.g., "repo" "contents")
-# @exitcode 0 All required scopes are present
-# @exitcode 1 API call failed, scopes missing, or network error
-# @set TOKEN_SCOPES Retrieved scopes from GitHub API
-# @set MISSING_SCOPES List of missing scopes (if any)
-# @stdout STATUS:message format (SUCCESS:... or ERROR:...)
-validate_token_scopes() {
-  local required_scopes=("$@")
-  local temp_header_file
-  local api_result parse_result
-
-  # Create temporary file for response headers
-  temp_header_file=$(mktemp)
-
-  # Use dedicated API call function
-  call_github_api "/" "$temp_header_file"
-  api_result=$?
-
-  if [ $api_result -ne 0 ]; then
-    rm -f "$temp_header_file"
-    echo "ERROR:GitHub API call failed"
-    return 1
-  fi
-
-  # Check for rate limit in response
-  if grep -qi "rate limit" "$temp_header_file"; then
-    rm -f "$temp_header_file"
-    echo "ERROR:GitHub API rate limit exceeded"
-    return 1
-  fi
-
-  # Parse scopes from response headers
-  parse_oauth_scopes "$temp_header_file"
-  parse_result=$?
-  rm -f "$temp_header_file"
-
-  if [ $parse_result -ne 0 ]; then
-    echo "ERROR:Failed to parse token scopes from API response"
-    return 1
-  fi
-
-  # Check if all required scopes are present
-  if ! check_required_scopes "${required_scopes[@]}"; then
-    echo "ERROR:Missing required scopes: ${MISSING_SCOPES}"
-    return 1
-  fi
-
-  echo "SUCCESS:All required scopes present"
-  return 0
-}
-
 # ============================================================================
-# Section 5: MAIN ORCHESTRATOR
+# Section 6: MAIN ORCHESTRATOR
 # ============================================================================
 
 # @description Main permissions validation orchestrator
@@ -239,15 +227,16 @@ validate_token_scopes() {
 # @stderr Error messages with ::error:: prefix
 # @set GITHUB_OUTPUT Writes status=success|error and message=<details>
 validate_permissions() {
-  local actions_type="${1:-${ACTIONS_TYPE:-read}}"
+  local actions_type
+  actions_type="${1:-${ACTIONS_TYPE:-read}}"
+  actions_type="${actions_type,,}"
 
   # Validate actions-type argument
   case "$actions_type" in
     read|commit|pr) ;;
     *)
       echo "::error::Invalid actions-type: '${actions_type}'. Must be one of: read, commit, pr" >&2
-      echo "status=error" >> "${GITHUB_OUTPUT}"
-      echo "message=Invalid actions-type: ${actions_type}" >> "${GITHUB_OUTPUT}"
+      { echo "status=error"; echo "message=Invalid actions-type: ${actions_type}"; } >> "$(out_status)"
       return 1
       ;;
   esac
@@ -266,52 +255,35 @@ validate_permissions() {
     echo "::error::${token_message}" >&2
     echo "::error::This action requires a GitHub token for API access" >&2
     echo "::error::Please ensure GITHUB_TOKEN is configured in the workflow" >&2
-    echo "status=error" >> "${GITHUB_OUTPUT}"
-    echo "message=${token_message}" >> "${GITHUB_OUTPUT}"
+    { echo "status=error"; echo "message=${token_message}"; } >> "$(out_status)"
     return 1
   fi
   echo "✓ ${token_message}"
   echo ""
 
-  # Validate token scopes based on action type
+  # Validate write permissions via API execution probe
   case "$actions_type" in
     "pr")
       echo "Checking permissions for PR operations..."
-      local scopes_output scopes_status scopes_message
-      scopes_output=$(validate_token_scopes "repo") || true
-      scopes_status="${scopes_output%%:*}"
-      scopes_message="${scopes_output#*:}"
-
-      if [ "$scopes_status" = "ERROR" ]; then
-        echo "::error::${scopes_message}" >&2
-        echo "::error::Required scopes: repo (includes contents and pull-requests)" >&2
-        echo "::error::Please configure permissions: contents: write, pull-requests: write" >&2
-        echo "status=error" >> "${GITHUB_OUTPUT}"
-        echo "message=Missing PR permissions: ${MISSING_SCOPES}" >> "${GITHUB_OUTPUT}"
+      if ! probe_github_write_permission "pr"; then
+        echo "::error::pull-requests: write permission not granted" >&2
+        echo "::error::For GITHUB_TOKEN, configure permissions: contents: write, pull-requests: write" >&2
+        { echo "status=error"; echo "message=Missing PR permissions: pull-requests: write"; } >> "$(out_status)"
         return 1
       fi
-      echo "✓ ${scopes_message}"
-      echo "✓ Token has required scopes: ${TOKEN_SCOPES}"
+      echo "✓ pull-requests: write permission verified"
       echo "✓ PR operations permissions validated"
       echo ""
       ;;
     "commit")
       echo "Checking permissions for commit operations..."
-      local scopes_output scopes_status scopes_message
-      scopes_output=$(validate_token_scopes "repo") || true
-      scopes_status="${scopes_output%%:*}"
-      scopes_message="${scopes_output#*:}"
-
-      if [ "$scopes_status" = "ERROR" ]; then
-        echo "::error::${scopes_message}" >&2
-        echo "::error::Required scopes: repo (includes contents)" >&2
-        echo "::error::Please configure permissions: contents: write" >&2
-        echo "status=error" >> "${GITHUB_OUTPUT}"
-        echo "message=Missing commit permissions: ${MISSING_SCOPES}" >> "${GITHUB_OUTPUT}"
+      if ! probe_github_write_permission "commit"; then
+        echo "::error::contents: write permission not granted" >&2
+        echo "::error::For GITHUB_TOKEN, configure permissions: contents: write" >&2
+        { echo "status=error"; echo "message=Missing commit permissions: contents: write"; } >> "$(out_status)"
         return 1
       fi
-      echo "✓ ${scopes_message}"
-      echo "✓ Token has required scopes: ${TOKEN_SCOPES}"
+      echo "✓ contents: write permission verified"
       echo "✓ Commit operations permissions validated"
       echo ""
       ;;
@@ -323,13 +295,12 @@ validate_permissions() {
   esac
 
   echo "=== GitHub permissions validation passed ==="
-  echo "status=success" >> "${GITHUB_OUTPUT}"
-  echo "message=GitHub permissions validated" >> "${GITHUB_OUTPUT}"
+  { echo "status=success"; echo "message=GitHub permissions validated"; } >> "$(out_status)"
   return 0
 }
 
 # ============================================================================
-# Section 6: SCRIPT ENTRY POINT
+# Section 7: SCRIPT ENTRY POINT
 # ============================================================================
 
 # Only execute when script is run directly (not when sourced for testing)

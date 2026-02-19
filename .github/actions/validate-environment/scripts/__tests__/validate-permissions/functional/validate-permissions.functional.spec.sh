@@ -14,13 +14,10 @@ Describe 'validate-permissions.sh - validate_permissions() Functional'
   setup_permissions_test() {
     export GITHUB_TOKEN="ghp_test_token"
     export GITHUB_OUTPUT="/dev/null"
-    MISSING_SCOPES=""
-    TOKEN_SCOPES=""
   }
 
   cleanup_permissions_test() {
     unset GITHUB_TOKEN GITHUB_OUTPUT
-    unset MISSING_SCOPES TOKEN_SCOPES
   }
 
   # ============================================================================
@@ -69,10 +66,10 @@ Describe 'validate-permissions.sh - validate_permissions() Functional'
       The output should include "contents: read is a required permission"
     End
 
-    It 'does not call validate_token_scopes'
+    It 'does not call probe_github_write_permission'
       mock_called=0
-      validate_token_scopes() { mock_called=1; }
-      export -f validate_token_scopes
+      probe_github_write_permission() { mock_called=1; return 0; }
+      export -f probe_github_write_permission
       When call validate_permissions "read"
       The status should be success
       The output should include "=== Validating GitHub Permissions ==="
@@ -84,15 +81,12 @@ Describe 'validate-permissions.sh - validate_permissions() Functional'
   # ============================================================================
 
   Describe '"commit" argument'
-    Context 'scopes satisfied'
-      BeforeEach 'mock_token_scopes_success'
+    Context 'probe succeeds'
+      BeforeEach 'mock_probe_success'
 
-      mock_token_scopes_success() {
-        validate_token_scopes() {
-          echo "SUCCESS:All required scopes present"
-          return 0
-        }
-        export -f validate_token_scopes
+      mock_probe_success() {
+        probe_github_write_permission() { return 0; }
+        export -f probe_github_write_permission
       }
 
       It 'returns success'
@@ -107,28 +101,25 @@ Describe 'validate-permissions.sh - validate_permissions() Functional'
       End
     End
 
-    Context 'scopes missing'
-      BeforeEach 'mock_token_scopes_failure'
+    Context 'probe fails'
+      BeforeEach 'mock_probe_failure'
 
-      mock_token_scopes_failure() {
-        validate_token_scopes() {
-          echo "ERROR:Missing required scopes: repo"
-          return 1
-        }
-        export -f validate_token_scopes
+      mock_probe_failure() {
+        probe_github_write_permission() { return 1; }
+        export -f probe_github_write_permission
       }
 
       It 'returns failure'
         When call validate_permissions "commit"
         The status should be failure
         The output should include "Checking GITHUB_TOKEN"
-        The stderr should include "Missing required scopes"
+        The stderr should include "contents: write permission not granted"
       End
 
       It 'outputs ::error:: to stderr'
         When call validate_permissions "commit"
         The status should be failure
-        The stderr should include "Missing required scopes"
+        The stderr should include "contents: write permission not granted"
         The output should include "Checking GITHUB_TOKEN"
       End
     End
@@ -139,15 +130,12 @@ Describe 'validate-permissions.sh - validate_permissions() Functional'
   # ============================================================================
 
   Describe '"pr" argument'
-    Context 'scopes satisfied'
-      BeforeEach 'mock_token_scopes_success'
+    Context 'probe succeeds'
+      BeforeEach 'mock_probe_success'
 
-      mock_token_scopes_success() {
-        validate_token_scopes() {
-          echo "SUCCESS:All required scopes present"
-          return 0
-        }
-        export -f validate_token_scopes
+      mock_probe_success() {
+        probe_github_write_permission() { return 0; }
+        export -f probe_github_write_permission
       }
 
       It 'returns success'
@@ -162,28 +150,25 @@ Describe 'validate-permissions.sh - validate_permissions() Functional'
       End
     End
 
-    Context 'scopes missing'
-      BeforeEach 'mock_token_scopes_failure'
+    Context 'probe fails'
+      BeforeEach 'mock_probe_failure'
 
-      mock_token_scopes_failure() {
-        validate_token_scopes() {
-          echo "ERROR:Missing required scopes: repo"
-          return 1
-        }
-        export -f validate_token_scopes
+      mock_probe_failure() {
+        probe_github_write_permission() { return 1; }
+        export -f probe_github_write_permission
       }
 
       It 'returns failure'
         When call validate_permissions "pr"
         The status should be failure
         The output should include "Checking GITHUB_TOKEN"
-        The stderr should include "Missing required scopes"
+        The stderr should include "pull-requests: write permission not granted"
       End
 
       It 'outputs ::error:: to stderr'
         When call validate_permissions "pr"
         The status should be failure
-        The stderr should include "Missing required scopes"
+        The stderr should include "pull-requests: write permission not granted"
         The output should include "Checking GITHUB_TOKEN"
       End
     End

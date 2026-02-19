@@ -190,193 +190,258 @@ Describe 'validate-permissions.sh - Permissions Validation'
   End
 
   # ============================================================================
-  # Token Scopes Parsing Tests
+  # GitHub API POST Tests
   # ============================================================================
 
-  Describe 'parse_oauth_scopes()'
-    BeforeEach 'setup_token_scopes'
-    AfterEach 'cleanup_token_scopes'
+  Describe 'github_api_post()'
+    BeforeEach 'setup_api_post_tests'
+    AfterEach 'cleanup_api_post_tests'
 
-    setup_token_scopes() {
-      TOKEN_SCOPES=""
-      TEST_HEADER_FILE=$(mktemp)
-    }
-
-    cleanup_token_scopes() {
-      unset TOKEN_SCOPES
-      rm -f "$TEST_HEADER_FILE"
-    }
-
-    Context 'valid header file'
-      It 'extracts scopes from X-OAuth-Scopes header'
-        echo "HTTP/1.1 200 OK" > "$TEST_HEADER_FILE"
-        echo "X-OAuth-Scopes: repo, user, gist" >> "$TEST_HEADER_FILE"
-        echo "" >> "$TEST_HEADER_FILE"
-        When call parse_oauth_scopes "$TEST_HEADER_FILE"
-        The status should be success
-        The variable TOKEN_SCOPES should eq "repo user gist"
-      End
-
-      It 'handles empty scopes'
-        echo "HTTP/1.1 200 OK" > "$TEST_HEADER_FILE"
-        echo "X-OAuth-Scopes: " >> "$TEST_HEADER_FILE"
-        echo "" >> "$TEST_HEADER_FILE"
-        When call parse_oauth_scopes "$TEST_HEADER_FILE"
-        The status should be success
-        The variable TOKEN_SCOPES should eq ""
-      End
-
-      It 'extracts single scope without comma'
-        echo "HTTP/1.1 200 OK" > "$TEST_HEADER_FILE"
-        echo "X-OAuth-Scopes: repo" >> "$TEST_HEADER_FILE"
-        When call parse_oauth_scopes "$TEST_HEADER_FILE"
-        The status should be success
-        The variable TOKEN_SCOPES should eq "repo"
-      End
-
-      It 'matches header name case-insensitively'
-        echo "HTTP/1.1 200 OK" > "$TEST_HEADER_FILE"
-        echo "x-oauth-scopes: repo, user" >> "$TEST_HEADER_FILE"
-        When call parse_oauth_scopes "$TEST_HEADER_FILE"
-        The status should be success
-        The variable TOKEN_SCOPES should eq "repo user"
-      End
-    End
-
-    Context 'invalid header file'
-      It 'returns failure when header not found'
-        echo "HTTP/1.1 200 OK" > "$TEST_HEADER_FILE"
-        echo "Content-Type: application/json" >> "$TEST_HEADER_FILE"
-        When call parse_oauth_scopes "$TEST_HEADER_FILE"
-        The status should be failure
-      End
-
-      It 'returns failure when file does not exist'
-        When call parse_oauth_scopes "/nonexistent/file"
-        The status should be failure
-      End
-    End
-  End
-
-  # ============================================================================
-  # Required Scopes Checking Tests
-  # ============================================================================
-
-  Describe 'check_required_scopes()'
-    BeforeEach 'setup_scope_checking'
-    AfterEach 'cleanup_scope_checking'
-
-    setup_scope_checking() {
-      TOKEN_SCOPES=""
-      MISSING_SCOPES=""
-    }
-
-    cleanup_scope_checking() {
-      unset TOKEN_SCOPES
-      unset MISSING_SCOPES
-    }
-
-    Context 'all scopes present'
-      It 'returns success when all required scopes exist'
-        TOKEN_SCOPES="repo user gist admin:org"
-        When call check_required_scopes "repo" "user"
-        The status should be success
-        The variable MISSING_SCOPES should eq ""
-      End
-
-      It 'validates single scope'
-        TOKEN_SCOPES="repo"
-        When call check_required_scopes "repo"
-        The status should be success
-        The variable MISSING_SCOPES should eq ""
-      End
-
-      It 'returns success when no scopes are required'
-        TOKEN_SCOPES="repo"
-        When call check_required_scopes
-        The status should be success
-        The variable MISSING_SCOPES should eq ""
-      End
-    End
-
-    Context 'scopes missing'
-      It 'returns failure and sets MISSING_SCOPES'
-        TOKEN_SCOPES="repo user"
-        When call check_required_scopes "repo" "admin:org" "gist"
-        The status should be failure
-        The variable MISSING_SCOPES should eq "admin:org gist"
-      End
-
-      It 'handles empty TOKEN_SCOPES'
-        TOKEN_SCOPES=""
-        When call check_required_scopes "repo" "user"
-        The status should be failure
-        The variable MISSING_SCOPES should eq "repo user"
-      End
-
-      It 'does not match scope as substring of another scope'
-        TOKEN_SCOPES="admin:repo"
-        When call check_required_scopes "repo"
-        The status should be failure
-        The variable MISSING_SCOPES should eq "repo"
-      End
-    End
-  End
-
-  # ============================================================================
-  # GitHub API Call Tests
-  # ============================================================================
-
-  Describe 'call_github_api()'
-    BeforeEach 'setup_api_tests'
-    AfterEach 'cleanup_api_tests'
-
-    setup_api_tests() {
+    setup_api_post_tests() {
       export GITHUB_TOKEN="ghp_test_token"
-      TEST_OUTPUT_FILE=$(mktemp)
+      export GITHUB_REPOSITORY="owner/repo"
     }
 
-    cleanup_api_tests() {
-      unset GITHUB_TOKEN
-      rm -f "$TEST_OUTPUT_FILE"
+    cleanup_api_post_tests() {
+      unset GITHUB_TOKEN GITHUB_REPOSITORY
     }
 
-    Context 'successful API call'
-      BeforeEach 'setup_successful_curl'
+    Context 'permission granted (422 - invalid payload but accepted)'
+      BeforeEach 'mock_curl_422'
 
-      setup_successful_curl() {
+      mock_curl_422() {
+        curl() { echo -n "422"; return 0; }
+        export -f curl
+      }
+
+      It 'outputs HTTP 422 status code'
+        When call github_api_post "/repos/owner/repo/git/refs" '{"ref":"refs/heads/test","sha":"0000"}'
+        The output should eq "422"
+        The status should be success
+      End
+    End
+
+    Context 'permission denied (403)'
+      BeforeEach 'mock_curl_403'
+
+      mock_curl_403() {
+        curl() { echo -n "403"; return 0; }
+        export -f curl
+      }
+
+      It 'outputs HTTP 403 status code'
+        When call github_api_post "/repos/owner/repo/git/refs" '{"ref":"refs/heads/test","sha":"0000"}'
+        The output should eq "403"
+        The status should be success
+      End
+    End
+
+    Context 'authentication failure (401)'
+      BeforeEach 'mock_curl_401'
+
+      mock_curl_401() {
+        curl() { echo -n "401"; return 0; }
+        export -f curl
+      }
+
+      It 'outputs HTTP 401 status code'
+        When call github_api_post "/repos/owner/repo/git/refs" '{"ref":"refs/heads/test","sha":"0000"}'
+        The output should eq "401"
+        The status should be success
+      End
+    End
+  End
+
+  # ============================================================================
+  # Default Branch Resolution Tests
+  # ============================================================================
+
+  Describe 'get_default_branch()'
+    BeforeEach 'cleanup_branch_vars'
+    AfterEach 'cleanup_branch_vars'
+
+    cleanup_branch_vars() {
+      unset GITHUB_REF_NAME GITHUB_REPOSITORY GITHUB_TOKEN
+    }
+
+    Context 'GITHUB_REF_NAME is set'
+      It 'returns GITHUB_REF_NAME value without API call'
+        export GITHUB_REF_NAME="feature-branch"
+        export GITHUB_TOKEN="ghp_test"
+        When call get_default_branch
+        The output should eq "feature-branch"
+        The status should be success
+      End
+    End
+
+    Context 'GITHUB_REF_NAME not set, API returns branch'
+      BeforeEach 'mock_curl_with_branch'
+
+      mock_curl_with_branch() {
+        export GITHUB_TOKEN="ghp_test"
+        export GITHUB_REPOSITORY="owner/repo"
         curl() {
-          # Mock successful curl response to stdout (will be redirected by caller)
-          echo "HTTP/1.1 200 OK"
-          echo "X-OAuth-Scopes: repo"
+          echo '{"default_branch": "develop"}'
           return 0
         }
         export -f curl
       }
 
-      It 'returns success and writes to output file'
-        When call call_github_api "/" "$TEST_OUTPUT_FILE"
-        The status should be success
-        The contents of file "$TEST_OUTPUT_FILE" should include "HTTP/1.1 200 OK"
-      End
-
-      It 'uses default endpoint when endpoint argument is empty'
-        When call call_github_api "" "$TEST_OUTPUT_FILE"
+      It 'returns branch name from API response'
+        When call get_default_branch
+        The output should eq "develop"
         The status should be success
       End
     End
 
-    Context 'failed API call'
-      BeforeEach 'setup_failed_curl'
+    Context 'API returns empty response, falls back to main'
+      BeforeEach 'mock_curl_empty_response'
 
-      setup_failed_curl() {
-        curl() { return 1; }
+      mock_curl_empty_response() {
+        export GITHUB_TOKEN="ghp_test"
+        export GITHUB_REPOSITORY="owner/repo"
+        curl() {
+          echo '{}'
+          return 0
+        }
         export -f curl
       }
 
+      It 'returns "main" as fallback'
+        When call get_default_branch
+        The output should eq "main"
+        The status should be success
+      End
+    End
+  End
+
+  # ============================================================================
+  # Permission Probe Tests
+  # ============================================================================
+
+  Describe 'probe_github_write_permission()'
+    BeforeEach 'setup_probe_tests'
+    AfterEach 'cleanup_probe_tests'
+
+    setup_probe_tests() {
+      export GITHUB_TOKEN="ghp_test_token"
+      export GITHUB_REPOSITORY="owner/repo"
+      export GITHUB_REF_NAME="main"
+    }
+
+    cleanup_probe_tests() {
+      unset GITHUB_TOKEN GITHUB_REPOSITORY GITHUB_REF_NAME
+    }
+
+    Context 'commit operation - permission granted (422)'
+      BeforeEach 'mock_api_post_422'
+
+      mock_api_post_422() {
+        github_api_post() { echo "422"; }
+        export -f github_api_post
+      }
+
+      It 'returns success'
+        When call probe_github_write_permission "commit"
+        The status should be success
+      End
+    End
+
+    Context 'commit operation - permission granted (201)'
+      BeforeEach 'mock_api_post_201'
+
+      mock_api_post_201() {
+        github_api_post() { echo "201"; }
+        export -f github_api_post
+      }
+
+      It 'returns success'
+        When call probe_github_write_permission "commit"
+        The status should be success
+      End
+    End
+
+    Context 'commit operation - permission denied (403)'
+      BeforeEach 'mock_api_post_403'
+
+      mock_api_post_403() {
+        github_api_post() { echo "403"; }
+        export -f github_api_post
+      }
+
       It 'returns failure'
-        When call call_github_api "/" "$TEST_OUTPUT_FILE"
+        When call probe_github_write_permission "commit"
         The status should be failure
+        The stderr should include "Permission denied (403)"
+      End
+    End
+
+    Context 'pr operation - permission granted (422)'
+      BeforeEach 'mock_pr_probe_success'
+
+      mock_pr_probe_success() {
+        github_api_post() { echo "422"; }
+        get_default_branch() { echo "main"; }
+        export -f github_api_post get_default_branch
+      }
+
+      It 'returns success'
+        When call probe_github_write_permission "pr"
+        The status should be success
+      End
+    End
+
+    Context 'pr operation - permission denied (403)'
+      BeforeEach 'mock_pr_probe_denied'
+
+      mock_pr_probe_denied() {
+        github_api_post() { echo "403"; }
+        get_default_branch() { echo "main"; }
+        export -f github_api_post get_default_branch
+      }
+
+      It 'returns failure'
+        When call probe_github_write_permission "pr"
+        The status should be failure
+        The stderr should include "Permission denied (403)"
+      End
+    End
+
+    Context 'authentication failure (401)'
+      BeforeEach 'mock_api_post_401'
+
+      mock_api_post_401() {
+        github_api_post() { echo "401"; }
+        export -f github_api_post
+      }
+
+      It 'returns failure with authentication error'
+        When call probe_github_write_permission "commit"
+        The status should be failure
+        The stderr should include "Authentication failed"
+      End
+    End
+
+    Context 'unexpected HTTP response'
+      BeforeEach 'mock_api_post_500'
+
+      mock_api_post_500() {
+        github_api_post() { echo "500"; }
+        export -f github_api_post
+      }
+
+      It 'returns failure with error message'
+        When call probe_github_write_permission "commit"
+        The status should be failure
+        The stderr should include "Unexpected HTTP response"
+      End
+    End
+
+    Context 'unknown operation'
+      It 'returns failure with unknown operation error'
+        When call probe_github_write_permission "unknown"
+        The status should be failure
+        The stderr should include "Unknown operation"
       End
     End
   End

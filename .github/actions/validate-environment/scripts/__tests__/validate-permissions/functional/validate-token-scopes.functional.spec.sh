@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #shellcheck shell=sh
 
-Describe 'validate-permissions.sh - Token Scopes Validation (Functional)'
+Describe 'validate-permissions.sh - probe_github_write_permission() Functional'
   SCRIPT_DIR="${SHELLSPEC_PROJECT_ROOT}/.github/actions/validate-environment/scripts"
   SCRIPT_PATH="${SCRIPT_DIR}/validate-permissions.sh"
 
@@ -9,136 +9,129 @@ Describe 'validate-permissions.sh - Token Scopes Validation (Functional)'
   Include "$SCRIPT_PATH"
 
   # ============================================================================
-  # Token Scopes Validation Tests
+  # Permission Probe Functional Tests
   # ============================================================================
 
-  Describe 'validate_token_scopes()'
-    BeforeEach 'setup_scopes_tests'
-    AfterEach 'cleanup_scopes_tests'
+  Describe 'probe_github_write_permission()'
+    BeforeEach 'setup_probe_tests'
+    AfterEach 'cleanup_probe_tests'
 
-    setup_scopes_tests() {
+    setup_probe_tests() {
       export GITHUB_TOKEN="ghp_test_token"
-      TOKEN_SCOPES=""
-      MISSING_SCOPES=""
+      export GITHUB_REPOSITORY="owner/repo"
+      export GITHUB_REF_NAME="main"
     }
 
-    cleanup_scopes_tests() {
-      unset GITHUB_TOKEN TOKEN_SCOPES MISSING_SCOPES
+    cleanup_probe_tests() {
+      unset GITHUB_TOKEN GITHUB_REPOSITORY GITHUB_REF_NAME
     }
 
-    Context 'API call succeeds with required scopes'
-      BeforeEach 'setup_successful_api'
+    Context 'commit probe - API returns 422 (permission granted)'
+      BeforeEach 'mock_api_post_422'
 
-      setup_successful_api() {
-        call_github_api() {
-          local output_file="$2"
-          echo "HTTP/1.1 200 OK" > "$output_file"
-          echo "X-OAuth-Scopes: repo user" >> "$output_file"
-          return 0
-        }
-        export -f call_github_api
+      mock_api_post_422() {
+        github_api_post() { echo "422"; }
+        export -f github_api_post
       }
 
-      It 'returns SUCCESS status'
-        When call validate_token_scopes "repo"
+      It 'returns success'
+        When call probe_github_write_permission "commit"
         The status should be success
-        The output should eq "SUCCESS:All required scopes present"
-        The variable TOKEN_SCOPES should eq "repo user"
       End
     End
 
-    Context 'API call fails'
-      BeforeEach 'setup_failed_api'
+    Context 'commit probe - API returns 403 (permission denied)'
+      BeforeEach 'mock_api_post_403'
 
-      setup_failed_api() {
-        call_github_api() { return 1; }
-        export -f call_github_api
+      mock_api_post_403() {
+        github_api_post() { echo "403"; }
+        export -f github_api_post
       }
 
-      It 'returns ERROR status for network failure'
-        When call validate_token_scopes "repo"
+      It 'returns failure'
+        When call probe_github_write_permission "commit"
         The status should be failure
-        The output should eq "ERROR:GitHub API call failed"
+        The stderr should include "Permission denied (403)"
       End
     End
 
-    Context 'rate limit exceeded'
-      BeforeEach 'setup_rate_limit_api'
+    Context 'commit probe - API returns 409 (conflict but permission granted)'
+      BeforeEach 'mock_api_post_409'
 
-      setup_rate_limit_api() {
-        call_github_api() {
-          echo "rate limit exceeded" > "$2"
-          return 0
-        }
-        export -f call_github_api
+      mock_api_post_409() {
+        github_api_post() { echo "409"; }
+        export -f github_api_post
       }
 
-      It 'returns ERROR status for rate limit'
-        When call validate_token_scopes "repo"
-        The status should be failure
-        The output should eq "ERROR:GitHub API rate limit exceeded"
+      It 'returns success'
+        When call probe_github_write_permission "commit"
+        The status should be success
       End
     End
 
-    Context 'missing required scopes'
-      BeforeEach 'setup_insufficient_scopes'
+    Context 'pr probe - API returns 422 (permission granted)'
+      BeforeEach 'mock_pr_success'
 
-      setup_insufficient_scopes() {
-        call_github_api() {
-          local output_file="$2"
-          echo "HTTP/1.1 200 OK" > "$output_file"
-          echo "X-OAuth-Scopes: user" >> "$output_file"
-          return 0
-        }
-        export -f call_github_api
+      mock_pr_success() {
+        github_api_post() { echo "422"; }
+        get_default_branch() { echo "main"; }
+        export -f github_api_post get_default_branch
       }
 
-      It 'returns ERROR status with missing scopes'
-        When call validate_token_scopes "repo"
-        The status should be failure
-        The output should eq "ERROR:Missing required scopes: repo"
-        The variable MISSING_SCOPES should eq "repo"
+      It 'returns success'
+        When call probe_github_write_permission "pr"
+        The status should be success
       End
     End
 
-    Context 'multiple missing scopes'
-      BeforeEach 'setup_multiple_missing_scopes'
+    Context 'pr probe - API returns 403 (permission denied)'
+      BeforeEach 'mock_pr_denied'
 
-      setup_multiple_missing_scopes() {
-        call_github_api() {
-          local output_file="$2"
-          echo "HTTP/1.1 200 OK" > "$output_file"
-          echo "X-OAuth-Scopes: user" >> "$output_file"
-          return 0
-        }
-        export -f call_github_api
+      mock_pr_denied() {
+        github_api_post() { echo "403"; }
+        get_default_branch() { echo "main"; }
+        export -f github_api_post get_default_branch
       }
 
-      It 'returns ERROR status with all missing scopes listed'
-        When call validate_token_scopes "repo" "admin:org"
+      It 'returns failure'
+        When call probe_github_write_permission "pr"
         The status should be failure
-        The output should eq "ERROR:Missing required scopes: repo admin:org"
-        The variable MISSING_SCOPES should eq "repo admin:org"
+        The stderr should include "Permission denied (403)"
       End
     End
 
-    Context 'parse failure'
-      BeforeEach 'setup_no_scopes_header'
+    Context 'authentication failure (401)'
+      BeforeEach 'mock_api_post_401'
 
-      setup_no_scopes_header() {
-        call_github_api() {
-          local output_file="$2"
-          echo "HTTP/1.1 200 OK" > "$output_file"
-          echo "Content-Type: application/json" >> "$output_file"
-          return 0
-        }
-        export -f call_github_api
+      mock_api_post_401() {
+        github_api_post() { echo "401"; }
+        export -f github_api_post
       }
 
-      It 'returns ERROR when X-OAuth-Scopes header is missing'
-        When call validate_token_scopes "repo"
+      It 'returns failure'
+        When call probe_github_write_permission "commit"
         The status should be failure
-        The output should eq "ERROR:Failed to parse token scopes from API response"
+        The stderr should include "Authentication failed"
+      End
+
+      It 'outputs authentication error to stderr'
+        When call probe_github_write_permission "commit"
+        The status should be failure
+        The stderr should include "Authentication failed"
+      End
+    End
+
+    Context 'unknown operation'
+      It 'returns failure'
+        When call probe_github_write_permission "delete"
+        The status should be failure
+        The stderr should include "Unknown operation"
+      End
+
+      It 'outputs unknown operation error to stderr'
+        When call probe_github_write_permission "delete"
+        The status should be failure
+        The stderr should include "Unknown operation"
       End
     End
   End
