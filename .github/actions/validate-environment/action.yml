@@ -12,7 +12,7 @@ description: |
   REQUIREMENTS: Linux only, GitHub-hosted runners only (ubuntu-latest, ubuntu-22.04, etc.)
   NOT SUPPORTED: Windows, macOS, self-hosted runners
   (Note: ARM64 validated on Linux if GitHub provides ARM64 runners)
-  Validates: OS/architecture, Git, curl, optional applications
+  Validates: OS/architecture, Git (via validate-runner), GitHub permissions (via validate-permissions), curl and optional applications (via validate-apps)
 author: "aglabo"
 
 branding:
