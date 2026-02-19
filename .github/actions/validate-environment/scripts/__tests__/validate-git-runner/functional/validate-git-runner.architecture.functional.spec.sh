@@ -143,52 +143,52 @@ Describe 'validate-git-runner.sh - Architecture Functional'
     End
   End
 
-  Describe 'validate_detected_arch()'
+  Describe 'is_supported_architecture()'
     Context 'with valid architectures'
       It 'validates x86_64 architecture'
-        When call validate_detected_arch "x86_64"
+        When call is_supported_architecture "x86_64"
         The status should be success
       End
 
       It 'validates aarch64 architecture'
-        When call validate_detected_arch "aarch64"
+        When call is_supported_architecture "aarch64"
         The status should be success
       End
 
       It 'validates amd64 architecture'
-        When call validate_detected_arch "amd64"
+        When call is_supported_architecture "amd64"
         The status should be success
       End
 
       It 'validates arm64 architecture'
-        When call validate_detected_arch "arm64"
+        When call is_supported_architecture "arm64"
         The status should be success
       End
     End
 
     Context 'with invalid architectures'
       It 'rejects unsupported architecture'
-        When call validate_detected_arch "mips"
+        When call is_supported_architecture "mips"
         The status should be failure
       End
 
       It 'rejects riscv architecture'
-        When call validate_detected_arch "riscv"
+        When call is_supported_architecture "riscv"
         The status should be failure
       End
 
       It 'rejects empty string'
-        When call validate_detected_arch ""
+        When call is_supported_architecture ""
         The status should be failure
       End
 
       It 'rejects 32bit arm'
-        When call validate_detected_arch "arm"
+        When call is_supported_architecture "arm"
         The status should be failure
       End
 
       It 'rejects 32bit i686'
-        When call validate_detected_arch "i686"
+        When call is_supported_architecture "i686"
         The status should be failure
       End
     End

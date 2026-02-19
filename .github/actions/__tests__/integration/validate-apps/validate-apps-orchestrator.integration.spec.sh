@@ -13,7 +13,6 @@ Describe 'validate_apps()'
     export GITHUB_OUTPUT="$GITHUB_OUTPUT_FILE"
     VALIDATION_RESULTS=()
     VALIDATION_INDEX=0
-    FAIL_FAST="true"
   }
 
   AfterEach 'cleanup_test'
