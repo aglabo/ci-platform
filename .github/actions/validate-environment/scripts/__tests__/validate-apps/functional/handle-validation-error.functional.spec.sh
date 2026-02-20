@@ -22,46 +22,29 @@ Describe 'handle_validation_error()'
 
   Describe 'default behavior (fail-fast)'
     It 'returns failure status'
-      When call handle_validation_error "git" "Git" "2.39.0" "Git version too old"
+      When call handle_validation_error "Git version too old"
       The status should be failure
       The stderr should not be blank
     End
 
     It 'outputs error message to stderr with ::error:: prefix'
-      When call handle_validation_error "git" "Git" "2.39.0" "Git version too old"
+      When call handle_validation_error "Git version too old"
       The status should be failure
       The stderr should include "::error::Git version too old"
     End
 
     It 'writes status=error to GITHUB_OUTPUT'
-      When call handle_validation_error "git" "Git" "2.39.0" "Git version too old"
+      When call handle_validation_error "Git version too old"
       The status should be failure
       The stderr should not be blank
       The contents of file "$GITHUB_OUTPUT_FILE" should include "status=error"
     End
 
-    It 'writes failed_apps to GITHUB_OUTPUT'
-      When call handle_validation_error "git" "Git" "2.39.0" "Git version too old"
-      The status should be failure
-      The stderr should not be blank
-      The contents of file "$GITHUB_OUTPUT_FILE" should include "failed_apps=Git"
-    End
-
     It 'writes message to GITHUB_OUTPUT'
-      When call handle_validation_error "git" "Git" "2.39.0" "Git version too old"
+      When call handle_validation_error "Git version too old"
       The status should be failure
       The stderr should not be blank
       The contents of file "$GITHUB_OUTPUT_FILE" should include "message=Git version too old"
-    End
-
-    It 'adds entry to VALIDATION_RESULTS array'
-      check_results_count() {
-        handle_validation_error "git" "Git" "2.39.0" "Git version too old" || true
-        echo "${#VALIDATION_RESULTS[@]}"
-      }
-      When call check_results_count
-      The output should equal 1
-      The stderr should not be blank
     End
   End
 End
