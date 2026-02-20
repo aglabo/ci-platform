@@ -13,7 +13,6 @@ Describe 'main() - E2E'
   setup_test() {
     GITHUB_OUTPUT_FILE=$(mktemp)
     export GITHUB_OUTPUT="$GITHUB_OUTPUT_FILE"
-    _OUTPUT_FILE="$GITHUB_OUTPUT_FILE"
     VALIDATION_RESULTS=()
     VALIDATION_INDEX=0
     APPS=()
@@ -46,34 +45,14 @@ Describe 'main() - E2E'
       The stderr should not be blank
     End
 
-    It 'writes validated_apps with Git and curl to GITHUB_OUTPUT'
-      check_output_apps() {
+    It 'writes message with Git and curl to GITHUB_OUTPUT'
+      check_output_message() {
         main < /dev/null > /dev/null
-        grep "^validated_apps=" "$GITHUB_OUTPUT_FILE" | tr -d '\r'
+        grep -A20 "^message<<" "$GITHUB_OUTPUT_FILE" | tr -d '\r'
       }
-      When call check_output_apps
+      When call check_output_message
       The output should include "Git"
       The output should include "curl"
-      The stderr should not be blank
-    End
-
-    It 'writes validated_count=2 to GITHUB_OUTPUT'
-      check_output_count() {
-        main < /dev/null > /dev/null
-        grep "^validated_count=" "$GITHUB_OUTPUT_FILE" | tr -d '\r'
-      }
-      When call check_output_count
-      The output should equal "validated_count=2"
-      The stderr should not be blank
-    End
-
-    It 'writes failed_count=0 to GITHUB_OUTPUT'
-      check_output_failed() {
-        main < /dev/null > /dev/null
-        grep "^failed_count=" "$GITHUB_OUTPUT_FILE" | tr -d '\r'
-      }
-      When call check_output_failed
-      The output should equal "failed_count=0"
       The stderr should not be blank
     End
   End
@@ -103,14 +82,5 @@ Describe 'main() - E2E'
       The stderr should not be blank
     End
 
-    It 'writes validated_count=2 when default apps pass before failure'
-      check_validated_count() {
-        echo "nonExistentCmd12345|NonExistent" | main > /dev/null || true
-        grep "^validated_count=" "$GITHUB_OUTPUT_FILE" | tr -d '\r'
-      }
-      When call check_validated_count
-      The output should equal "validated_count=2"
-      The stderr should not be blank
-    End
   End
 End
