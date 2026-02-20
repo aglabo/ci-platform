@@ -1,0 +1,54 @@
+# git-cliff configuration file
+# src: ./configs/cliff.toml
+# @(#) : ghalint configuration file
+#
+# Copyright (c) 2025 atsushifx <https://github.com/atsushifx>
+#
+# This software is released under the MIT License.
+# https://opensource.org/licenses/MIT
+
+[changelog]
+body = """
+{% if version %}
+## [{{ version | trim_start_matches(pat="v") }}] - {{ timestamp | date(format="%Y-%m-%d") }}
+{% else %}
+## [unreleased]
+{% endif %}
+
+{% for group, commits in commits | group_by(attribute="group") %}
+### {{ group }}
+
+{% for commit in commits %}
+- {% if commit.scope %}**{{ commit.scope }}:** {% endif %}
+  {% if commit.breaking %}[BREAKING] {% endif %}
+  {{ commit.message | upper_first }}
+{% endfor %}
+
+{% endfor %}
+"""
+trim = true
+render_always = true
+
+[git]
+conventional_commits = true
+filter_unconventional = true
+require_conventional = false
+topo_order_commits = true
+sort_commits = "oldest"
+
+commit_preprocessors = [
+  { pattern = "^merge \\(#\\d+\\):\\s*", replace = "" }
+]
+
+commit_parsers = [
+  { breaking = true, group = "Breaking Changes", order = -1 },
+
+  { message = "^feat", group = "Features", order = 0 },
+  { message = "^fix", group = "Bug Fixes", order = 1 },
+  { message = "^refactor", group = "Refactor", order = 2 },
+  { message = "^perf", group = "Performance", order = 3 },
+  { message = "^docs?", group = "Documentation", order = 4 },
+  { message = "^test", group = "Testing", order = 5 },
+  { message = "^chore|^ci", group = "Maintenance", order = 6 },
+  { message = "^revert", group = "Revert", order = 7 },
+]
