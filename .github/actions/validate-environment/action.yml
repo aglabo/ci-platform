@@ -12,8 +12,9 @@ description: |
   REQUIREMENTS: Linux only (ubuntu-latest, ubuntu-22.04, etc.)
   NOT SUPPORTED: Windows, macOS
   Self-hosted runners: allowed by default; set require-github-hosted: "true" to restrict to GitHub-hosted only.
+  Note: require-github-hosted relies on RUNNER_ENVIRONMENT set by GitHub Actions (GitHub spec). Self-hosted runners do not set this variable.
   (Note: ARM64 validated on Linux if GitHub provides ARM64 runners)
-  Validates: OS/architecture, Git (via validate-runner), GitHub permissions (via validate-permissions), curl and optional applications (via validate-apps)
+  Validates: OS/architecture (runner), GitHub permissions, required applications (Git, curl, optional tools)
 author: "aglabo"
 
 branding:
@@ -26,7 +27,7 @@ inputs:
     required: false
     default: "amd64"
   actions-type:
-    description: "Action type determining required permissions: 'read' (contents: read, default), 'commit' (contents: write), 'pr' (contents: write + pull-requests: write)"
+    description: "Action type determining required permissions: 'read' (contents: read, default), 'commit' (contents: write), 'pr' (contents: write + pull-requests: write), 'any' (skip permission probe)"
     required: false
     default: "read"
   additional-apps:
@@ -64,7 +65,7 @@ outputs:
     description: "Runner validation message"
     value: ${{ steps.validate-runner.outputs.message }}
   permissions-status:
-    description: "Permissions validation status (success or error, empty if not checked)"
+    description: "Permissions validation status (success or error)"
     value: ${{ steps.validate-permissions.outputs.status }}
   permissions-message:
     description: "Permissions validation message (empty if not checked)"
@@ -75,18 +76,6 @@ outputs:
   apps-message:
     description: "Applications validation message"
     value: ${{ steps.validate-apps.outputs.message }}
-  validated-apps:
-    description: "Comma-separated list of validated application names"
-    value: ${{ steps.validate-apps.outputs.validated_apps }}
-  validated-count:
-    description: "Number of successfully validated applications"
-    value: ${{ steps.validate-apps.outputs.validated_count }}
-  failed-apps:
-    description: "Comma-separated list of failed application names (empty if all passed)"
-    value: ${{ steps.validate-apps.outputs.failed_apps }}
-  failed-count:
-    description: "Number of failed applications (0 if all passed)"
-    value: ${{ steps.validate-apps.outputs.failed_count }}
 
 runs:
   using: "composite"
@@ -111,7 +100,7 @@ runs:
       shell: bash
       # Note: Uses curl to call the GitHub API.
       # curl is assumed pre-installed on GitHub-hosted Ubuntu runners (standard system tool).
-      # Formal curl availability check is performed in the validate-apps step below.
+      # curl availability is checked inside validate-permissions.sh before API calls.
       run: |
         set -euo pipefail
         bash "${GITHUB_ACTION_PATH}/scripts/validate-permissions.sh" "${{ inputs.actions-type }}"
@@ -125,4 +114,4 @@ runs:
         bash "${GITHUB_ACTION_PATH}/scripts/validate-apps.sh" <<'APPS_EOF'
         ${{ inputs.additional-apps }}
         APPS_EOF
-      # Outputs: status, message, validated_apps, validated_count, failed_apps, failed_count
+      # Outputs: status, message
