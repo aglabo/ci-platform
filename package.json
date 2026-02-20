@@ -1,7 +1,7 @@
 {
   "name": "ci-platform",
   "private": true,
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "CI platform actions, workflow for GitHub Actions",
   "author": "Furukawa, Atsushi <atsushifx@gmail.com>",
   "license": "MIT",

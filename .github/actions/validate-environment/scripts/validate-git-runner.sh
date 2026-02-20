@@ -19,21 +19,24 @@
 #   2. Expected architecture input is valid (amd64 or arm64)
 #   3. Detected architecture matches expected architecture
 #   4. GitHub Actions environment (GITHUB_ACTIONS=true)
-#   5. GitHub-hosted runner (RUNNER_ENVIRONMENT=github-hosted)
+#   5. GitHub-hosted runner (optional; required when REQUIRE_GITHUB_HOSTED=true)
 #   6. Required runtime variables (RUNNER_TEMP, GITHUB_OUTPUT, GITHUB_PATH)
 #
 # @exitcode 0 GitHub runner validation successful
 # @exitcode 1 GitHub runner validation failed
 #
 # @author   atsushifx
-# @version  1.2.0
+# @version  0.1.0
 # @license  MIT
 
 set -euo pipefail
 
 # Global variables for validation results
-GITHUB_OUTPUT="${GITHUB_OUTPUT:-/dev/null}"
+if [ "${BASH_SOURCE[0]}" = "${0}" ] && [ -z "${GITHUB_OUTPUT:-}" ]; then
+  echo "Warning: GITHUB_OUTPUT is not set; outputs will be discarded" >&2
+fi
 EXPECTED_ARCH="${EXPECTED_ARCHITECTURE:-amd64}"
+REQUIRE_GITHUB_HOSTED="${REQUIRE_GITHUB_HOSTED:-true}"
 NORMALIZED_ARCH=""
 DETECTED_OS=""
 DETECTED_ARCH=""
@@ -58,20 +61,6 @@ detect_architecture() {
   echo "${1:-$(uname -m)}"
 }
 
-# @description Detect operating system
-# @exitcode 0 Always succeeds
-# @stdout Normalized OS name (lowercase)
-detect_os() {
-  uname -s | tr '[:upper:]' '[:lower:]'
-}
-
-# @description Detect system architecture
-# @exitcode 0 Always succeeds
-# @stdout Raw architecture name from uname -m
-detect_architecture() {
-  uname -m
-}
-
 # @description Normalize architecture to canonical form
 # @arg $1 string Raw architecture name (e.g., "x86_64", "aarch64")
 # @exitcode 0 Valid architecture
@@ -93,6 +82,17 @@ normalize_architecture() {
       return 1
       ;;
   esac
+}
+
+# @description Write status and message to GITHUB_OUTPUT
+# @arg $1 string Status value (success|error)
+# @arg $2 string Message string
+# @exitcode 0 Always succeeds
+# @note GITHUB_OUTPUT is evaluated at call time (not at source time) to allow
+#       test environments to set the variable after sourcing this script.
+write_output() {
+  echo "status=$1" >> "${GITHUB_OUTPUT:-/dev/null}"
+  echo "message=$2" >> "${GITHUB_OUTPUT:-/dev/null}"
 }
 
 # @description Check environment variable existence and value
@@ -153,47 +153,29 @@ validate_expected_arch() {
 # @arg $1 string Raw architecture name
 # @exitcode 0 Architecture is valid (can be normalized)
 # @exitcode 1 Architecture is unsupported
-validate_detected_arch() {
-  local raw_arch="$1"
-
-  if normalize_architecture "${raw_arch}" > /dev/null; then
-    return 0
-  else
-    return 1
-  fi
+is_supported_architecture() {
+  normalize_architecture "$1" > /dev/null
 }
 
 # @description Validate architecture matches expected value
 # @exitcode 0 EXPECTED_ARCH matches NORMALIZED_ARCH
 # @exitcode 1 Architecture mismatch
 validate_arch_match() {
-  if [ "${EXPECTED_ARCH}" != "${NORMALIZED_ARCH}" ]; then
-    return 1
-  fi
-
-  return 0
+  [ "${EXPECTED_ARCH}" = "${NORMALIZED_ARCH}" ]
 }
 
 # @description Validate GitHub Actions environment
 # @exitcode 0 GITHUB_ACTIONS environment variable is set to 'true'
 # @exitcode 1 Not running in GitHub Actions environment
 validate_github_actions_env() {
-  if ! check_env_var "GITHUB_ACTIONS" "true"; then
-    return 1
-  fi
-
-  return 0
+  check_env_var "GITHUB_ACTIONS" "true"
 }
 
 # @description Validate GitHub-hosted runner
 # @exitcode 0 RUNNER_ENVIRONMENT is set to 'github-hosted'
 # @exitcode 1 Self-hosted runner or RUNNER_ENVIRONMENT not set correctly
 validate_github_hosted_runner() {
-  if ! check_env_var "RUNNER_ENVIRONMENT" "github-hosted"; then
-    return 1
-  fi
-
-  return 0
+  check_env_var "RUNNER_ENVIRONMENT" "github-hosted"
 }
 
 # @description Validate required runtime variables
@@ -226,34 +208,26 @@ validate_git_runner() {
   # Detect and validate OS
   DETECTED_OS=$(detect_os)
 
-  local os_output os_exit_code os_status_line os_status os_message
-  os_output=$(validate_os "${DETECTED_OS}")
-  os_exit_code=$?
-  os_status_line=$(echo "$os_output" | head -1)
-  os_status="${os_status_line%%:*}"
-  os_message="${os_status_line#*:}"
-
-  if [ $os_exit_code -ne 0 ] || [ "$os_status" = "ERROR" ]; then
+  local os_output os_message
+  if os_output=$(validate_os "${DETECTED_OS}"); then
+    os_message="${os_output#SUCCESS:}"
+    echo "Operating System: ${DETECTED_OS}"
+    echo "✓ ${os_message}"
+    echo ""
+  else
+    os_message="${os_output#ERROR:}"
     echo "::error::${os_message}" >&2
     echo "::error::This action requires Linux" >&2
     echo "::error::Please use a Linux runner (e.g., ubuntu-latest)" >&2
-    echo "status=error" >> ""$GITHUB_OUTPUT""
-    echo "message=${os_message}" >> ""$GITHUB_OUTPUT""
+    write_output "error" "${os_message}"
     return 1
-  elif [ "$os_status" = "WARNING" ]; then
-    echo "::warning::${os_message}" >&2
   fi
-
-  echo "Operating System: ${DETECTED_OS}"
-  echo "✓ ${os_message}"
-  echo ""
 
   # Validate expected architecture input
   if ! validate_expected_arch; then
     echo "::error::Invalid architecture input: ${EXPECTED_ARCH}" >&2
     echo "::error::Supported values: amd64, arm64" >&2
-    echo "status=error" >> ""$GITHUB_OUTPUT""
-    echo "message=Invalid architecture input: ${EXPECTED_ARCH}" >> ""$GITHUB_OUTPUT""
+    write_output "error" "Invalid architecture input: ${EXPECTED_ARCH}"
     return 1
   fi
 
@@ -262,11 +236,10 @@ validate_git_runner() {
   # Detect and validate architecture
   DETECTED_ARCH=$(detect_architecture)
 
-  if ! validate_detected_arch "${DETECTED_ARCH}"; then
+  if ! is_supported_architecture "${DETECTED_ARCH}"; then
     echo "::error::Unsupported architecture: ${DETECTED_ARCH}" >&2
     echo "::error::Supported architectures: amd64 (x86_64), arm64 (aarch64)" >&2
-    echo "status=error" >> ""$GITHUB_OUTPUT""
-    echo "message=Unsupported architecture: ${DETECTED_ARCH}" >> ""$GITHUB_OUTPUT""
+    write_output "error" "Unsupported architecture: ${DETECTED_ARCH}"
     return 1
   fi
 
@@ -280,8 +253,7 @@ validate_git_runner() {
     echo "::error::Expected: ${EXPECTED_ARCH}" >&2
     echo "::error::Detected: ${NORMALIZED_ARCH} (${DETECTED_ARCH})" >&2
     echo "::error::Please use a runner with ${EXPECTED_ARCH} architecture" >&2
-    echo "status=error" >> ""$GITHUB_OUTPUT""
-    echo "message=Architecture mismatch: expected ${EXPECTED_ARCH}, got ${NORMALIZED_ARCH}" >> ""$GITHUB_OUTPUT""
+    write_output "error" "Architecture mismatch: expected ${EXPECTED_ARCH}, got ${NORMALIZED_ARCH}"
     return 1
   fi
 
@@ -295,29 +267,27 @@ validate_git_runner() {
     echo "::error::Not running in GitHub Actions environment" >&2
     echo "::error::This action must run in a GitHub Actions workflow" >&2
     echo "::error::GITHUB_ACTIONS environment variable is not set to 'true'" >&2
-    echo "status=error" >> ""$GITHUB_OUTPUT""
-    echo "message=Not running in GitHub Actions environment" >> ""$GITHUB_OUTPUT""
+    write_output "error" "Not running in GitHub Actions environment"
     return 1
   fi
 
   echo "✓ GITHUB_ACTIONS is set to 'true'"
 
-  if ! validate_github_hosted_runner; then
-    echo "::error::This action requires a GitHub-hosted runner" >&2
-    echo "::error::Self-hosted runners are not supported" >&2
-    echo "::error::RUNNER_ENVIRONMENT is not set to 'github-hosted' (current: ${RUNNER_ENVIRONMENT:-unset})" >&2
-    echo "status=error" >> ""$GITHUB_OUTPUT""
-    echo "message=Requires GitHub-hosted runner (not self-hosted)" >> ""$GITHUB_OUTPUT""
-    return 1
+  if [ "${REQUIRE_GITHUB_HOSTED}" = "true" ]; then
+    if ! validate_github_hosted_runner; then
+      echo "::error::This action requires a GitHub-hosted runner" >&2
+      echo "::error::Self-hosted runners are not supported" >&2
+      echo "::error::RUNNER_ENVIRONMENT is not set to 'github-hosted' (current: ${RUNNER_ENVIRONMENT:-unset})" >&2
+      write_output "error" "Requires GitHub-hosted runner (not self-hosted)"
+      return 1
+    fi
+    echo "✓ RUNNER_ENVIRONMENT is 'github-hosted'"
   fi
-
-  echo "✓ RUNNER_ENVIRONMENT is 'github-hosted'"
 
   if ! validate_runtime_variables; then
     echo "::error::Required environment variables are not set" >&2
     echo "::error::This action must run in a GitHub Actions environment" >&2
-    echo "status=error" >> ""$GITHUB_OUTPUT""
-    echo "message=Missing required environment variables" >> ""$GITHUB_OUTPUT""
+    write_output "error" "Missing required environment variables"
     return 1
   fi
 
@@ -327,8 +297,7 @@ validate_git_runner() {
   echo ""
 
   echo "=== GitHub runner validation passed ==="
-  echo "status=success" >> ""$GITHUB_OUTPUT""
-  echo "message=GitHub runner validated: Linux ${NORMALIZED_ARCH}, github-hosted" >> ""$GITHUB_OUTPUT""
+  write_output "success" "GitHub runner validated: Linux ${NORMALIZED_ARCH}"
   return 0
 }
 

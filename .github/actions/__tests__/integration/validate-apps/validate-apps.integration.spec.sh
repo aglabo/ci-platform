@@ -10,7 +10,6 @@ Describe 'validate_apps()'
 
   # Mock GITHUB_OUTPUT
   export GITHUB_OUTPUT="/dev/null"
-  export FAIL_FAST="true"
 
   # Source the script to load functions
   Include "$SCRIPT_PATH"
@@ -143,33 +142,6 @@ Describe 'validate_apps()'
       The value "$(get_validated_apps)" should equal "Git"
       The stderr should include "::warning::"
       The stderr should include "version check skipped"
-    End
-  End
-
-  Context 'VALIDATED_APPS and VALIDATED_VERSIONS arrays'
-    It 'populates VALIDATED_APPS with app names'
-      When call validate_apps "git|Git" "bash|Bash"
-      The status should be success
-      The stderr should include "Checking"
-      The value "$(get_validated_app_at 0)" should equal "Git"
-      The value "$(get_validated_app_at 1)" should equal "Bash"
-    End
-
-    It 'populates VALIDATED_VERSIONS with version strings'
-      When call validate_apps "git|Git"
-      The status should be success
-      The stderr should include "Checking"
-      The value "$(get_validated_version_at 0)" should include "git version"
-    End
-
-    It 'arrays have matching indices for multiple apps'
-      When call validate_apps "git|Git" "bash|Bash"
-      The status should be success
-      The stderr should include "Checking"
-      The value "$(get_validated_app_at 0)" should equal "Git"
-      The value "$(get_validated_app_at 1)" should equal "Bash"
-      The value "$(get_validated_version_at 0)" should include "git"
-      The value "$(get_validated_version_at 1)" should include "bash"
     End
   End
 

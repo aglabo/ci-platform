@@ -9,8 +9,9 @@
 name: "Validate Environment"
 description: |
   Validate GitHub Actions runner environment.
-  REQUIREMENTS: Linux only, GitHub-hosted runners only (ubuntu-latest, ubuntu-22.04, etc.)
-  NOT SUPPORTED: Windows, macOS, self-hosted runners
+  REQUIREMENTS: Linux only (ubuntu-latest, ubuntu-22.04, etc.)
+  NOT SUPPORTED: Windows, macOS
+  Self-hosted runners: allowed by default; set require-github-hosted: "true" to restrict to GitHub-hosted only.
   (Note: ARM64 validated on Linux if GitHub provides ARM64 runners)
   Validates: OS/architecture, Git (via validate-runner), GitHub permissions (via validate-permissions), curl and optional applications (via validate-apps)
 author: "aglabo"
@@ -50,6 +51,10 @@ inputs:
       Security: NO eval usage, sed-only extraction, prefix-typed extractors prevent injection
     required: false
     default: ""
+  require-github-hosted:
+    description: "Require GitHub-hosted runner. 'true': error if runner is not github-hosted. 'false' (default): self-hosted runners allowed"
+    required: false
+    default: "false"
 
 outputs:
   runner-status:
@@ -95,6 +100,7 @@ runs:
       shell: bash
       env:
         EXPECTED_ARCHITECTURE: ${{ inputs.architecture }}
+        REQUIRE_GITHUB_HOSTED: ${{ inputs.require-github-hosted }}
       run: |
         set -euo pipefail
         bash "${GITHUB_ACTION_PATH}/scripts/validate-git-runner.sh"

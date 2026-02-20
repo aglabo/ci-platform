@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # shellcheck shell=sh
-# src: ./.github/actions/validate-environment/scripts/__tests__/validate-apps/integration/validate-app-version.integration.spec.sh
-# @(#) : Integration tests for validate_app_version() in validate-apps.sh
+# src: ./.github/actions/validate-environment/scripts/__tests__/validate-apps/functional/validate-app-version.functional.spec.sh
+# @(#) : Functional tests for validate_app_version() in validate-apps.sh
 
 Describe 'validate_app_version()'
   # Get absolute path to script

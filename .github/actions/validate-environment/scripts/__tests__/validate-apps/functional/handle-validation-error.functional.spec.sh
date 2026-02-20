@@ -20,12 +20,7 @@ Describe 'handle_validation_error()'
     rm -f "$GITHUB_OUTPUT_FILE"
   }
 
-  Describe 'with FAIL_FAST=true (default)'
-    BeforeEach 'set_fail_fast_true'
-    set_fail_fast_true() {
-      FAIL_FAST="true"
-    }
-
+  Describe 'default behavior (fail-fast)'
     It 'returns failure status'
       When call handle_validation_error "git" "Git" "2.39.0" "Git version too old"
       The status should be failure
@@ -67,39 +62,6 @@ Describe 'handle_validation_error()'
       When call check_results_count
       The output should equal 1
       The stderr should not be blank
-    End
-  End
-
-  Describe 'with FAIL_FAST=false'
-    BeforeEach 'set_fail_fast_false'
-    set_fail_fast_false() {
-      FAIL_FAST="false"
-    }
-
-    It 'returns success status (continues processing)'
-      When call handle_validation_error "git" "Git" "2.39.0" "Git version too old"
-      The status should be success
-    End
-
-    It 'outputs nothing to stderr'
-      When call handle_validation_error "git" "Git" "2.39.0" "Git version too old"
-      The status should be success
-      The stderr should be blank
-    End
-
-    It 'does not write to GITHUB_OUTPUT'
-      When call handle_validation_error "git" "Git" "2.39.0" "Git version too old"
-      The status should be success
-      The contents of file "$GITHUB_OUTPUT_FILE" should be blank
-    End
-
-    It 'adds entry to VALIDATION_RESULTS array'
-      check_results_count() {
-        handle_validation_error "git" "Git" "2.39.0" "Git version too old"
-        echo "${#VALIDATION_RESULTS[@]}"
-      }
-      When call check_results_count
-      The output should equal 1
     End
   End
 End

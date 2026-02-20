@@ -270,4 +270,126 @@ Describe 'initialize_apps_list()'
       The variable APPS[0] should equal "docker|Docker||"
     End
   End
+
+  Context 'app count limit (MAX_APPS = 30)'
+    call_with_n_defaults() {
+      local n=$1
+      local args=()
+      local i
+      for i in $(seq 1 "$n"); do
+        args+=("app${i}|App${i}")
+      done
+      initialize_apps_list "${args[@]}"
+    }
+
+    It 'accepts exactly 30 default apps (boundary)'
+      Data
+        # No stdin data
+      End
+      When call call_with_n_defaults 30
+      The status should be success
+      The value "${#APPS[@]}" should equal 30
+    End
+
+    It 'rejects 31 default apps (1 over limit) with exit code 2'
+      Data
+        # No stdin data
+      End
+      When call call_with_n_defaults 31
+      The status should equal 2
+      The stderr should include "::error::Too many apps specified"
+      The stderr should include "max: 30"
+      The value "${#APPS[@]}" should equal 31
+    End
+
+    It 'accepts exactly 30 stdin apps (boundary)'
+      Data
+        #|app1|App1
+        #|app2|App2
+        #|app3|App3
+        #|app4|App4
+        #|app5|App5
+        #|app6|App6
+        #|app7|App7
+        #|app8|App8
+        #|app9|App9
+        #|app10|App10
+        #|app11|App11
+        #|app12|App12
+        #|app13|App13
+        #|app14|App14
+        #|app15|App15
+        #|app16|App16
+        #|app17|App17
+        #|app18|App18
+        #|app19|App19
+        #|app20|App20
+        #|app21|App21
+        #|app22|App22
+        #|app23|App23
+        #|app24|App24
+        #|app25|App25
+        #|app26|App26
+        #|app27|App27
+        #|app28|App28
+        #|app29|App29
+        #|app30|App30
+      End
+      When call initialize_apps_list
+      The status should be success
+      The value "${#APPS[@]}" should equal 30
+    End
+
+    It 'rejects 31 stdin apps (1 over limit) with exit code 2'
+      Data
+        #|app1|App1
+        #|app2|App2
+        #|app3|App3
+        #|app4|App4
+        #|app5|App5
+        #|app6|App6
+        #|app7|App7
+        #|app8|App8
+        #|app9|App9
+        #|app10|App10
+        #|app11|App11
+        #|app12|App12
+        #|app13|App13
+        #|app14|App14
+        #|app15|App15
+        #|app16|App16
+        #|app17|App17
+        #|app18|App18
+        #|app19|App19
+        #|app20|App20
+        #|app21|App21
+        #|app22|App22
+        #|app23|App23
+        #|app24|App24
+        #|app25|App25
+        #|app26|App26
+        #|app27|App27
+        #|app28|App28
+        #|app29|App29
+        #|app30|App30
+        #|app31|App31
+      End
+      When call initialize_apps_list
+      The status should equal 2
+      The stderr should include "::error::Too many apps specified"
+      The stderr should include "max: 30"
+      The value "${#APPS[@]}" should equal 31
+    End
+
+    It 'rejects 29 defaults + 2 stdin = 31 total (mixed over limit)'
+      Data
+        #|app30|App30
+        #|app31|App31
+      End
+      When call call_with_n_defaults 29
+      The status should equal 2
+      The stderr should include "::error::Too many apps specified"
+      The stderr should include "max: 30"
+    End
+  End
 End

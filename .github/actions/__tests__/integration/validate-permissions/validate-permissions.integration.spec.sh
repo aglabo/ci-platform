@@ -20,19 +20,17 @@ Describe 'validate-permissions.sh - Orchestrator Error Flows (Integration)'
       GITHUB_OUTPUT_FILE=$(mktemp)
       export GITHUB_OUTPUT="$GITHUB_OUTPUT_FILE"
       export GITHUB_TOKEN="ghp_test_token"
+      export GITHUB_REPOSITORY="owner/repo"
+      export GITHUB_REF_NAME="main"
 
-      # Mock call_github_api by default
-      call_github_api() {
-        echo "HTTP/1.1 200 OK" > "$2"
-        echo "X-OAuth-Scopes: repo" >> "$2"
-        return 0
-      }
-      export -f call_github_api
+      # Mock github_api_post by default (returns 422 - permission OK)
+      github_api_post() { echo "422"; }
+      export -f github_api_post
     }
 
     cleanup_orchestrator_test() {
       rm -f "$GITHUB_OUTPUT_FILE"
-      unset GITHUB_OUTPUT GITHUB_TOKEN ACTIONS_TYPE
+      unset GITHUB_OUTPUT GITHUB_TOKEN ACTIONS_TYPE GITHUB_REPOSITORY GITHUB_REF_NAME
     }
 
     Context 'GITHUB_TOKEN not set'
@@ -51,20 +49,16 @@ Describe 'validate-permissions.sh - Orchestrator Error Flows (Integration)'
       BeforeEach 'setup_insufficient_pr_permissions'
 
       setup_insufficient_pr_permissions() {
-        call_github_api() {
-          echo "HTTP/1.1 200 OK" > "$2"
-          echo "X-OAuth-Scopes: user" >> "$2"
-          return 0
-        }
-        export -f call_github_api
+        github_api_post() { echo "403"; }
+        export -f github_api_post
       }
 
-      It 'fails with error about missing scopes'
+      It 'fails with error about missing permissions'
         export ACTIONS_TYPE="pr"
         When run validate_permissions
         The status should be failure
         The stdout should include "Validating GitHub Permissions"
-        The stderr should include "Missing required scopes"
+        The stderr should include "pull-requests: write permission not granted"
         The contents of file "$GITHUB_OUTPUT_FILE" should include "status=error"
         The contents of file "$GITHUB_OUTPUT_FILE" should include "message=Missing PR permissions"
       End
@@ -74,20 +68,16 @@ Describe 'validate-permissions.sh - Orchestrator Error Flows (Integration)'
       BeforeEach 'setup_insufficient_commit_permissions'
 
       setup_insufficient_commit_permissions() {
-        call_github_api() {
-          echo "HTTP/1.1 200 OK" > "$2"
-          echo "X-OAuth-Scopes: user" >> "$2"
-          return 0
-        }
-        export -f call_github_api
+        github_api_post() { echo "403"; }
+        export -f github_api_post
       }
 
-      It 'fails with error about missing scopes'
+      It 'fails with error about missing permissions'
         export ACTIONS_TYPE="commit"
         When run validate_permissions
         The status should be failure
         The stdout should include "Validating GitHub Permissions"
-        The stderr should include "Missing required scopes"
+        The stderr should include "contents: write permission not granted"
         The contents of file "$GITHUB_OUTPUT_FILE" should include "status=error"
         The contents of file "$GITHUB_OUTPUT_FILE" should include "message=Missing commit permissions"
       End

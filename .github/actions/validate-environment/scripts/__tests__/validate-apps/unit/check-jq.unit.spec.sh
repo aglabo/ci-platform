@@ -38,19 +38,12 @@ Describe 'check_jq()'
     It 'returns failure'
       When call check_jq
       The status should be failure
-      The stderr should not be blank
     End
 
-    It 'outputs jq required message to stderr'
+    It 'outputs nothing to stderr'
       When call check_jq
       The status should be failure
-      The stderr should include "jq is required for JSON processing"
-    End
-
-    It 'outputs install instructions to stderr'
-      When call check_jq
-      The status should be failure
-      The stderr should include "Install:"
+      The stderr should be blank
     End
   End
 End
