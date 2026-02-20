@@ -11,8 +11,9 @@
 # @brief Validate GitHub Actions runner environment comprehensively
 # @description
 #   Validates the execution environment for GitHub Actions workflows.
-#   Ensures OS is Linux, architecture matches expectations (amd64|arm64),
-#   and runner is GitHub-hosted with required environment variables.
+#   Prerequisite: Linux runner only (Ubuntu). Windows and macOS are not supported.
+#   Checks architecture (amd64|arm64), GitHub Actions environment,
+#   and optionally GitHub-hosted runner (enabled when REQUIRE_GITHUB_HOSTED=true).
 #
 #   **Checks:**
 #   1. Operating System is Linux
@@ -172,6 +173,8 @@ validate_github_actions_env() {
 }
 
 # @description Validate GitHub-hosted runner
+# @note RUNNER_ENVIRONMENT is set automatically by GitHub Actions on GitHub-hosted runners.
+#       This variable is NOT available on self-hosted runners (GitHub spec dependency).
 # @exitcode 0 RUNNER_ENVIRONMENT is set to 'github-hosted'
 # @exitcode 1 Self-hosted runner or RUNNER_ENVIRONMENT not set correctly
 validate_github_hosted_runner() {
