@@ -90,6 +90,121 @@ Describe 'validate-permissions.sh - Permissions Validation'
   End
 
   # ============================================================================
+  # Command Availability Tests
+  # ============================================================================
+
+  Describe 'check_curl()'
+    Context 'when curl is available'
+      It 'returns success'
+        When call check_curl
+        The status should be success
+      End
+
+      It 'outputs nothing to stderr'
+        When call check_curl
+        The stderr should be blank
+      End
+    End
+
+    Context 'when curl is not available'
+      setup_no_curl() {
+        RM_CMD=$(command -v rm)
+        EMPTY_DIR=$(mktemp -d)
+        SAVED_PATH="$PATH"
+        PATH="$EMPTY_DIR"
+      }
+      teardown_no_curl() {
+        PATH="$SAVED_PATH"
+        "$RM_CMD" -rf "$EMPTY_DIR"
+      }
+      BeforeEach 'setup_no_curl'
+      AfterEach 'teardown_no_curl'
+
+      It 'returns failure'
+        When call check_curl
+        The status should be failure
+      End
+
+      It 'outputs nothing to stderr'
+        When call check_curl
+        The status should be failure
+        The stderr should be blank
+      End
+    End
+  End
+
+  # ============================================================================
+  # Token Check Tests
+  # ============================================================================
+
+  Describe 'check_token()'
+    BeforeEach 'cleanup_check_token'
+    AfterEach 'cleanup_check_token'
+
+    cleanup_check_token() {
+      unset GITHUB_TOKEN GITHUB_OUTPUT
+    }
+
+    Context 'token is set'
+      It 'returns success and outputs progress'
+        export GITHUB_TOKEN="ghp_test_token"
+        When call check_token
+        The status should be success
+        The output should include "✓ GITHUB_TOKEN is set"
+      End
+    End
+
+    Context 'token is not set'
+      It 'returns failure with error message'
+        When call check_token
+        The status should be failure
+        The output should include "Checking GITHUB_TOKEN"
+        The stderr should include "GITHUB_TOKEN environment variable is not set"
+      End
+    End
+  End
+
+  # ============================================================================
+  # Base Branch Resolution Tests
+  # ============================================================================
+
+  Describe 'determine_base_branch()'
+    BeforeEach 'cleanup_base_branch_vars'
+    AfterEach 'cleanup_base_branch_vars'
+
+    cleanup_base_branch_vars() {
+      unset GITHUB_BASE_REF GITHUB_REF_NAME
+    }
+
+    Context 'GITHUB_BASE_REF is set'
+      It 'returns GITHUB_BASE_REF'
+        export GITHUB_BASE_REF="main"
+        export GITHUB_REF_NAME="feature-branch"
+        When call determine_base_branch
+        The output should eq "main"
+        The status should be success
+      End
+    End
+
+    Context 'GITHUB_BASE_REF not set, GITHUB_REF_NAME is set'
+      It 'returns GITHUB_REF_NAME as fallback'
+        export GITHUB_REF_NAME="develop"
+        When call determine_base_branch
+        The output should eq "develop"
+        The status should be success
+      End
+    End
+
+    Context 'neither GITHUB_BASE_REF nor GITHUB_REF_NAME is set'
+      It 'returns failure'
+        When call determine_base_branch
+        The status should be failure
+        The stderr should be blank
+      End
+    End
+  End
+
+  # ============================================================================
   # GitHub Token Tests
   # ============================================================================
 
@@ -253,69 +368,6 @@ Describe 'validate-permissions.sh - Permissions Validation'
   End
 
   # ============================================================================
-  # Default Branch Resolution Tests
-  # ============================================================================
-
-  Describe 'get_default_branch()'
-    BeforeEach 'cleanup_branch_vars'
-    AfterEach 'cleanup_branch_vars'
-
-    cleanup_branch_vars() {
-      unset GITHUB_REF_NAME GITHUB_REPOSITORY GITHUB_TOKEN
-    }
-
-    Context 'GITHUB_REF_NAME is set'
-      It 'returns GITHUB_REF_NAME value without API call'
-        export GITHUB_REF_NAME="feature-branch"
-        export GITHUB_TOKEN="ghp_test"
-        When call get_default_branch
-        The output should eq "feature-branch"
-        The status should be success
-      End
-    End
-
-    Context 'GITHUB_REF_NAME not set, API returns branch'
-      BeforeEach 'mock_curl_with_branch'
-
-      mock_curl_with_branch() {
-        export GITHUB_TOKEN="ghp_test"
-        export GITHUB_REPOSITORY="owner/repo"
-        curl() {
-          echo '{"default_branch": "develop"}'
-          return 0
-        }
-        export -f curl
-      }
-
-      It 'returns branch name from API response'
-        When call get_default_branch
-        The output should eq "develop"
-        The status should be success
-      End
-    End
-
-    Context 'API returns empty response, falls back to main'
-      BeforeEach 'mock_curl_empty_response'
-
-      mock_curl_empty_response() {
-        export GITHUB_TOKEN="ghp_test"
-        export GITHUB_REPOSITORY="owner/repo"
-        curl() {
-          echo '{}'
-          return 0
-        }
-        export -f curl
-      }
-
-      It 'returns "main" as fallback'
-        When call get_default_branch
-        The output should eq "main"
-        The status should be success
-      End
-    End
-  End
-
-  # ============================================================================
   # Permission Probe Tests
   # ============================================================================
 
@@ -326,11 +378,11 @@ Describe 'validate-permissions.sh - Permissions Validation'
     setup_probe_tests() {
       export GITHUB_TOKEN="ghp_test_token"
       export GITHUB_REPOSITORY="owner/repo"
-      export GITHUB_REF_NAME="main"
+      export GITHUB_BASE_REF="main"
     }
 
     cleanup_probe_tests() {
-      unset GITHUB_TOKEN GITHUB_REPOSITORY GITHUB_REF_NAME
+      unset GITHUB_TOKEN GITHUB_REPOSITORY GITHUB_BASE_REF
     }
 
     Context 'commit operation - permission granted (422)'
@@ -381,8 +433,7 @@ Describe 'validate-permissions.sh - Permissions Validation'
 
       mock_pr_probe_success() {
         github_api_post() { echo "422"; }
-        get_default_branch() { echo "main"; }
-        export -f github_api_post get_default_branch
+        export -f github_api_post
       }
 
       It 'returns success'
@@ -396,14 +447,27 @@ Describe 'validate-permissions.sh - Permissions Validation'
 
       mock_pr_probe_denied() {
         github_api_post() { echo "403"; }
-        get_default_branch() { echo "main"; }
-        export -f github_api_post get_default_branch
+        export -f github_api_post
       }
 
       It 'returns failure'
         When call probe_github_write_permission "pr"
         The status should be failure
         The stderr should include "Permission denied (403)"
+      End
+    End
+
+    Context 'pr operation - no base branch available'
+      BeforeEach 'setup_pr_no_base_branch'
+
+      setup_pr_no_base_branch() {
+        unset GITHUB_BASE_REF GITHUB_REF_NAME
+      }
+
+      It 'returns failure with descriptive error'
+        When call probe_github_write_permission "pr"
+        The status should be failure
+        The stderr should include "GITHUB_BASE_REF"
       End
     End
 

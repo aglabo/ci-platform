@@ -66,9 +66,30 @@ check_env_var() {
   return 0
 }
 
+# @description Check if curl is available in PATH
+# @exitcode 0 curl is available
+# @exitcode 1 curl is not installed or not found in PATH
+check_curl() {
+  command -v curl >/dev/null 2>&1
+}
+
 # ============================================================================
 # Section 3: GITHUB API LAYER
 # ============================================================================
+
+# @description Determine the base branch for PR permission probe
+# @stdout Branch name (GITHUB_BASE_REF → GITHUB_REF_NAME)
+# @exitcode 0 Branch determined
+# @exitcode 1 Neither GITHUB_BASE_REF nor GITHUB_REF_NAME is set
+determine_base_branch() {
+  if [ -n "${GITHUB_BASE_REF:-}" ]; then
+    echo "$GITHUB_BASE_REF"
+  elif [ -n "${GITHUB_REF_NAME:-}" ]; then
+    echo "$GITHUB_REF_NAME"
+  else
+    return 1
+  fi
+}
 
 # @description Send POST request to GitHub API and return HTTP status code only
 # @arg $1 string API endpoint path (e.g., "/repos/owner/repo/git/refs")
@@ -88,31 +109,6 @@ github_api_post() {
     "https://api.github.com${endpoint}" \
     --data "${json_payload}") || http_status="000"  # "000": Network error (curl failed)
   echo "$http_status"
-}
-
-# @description Get the default branch for the current repository
-# @stdout Branch name
-# @exitcode 0 Always
-# Priority: GITHUB_REF_NAME → GET /repos API → fallback "main"
-get_default_branch() {
-  if [ -n "${GITHUB_REF_NAME:-}" ]; then
-    echo "${GITHUB_REF_NAME}"
-    return 0
-  fi
-
-  local branch
-  branch=$(curl -s \
-    -H "Authorization: Bearer ${GITHUB_TOKEN}" \
-    -H "Accept: application/vnd.github+json" \
-    "https://api.github.com/repos/${GITHUB_REPOSITORY}" \
-    | jq -r '.default_branch // empty' | tr -d '\r')
-
-  if [ -n "$branch" ]; then
-    echo "$branch"
-    return 0
-  fi
-
-  echo "main"
 }
 
 # ============================================================================
@@ -141,12 +137,15 @@ probe_github_write_permission() {
       http_status=$(github_api_post "/repos/${owner_repo}/git/refs" "$payload")
       ;;
     pr)
+      local base_branch
+      if ! base_branch=$(determine_base_branch); then
+        echo "::error::Cannot determine base branch: set GITHUB_BASE_REF or GITHUB_REF_NAME" >&2
+        return 1
+      fi
       local timestamp
       timestamp=$(date +%s)
-      local default_branch
-      default_branch=$(get_default_branch)
       local payload
-      payload="{\"title\": \"permission-probe\", \"head\": \"permission-probe-${timestamp}\", \"base\": \"${default_branch}\"}"
+      payload="{\"title\": \"permission-probe\", \"head\": \"permission-probe-${timestamp}\", \"base\": \"${base_branch}\"}"
       http_status=$(github_api_post "/repos/${owner_repo}/pulls" "$payload")
       ;;
     *)
@@ -216,6 +215,30 @@ validate_id_token_permissions() {
   return 0
 }
 
+# @description Check GITHUB_TOKEN existence with progress output and GITHUB_OUTPUT write
+# @exitcode 0 Token is present
+# @exitcode 1 Token is missing
+# @stdout Progress messages
+# @stderr Error messages with ::error:: prefix
+# @set GITHUB_OUTPUT Writes status=error and message on failure
+check_token() {
+  echo "Checking GITHUB_TOKEN..."
+  local token_output token_status token_message
+  token_output=$(validate_github_token) || true
+  token_status="${token_output%%:*}"
+  token_message="${token_output#*:}"
+
+  if [ "$token_status" = "ERROR" ]; then
+    echo "::error::${token_message}" >&2
+    echo "::error::This action requires a GitHub token for API access" >&2
+    echo "::error::Please ensure GITHUB_TOKEN is configured in the workflow" >&2
+    { echo "status=error"; echo "message=${token_message}"; } >> "$(out_status)"
+    return 1
+  fi
+  echo "✓ ${token_message}"
+  echo ""
+}
+
 # ============================================================================
 # Section 6: MAIN ORCHESTRATOR
 # ============================================================================
@@ -233,33 +256,26 @@ validate_permissions() {
 
   # Validate actions-type argument
   case "$actions_type" in
-    read|commit|pr) ;;
+    read|commit|pr|any) ;;
     *)
-      echo "::error::Invalid actions-type: '${actions_type}'. Must be one of: read, commit, pr" >&2
+      echo "::error::Invalid actions-type: '${actions_type}'. Must be one of: read, commit, pr, any" >&2
       { echo "status=error"; echo "message=Invalid actions-type: ${actions_type}"; } >> "$(out_status)"
       return 1
       ;;
   esac
 
+  # any: token check only, skip permission probe
+  if [ "$actions_type" = "any" ]; then
+    check_token || return 1
+    echo "=== GitHub permissions validation passed (type=any: permission checks skipped) ==="
+    { echo "status=success"; echo "message=GitHub permissions validated"; } >> "$(out_status)"
+    return 0
+  fi
+
   echo "=== Validating GitHub Permissions ==="
   echo ""
 
-  # Always validate GITHUB_TOKEN existence
-  echo "Checking GITHUB_TOKEN..."
-  local token_output token_status token_message
-  token_output=$(validate_github_token) || true
-  token_status="${token_output%%:*}"
-  token_message="${token_output#*:}"
-
-  if [ "$token_status" = "ERROR" ]; then
-    echo "::error::${token_message}" >&2
-    echo "::error::This action requires a GitHub token for API access" >&2
-    echo "::error::Please ensure GITHUB_TOKEN is configured in the workflow" >&2
-    { echo "status=error"; echo "message=${token_message}"; } >> "$(out_status)"
-    return 1
-  fi
-  echo "✓ ${token_message}"
-  echo ""
+  check_token || return 1
 
   # Validate write permissions via API execution probe
   case "$actions_type" in
@@ -305,6 +321,7 @@ validate_permissions() {
 
 # Only execute when script is run directly (not when sourced for testing)
 if [ "${BASH_SOURCE[0]}" = "${0}" ]; then
+  check_curl || { echo "::error::curl is not installed or not found in PATH" >&2; exit 1; }
   validate_permissions "${1:-${ACTIONS_TYPE:-read}}"
   exit $?
 fi
