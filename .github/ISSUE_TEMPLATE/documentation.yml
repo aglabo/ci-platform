@@ -1,0 +1,95 @@
+name: Documentation
+description: Create or update documentation (guides, tutorials, references, API docs).
+title: "[Docs]"
+labels: ["documentation"]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for improving documentation! Please provide clear details about what needs to be documented.
+
+  - type: dropdown
+    id: doc_type
+    attributes:
+      label: Document Type
+      description: Select the type of documentation you plan to create or update.
+      options:
+        - Tutorial (Step-by-step guide for beginners)
+        - How-to Guide (Task-oriented instructions)
+        - Reference (Technical specifications, API docs)
+        - Explanation (Conceptual overview, design rationale)
+        - README/Getting Started
+        - Migration Guide
+        - Troubleshooting Guide
+    validations:
+      required: true
+
+  - type: textarea
+    id: documentation_goal
+    attributes:
+      label: Documentation Goal
+      description: |
+        What should readers be able to understand or accomplish after reading this documentation?
+      placeholder: |
+        After reading this guide, users will:
+        - Understand how Reusable Workflows differ from Composite Actions
+        - Be able to create and call a reusable workflow
+        - Know when to use Reusable Workflows vs alternatives
+    validations:
+      required: true
+
+  - type: textarea
+    id: target_audience
+    attributes:
+      label: Target Audience
+      description: |
+        Who is this documentation for?
+        Include their level of expertise and assumed knowledge.
+      placeholder: |
+        - GitHub Actions users with basic workflow experience
+        - Developers familiar with CI/CD concepts
+        - Teams looking to standardize CI/CD pipelines
+
+        Prerequisites:
+        - Understanding of YAML syntax
+        - Experience writing GitHub Actions workflows
+    validations:
+      required: true
+
+  - type: textarea
+    id: references
+    attributes:
+      label: References
+      description: |
+        Link to any related documentation, specs, or resources
+        that should be referenced or consulted.
+      placeholder: |
+        - GitHub official docs: https://docs.github.com/en/actions/using-workflows/reusing-workflows
+        - Related internal docs: /docs/ci-cd-guide.md
+        - Previous discussions: #123
+        - Design specs: /specs/reusable-workflows.md
+
+  - type: textarea
+    id: acceptance_criteria
+    attributes:
+      label: Acceptance Criteria
+      description: |
+        Define when this documentation is considered complete.
+        Focus on content quality, clarity, and completeness.
+      placeholder: |
+        - [ ] All key concepts are explained clearly
+        - [ ] At least 2 practical examples are provided
+        - [ ] Target audience can follow the documentation without confusion
+        - [ ] Code examples are tested and work as expected
+        - [ ] Documentation is reviewed by at least one technical expert
+        - [ ] Formatting follows project documentation style guide
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional_context
+    attributes:
+      label: Additional Context
+      description: Any other information or notes that might help.
+      placeholder: "This documentation supports the feature introduced in #456..."
