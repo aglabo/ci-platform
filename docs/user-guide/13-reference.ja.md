@@ -10,6 +10,9 @@ tags:
   - outputs
 ---
 
+> このアクションは **Linux ランナー専用** です（`ubuntu-latest`、`ubuntu-22.04` など）。
+> Windows・macOS はサポートしていません。
+
 ## 📖 リファレンス
 
 このページでは、`validate-environment` アクションの入力パラメーター・出力値・書式仕様を網羅的に説明します。
@@ -23,9 +26,6 @@ tags:
 ```yaml
 - uses: aglabo/ci-platform/.github/actions/validate-environment@v0.1.0
 ```
-
-> **Linux ランナー専用です**
-> Windows および macOS はサポートしていません (`ubuntu-latest`、`ubuntu-22.04` など Linux 系ランナーで使用してください)。
 
 ## 📥 入力パラメーター
 
@@ -54,7 +54,10 @@ tags:
 
 <!-- markdownlint-enable line-length MD060 -->
 
-それ以外の値を指定した場合はエラーになります。
+補足:
+
+- それ以外の値を指定した場合はエラーになります（自動フォールバックはしません）。
+- 期待値と実際のアーキテクチャが一致しない場合も即エラーになります。
 
 ---
 
@@ -69,7 +72,7 @@ tags:
 | `read` (デフォルト) | `contents: read`                           | トークンの存在確認 + 読み取り権限プローブ |
 | `commit`            | `contents: write`                          | トークンの存在確認 + 書き込み権限プローブ |
 | `pr`                | `contents: write` + `pull-requests: write` | トークンの存在確認 + PR 作成権限プローブ  |
-| `any`               | 任意                                       | トークンの存在確認のみ (権限プローブなし) |
+| `any`               | 制限なし（permissions を検証しない）       | トークンの存在確認のみ (権限プローブなし) |
 
 <!-- markdownlint-enable line-length MD060 -->
 
@@ -77,7 +80,7 @@ tags:
 
 `additional-apps` はパイプ (`|`) 区切りの 4 フィールド形式で記述します。
 
-```bash
+```plaintext
 cmd|app_name|version_extractor|min_version
 ```
 
@@ -92,18 +95,26 @@ cmd|app_name|version_extractor|min_version
 
 <!-- markdownlint-enable line-length MD060 -->
 
-複数アプリを検証する場合は YAML の multiline 文字列で記述します。
+補足:
+
+- 複数アプリを検証する場合は YAML の multiline 文字列で記述します。
 
 ```yaml
 - uses: aglabo/ci-platform/.github/actions/validate-environment@v0.1.0
   with:
     additional-apps: |
-      gh|GitHub CLI|regex:version ([0-9.]+)|2.0
+      gh|GitHub CLI|field:3|2.0
       node|Node.js|regex:v([0-9.]+)|18.0
-      jq|jq|field:2|1.6
+      jq|jq|regex:([0-9.]+)|1.6
 ```
 
-`#` で始まる行はコメントとして無視されます。
+補足:
+
+- `#` で始まる行はコメントとして無視されます。
+- 安全のため、実行ファイル名には、タブ、改行コードなどのコントロールキャラ・`./`、`../` のような相対パス・
+  `;`、`&`、半角スペースなどの特殊文字を含めることはできません。
+  なお、`regex:PATTERN` の PATTERN では半角スペース（0x20）は使用できます。
+- 安全のため、表示名には、改行コード、タブを含めることはできません。
 
 #### 🔍 バージョン抽出方式
 
@@ -111,26 +122,34 @@ cmd|app_name|version_extractor|min_version
 
 <!-- markdownlint-disable line-length MD060 -->
 
-| 方式           | 書式            | 動作                                                        | 例                            |
-| -------------- | --------------- | ----------------------------------------------------------- | ----------------------------- |
-| フィールド指定 | `field:N`       | `--version` 出力をスペース区切りで N 番目のフィールドを取得 | `field:2` → `jq-1.6` の `1.6` |
-| 正規表現       | `regex:PATTERN` | `sed -E` でキャプチャグループ `\1` を抽出                   | `regex:version ([0-9.]+)`     |
-| 自動抽出       | `auto`          | `--version` 出力から `X.Y` または `X.Y.Z` 形式を自動検出    | `auto`                        |
-| デフォルト     | ''              | 抽出方式が空欄のときは、`auto`として自動抽出                | ''                            |
-
-空欄の場合は `auto` として扱われます。
+| 方式           | 書式            | 動作                                                        | 例                                        |
+| -------------- | --------------- | ----------------------------------------------------------- | ----------------------------------------- |
+| フィールド指定 | `field:N`       | `--version` 出力をスペース区切りで N 番目のフィールドを取得 | `field:3` → `gh version 2.0.0` の `2.0.0` |
+| 正規表現       | `regex:PATTERN` | `sed -E` でキャプチャグループ `\1` を抽出                   | `regex:version ([0-9.]+)`                 |
+| 自動抽出       | `auto`          | `--version` 出力から `X.Y` または `X.Y.Z` 形式を自動検出    | `auto`                                    |
+| デフォルト     | ''              | 抽出方式が空欄のときは、`auto`として自動抽出                | ''                                        |
 
 <!-- markdownlint-enable line-length MD060 -->
+
+補足:
+
+- **空欄の場合は `auto` として扱われます。**
+- 自動抽出の場合、1〜3桁の数字をメジャーバージョンとして扱います。4桁は日付データを取得する場合があるため無視しています。
+- `regex:PATTERN` を使用する場合、パターンには必ず 1 つ以上のキャプチャグループを含めてください。
+  マッチしない場合はエラーになります。
+- 使用できる文字はホワイトリストで制限されています: 英数字 / `. _ - [ ] ( ) + ^ :` / 半角スペース（0x20）のみ有効です。
+  `*` `?` `|` は ReDoS 攻撃面を低減するため意図的に除外されています。
+  それ以外の文字（バックスラッシュ・`#`・シェルメタ文字・制御文字など）はエラーになります。
 
 各方式の使用例を以下に示します。
 
 ```yaml
 additional-apps: |
-  # field:N 方式 (jq は "jq-1.6" 形式で出力するためフィールド指定が必要)
-  jq|jq|field:2|1.6
+  # field:N 方式 (gh は "gh version 2.x.x" のようにスペース区切りで出力するため field が有効)
+  gh|GitHub CLI|field:3|2.0
 
-  # regex:PATTERN 方式 (gh は "gh version 2.x.x" 形式)
-  gh|GitHub CLI|regex:version ([0-9.]+)|2.0
+  # regex:PATTERN 方式 (jq は "jq-1.6" 形式でスペースがないため regex が必要)
+  jq|jq|regex:([0-9.]+)|1.6
 
   # auto 方式 (semver X.Y.Z 形式が直接含まれる場合)
   # "auto" と明示してもよく、空欄にすると自動的に auto として扱われる
@@ -150,14 +169,18 @@ GitHub ホステッドランナーか否かを `RUNNER_ENVIRONMENT` 環境変数
 
 <!-- markdownlint-enable line-length MD060 -->
 
-> `RUNNER_ENVIRONMENT` は GitHub Actions が GitHub ホステッドランナーに自動設定する変数です。
-> セルフホストランナーではこの変数が設定されないため、`true` にするとセルフホストランナーはエラーになります。
+補足:
+
+- `RUNNER_ENVIRONMENT` は GitHub Actions が GitHub ホステッドランナーに自動設定する変数です。
+- セルフホストランナーではこの変数が設定されないため、`true` にするとセルフホストランナーはエラーになります。
 
 ---
 
 ## 📤 出力値
 
 各検証の結果は `status` と `message` のペアで出力されます。
+各検証は `runner` → `permissions` → `apps` の順で実行されます。
+いずれかが `error` を返した場合、アクションは即時に非ゼロの終了コードで終了します（フェイルファスト）。後続の検証ステップは実行されません。
 
 <!-- markdownlint-disable line-length MD060 -->
 
@@ -193,11 +216,17 @@ steps:
 
 ## 🔒 制約事項
 
-| 制約         | 内容                                                                   | 備考             |
-| ------------ | ---------------------------------------------------------------------- | ---------------- |
-| 対応 OS      | Linux のみ (`ubuntu-latest`、`ubuntu-22.04` など)                      |                  |
-| アプリ上限   | `additional-apps` に指定できるアプリは最大 30 件                       | DOS対策のため    |
-| セキュリティ | `eval` 非使用。バージョン抽出は `sed` のみ使用し、メタキャラクター禁止 | '\d'等は使用不可 |
+<!-- markdownlint-disable line-length -->
+
+| 制約           | 内容                                                                                                                                                               | 備考                     |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------ |
+| アプリ上限     | `additional-apps` に指定できるアプリは最大 30 件                                                                                                                   | DoS対策のため            |
+| フィールド数   | 1 定義あたり 2 列（`cmd\|app_name`）または 4 列（`cmd\|app_name\|extractor\|version`）のみ有効。3 列など他の数はエラー。2 列の場合はバージョンチェックを行いません | フェイルファストで即終了 |
+| バージョン比較 | `sort -V`（GNU coreutils）による比較。`X.Y` / `X.Y.Z` 形式に対応。PCRE / strict semver 非準拠                                                                      | Linux runner 専用        |
+| セキュリティ   | `eval` 非使用。バージョン抽出は POSIX ERE（`sed -E`）準拠。                                                                                                        | POSIX ERE 準拠           |
+| 正規表現方言   | 正規表現は POSIX ERE に準拠します（PCRE 記法は使用できません）。                                                                                                   | `sed -E` 使用            |
+
+<!-- markdownlint-disable line-length -->
 
 ---
 
