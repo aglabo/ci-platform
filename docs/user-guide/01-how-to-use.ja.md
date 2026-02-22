@@ -1,6 +1,6 @@
 ---
 title: 使い方
-description: ci-platform の Actions・ワークフローを自分のリポジトリから参照して利用する方法
+description: aglabo/ci-platform の Actions・Workflows を自分のリポジトリから参照して利用する方法
 slug: how-to-use
 sidebar_position: 1
 tags:
@@ -12,14 +12,16 @@ tags:
 
 ## 📖 このガイドについて
 
-ci-platform が提供するコンポーネントを、自分のリポジトリから参照して利用する方法を説明します。
+`aglabo/ci-platform` が提供するコンポーネントの利用方法を説明します。
+以下では `aglabo/ci-platform` を ci-platform と表記します。
+ci-platform は Linux ランナーのみを対象として設計されており、macOS および Windows ランナーには対応していません。
 ci-platform のリポジトリをフォークする必要はありません。
 
 ---
 
 ## 🔗 コンポーネントの参照方法
 
-ci-platform は 2 種類の形式でコンポーネントを提供します (または提供予定です)。
+ci-platform は Composite Action を提供中です。Reusable Workflow は v0.2.x で公開予定です。
 
 ### Composite Action
 
@@ -57,6 +59,7 @@ jobs:
 <!-- markdownlint-enable line-length MD060 -->
 
 本番ワークフローではタグまたはコミット SHA による固定を推奨します。
+再現性を最大化する場合はコミット SHA 固定を推奨します。
 
 ---
 
@@ -81,7 +84,6 @@ jobs:
           actions-type: read
 ```
 
-> **Linux ランナー専用です。**
 > `ubuntu-latest`・`ubuntu-22.04` など Linux 系ランナーで使用してください。
 
 詳細は以下を参照してください。
@@ -95,17 +97,18 @@ jobs:
 
 ## 🔄 Reusable Workflow の使い方 (提供予定)
 
-actionlint・ghalint・gitleaks の reusable workflow は現在準備中です。
-提供開始後は、以下のように参照できるようになります。
+actionlint・ghalint・gitleaks の Reusable Workflow は v0.2.x 系で順次公開予定です。
+Composite Action はジョブ内の検証用途、Reusable Workflow は CI 全体の標準化用途を想定しています。
+公開後は、以下のように参照できます。
 
 ```yaml
-# 将来の利用イメージ
+# 将来の利用イメージ (v0.2.x 以降)
 jobs:
   lint-workflow:
-    uses: aglabo/ci-platform/.github/workflows/actionlint.yml@v1
+    uses: aglabo/ci-platform/.github/workflows/actionlint.yml@v0.2.0
 
   scan-secrets:
-    uses: aglabo/ci-platform/.github/workflows/scan-gitleaks.yml@v1
+    uses: aglabo/ci-platform/.github/workflows/scan-gitleaks.yml@v0.2.0
 ```
 
 ロードマップの詳細は [ci-platform とは](./00-about-ci-platform.ja.md#️-ロードマップ) を参照してください。
