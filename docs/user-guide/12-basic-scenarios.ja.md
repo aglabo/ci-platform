@@ -11,14 +11,17 @@ tags:
 
 ## 🗂 利用シナリオ
 
+本アクションは CI の入口ゲートとして設計されています。
 このページでは、`actions-type` ごとの典型的な利用例を示します。
+権限の強さに応じて `read` → `commit` → `pr` の順で例を示します。
+再現性確保のため、固定バージョンの使用を推奨します。
 
 ---
 
 ## シナリオ 1: コード参照のみ (read)
 
 コードの読み取りや検証をするワークフロー向けの設定です。
-`actions-type` を省略した場合のデフォルトです。
+`read` は最小権限のベースラインであり、`actions-type` を省略した場合のデフォルトです。
 
 ```yaml
 jobs:
@@ -28,18 +31,20 @@ jobs:
       contents: read
 
     steps:
+      # CI の入口ゲートとして機能させるため checkout より前に配置します
       - name: Validate environment
         uses: aglabo/ci-platform/.github/actions/validate-environment@v0.1.0
-        with:
-          actions-type: read
+        # actions-type: read (default)
 
       - uses: actions/checkout@v4
       - name: Run linter
         run: pnpm lint
 ```
 
-`contents: read` はワークフローの動作に必要な最小限のパーミッションです。
-明示的に記述することを推奨します。
+補足:
+
+- `contents: read` はワークフローの動作に必要な最小限のパーミッションです。
+  明示的に記述することを推奨します。
 
 ---
 
@@ -56,6 +61,7 @@ jobs:
       contents: write
 
     steps:
+      # CI の入口ゲートとして機能させるため checkout より前に配置します
       - name: Validate environment
         uses: aglabo/ci-platform/.github/actions/validate-environment@v0.1.0
         with:
@@ -72,7 +78,9 @@ jobs:
           git push
 ```
 
-`contents: write` を付与することで、コミット権限の事前確認をします。
+補足:
+
+- `contents: write` を付与することで、コミット権限の事前確認をします。
 
 ---
 
@@ -90,12 +98,13 @@ jobs:
       pull-requests: write
 
     steps:
+      # CI の入口ゲートとして機能させるため checkout より前に配置します
       - name: Validate environment
         uses: aglabo/ci-platform/.github/actions/validate-environment@v0.1.0
         with:
           actions-type: pr
           additional-apps: |
-            gh|GitHub CLI|regex:version ([0-9.]+)|2.0
+            gh|GitHub CLI|field:3|2.0
 
       - uses: actions/checkout@v4
       - name: Create pull request
@@ -106,8 +115,11 @@ jobs:
             --base main
 ```
 
-`pull-requests: write` と `contents: write` の両方を付与してください。
-`gh` CLI を使う場合は `additional-apps` で事前にインストール確認をします。
+補足:
+
+- `pull-requests: write` と `contents: write` の両方を付与してください。
+- `gh` CLI は `GITHUB_TOKEN` 環境変数を自動的に使用します。
+- `gh` CLI を使う場合は `additional-apps` で事前にインストール確認をします。
 
 ---
 
@@ -128,9 +140,9 @@ jobs:
         with:
           actions-type: commit
           additional-apps: |
-            gh|gh|regex:version ([0-9.]+)|2.0
+            gh|GitHub CLI|field:3|2.0
             node|Node.js|regex:v([0-9.]+)|20.0
-            jq|jq|field:2|1.6
+            jq|jq|regex:([0-9.]+)|1.6
 ```
 
 <!-- markdownlint-disable line-length MD060 -->
@@ -144,9 +156,15 @@ jobs:
 
 <!-- markdownlint-enable line-length MD060 -->
 
+補足:
+
+- `additional-apps` に指定するツールは、runner にあらかじめインストール済みであることが前提です。
+  カスタムランナーを使う場合は事前に確認してください。
+- このアクションはインストーラーではなく、失敗を早期検出するゲートです。ツールのセットアップは別ステップで行ってください。
+
 ---
 
-## シナリオ 5: パーミッション検証をスキップ (any)
+## シナリオ 5: パーミッション検証をスキップ (`any`)
 
 特殊な権限構成のランナーや、パーミッション検証が不要な場合に使用します。
 `GITHUB_TOKEN` の存在確認のみ行い、権限プローブは実行しません。
@@ -165,7 +183,10 @@ jobs:
           actions-type: any
 ```
 
-通常のワークフローでは `read` / `commit` / `pr` のいずれかを使用してください。
+補足:
+
+- `any` は例外的な用途向けです。通常のワークフローでは `read` / `commit` / `pr` のいずれかを使用してください。
+- 多用すると CI の設計意図が曖昧になるため、使用箇所は最小限に留めてください。
 
 ---
 
