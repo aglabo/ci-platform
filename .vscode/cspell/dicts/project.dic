@@ -1,4 +1,6 @@
 # this files is words list for check spell on cSpell
+BEMATCH
+Diátaxis
 executability
 IDD
 ksh
@@ -8,3 +10,4 @@ noreturn
 Rekor
 riscv
 shellspecrc
+topo
