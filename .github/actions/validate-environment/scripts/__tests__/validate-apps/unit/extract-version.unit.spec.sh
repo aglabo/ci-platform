@@ -121,13 +121,13 @@ Describe 'extract_version_number()'
     End
   End
 
-  Context 'security validation - sed delimiter'
-    It 'returns exit code 2 and error message for regex with # character'
+  Context 'security validation - unsupported characters'
+    It 'returns exit code 1 and error message for regex with # character'
       When call extract_version_number "test 1.0" "regex:test#([0-9.]+)"
       The status should equal 1
       The line 1 of output should equal "ERROR"
       The line 2 of output should start with "::error::"
-      The line 2 of output should include "cannot contain '#' character"
+      The line 2 of output should include "unsupported characters"
     End
   End
 
@@ -174,6 +174,22 @@ Describe 'extract_version_number()'
       The status should equal 1
       The line 1 of output should equal "ERROR"
       The line 2 of output should start with "::error::"
+    End
+
+    It 'returns exit code 1 and error message for regex with control character (tab)'
+      When call extract_version_number "test 1.0" "regex:test$(printf '\t')([0-9.]+)"
+      The status should equal 1
+      The line 1 of output should equal "ERROR"
+      The line 2 of output should start with "::error::"
+      The line 2 of output should include "control characters"
+    End
+
+    It 'returns exit code 1 and error message when regex matches but has no capture group'
+      When call extract_version_number "test 1.0" "regex:[0-9.]+"
+      The status should equal 1
+      The line 1 of output should equal "ERROR"
+      The line 2 of output should start with "::error::"
+      The line 2 of output should include "no capture group"
     End
   End
 
