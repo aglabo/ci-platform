@@ -30,8 +30,8 @@
 #   - Prefix-typed extractors: field:N or regex:PATTERN (explicit method declaration)
 #   - sed-only with # delimiter (allows / in patterns)
 #   - NO eval usage - prevents arbitrary code execution
-#   - Input validation: Rejects shell metacharacters, control chars, sed delimiter (#)
-#   - sed injection prevention: # character rejection prevents breaking out of pattern
+#   - Input validation: Whitelist-based (A-Za-z0-9 . _ - [ ] ( ) + * ? ^ | : space only)
+#   - All other characters rejected, preventing shell injection, sed delimiter attacks, and escape abuse
 #   - Examples: "regex:version ([0-9.]+)" extracts version number from "git version 2.52.0"
 #
 #   **Environment Variables:**
@@ -80,18 +80,19 @@ VALIDATION_INDEX=0
 # @arg $1 string Regex pattern to validate
 # @exitcode 0 Pattern is safe to use
 # @exitcode 1 Empty pattern
-# @exitcode 2 Contains '#' (reserved as sed delimiter)
-# @exitcode 3 Contains shell metacharacters (;|&$`)
-# @exitcode 4 Contains control characters (newline/CR/tab)
+# @exitcode 2 Contains characters outside the allowed whitelist
 # @note No output. Caller uses exit code to construct error messages.
-# @note Backslashes are allowed (e.g., \. for literal dot, \( for literal parenthesis).
-#       Shell injection is prevented by metacharacter checks; # delimiter prevents delimiter breaking.
+# @note Whitelist-based validation: only A-Za-z0-9 . _ - [ ] ( ) + * ? ^ | : and space are allowed.
+#       This prevents shell injection, backslash escape attacks, sed delimiter breaking,
+#       control character injection, and command substitution in a single check.
 is_safe_regex() {
   local pattern="$1"
+
   [ -z "$pattern" ] && return 1
-  [[ "$pattern" == *"#"* ]] && return 2
-  [[ "$pattern" =~ [\;\|\&\$\`] ]] && return 3
-  [[ "$pattern" =~ $'\n'|$'\r'|$'\t' ]] && return 4
+
+  # allow only safe POSIX ERE characters for version extraction
+  [[ "$pattern" =~ ^[A-Za-z0-9._\-\[\]\(\)\+\*\?\^\|\: ]+$ ]] || return 2
+
   return 0
 }
 
@@ -115,9 +116,7 @@ extract_version_by_regex() {
   case $safe_status in
     0) ;;
     1) echo "ERROR"; echo "::error::Empty regex pattern"; return 1 ;;
-    2) echo "ERROR"; echo "::error::Regex pattern cannot contain '#' character (reserved as sed delimiter)"; return 1 ;;
-    3) echo "ERROR"; echo "::error::Regex pattern contains dangerous shell metacharacters: $regex_pattern"; return 1 ;;
-    4) echo "ERROR"; echo "::error::Regex pattern contains control characters"; return 1 ;;
+    2) echo "ERROR"; echo "::error::Regex contains unsupported characters (allowed: A-Za-z0-9 . _ - [ ] ( ) + * ? ^ | : and space)"; return 1 ;;
     *) echo "ERROR"; echo "::error::Invalid regex pattern"; return 1 ;;
   esac
 
