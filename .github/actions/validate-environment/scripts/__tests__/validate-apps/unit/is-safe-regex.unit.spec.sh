@@ -46,6 +46,18 @@ Describe 'is_safe_regex()'
     End
   End
 
+  Context 'control characters - returns exit code 2'
+    It 'rejects tab character'
+      When call is_safe_regex $'test\tpattern'
+      The status should equal 2
+    End
+
+    It 'rejects newline character'
+      When call is_safe_regex $'test\npattern'
+      The status should equal 2
+    End
+  End
+
   Context 'dangerous metacharacters - returns exit code 3'
     It 'rejects semicolon (command separator)'
       When call is_safe_regex "test;cmd"
@@ -92,18 +104,6 @@ Describe 'is_safe_regex()'
       The status should equal 3
     End
 
-  End
-
-  Context 'control characters - returns exit code 2'
-    It 'rejects tab character'
-      When call is_safe_regex $'test\tpattern'
-      The status should equal 2
-    End
-
-    It 'rejects newline character'
-      When call is_safe_regex $'test\npattern'
-      The status should equal 2
-    End
   End
 
   Context 'shell injection patterns - returns exit code 4'
