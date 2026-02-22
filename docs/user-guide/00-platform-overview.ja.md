@@ -10,6 +10,8 @@ tags:
   - git-hooks
 ---
 
+<!-- markdownlint-disable line-length -->
+
 ## 🏗️ ci-platform とは
 
 `ci-platform` は、**複数の OSS リポジトリにわたる CI/CD を統制・管理するための基盤**です。
@@ -62,27 +64,19 @@ GitHub Actions の Composite Action と Reusable Workflow を SHA 固定で参�
 
 ### Composite Action (`aglabo/ci-platform`)
 
-<!-- markdownlint-disable line-length MD060 -->
-
 | コンポーネント         | 役割                                                                                                     |
 | ---------------------- | -------------------------------------------------------------------------------------------------------- |
 | `validate-environment` | **CI 冒頭に置くゲート**。ランナー OS・パーミッション・ツールを検証し、ポリシー違反を即座にブロックします |
 
-<!-- markdownlint-enable line-length MD060 -->
-
 Composite Action は `steps:` から参照します。ジョブ内で fail-fast として機能します。
 
 ### Reusable Workflow (`aglabo/.github`)
-
-<!-- markdownlint-disable line-length -->
 
 | コンポーネント | 役割                                  | 参照パス (`@r1.1.2`)                                             |
 | -------------- | ------------------------------------- | ---------------------------------------------------------------- |
 | actionlint     | GitHub Actions ワークフローの構文検証 | `aglabo/.github/.github/workflows/ci-common-lint-actionlint.yml` |
 | ghalint        | GitHub Actions のポリシー違反検出     | `aglabo/.github/.github/workflows/ci-common-lint-ghalint.yml`    |
 | gitleaks       | リポジトリ全体の機密情報スキャン      | `aglabo/.github/.github/workflows/ci-common-scan-gitleaks.yml`   |
-
-<!-- markdownlint-enable line-length -->
 
 Reusable Workflow は `jobs:` から参照します。複数ジョブ・複数リポジトリにわたるポリシーを強制します。
 
