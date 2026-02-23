@@ -35,16 +35,6 @@ is_lefthook_installed() {
 }
 
 ##
-# @description Check if shellspec is already installed in specified directory
-# @arg $1 string Directory path where shellspec should be installed
-# @return 0 If shellspec is installed
-# @return 1 If shellspec is not installed
-is_shellspec_installed() {
-  local install_dir="$1"
-  [[ -f "${install_dir}/shellspec" ]]
-}
-
-##
 # @description Install and configure lefthook
 # @return 0 If installation succeeds
 # @return 1 If installation fails
@@ -54,34 +44,7 @@ setup_lefthook() {
 }
 
 ##
-# @description Install shellspec to specified directory
-# @arg $1 string Directory path where shellspec will be installed
-# @return 0 If installation succeeds
-# @return 1 If installation fails
-setup_shellspec() {
-  local install_dir="${1:-.tools/shellspec}"
-
-  if is_shellspec_installed "$install_dir"; then
-    echo "shellspec is already installed in $install_dir"
-    return 0
-  fi
-
-  echo "Installing shellspec to $install_dir..."
-
-  # Clone shellspec repository
-  if git clone --depth 1 https://github.com/shellspec/shellspec.git "$install_dir" >/dev/null 2>&1; then
-    echo "shellspec installed successfully to $install_dir"
-    echo "Add to PATH: export PATH=\"\$PWD/$install_dir:\$PATH\""
-    return 0
-  else
-    echo "Error: shellspec installation failed" >&2
-    return 1
-  fi
-}
-
-##
 # @description Main entry point
-# @arg $1 string Optional shellspec installation directory (default: .tools/shellspec)
 # @return 0 If installation succeeds or is skipped
 # @return 1 If installation fails
 main() {
@@ -98,10 +61,6 @@ main() {
   else
     setup_lefthook
   fi
-
-  # Install shellspec
-  local shellspec_dir="${1:-.tools/shellspec}"
-  setup_shellspec "$shellspec_dir"
 }
 
-main "$@"
+main
