@@ -62,6 +62,7 @@ $~*
 !.claude/agents/**
 
 # MCP server dependency files
+.cocoindex*/
 .serena/
 .lsmcp/
 

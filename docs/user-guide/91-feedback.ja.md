@@ -11,7 +11,7 @@ tags:
 
 <!-- markdownlint-disable no-duplicate-heading -->
 
-本プロジェクト: <https://github.com/aglabo/ci-platform>
+本プロジェクト: [https://github.com/aglabo/ci-platform](https://github.com/aglabo/ci-platform)
 
 ## 💬 フィードバックについて
 
