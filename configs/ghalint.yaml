@@ -11,14 +11,23 @@
 excludes:
   # Allow version tags for reusable workflow calls instead of SHA pinning
   - policy_name: action_ref_should_be_full_length_commit_sha
-    workflow_file_path: .github/workflows/ci-scan-all.yml
+    workflow_file_path: .github/workflows/ci-workflows-qa.yml
     job_name: actionlint
     action_name: aglabo/.github/.github/workflows/ci-common-lint-actionlint.yml
   - policy_name: action_ref_should_be_full_length_commit_sha
-    workflow_file_path: .github/workflows/ci-scan-all.yml
+    workflow_file_path: .github/workflows/ci-workflows-qa.yml
     job_name: ghalint
     action_name: aglabo/.github/.github/workflows/ci-common-lint-ghalint.yml
   - policy_name: action_ref_should_be_full_length_commit_sha
-    workflow_file_path: .github/workflows/ci-scan-all.yml
+    workflow_file_path: .github/workflows/ci-scan-secrets.yml
     job_name: scan-gitleaks
     action_name: aglabo/.github/.github/workflows/ci-common-scan-gitleaks.yml
+  # Allow version tags for validate-environment action (same-repo action)
+  - policy_name: action_ref_should_be_full_length_commit_sha
+    workflow_file_path: .github/workflows/ci-build-docs.yml
+    job_name: build
+    action_name: aglabo/ci-platform/.github/actions/validate-environment
+  - policy_name: action_ref_should_be_full_length_commit_sha
+    workflow_file_path: .github/workflows/ci-build-docs.yml
+    job_name: deploy
+    action_name: aglabo/ci-platform/.github/actions/validate-environment

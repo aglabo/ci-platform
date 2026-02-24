@@ -30,8 +30,10 @@
 #   - Prefix-typed extractors: field:N or regex:PATTERN (explicit method declaration)
 #   - sed-only with # delimiter (allows / in patterns)
 #   - NO eval usage - prevents arbitrary code execution
-#   - Input validation: Rejects shell metacharacters, control chars, sed delimiter (#)
-#   - sed injection prevention: # character rejection prevents breaking out of pattern
+#   - Input validation: Whitelist-based (A-Za-z0-9 . _ - [ ] ( ) + * ? ^ | : space only)
+#   - All other characters rejected, preventing shell injection, sed delimiter attacks, and escape abuse
+#   - Input validation: Whitelist-based (A-Za-z0-9 . _ - [ ] ( ) + * ? ^ | : space only)
+#   - All other characters rejected, preventing shell injection, sed delimiter attacks, and escape abuse
 #   - Examples: "regex:version ([0-9.]+)" extracts version number from "git version 2.52.0"
 #
 #   **Environment Variables:**
@@ -76,26 +78,44 @@ VALIDATION_INDEX=0
 # Section 2: VERSION EXTRACTION FUNCTIONS
 # ============================================================================
 
-# @description Validate a regex pattern for safe use in sed ERE with # delimiter
+# @description Validate a regex pattern for safe use in bash BEMATCH
 # @arg $1 string Regex pattern to validate
 # @exitcode 0 Pattern is safe to use
 # @exitcode 1 Empty pattern
-# @exitcode 2 Contains '#' (reserved as sed delimiter)
-# @exitcode 3 Contains shell metacharacters (;|&$`)
-# @exitcode 4 Contains control characters (newline/CR/tab)
+# @exitcode 2 Contains control characters (newline, CR, tab, NUL, etc.)
+# @exitcode 3 Contains dangerous shell metacharacters (; & | ' " < > { } \)
+# @exitcode 4 Contains characters outside the allowed whitelist
 # @note No output. Caller uses exit code to construct error messages.
-# @note Backslashes are allowed (e.g., \. for literal dot, \( for literal parenthesis).
-#       Shell injection is prevented by metacharacter checks; # delimiter prevents delimiter breaking.
+# @note Defense layers: control chars → dangerous metacharacters → whitelist.
+# @note $ and backtick are not in the danger pattern; they are caught by the whitelist (exit 4).
+# @note Whitelist-based validation: only A-Za-z0-9 . _ - [ ] ( ) + ^ : and space are allowed.
+#       * and ? are intentionally excluded to reduce ReDoS attack surface.
 is_safe_regex() {
   local pattern="$1"
+
   [ -z "$pattern" ] && return 1
-  [[ "$pattern" == *"#"* ]] && return 2
-  [[ "$pattern" =~ [\;\|\&\$\`] ]] && return 3
-  [[ "$pattern" =~ $'\n'|$'\r'|$'\t' ]] && return 4
+  # 空白のみも "空" と同じ扱い
+  [[ "$pattern" =~ ^[[:space:]]+$ ]] && return 1
+
+  # Layer 1: control character check (newline, CR, tab, NUL, etc.)
+  [[ "$pattern" =~ [[:cntrl:]] ]] && return 2
+
+  # Layer 2: dangerous shell metacharacter check (fail-fast defense layer)
+  # Matches: ; & | ' " < > { } backslash  ($, ` caught by whitelist)
+  # Note: '"'"' is the shell quoting trick to embed a literal single quote
+  #       in a single-quoted string: close ', append "'" (quoted), reopen '
+  local _danger_pattern='[;&|"'"'"'<>{}\\]'
+  [[ "$pattern" =~ $_danger_pattern ]] && return 3
+
+  # Layer 3: whitelist check - version extraction characters only
+  # Note: * and ? omitted to reduce ReDoS attack surface
+  local _safe_pattern='^[]A-Za-z0-9._()+^: [-]+$'
+  [[ "$pattern" =~ $_safe_pattern ]] || return 4
+
   return 0
 }
 
-# @description Extract version using regex pattern (sed-based, security hardened)
+# @description Extract version using regex pattern (bash BEMATCH, security hardened)
 # @arg $1 string Full version string (e.g., "git version 2.52.0")
 # @arg $2 string Regex pattern (without "regex:" prefix)
 # Output format:
@@ -103,49 +123,37 @@ is_safe_regex() {
 #   Line 2+: Log messages (::error::, etc.)
 # @exitcode 0 Extraction successful
 # @exitcode 1 Failure (pattern did not match or invalid input)
-# @note Uses sed with # delimiter to allow / in patterns
+# @note Uses bash =~ (BEMATCH) for partial matching - no .* wrapping needed
 # @note Pattern security validated by is_safe_regex()
+# @note Only the first capture group ${BASH_REMATCH[1]} is extracted; patterns with
+#       multiple capture groups will only return the first match
 extract_version_by_regex() {
   local full_version="$1"
   local regex_pattern="$2"
 
-  # Validate regex pattern (security + syntax checks)
+  # Validate regex pattern (security + syntax checks via is_safe_regex)
   local safe_status=0
   is_safe_regex "$regex_pattern" || safe_status=$?
   case $safe_status in
     0) ;;
     1) echo "ERROR"; echo "::error::Empty regex pattern"; return 1 ;;
-    2) echo "ERROR"; echo "::error::Regex pattern cannot contain '#' character (reserved as sed delimiter)"; return 1 ;;
-    3) echo "ERROR"; echo "::error::Regex pattern contains dangerous shell metacharacters: $regex_pattern"; return 1 ;;
-    4) echo "ERROR"; echo "::error::Regex pattern contains control characters"; return 1 ;;
+    2) echo "ERROR"; echo "::error::Regex pattern contains control characters"; return 1 ;;
+    3) echo "ERROR"; echo "::error::Regex pattern contains dangerous shell metacharacters"; return 1 ;;
+    4) echo "ERROR"; echo "::error::Regex contains unsupported characters (allowed: A-Za-z0-9 . _ - [ ] ( ) + ^ : and space)"; return 1 ;;
     *) echo "ERROR"; echo "::error::Invalid regex pattern"; return 1 ;;
   esac
 
-  # Wrap pattern with .* for full line matching if not already present
-  local sed_pattern="$regex_pattern"
-  if [[ ! "$sed_pattern" =~ ^\.\* ]]; then
-    sed_pattern=".*${sed_pattern}"
-  fi
-  if [[ ! "$sed_pattern" =~ \.\*$ ]]; then
-    sed_pattern="${sed_pattern}.*"
-  fi
-
-  # Extract using sed -E with # delimiter
-  local extracted sed_exit
-  extracted=$(echo "$full_version" | sed -E "s#${sed_pattern}#\1#" 2>/dev/null)
-  sed_exit=$?
-
-  # Check if sed itself failed (e.g., invalid regex such as unmatched parenthesis)
-  if [ $sed_exit -ne 0 ]; then
+  # Extract using bash =~ (BEMATCH) - partial match by default
+  if [[ ! "$full_version" =~ $regex_pattern ]]; then
     echo "ERROR"
-    echo "::error::Invalid regex pattern (sed error): $regex_pattern"
+    echo "::error::Pattern did not match: $regex_pattern"
     return 1
   fi
 
-  # Check if extraction succeeded (result differs from input)
-  if [ "$extracted" = "$full_version" ]; then
+  local extracted="${BASH_REMATCH[1]:-}"
+  if [ -z "$extracted" ]; then
     echo "ERROR"
-    echo "::error::Pattern did not match: $regex_pattern"
+    echo "::error::Pattern matched but no capture group: $regex_pattern"
     return 1
   fi
 
@@ -159,12 +167,12 @@ extract_version_by_regex() {
 #   Line 1: Extracted version number on success, "ERROR" on failure
 #   Line 2+: Log messages (::error::, ::warning::, etc.)
 # Exit code: 0=success, 1=failure
-# Note: Safe extraction using sed only - no eval, prefix-typed extractors only
+# Note: Safe extraction - no eval, no sed (uses grep/cut/bash =~), prefix-typed extractors only
 #
 # Supported formats (prefix-typed):
 #   auto            - Explicit: extract semver (X.Y or X.Y.Z)
 #   field:N         - Extract Nth field (space-delimited, 1-indexed)
-#   regex:PATTERN   - sed -E 's/PATTERN/\1/' with capture group
+#   regex:PATTERN   - bash =~ (BEMATCH) with ${BASH_REMATCH[1]} capture group
 #   (empty)         - Default: same as auto (extract semver)
 #
 # Examples:
@@ -179,12 +187,7 @@ extract_version_by_regex() {
 #   → ::error::No semver pattern found in: unknown
 extract_version_number() {
   local full_version="$1"
-  local version_extractor="$2"
-
-  # Default: treat empty extractor as "auto" (extract semver)
-  if [ -z "$version_extractor" ]; then
-    version_extractor="auto"
-  fi
+  local version_extractor="${2:-auto}"
 
   # Parse extractor format: method:argument
   local method="${version_extractor%%:*}"
@@ -194,16 +197,13 @@ extract_version_number() {
     auto)
       # Extract semver (X.Y or X.Y.Z)
       local extracted
-      extracted=$(echo "$full_version" | grep -oE '[0-9]{1,3}\.[0-9]+(\.[0-9]+)?' | head -1)
-
+      extracted=$(grep -oE '[0-9]{1,3}\.[0-9]+(\.[0-9]+)?' <<<"$full_version" | head -1 || true)
       if [ -z "$extracted" ]; then
         echo "ERROR"
         echo "::error::No semver pattern found in: $full_version"
         return 1
       fi
-
       echo "$extracted"
-      return 0
       ;;
 
     field)
@@ -214,15 +214,18 @@ extract_version_number() {
         return 1
       fi
       local result
-      result=$(echo "$full_version" | cut -d' ' -f"$argument")
+      result=$(cut -d' ' -f"$argument" <<<"$full_version")
+      if [ -z "$result" ]; then
+        echo "ERROR"
+        echo "::error::Field $argument not found in: $full_version"
+        return 1
+      fi
       echo "$result"
-      return 0
       ;;
 
     regex)
       # Delegate to extract_version_by_regex helper function
-      extract_version_by_regex "$full_version" "$argument"
-      return $?
+      extract_version_by_regex "$full_version" "$argument" || return $?
       ;;
 
     *)
@@ -231,6 +234,8 @@ extract_version_number() {
       return 1
       ;;
   esac
+
+  return 0
 }
 
 # Check version meets minimum requirement (pure comparison function)
@@ -290,15 +295,15 @@ get_app_version() {
 # @exitcode 0 Command name is safe
 # @exitcode 1 Contains control characters (newline/CR/tab)
 # @exitcode 2 Contains relative path (./ or ../)
-# @exitcode 3 Contains shell metacharacters (;|&$`() space)
+# @exitcode 3 Contains shell metacharacters (;|&$`()*?{} space)
 # @note No output. Caller uses exit code to construct error messages.
-# Rejected: control characters, relative paths (./ ../), shell metacharacters (;|&$`() space)
+# Rejected: control characters, relative paths (./ ../), shell metacharacters (;|&$`()*?{} space)
 # Allowed: / - _ (for absolute paths like /usr/bin/gh)
 is_safe_command() {
   local cmd="$1"
   [[ "$cmd" =~ $'\n'|$'\r'|$'\t' ]] && return 1
   [[ "$cmd" == ./* || "$cmd" == ../* || "$cmd" == */./* || "$cmd" == */../* ]] && return 2
-  [[ "$cmd" =~  [\;\|\&\$\`\(\)[:space:]] ]] && return 3
+  [[ "$cmd" =~ [\;\|\&\$\`\(\)\*\?\{\}[:space:]] ]] && return 3
   return 0
 }
 

@@ -12,7 +12,10 @@
     "check:dprint": "dprint check",
     "check:spells": "cspell  --config .vscode/cspell.json --cache --cache-location .cache/cspell/cSpellCache",
     "lint:text": "pnpm exec textlint --config ./configs/textlintrc.yaml --cache --cache-location .cache/textlintcache ",
-    "lint:markdown": "pnpm exec markdownlint-cli2 --config ./configs/.markdownlint.yaml ",
+    "lint:markdown": "pnpm exec markdownlint-cli2 --config ./configs/.markdownlint-cli2.yaml ",
+    "lint:gha": "pnpm run lint:gha:actions && pnpm run lint:gha:workflows",
+    "lint:gha:actions": "pnpm exec ghalint --config ./configs/ghalint.yaml run-action ",
+    "lint:gha:workflows": "bash ./scripts/lint-actionlint.sh && pnpm exec ghalint --config ./configs/ghalint.yaml run",
     "test:sh": "bash scripts/run-specs.sh ",
     "test:sh:all": "pnpm run test:sh .github/actions/validate-environment/scripts/__tests__ && pnpm run test:sh .github/actions/__tests__"
   }

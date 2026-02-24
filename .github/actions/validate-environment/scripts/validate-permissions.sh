@@ -181,20 +181,6 @@ probe_github_write_permission() {
 # Section 5: VALIDATION FUNCTIONS
 # ============================================================================
 
-# @description Validate GitHub token is available
-# @exitcode 0 GITHUB_TOKEN environment variable is set
-# @exitcode 1 GITHUB_TOKEN is not set or empty
-# @stdout STATUS:message format (SUCCESS:... or ERROR:...)
-validate_github_token() {
-  if ! check_env_var "GITHUB_TOKEN"; then
-    echo "ERROR:GITHUB_TOKEN environment variable is not set"
-    return 1
-  fi
-
-  echo "SUCCESS:GITHUB_TOKEN is set"
-  return 0
-}
-
 # @description Validate OIDC permissions are enabled
 # @note This function is provided for reusability but NOT used by this action
 # @exitcode 0 Both OIDC environment variables are set (id-token: write)
@@ -215,27 +201,23 @@ validate_id_token_permissions() {
   return 0
 }
 
-# @description Check GITHUB_TOKEN existence with progress output and GITHUB_OUTPUT write
+# @description Validate GITHUB_TOKEN availability with progress output and GITHUB_OUTPUT write
 # @exitcode 0 Token is present
 # @exitcode 1 Token is missing
 # @stdout Progress messages
 # @stderr Error messages with ::error:: prefix
 # @set GITHUB_OUTPUT Writes status=error and message on failure
-check_token() {
+check_github_token() {
   echo "Checking GITHUB_TOKEN..."
-  local token_output token_status token_message
-  token_output=$(validate_github_token) || true
-  token_status="${token_output%%:*}"
-  token_message="${token_output#*:}"
-
-  if [ "$token_status" = "ERROR" ]; then
-    echo "::error::${token_message}" >&2
+  if ! check_env_var "GITHUB_TOKEN"; then
+    local message="GITHUB_TOKEN environment variable is not set"
+    echo "::error::${message}" >&2
     echo "::error::This action requires a GitHub token for API access" >&2
     echo "::error::Please ensure GITHUB_TOKEN is configured in the workflow" >&2
-    { echo "status=error"; echo "message=${token_message}"; } >> "$(out_status)"
+    { echo "status=error"; echo "message=${message}"; } >> "$(out_status)"
     return 1
   fi
-  echo "✓ ${token_message}"
+  echo "✓ GITHUB_TOKEN is set"
   echo ""
 }
 
@@ -264,22 +246,19 @@ validate_permissions() {
       ;;
   esac
 
-  # any: token check only, skip permission probe
-  if [ "$actions_type" = "any" ]; then
-    check_token || return 1
-    echo "=== GitHub permissions validation passed (type=any: permission checks skipped) ==="
-    { echo "status=success"; echo "message=GitHub permissions validated"; } >> "$(out_status)"
-    return 0
-  fi
-
   echo "=== Validating GitHub Permissions ==="
   echo ""
 
-  check_token || return 1
-
   # Validate write permissions via API execution probe
   case "$actions_type" in
+    "any")
+      check_github_token || return 1
+      echo "=== GitHub permissions validation passed (type=any: permission checks skipped) ==="
+      { echo "status=success"; echo "message=GitHub permissions validated"; } >> "$(out_status)"
+      return 0
+      ;;
     "pr")
+      check_github_token || return 1
       echo "Checking permissions for PR operations..."
       if ! probe_github_write_permission "pr"; then
         echo "::error::pull-requests: write permission not granted" >&2
@@ -292,6 +271,7 @@ validate_permissions() {
       echo ""
       ;;
     "commit")
+      check_github_token || return 1
       echo "Checking permissions for commit operations..."
       if ! probe_github_write_permission "commit"; then
         echo "::error::contents: write permission not granted" >&2
@@ -304,6 +284,7 @@ validate_permissions() {
       echo ""
       ;;
     "read")
+      check_github_token || return 1
       # contents: read is a required GitHub Actions permission.
       # No API check needed — declare it explicitly in your workflow.
       echo "contents: read is a required permission. Declare it explicitly in your workflow's permissions section."
