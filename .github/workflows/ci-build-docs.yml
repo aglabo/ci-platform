@@ -70,7 +70,9 @@ jobs:
             pnpm-store-${{ runner.os }}-
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: |
+          ls pnpm*
+          pnpm install
         working-directory: website
 
       - name: Build documentation
