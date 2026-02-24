@@ -38,7 +38,6 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Validate environment
-<<<<<<< HEAD
         uses: aglabo/ci-platform/.github/actions/validate-environment@21e02575bb3c3ec61a149801d696b53669f85208 # v0.1.0
         with:
           actions-type: read
@@ -99,58 +98,6 @@ jobs:
     steps:
       - name: Validate environment
         uses: aglabo/ci-platform/.github/actions/validate-environment@21e02575bb3c3ec61a149801d696b53669f85208 # v0.1.0
-||||||| parent of f249379 (merge  (#29): refactor(permissions): refactor token validation and add Docusaurus docs platform)
-=======
-        uses: ./.github/actions/validate-environment
-        with:
-          actions-type: read
-
-      - name: Checkout repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          persist-credentials: false
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061 # v4.2.0
-        with:
-          version: latest
-
-      - name: Setup Node.js
-        uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6.2.0
-        with:
-          node-version: "20"
-          cache: "pnpm"
-          cache-dependency-path: website/pnpm-lock.yaml
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-        working-directory: website
-
-      - name: Build documentation
-        run: pnpm run build:docs
-        working-directory: website
-
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4.0.0
-        with:
-          path: website/build
-
-  deploy:
-    name: Deploy to GitHub Pages
-    needs: build
-    if: github.event_name != 'pull_request'
-    permissions:
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - name: Validate environment
-        uses: ./.github/actions/validate-environment
->>>>>>> f249379 (merge  (#29): refactor(permissions): refactor token validation and add Docusaurus docs platform)
         with:
           actions-type: any
 
