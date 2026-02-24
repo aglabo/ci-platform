@@ -56,6 +56,10 @@ inputs:
     description: "Require GitHub-hosted runner. 'true': error if runner is not github-hosted. 'false' (default): self-hosted runners allowed"
     required: false
     default: "false"
+  github-token:
+    description: "GitHub token for API access. Defaults to github.token (built-in GITHUB_TOKEN). Pass secrets.MY_PAT to use a Personal Access Token instead."
+    required: false
+    default: ${{ github.token }}
 
 outputs:
   runner-status:
@@ -101,6 +105,8 @@ runs:
       # Note: Uses curl to call the GitHub API.
       # curl is assumed pre-installed on GitHub-hosted Ubuntu runners (standard system tool).
       # curl availability is checked inside validate-permissions.sh before API calls.
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
       run: |
         set -euo pipefail
         bash "${GITHUB_ACTION_PATH}/scripts/validate-permissions.sh" "${{ inputs.actions-type }}"

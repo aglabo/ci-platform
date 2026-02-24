@@ -1,7 +1,7 @@
 ---
 title: ユーザーガイド
 description: ci-platform の Composite Actions の使い方ガイド
-slug: user-guide
+slug: /user-guide
 sidebar_position: 1
 tags:
   - ci-platform
