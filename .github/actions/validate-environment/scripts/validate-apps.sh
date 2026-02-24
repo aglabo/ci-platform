@@ -103,7 +103,7 @@ is_safe_regex() {
   # Layer 2: dangerous shell metacharacter check (fail-fast defense layer)
   # Matches: ; & | ' " < > { } backslash  ($, ` caught by whitelist)
   # Note: '"'"' is the shell quoting trick to embed a literal single quote
-  #       in a single-quoted string: close ', append "'" (dquoted), reopen '
+  #       in a single-quoted string: close ', append "'" (quoted), reopen '
   local _danger_pattern='[;&|"'"'"'<>{}\\]'
   [[ "$pattern" =~ $_danger_pattern ]] && return 3
 

@@ -38,7 +38,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Validate environment
-        uses: aglabo/ci-platform/.github/actions/validate-environment@v0.1.0
+        uses: ./.github/actions/validate-environment
         with:
           actions-type: read
 
@@ -55,8 +55,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6.2.0
         with:
-          node-version: '20'
-          cache: 'pnpm'
+          node-version: "20"
+          cache: "pnpm"
           cache-dependency-path: website/pnpm-lock.yaml
 
       - name: Install dependencies
@@ -86,7 +86,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Validate environment
-        uses: aglabo/ci-platform/.github/actions/validate-environment@v0.1.0
+        uses: ./.github/actions/validate-environment
         with:
           actions-type: any
 
