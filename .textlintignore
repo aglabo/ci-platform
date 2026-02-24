@@ -10,6 +10,9 @@
 .claude/**
 .serena/**
 
+# temp
+**/temp/**
+**/tmp/**
 
 ## Dev tools
 .tools/**
