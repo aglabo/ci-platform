@@ -51,13 +51,13 @@ macOS および Windows ランナーはサポート対象外です。
 
 ### 現在提供中
 
-<!-- markdownlint-disable line-length MD060 -->
+<!-- markdownlint-disable line-length no-inline-html -->
 
 | 種類             | コンポーネント       | レイヤー           | 役割                                                                                                                     |
 | ---------------- | -------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------ |
-| Composite Action | validate-environment | エントリーポイント | **CI の最初に置くゲートアクション**。</br> ランナーの OS・パーミッション・ツールを検証し、後続ジョブへの進入を制御します |
+| Composite Action | validate-environment | エントリーポイント | **CI の最初に置くゲートアクション**。<br />ランナーの OS・パーミッション・ツールを検証し、後続ジョブへの進入を制御します |
 
-<!-- markdownlint-enable line-length MD060 -->
+<!-- markdownlint-enable line-length no-inline-html -->
 
 > `validate-environment` は CI パイプラインの**強制停止ゲート**として機能します。
 > ポリシー違反・権限不足・ランナー不正を検出した時点で即座に停止し、後続ジョブへの進入を遮断します。
