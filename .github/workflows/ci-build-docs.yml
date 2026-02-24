@@ -71,7 +71,8 @@ jobs:
 
       - name: Install dependencies
         run: |
-          ls pnpm*
+          pwd
+          ls
           pnpm install
         working-directory: website
 
