@@ -6,7 +6,10 @@
 # This software is released under the MIT License.
 # https://opensource.org/licenses/MIT
 
-# Dependencies
+# pnpm Dependencies
+!pnpm-lock.yaml
+
+# Node Dependencies
 /node_modules
 
 # Production
