@@ -2,13 +2,7 @@
   "mcpServers": {
     "cocoindex-code": {
       "type": "stdio",
-      "command": "uvx",
-      "args": [
-        "--prerelease=explicit",
-        "--with",
-        "\"cocoindex-code>=1.0.0a18\"",
-        "cocoindex-code@latest"
-      ]
+      "command": "cocoindex-code"
     },
     "fossil-mcp": {
       "type": "stdio",
