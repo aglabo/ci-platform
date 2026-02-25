@@ -66,15 +66,15 @@ const config: Config = {
       items: [
         {
           type: 'docSidebar',
-          sidebarId: 'developerGuide',
-          position: 'left',
-          label: 'Developer Guide',
-        },
-        {
-          type: 'docSidebar',
           sidebarId: 'userGuide',
           position: 'left',
           label: 'User Guide',
+        },
+        {
+          type: 'docSidebar',
+          sidebarId: 'developerGuide',
+          position: 'left',
+          label: 'Developer Guide',
         },
         {
           type: 'docsVersionDropdown',
@@ -94,12 +94,12 @@ const config: Config = {
           title: 'Docs',
           items: [
             {
-              label: 'Developer Guide',
-              to: '/developer-guide',
-            },
-            {
               label: 'User Guide',
               to: '/user-guide',
+            },
+            {
+              label: 'Developer Guide',
+              to: '/developer-guide',
             },
           ],
         },
