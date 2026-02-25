@@ -22,12 +22,3 @@ excludes:
     workflow_file_path: .github/workflows/ci-scan-secrets.yml
     job_name: scan-gitleaks
     action_name: aglabo/.github/.github/workflows/ci-common-scan-gitleaks.yml
-  # Allow version tags for validate-environment action (same-repo action)
-  - policy_name: action_ref_should_be_full_length_commit_sha
-    workflow_file_path: .github/workflows/ci-build-docs.yml
-    job_name: build
-    action_name: aglabo/ci-platform/.github/actions/validate-environment
-  - policy_name: action_ref_should_be_full_length_commit_sha
-    workflow_file_path: .github/workflows/ci-build-docs.yml
-    job_name: deploy
-    action_name: aglabo/ci-platform/.github/actions/validate-environment
