@@ -12,72 +12,110 @@ tags:
 
 ## 🏗️ ci-platform とは
 
-`ci-platform` は、OSS の **CI/CD 品質管理を共通化・外部化するための基盤**です。
-CI の入口を標準化し、セキュリティポリシーを組織横断で強制できる「ゲート基盤」として設計されています。
+`ci-platform` は、**複数の OSS リポジトリにわたる CI/CD を統制・管理するための基盤**です。
+CI セキュリティポリシーを単一リポジトリで一元管理し、各リポジトリへ外部化・強制します。
 
-次のような開発者・チームに向けて設計しています。
+CI 設定を各リポジトリへコピーして運用していると、次のような問題が起きがちです。
 
-- 複数の OSS リポジトリを運営しており、CI 設定を毎回コピーしている
-- GitHub Actions のセキュリティポリシーを組織横断で標準化したい
-- ワークフロー設定のミスやシークレット漏洩をコミット前後で防ぎたい
+- リポジトリごとに設定内容が少しずつ異なり、セキュリティポリシーが統一されなくなる
+- パーミッションや検証ルールの変更を、すべてのリポジトリへ個別に反映する必要がある
+- どのリポジトリが最新のポリシーに追いついているか把握できなくなる
 
-GitHub Actions の Composite Actions や Reusable Workflows を公開しています。
-自分のリポジトリのワークフローから `aglabo/ci-platform` を指定して `uses:` で参照するだけで利用できます。
+`ci-platform` はこれらの問題を、CI 設定を外部リポジトリに集約して参照する構造で解決します。
+
+**対象読者**:
+
+- 複数リポジトリにわたって CI/CD を標準化したい OSS メンテナー
+- GitHub Actions のセキュリティポリシー (権限・ランナー・シークレット) を組織全体で強制したい
+- ワークフロー設定のドリフトとサプライチェーンリスクを構造的に排除したい
+
+GitHub Actions の Composite Action と Reusable Workflow を SHA 固定で参照するだけで利用できます。
 
 ```yaml
-- uses: aglabo/ci-platform/.github/actions/validate-environment@v0.1.0
+- uses: aglabo/ci-platform/.github/actions/validate-environment@21e02575bb3c3ec61a149801d696b53669f85208 # v0.1.0
 ```
+
+> **クイックスタートはこちら** → [最小構成で今すぐ導入](./11-quickstart.ja.md)
 
 ---
 
 ## 🎯 解決する問題
 
-OSS 開発では、CI/CD に関して次のような課題が生じやすいです。
+| 問題                                               | ci-platform のアプローチ                            |
+| -------------------------------------------------- | --------------------------------------------------- |
+| CI 設定を各リポジトリにコピーしていて管理が分散    | Actions/Workflows を外部リポジトリに集約して参照    |
+| パーミッション不足・ランナー不正が CI 実行後に判明 | `validate-environment` でジョブ冒頭に fail-fast     |
+| サプライチェーン攻撃への耐性が不明確               | SHA 固定 + タグコメントを標準的な参照方式として採用 |
+| シークレット漏洩を CI で検知したい                 | gitleaks Reusable Workflow による全コードスキャン   |
 
-- コミット時にシークレット情報や機密データを混入するリスクがある
-- GitHub Actions ワークフローの設定ミスが CI 実行時まで発覚しない
-
-`ci-platform` が公開する Actions やワークフローを参照することで、これらの問題に対処する CI/CD 品質管理の仕組みを**自分のリポジトリに取り込めます**。
-
-## 🖥️ 実行環境
-
-ci-platform は Linux ランナー (Ubuntu) を前提として設計されています。
-シェルベースの検証ロジックおよび GNU ツール依存のため、Linux ランナーに限定しています。
-macOS および Windows ランナーはサポート対象外です。
+> **典型的なリスクシナリオ**:
+>
+> - fork PR が `pull_request_target` のコンテキストで実行され、シークレットへアクセスされる
+> - `permissions:` が未設定のまま default permissions が有効になり、書き込み権限が意図せず付与される
+> - タグ書き換えによって参照先 Action のコードが静かに差し替えられるサプライチェーン攻撃
+>
+> ci-platform はこれらのリスクをポリシーとして構造的に排除します。
 
 ---
 
 ## 📦 提供コンポーネント
 
-### 現在提供中
+### Composite Action (`aglabo/ci-platform`)
 
 <!-- markdownlint-disable line-length MD060 -->
 
-| 種類             | コンポーネント       | レイヤー           | 役割                                                                                                                     |
-| ---------------- | -------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------ |
-| Composite Action | validate-environment | エントリーポイント | **CI の最初に置くゲートアクション**。</br> ランナーの OS・パーミッション・ツールを検証し、後続ジョブへの進入を制御します |
+| コンポーネント         | 役割                                                                                                     |
+| ---------------------- | -------------------------------------------------------------------------------------------------------- |
+| `validate-environment` | **CI 冒頭に置くゲート**。ランナー OS・パーミッション・ツールを検証し、ポリシー違反を即座にブロックします |
 
 <!-- markdownlint-enable line-length MD060 -->
 
-> `validate-environment` は CI パイプラインの**強制停止ゲート**として機能します。
-> ポリシー違反・権限不足・ランナー不正を検出した時点で即座に停止し、後続ジョブへの進入を遮断します。
+Composite Action は `steps:` から参照します。ジョブ内で fail-fast として機能します。
 
-### 提供予定 (Reusable Workflow)
+### Reusable Workflow (`aglabo/.github`)
 
-<!-- markdownlint-disable line-length MD060 -->
+<!-- markdownlint-disable line-length -->
 
-| コンポーネント | 説明                                  |
-| -------------- | ------------------------------------- |
-| actionlint     | GitHub Actions ワークフローの構文検証 |
-| ghalint        | GitHub Actions のポリシー違反検出     |
-| gitleaks       | リポジトリ全体の機密情報スキャン      |
+| コンポーネント | 役割                                  | 参照パス (`@r1.1.2`)                                             |
+| -------------- | ------------------------------------- | ---------------------------------------------------------------- |
+| actionlint     | GitHub Actions ワークフローの構文検証 | `aglabo/.github/.github/workflows/ci-common-lint-actionlint.yml` |
+| ghalint        | GitHub Actions のポリシー違反検出     | `aglabo/.github/.github/workflows/ci-common-lint-ghalint.yml`    |
+| gitleaks       | リポジトリ全体の機密情報スキャン      | `aglabo/.github/.github/workflows/ci-common-scan-gitleaks.yml`   |
 
-<!-- markdownlint-enable line-length MD060 -->
+<!-- markdownlint-enable line-length -->
 
-> 上記のツールは現在 ci-platform 自身の CI で使用しています。
-> v0.2.x では actionlint / ghalint / gitleaks をそれぞれ独立した Reusable Workflow
-> (`scan-actionlint.yml` など) として提供します。
-> 利用者は必要なツールのみ選択して参照できます。
+Reusable Workflow は `jobs:` から参照します。複数ジョブ・複数リポジトリにわたるポリシーを強制します。
+
+> Reusable Workflow は現在 `aglabo/.github` リポジトリから提供されており、将来的に `ci-platform` へ集約予定です。
+
+### 二層防御モデル
+
+ci-platform は次の 2 層でリポジトリを保護します。
+
+- 第 1 層 (ジョブ内): Composite Action がステップ冒頭で環境を検証し、ポリシー違反を即座にブロックします
+- 第 2 層 (ワークフロー全体): Reusable Workflow がリポジトリ横断でセキュリティポリシーを強制します
+
+この組み合わせにより、「実行前の即時検出」と「組織全体の一貫した適用」を同時に達成します。
+
+```plaintext
+┌─────────────────────────────────────────────────────────────────┐
+│ 利用者のワークフロー                                            │
+│                                                                 │
+│  jobs:                                                          │
+│    lint:                                                        │
+│      uses: aglabo/.github/...actionlint.yml@r1.1.2  ← Reusable  │
+│                                                                 │
+│    build:                                                       │
+│      steps:                                                     │
+│        - uses: aglabo/ci-platform/.../validate-environment@SHA  │
+│          ← Composite (ジョブ内 fail-fast ゲート)                │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+| 種別              | 参照場所 | スコープ     | 目的                    |
+| ----------------- | -------- | ------------ | ----------------------- |
+| Composite Action  | `steps:` | ジョブ内     | 実行前の fail-fast 検証 |
+| Reusable Workflow | `jobs:`  | ワークフロー | CI 全体へのポリシー強制 |
 
 ### 構成概観
 
@@ -87,107 +125,106 @@ graph TB
         wf["GitHub Actions ワークフロー"]
     end
 
-    subgraph platform["ci-platform  ―  aglabo/ci-platform"]
+    subgraph platform["aglabo/ci-platform"]
         subgraph ca["Composite Actions  ✅ 提供中"]
             ve["validate-environment"]
         end
-        subgraph rw["Reusable Workflows  ⬜ 提供予定（未提供）"]
-            al["actionlint"]
-            gh["ghalint"]
-            gl["gitleaks"]
-        end
+    end
+
+    subgraph aglabo_github["aglabo/.github  ✅ 提供中 (ci-platform へ集約予定)"]
+        al["actionlint  @r1.1.2"]
+        gh["ghalint  @r1.1.2"]
+        gl["gitleaks  @r1.1.2"]
     end
 
     wf -->|"steps: uses:"| ve
-    wf -.->|"jobs: uses:"| al
-    wf -.->|"jobs: uses:"| gh
-    wf -.->|"jobs: uses:"| gl
-
-    classDef planned fill:#d0d0d0,stroke:#999,color:#555
-    class al,gh,gl planned
-    style rw fill:#e0e0e0,stroke:#aaa,color:#555
+    wf -->|"jobs: uses:"| al
+    wf -->|"jobs: uses:"| gh
+    wf -->|"jobs: uses:"| gl
 ```
 
-> 実線は現在提供中、点線は提供予定のコンポーネントです。
+---
 
-## 🔧 品質管理の 3 つの柱
+## 🔒 SHA 固定による参照
 
-OSS 開発における品質管理は、次の 3 つの領域に分けられます。
-
-| 領域                 | 対象               | ci-platform での提供 |
-| -------------------- | ------------------ | -------------------- |
-| ローカル品質管理     | Git Hooks          | 対象外               |
-| **CI/CD 品質管理**   | **GitHub Actions** | **提供中・提供予定** |
-| ドキュメント品質管理 | textlint など      | 対象外               |
-
-**ci-platform が提供するのは CI/CD 品質管理の領域のみです。**
-ローカルやドキュメントの品質管理は各リポジトリの自由ですが、CI は組織全体で強制的に守る領域として位置づけています。
-この方針により、CI 品質を一点集中で管理しながら、ツールの肥大化と導入コストを最小化します。
-ローカル品質管理やドキュメント品質管理のツールは、利用者が各自で導入してください。
-
-### CI/CD 品質管理 (GitHub Actions)
-
-(main ブランチへの)Push・PR 時に GitHub Actions が自動実行し、ワークフロー定義を検証します。
-現在は ci-platform 自身の CI に組み込まれており、外部への reusable workflow 提供は予定中です。
-
-| ツール     | 目的                                  | 外部提供 |
-| ---------- | ------------------------------------- | -------- |
-| actionlint | GitHub Actions ワークフローの構文検証 | 予定     |
-| ghalint    | GitHub Actions のポリシー違反を検出   | 予定     |
-| gitleaks   | リポジトリ全体のシークレットスキャン  | 予定     |
-
-## 🚀 利用方法
-
-自分のリポジトリの GitHub Actions ワークフローから Composite Actions を参照して利用します。
-`ci-platform` のリポジトリ自体をフォークする必要はありません。
+ci-platform では **SHA 固定 + タグコメント**を標準的な参照方式として採用しています。
 
 ```yaml
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read # validate-environment に必要な最小権限
-
-    steps:
-      - name: Validate environment
-        uses: aglabo/ci-platform/.github/actions/validate-environment@v0.1.0
+# 推奨: SHA 固定でサプライチェーン攻撃への耐性を確保
+- uses: aglabo/ci-platform/.github/actions/validate-environment@21e02575bb3c3ec61a149801d696b53669f85208 # v0.1.0
 ```
 
-> **ci-platform は Linux ランナー専用の基盤です。**
-> macOS および Windows ランナーには対応しません。
-> `ubuntu-latest`・`ubuntu-22.04` など Linux 系ランナーで使用してください。
+タグ (`@v0.1.0`) だけでは参照先のコミットが後から書き換えられるリスクを排除できません。
+SHA 固定により、参照先の内容が変更されても CI への影響をゼロに抑えられます。
 
-## 🤔 なぜ専用リポジトリなのか
+> **SHA の更新戦略**: Dependabot または Renovate の `github-actions` エコシステム設定で
+> SHA を自動更新できます。タグコメント (`# v0.1.0`) が付いていれば PR で差分を確認できます。
 
-GitHub には `.github` リポジトリによる Org 共通設定の仕組みがありますが、
-`ci-platform` は独立したリポジトリとして管理しています。理由は次のとおりです。
+---
 
-- 再利用性: `aglabo/*` 配下の全リポジトリが `@v0.x.0` 形式でバージョンを固定して参照できる
-- 独立したバージョン管理: 変更の影響範囲を明示的に制御できる
-- 段階的な公開: Composite Actions → Reusable Workflows へ段階的に拡張できる
+## 🖥️ 実行環境
 
-これにより、CI/CD 品質管理を「各リポジトリに埋め込む」のではなく「外部基盤として共有する」設計を実現しています。
+**Linux ランナー専用** (`ubuntu-latest` / `ubuntu-22.04` など)。
 
-## 🗺️ ロードマップ
+検証スクリプトは Bash と GNU ツールに依存しており、macOS・Windows ランナーはサポート対象外です。
 
-**v0.1.x 系 (現在)**: `validate-environment` Composite Action を提供中。GitHub Actions ランナーの OS・パーミッション・ツールを事前検証します。
+---
 
-**v0.2.x (予定)**: actionlint・ghalint・gitleaks をそれぞれ独立した Reusable Workflow として提供します。
-利用者は必要なツールのみ選択して参照できます。
-バージョン指定はセマンティックバージョン固定 (`@v0.2.0` 形式) を採用します。
-将来は個別ワークフローを束ねた統合スキャン (`scan-all.yml`) や、組織標準テンプレートへの発展も視野に入れています。
+## ⚙️ 設計原則とスコープ
+
+### 設計原則
+
+| 原則                    | 内容                                                                                   | 具体例                                                                     |
+| ----------------------- | -------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| Immutable reference     | SHA 固定により、参照先コミットが変わらない限り CI は影響を受けない                     | `@21e02575...` のようにフル SHA で固定する                                 |
+| Centralized enforcement | セキュリティポリシーを単一リポジトリで一元管理し、各リポジトリ間の設定のずれを防ぎます | `permissions:` ポリシーを ci-platform 側で定義し、全リポジトリから参照する |
+| Fail early, fail loudly | `validate-environment` がジョブ冒頭でポリシー違反を即検出・即終了する                  | ランナー OS が `ubuntu` でなければ最初のステップで即 `exit 1`              |
+
+### このプラットフォームが扱わないもの
+
+- CI テンプレートの自動生成
+- 独自ランナーの管理・プロビジョニング
+- アプリケーションのデプロイ戦略
+
+### なぜ専用リポジトリなのか
+
+GitHub `.github` リポジトリでも Org 共通設定は可能ですが、`ci-platform` は意図的に独立したリポジトリとして管理しています。
+
+- バージョン管理の独立性: CI 基盤の変更が全リポジトリに波及するタイミングを明示的に制御できる
+- SHA 固定による改ざん耐性: 参照元コミットが変わらない限り、利用者の CI は影響を受けない
+- 段階的な拡張: Composite Action から Reusable Workflow へ、スコープを拡大しながら展開できる
+
+各リポジトリは独自のジョブを自由に追加できます。ci-platform は CI の「禁止」ではなく「境界の定義」です。
+
+---
+
+## 🗺️ 現在の実装状況
+
+**v0.1.x**: `validate-environment` Composite Action を提供中。
+
+actionlint・ghalint・gitleaks の Reusable Workflow は `aglabo/.github` リポジトリ (`@r1.1.2`) から提供されています。
+ci-platform 自身の CI でも使用しており、将来的に `ci-platform` リポジトリへ集約予定です。
 
 ```yaml
-# 将来の利用イメージ (v0.2.0 以降) — ツールごとに個別参照可能
+# Reusable Workflow の利用例
 jobs:
-  scan:
-    uses: aglabo/ci-platform/.github/workflows/scan-gitleaks.yml@v0.2.0
+  scan-secrets:
+    uses: aglabo/.github/.github/workflows/ci-common-scan-gitleaks.yml@r1.1.2
 ```
+
+**段階導入パターン**:
+
+1. **検証フェーズ**: `validate-environment` を 1 ジョブに追加し、既存 CI に影響を与えずに動作を確認します
+2. **拡大フェーズ**: Reusable Workflow を新規ジョブとして追加します (既存ジョブは変更しません)
+3. **標準化フェーズ**: 全ジョブに `validate-environment` を配置し、ポリシー適用を完了させます
+
+> Breaking Change 対応: SHA 固定または版タグで参照を固定しているため、
+> アップグレードは任意のタイミングで実施できます。
 
 ---
 
 ## 📚 関連ドキュメント
 
 - [使い方](./01-how-to-use.ja.md): 各種アクション・ワークフローの利用手順
+- [クイックスタート](./11-quickstart.ja.md): 最小構成での導入手順
 - [Validate Environment 概要](./10-about-validate-environment.ja.md): validate-environment の詳細
-- [クイックスタート](./11-quickstart.ja.md): 最小構成での利用手順
