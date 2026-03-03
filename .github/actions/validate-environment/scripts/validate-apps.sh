@@ -299,6 +299,7 @@ get_app_version() {
 # @note No output. Caller uses exit code to construct error messages.
 # Rejected: control characters, relative paths (./ ../), shell metacharacters (;|&$`()*?{} space)
 # Allowed: / - _ (for absolute paths like /usr/bin/gh)
+# Note: comma (,) is intentionally excluded from rejection — it has no shell injection risk in bash
 is_safe_command() {
   local cmd="$1"
   [[ "$cmd" =~ $'\n'|$'\r'|$'\t' ]] && return 1

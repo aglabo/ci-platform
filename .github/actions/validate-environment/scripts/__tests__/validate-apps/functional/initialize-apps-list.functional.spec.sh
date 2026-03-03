@@ -271,6 +271,90 @@ Describe 'initialize_apps_list()'
     End
   End
 
+  Context 'security: shell injection via stdin'
+    It 'rejects semicolon injection in cmd field'
+      Data
+        #|git;curl evil.com|Malicious
+      End
+      When call initialize_apps_list
+      The status should be failure
+      The stderr should include "::error::"
+      The stderr should include "metacharacters"
+    End
+
+    It 'rejects backtick injection in cmd field'
+      Data
+        #|`curl evil.com`|Malicious
+      End
+      When call initialize_apps_list
+      The status should be failure
+      The stderr should include "::error::"
+      The stderr should include "metacharacters"
+    End
+
+    It 'rejects dollar-paren injection in cmd field'
+      Data
+        #|$(curl evil.com)|Malicious
+      End
+      When call initialize_apps_list
+      The status should be failure
+      The stderr should include "::error::"
+      The stderr should include "metacharacters"
+    End
+
+    It 'rejects pipe injection in cmd field (treated as extra field)'
+      Data
+        #|git|bash|evil-cmd|extra|field
+      End
+      When call initialize_apps_list
+      The status should be failure
+      The stderr should include "::error::"
+      The stderr should include "expected 2 or 4 pipe-delimited fields"
+    End
+
+    It 'rejects relative path injection in cmd field'
+      Data
+        #|../../../bin/sh|Malicious
+      End
+      When call initialize_apps_list
+      The status should be failure
+      The stderr should include "::error::"
+      The stderr should include "relative path"
+    End
+
+    It 'rejects newline injection in cmd field'
+      Data
+        #|git
+        #|bash evil.com|Malicious
+      End
+      When call initialize_apps_list
+      The status should be failure
+      The stderr should include "::error::"
+    End
+
+    It 'rejects ampersand injection in cmd field'
+      Data
+        #|git&evil|Malicious
+      End
+      When call initialize_apps_list
+      The status should be failure
+      The stderr should include "::error::"
+      The stderr should include "metacharacters"
+    End
+
+    It 'does not execute injected command (side-effect check)'
+      _injection_marker_file=$(mktemp)
+      rm -f "$_injection_marker_file"
+      Data
+        #|git;touch ${_injection_marker_file}|Malicious
+      End
+      When call initialize_apps_list
+      The status should be failure
+      The stderr should include "::error::"
+      The path "${_injection_marker_file}" should not be exist
+    End
+  End
+
   Context 'app count limit (MAX_APPS = 30)'
     call_with_n_defaults() {
       local n=$1
