@@ -3,6 +3,66 @@
  * and scoped locally.
  */
 
+/* ページ全体のレイアウト: User Guide ページ同様の左サイドバー + 右コンテンツ */
+.pageLayout {
+  display: flex;
+  width: 100%;
+}
+
+/* サイドバー: Docusaurus doc-sidebar に合わせたスタイル */
+.sidebar {
+  width: var(--doc-sidebar-width, 300px);
+  min-width: var(--doc-sidebar-width, 300px);
+  max-height: calc(100vh - var(--ifm-navbar-height));
+  overflow-y: auto;
+  position: sticky;
+  top: var(--ifm-navbar-height);
+  padding: 1rem 0;
+  border-right: 1px solid var(--ifm-toc-border-color);
+  background-color: var(--ifm-background-surface-color);
+}
+
+.sidebarCategory {
+  padding: 0.4rem 1rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ifm-color-emphasis-600);
+}
+
+.sidebarItems {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.sidebarItem {
+  margin: 0;
+}
+
+.sidebarLink {
+  display: block;
+  padding: 0.4rem 1rem 0.4rem 1.5rem;
+  color: var(--ifm-color-content);
+  font-size: 0.9rem;
+  text-decoration: none;
+  border-radius: 0.25rem;
+}
+
+.sidebarLink:hover {
+  background-color: var(--ifm-color-emphasis-100);
+  color: var(--ifm-color-primary);
+  text-decoration: none;
+}
+
+/* メインコンテンツ */
+.content {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ヒーローバナー */
 .heroBanner {
   padding: 4rem 0;
   text-align: center;
@@ -20,4 +80,16 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 1rem;
+}
+
+/* レスポンシブ: 小画面ではサイドバーを非表示 */
+@media screen and (max-width: 996px) {
+  .pageLayout {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    display: none;
+  }
 }

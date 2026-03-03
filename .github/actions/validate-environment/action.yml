@@ -107,17 +107,18 @@ runs:
       # curl availability is checked inside validate-permissions.sh before API calls.
       env:
         GITHUB_TOKEN: ${{ inputs.github-token }}
+        ACTIONS_TYPE: ${{ inputs.actions-type }}
       run: |
         set -euo pipefail
-        bash "${GITHUB_ACTION_PATH}/scripts/validate-permissions.sh" "${{ inputs.actions-type }}"
+        bash "${GITHUB_ACTION_PATH}/scripts/validate-permissions.sh" "$ACTIONS_TYPE"
       # Outputs: status, message (written to $GITHUB_OUTPUT by script)
 
     - name: "Validate required applications"
       id: validate-apps
       shell: bash
+      env:
+        ADDITIONAL_APPS: ${{ inputs.additional-apps }}
       run: |
         set -euo pipefail
-        bash "${GITHUB_ACTION_PATH}/scripts/validate-apps.sh" <<'APPS_EOF'
-        ${{ inputs.additional-apps }}
-        APPS_EOF
+        printf '%s\n' "$ADDITIONAL_APPS" | bash "${GITHUB_ACTION_PATH}/scripts/validate-apps.sh"
       # Outputs: status, message
