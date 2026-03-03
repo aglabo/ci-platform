@@ -38,7 +38,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Validate environment
-        uses: aglabo/ci-platform/.github/actions/validate-environment@21e02575bb3c3ec61a149801d696b53669f85208 # v0.1.0
+        uses: aglabo/ci-platform/.github/actions/validate-environment@v0.1.1
         with:
           actions-type: read
 
@@ -97,7 +97,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Validate environment
-        uses: aglabo/ci-platform/.github/actions/validate-environment@21e02575bb3c3ec61a149801d696b53669f85208 # v0.1.0
+        uses: aglabo/ci-platform/.github/actions/validate-environment@991f0aada325e945bab1a21ddd675fba4743ff8a # v0.1.1
         with:
           actions-type: any
 
