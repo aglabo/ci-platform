@@ -10,7 +10,7 @@ pre-commit:
   parallel: true
   commands:
     gitleaks:
-      run: gitleaks protect --config ./configs/gitleaks.toml --staged
+      run: betterleaks protect --config ./configs/betterleaks.toml
 
     secretlint:
       glob: "**/*"
