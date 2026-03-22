@@ -1,12 +1,4 @@
 {
   "mcpServers": {
-    "cocoindex-code": {
-      "type": "stdio",
-      "command": "cocoindex-code"
-    },
-    "fossil-mcp": {
-      "type": "stdio",
-      "command": "fossil-mcp"
-    }
   }
 }
