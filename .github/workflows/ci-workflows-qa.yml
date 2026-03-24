@@ -32,10 +32,10 @@ jobs:
     name: Actionlint
     permissions:
       contents: read
-    uses: aglabo/.github/.github/workflows/ci-common-lint-actionlint.yml@r1.1.2
+    uses: aglabo/.github/.github/workflows/ci-common-lint-actionlint.yml@38070c03acff350b4c8f46d684781052b70c0e58 # r1.1.2
 
   ghalint:
     name: Ghalint
     permissions:
       contents: read
-    uses: aglabo/.github/.github/workflows/ci-common-lint-ghalint.yml@r1.1.2
+    uses: aglabo/.github/.github/workflows/ci-common-lint-ghalint.yml@38070c03acff350b4c8f46d684781052b70c0e58 # r1.1.2
