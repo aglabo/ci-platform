@@ -71,17 +71,17 @@ normalize_architecture() {
   local raw_arch="$1"
 
   case "${raw_arch}" in
-    x86_64|amd64|x64)
-      echo "amd64"
-      return 0
-      ;;
-    aarch64|arm64)
-      echo "arm64"
-      return 0
-      ;;
-    *)
-      return 1
-      ;;
+  x86_64 | amd64 | x64)
+    echo "amd64"
+    return 0
+    ;;
+  aarch64 | arm64)
+    echo "arm64"
+    return 0
+    ;;
+  *)
+    return 1
+    ;;
   esac
 }
 
@@ -92,8 +92,8 @@ normalize_architecture() {
 # @note GITHUB_OUTPUT is evaluated at call time (not at source time) to allow
 #       test environments to set the variable after sourcing this script.
 write_output() {
-  echo "status=$1" >> "${GITHUB_OUTPUT:-/dev/null}"
-  echo "message=$2" >> "${GITHUB_OUTPUT:-/dev/null}"
+  echo "status=$1" >>"${GITHUB_OUTPUT:-/dev/null}"
+  echo "message=$2" >>"${GITHUB_OUTPUT:-/dev/null}"
 }
 
 # @description Check environment variable existence and value
@@ -141,12 +141,12 @@ validate_os() {
 # @exitcode 1 EXPECTED_ARCH is invalid
 validate_expected_arch() {
   case "${EXPECTED_ARCH}" in
-    amd64|arm64)
-      return 0
-      ;;
-    *)
-      return 1
-      ;;
+  amd64 | arm64)
+    return 0
+    ;;
+  *)
+    return 1
+    ;;
   esac
 }
 
@@ -155,7 +155,7 @@ validate_expected_arch() {
 # @exitcode 0 Architecture is valid (can be normalized)
 # @exitcode 1 Architecture is unsupported
 is_supported_architecture() {
-  normalize_architecture "$1" > /dev/null
+  normalize_architecture "$1" >/dev/null
 }
 
 # @description Validate architecture matches expected value
