@@ -18,7 +18,7 @@
     "lint:gha": "pnpm run lint:gha:actions && pnpm run lint:gha:workflows",
     "lint:gha:actions": "pnpm exec ghalint --config ./configs/ghalint.yaml run-action ",
     "lint:gha:workflows": "bash ./scripts/lint-actionlint.sh && pnpm exec ghalint --config ./configs/ghalint.yaml run",
-    "lint:sh": "bash runners/run-shellcheck.sh --rcfile=./configs/shellcheckrc ",
+    "lint:sh": "bash runners/run-shellcheck.sh ",
     "test:sh": "bash runners/run-shellspec.sh ",
     "test:sh:all": "bash runners/run-shellspec.sh all"
   }
