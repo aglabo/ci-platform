@@ -41,3 +41,9 @@
 
 # Don't treat warnings as failures (allow exit code 0 with warnings)
 --no-warning-as-failure
+
+# === Parallel Execution ===
+# Spec file parallel execution
+# @note: use in Windows is dangerous.
+--jobs 4
+
