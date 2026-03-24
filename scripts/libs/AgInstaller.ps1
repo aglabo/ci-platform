@@ -53,21 +53,21 @@ function Install-WinGetPackages {
     }
     end {
         if ($pkgList.Count -eq 0) {
-            Write-Warning "ïýzL No valid packages to install via winget."
+            Write-Warning "No valid packages to install via winget."
             return
         }
 
         foreach ($pkg in $pkgList) {
             $args = AgInstaller-WinGetBuildParams -Package $pkg
-            Write-Host "ïýzŽ¥ Installing $pkg áäyÛØinget $($args -join ' ')" -ForegroundColor Cyan
+            Write-Host "Installing $pkg via winget $($args -join ' ')" -ForegroundColor Cyan
             $args2 = @("install") + $args
             try {
                 Start-Process "winget" -ArgumentList $args2 -Wait -NoNewWindow -ErrorAction Stop
             } catch {
-                Write-Warning "áûvÛªnstallation failed: $pkg"
+                Write-Warning "Installation failed: $pkg"
             }
         }
-        Write-Host "áús?winget packages installed." -ForegroundColor Green
+        Write-Host "winget packages installed." -ForegroundColor Green
     }
 }
 
@@ -103,15 +103,15 @@ function Install-ScoopPackages {
     }
     end {
         if ($toolList.Count -eq 0) {
-            Write-Warning "ïýzL No valid tools to install via scoop."
+            Write-Warning "No valid tools to install via scoop."
             return
         }
 
         foreach ($tool in $toolList) {
-            Write-Host "ïýzŽ¥ Installing: $tool" -ForegroundColor Cyan
+            Write-Host "Installing: $tool" -ForegroundColor Cyan
             scoop install $tool
         }
-        Write-Host "áús?Scoop tools installed." -ForegroundColor Green
+        Write-Host "Scoop tools installed." -ForegroundColor Green
     }
 }
 
@@ -147,13 +147,13 @@ function Install-PnpmPackages {
     }
     end {
         if ($pkgList.Count -eq 0) {
-            Write-Warning "ïýzL No valid packages to install."
+            Write-Warning "No valid packages to install."
             return
         }
 
         $cmd = "pnpm add --global " + ($pkgList -join " ")
-        Write-Host "ïýzE Installing via pnpm: $cmd" -ForegroundColor Cyan
+        Write-Host "Installing via pnpm: $cmd" -ForegroundColor Cyan
         Invoke-Expression $cmd
-        Write-Host "áús?pnpm packages installed." -ForegroundColor Green
+        Write-Host "pnpm packages installed." -ForegroundColor Green
     }
 }
