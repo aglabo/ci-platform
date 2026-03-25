@@ -191,5 +191,5 @@ steps:
 ## 📚 次のステップ
 
 - [デザインプリンシプル](./04-design-principles.ja.md): アーキテクチャを支える設計原則と実装方針
-- [GitHub Actions 設計](./30-github-actions.ja.md): Composite Action / Reusable Workflow の詳細
-- [スクリプトリファレンス](./20-scripts-reference.ja.md): scripts/ 配下の詳細リファレンス
+- GitHub Actions 設計 (準備中): Composite Action / Reusable Workflow の詳細
+- スクリプトリファレンス (準備中): scripts/ 配下の詳細リファレンス
