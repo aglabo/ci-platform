@@ -182,5 +182,5 @@ ci-platform を拡張する際のチェックリストです。
 ## 📚 次のステップ
 
 - [アーキテクチャ](./03-architecture.ja.md): 設計原則が実装に反映されたコンポーネント全体図
-- [GitHub Actions 設計](./30-github-actions.ja.md): Composite Action / Reusable Workflow の詳細設計
-- [設定ガイド](./40-configuration.ja.md): 各品質ツール設定の詳細リファレンス
+- GitHub Actions 設計 (準備中): Composite Action / Reusable Workflow の詳細設計
+- 設定ガイド (準備中): 各品質ツール設定の詳細リファレンス
