@@ -1,12 +1,7 @@
 # src: ./scripts/in
 # @(#) :
 #
-<<<<<<< HEAD
-# Copyright (c) 2025- atsushifx <https://github.com/atsushifx>
-||||||| 8c2a0ca
-=======
 # Copyright (c) 2026- atsushifx <https://github.com/atsushifx>
->>>>>>> main
 #
 # This software is released under the MIT License.
 # https://opensource.org/licenses/MIT

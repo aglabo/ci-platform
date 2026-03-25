@@ -1,13 +1,8 @@
 # src: /scripts/install-doc-tools.ps1
 # @(#) : Document linting and writing tools installation script
 #
-<<<<<<< HEAD
-# Copyright (c) 2025 Furukawa Atsushi <atsushifx@gmail.com>
-||||||| 8c2a0ca
-=======
 # Copyright (c) 2026- Furukawa Atsushi <atsushifx@gmail.com>
 #
->>>>>>> main
 # Released under the MIT License.
 # https://opensource.org/licenses/MIT
 #
