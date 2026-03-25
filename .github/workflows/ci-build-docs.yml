@@ -38,7 +38,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Validate environment
-        uses: aglabo/ci-platform/.github/actions/validate-environment@v0.1.1
+        uses: aglabo/ci-platform/.github/actions/validate-environment@f80bab4e9e3716456a718300a2d2445c8f7e12a1 # v0.1.1
         with:
           actions-type: read
 
@@ -60,7 +60,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6.2.0
         with:
-          node-version: "20"
+          node-version: "22"
 
       - name: Get pnpm store directory
         id: pnpm-cache
