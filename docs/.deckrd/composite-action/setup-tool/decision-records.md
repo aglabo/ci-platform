@@ -173,3 +173,171 @@ REQ-NF-002 の「失敗の理由に応じたエラーメッセージ」要件に
 - Negative:
   - `asset-template` の `{keyword}` 構文はホワイトリストで `{` `}` を許可するが、`keyword` の内容は validate では検証しない。
   - (未知キーワードは build-url 側で空文字置換)
+
+---
+
+### DR-15: ログメッセージ生成を logging.lib.sh に集約し、出力責務を呼び出し側に委譲
+
+**Phase**: implementation-design
+**Status**: Accepted
+**Date**: 2026-03-25
+
+### Context
+
+`common.lib.sh` の `normalize_version()` が `echo "Error: ..." >&2` 形式でエラーを出力しており、
+`validation.lib.sh` は `echo "::error::..." >&2` 形式を使用している。
+形式が不統一であり、テスト時にメッセージ内容を検証しにくい問題があった。
+また、GitHub Actions アノテーション形式 (`::error::`, `::warning::`) を各関数が直接出力すると、
+ローカル実行時の挙動との差異や、テスト時のモック困難性が生じる。
+
+### Decision
+
+1. `_libs/logging.lib.sh` を新規作成し、メッセージ**生成**関数を集約する:
+   - `make_error_message <field> <msg>` → stdout に `::error::<field>: <msg>` を返す
+   - `make_warning_message <field> <msg>` → stdout に `::warning::<field>: <msg>` を返す
+   - `make_notice_message <msg>` → stdout に `::notice::<msg>` を返す
+2. 各関数は**出力しない** (stdout にメッセージ文字列を echo するのみ)
+3. 出力 (`>&2` や `echo`) は呼び出し側の責務とする
+4. `common.lib.sh` / `validation.lib.sh` は `logging.lib.sh` を source して使用する
+5. テストでは `Mock make_error_message` で差し替え可能にする
+
+### Alternatives Considered
+
+- Option A: 各ライブラリが独自にメッセージを直接出力 (現状) → 形式不統一・テストでモック困難
+- Option B: logging.lib.sh がメッセージを生成して出力まで担う → 呼び出し側が出力先 (stdout/stderr) を選べない
+- Option C: メッセージ生成のみを担い出力は呼び出し側 (今回採択) → テストでモック可能・出力先を呼び出し側が制御できる
+
+### Rationale
+
+メッセージ形式を一箇所に集約することで、GitHub Actions アノテーション形式の変更が
+`logging.lib.sh` 一箇所の修正で済む。出力責務を呼び出し側に委譲することで、
+ShellSpec の `Mock` を使ったメッセージ生成のテストが容易になる。
+
+### Consequences
+
+- Positive:
+  - `::error::` / `::warning::` 形式が全ライブラリで統一される
+  - テスト時に `Mock make_error_message` でメッセージ生成を差し替え可能
+  - 呼び出し側が stdout/stderr を選択できる柔軟性がある
+- Negative:
+  - すべての呼び出し側が `. logging.lib.sh` する必要
+  - メッセージ出力の 2行記述 (`_msg=$(make_error_message ...); echo "$_msg" >&2`) がやや冗長
+
+---
+
+### DR-16: validate_symbol を 2 層構造に再設計 (汎用バックエンド + フィールド専用フロントエンド)
+
+**Phase**: implementation-design
+**Status**: Accepted
+**Date**: 2026-03-25
+
+### Context
+
+現行の `validate_symbol(value, field_name, pattern)` は呼び出し側がパターン文字列を知る必要があり、
+以下の問題があった。
+
+1. 呼び出し側がパターン正規表現を直接持つため、パターン変更時に呼び出し箇所を全修正する必要がある
+2. テストケースごとにパターン文字列をハードコードしており、テストと実装の二重管理になる
+3. `validate-inputs.sh` 側でパターン定数を定義するか関数内に定数を置くかの責務が曖昧
+4. 戻り値がステータスコードのみで、正規化後の値をキャプチャする方法がない
+
+### Decision
+
+`validation.lib.sh` を 2 層構造に再設計する:
+
+**Layer 1 汎用バックエンド (内部関数)**:
+
+```bash
+# _validate_symbol_backend value field_name pattern
+# stdout: normalized value (trim済み) on success | (nothing) on failure
+# stderr: ::error:: message on failure (logging.lib.sh 経由)
+# return: 0 on success, 1 on failure
+_validate_symbol_backend() { ... }
+```
+
+**Layer 2: フィールド専用フロントエンド (公開 API)**:
+
+```bash
+# パターンを関数内 readonly 定数として保持
+validate_tool_name()  { _validate_symbol_backend "$1" "tool-name"  '^[a-z][a-z0-9_-]{0,63}$'; }
+validate_repo_org()   { _validate_symbol_backend "$1" "repo-org"   '^[a-z0-9][a-z0-9-]{0,38}$'; }
+validate_repo_name()  { _validate_symbol_backend "$1" "repo-name"  '^[A-Za-z0-9._-]{1,100}$'; }
+```
+
+**戻り値の再設計**:
+
+- 成功: `return 0` + stdout に trim 済み値を出力
+- 失敗: `return 1` + stderr に `::error::` メッセージを出力 (logging.lib.sh 使用)
+
+**呼び出しイディオム**:
+
+```bash
+tool_name=$(validate_tool_name "$INPUT_TOOL_NAME") || exit 1
+```
+
+### Alternatives Considered
+
+- Option A: 現行設計 (パターンを引数で渡す) を維持 → 呼び出し側がパターンを知る必要がある
+- Option B: パターン名 (文字列キー) を引数で渡し、関数内で連想配列ルックアップ → bash 3 非互換・複雑
+- Option C: 2 層構造 (今回採択) → パターンがフロントエンド関数内に閉じる・テストが関数単位で独立
+
+### Rationale
+
+フィールド専用関数にすることで「この入力には必ずこのパターン」が関数定義に自明に現れる。
+`$(validate_tool_name "$val") || exit 1` のイディオムで正規化値の取得と失敗処理が 1 行で書ける。
+バックエンドは引数でパターンを受け取るためテスト用の任意パターンも自然に渡せる。
+
+### Consequences
+
+- Positive:
+  - 呼び出し側がパターン文字列を一切知らなくてよい
+  - パターン変更はフロントエンド関数 1 箇所の修正で完結
+  - `$(validate_tool_name "$val") || exit 1` のイディオムが使いやすい
+  - テストがフィールド単位で独立し、意図が明確になる
+- Negative:
+  - フィールドが増えるたびにフロントエンド関数を追加する必要がある
+  - `_validate_symbol_backend` の内部関数規約 (`_` プレフィックス) をチームで共有する必要がある
+
+---
+
+### DR-17: repo 検証を validate_repository() に一本化し org/name 個別関数を廃止
+
+**Phase**: implementation-design
+**Status**: Accepted
+**Date**: 2026-03-25
+
+### Context
+
+DR-16 の 2 層設計で `validate_repo_org()` / `validate_repo_name()` を個別に定義したが、
+`repo` 入力は常に `org/name` 形式で受け取るため、呼び出し側でスラッシュ分割と 2 回の検証呼び出しが必要になる。
+これは呼び出し側の責務が増え、スラッシュ個数チェック (DR-11 R-004) の実装場所も曖昧になる。
+
+### Decision
+
+- `validate_repo_org()` / `validate_repo_name()` を**廃止**する
+- `validate_repository(value)` を新設し、以下を一括して担う:
+  1. trim (前後空白除去)
+  2. スラッシュが 1 個のみかチェック (0 個・2 個以上はエラー)
+  3. org 部を `_validate_symbol_backend` で検証 (`^[a-z0-9][a-z0-9-]{0,38}$`)
+  4. name 部を `_validate_symbol_backend` で検証 (`^[A-Za-z0-9._-]{1,100}$`)
+  5. 成功: stdout に `"org/name"` を出力して return 0
+  6. 失敗: stderr に `::error::repo:` メッセージを出力して return 1
+
+### Alternatives Considered
+
+- Option A: `validate_repo_org` / `validate_repo_name` を個別に公開 → 呼び出し側でスラッシュ分割・2 回呼び出しが必要
+- Option B: `validate_repository()` に一本化 (今回採択) → 呼び出し側は 1 行で完結、スラッシュ検証も内包
+
+### Rationale
+
+`repo` は仕様上常に `org/name` 形式であり、分割して個別検証する必要性が呼び出し側にはない。
+`$(validate_repository "$INPUT_REPO") || exit 1` の 1 行イディオムで一貫して扱える。
+
+### Consequences
+
+- Positive:
+  - 呼び出し側が `org/name` 分割ロジックを持たなくてよい
+  - スラッシュ個数チェックが `validate_repository()` 内に集約される
+  - `$(validate_repository "$val") || exit 1` のイディオムが一貫する
+- Negative:
+  - org 部・name 部を個別にテストする場合は `_validate_symbol_backend` を直接テストする必要がある
