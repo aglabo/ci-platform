@@ -73,6 +73,21 @@ normalize_version() { ... }  # _libs/common.lib.sh
 
 ---
 
+## DESIGN DECISIONS
+
+### ASCII 制限ポリシー (仕様決定済み)
+
+R-000U の ASCII 以外 Unicode 拒否は**仕様要求**として確定している (validate.spec.md Section 2.4)。
+実装都合ではなく意図的な設計であり、以下の理由により国際化対応は行わない:
+
+- Unicode 同形異字攻撃の排除
+- シェル実行の安全性 (マルチバイト文字のエンコーディング一貫性)
+- 決定論的な動作保証 (全 CI 環境で同一結果)
+
+この制限の緩和は破壊的変更 (仕様メジャーバージョン更新必須)。
+
+---
+
 ## PRIOR ART
 
 - `validate-apps.sh` の fail-fast パターンが直接参照可能
@@ -141,11 +156,12 @@ trim() { local v="$1"; v="${v#"${v%%[![:space:]]*}"}"; echo "${v%"${v##*[![:spac
 # R-000U: ASCII 以外 Unicode を拒否
 # [[ "$val" =~ [^\x00-\x7F] ]] → exit 1
 
-# R-001: tool-version 検証
-# if ! normalized=$(normalize_version "$tool_version" 2>/dev/null); then exit 1; fi
+# R-001: tool-version 検証 (normalize_version の stderr はそのまま伝播)
+# if ! normalized=$(normalize_version "$tool_version"); then exit 1; fi
 
-# R-001-N: GITHUB_OUTPUT へ書き出し
-# echo "tool-version=${normalized}" >> "${GITHUB_OUTPUT:-/dev/null}"
+# R-001-N: GITHUB_OUTPUT へ書き出し (GITHUB_OUTPUT 未設定時はエラー終了)
+# [[ -z "${GITHUB_OUTPUT:-}" ]] && { echo "::error::GITHUB_OUTPUT is not set" >&2; exit 1; }
+# echo "tool-version=${normalized}" >> "$GITHUB_OUTPUT"
 
 # R-002: asset-template 検証
 # validate_asset_template "$asset_template" || exit 1
@@ -181,6 +197,8 @@ Describe 'validate_inputs'
   Describe 'R-000: trim whitespace'
     It 'accepts tool-name with leading/trailing spaces'
     It 'accepts tool-version with spaces'
+    It 'rejects tool-name that is spaces-only (trim → empty → R-003 fail)'
+    It 'rejects repo that is spaces-only (trim → empty → R-004 fail)'
   End
 
   Describe 'R-000U: ASCII subset enforcement'
@@ -217,6 +235,8 @@ Describe 'validate_inputs'
     It 'passes when empty (skip)'
     It 'rejects <filename><filename>.txt'
     It 'rejects Unicode'
+    It 'rejects <<filename> (partial angle bracket prefix)'
+    It 'rejects <FILENAME> (uppercase — not a recognized meta variable)'
   End
 
   Describe 'R-003: tool-name validation'
@@ -230,7 +250,10 @@ Describe 'validate_inputs'
   Describe 'R-004: repo validation'
     It 'accepts rhysd/actionlint'
     It 'rejects ActionLint (no slash)'
-    It 'rejects org/repo/extra'
+    It 'rejects org/repo/extra (2 slashes)'
+    It 'rejects /repo (leading slash)'
+    It 'rejects org/ (trailing slash)'
+    It 'rejects org//repo (double slash)'
     It 'rejects org > 39 chars'
     It 'rejects repo > 64 chars'
   End
@@ -316,3 +339,4 @@ Req: REQ-F-010, REQ-F-011
 | Date       | Version | Description   |
 | ---------- | ------- | ------------- |
 | 2026-03-24 | 1.0.0   | Initial draft |
+| 2026-03-25 | 1.1.0   | Codex review 反映: normalize_version stderr 伝播・GITHUB_OUTPUT 未設定時エラー化・ASCII 制限をポリシーとして明記・エッジケース追加 (trim後空文字/repo スラッシュ異常/checksum-template 大文字小文字) |
