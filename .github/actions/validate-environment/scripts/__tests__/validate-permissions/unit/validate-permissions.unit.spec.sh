@@ -137,18 +137,18 @@ Describe 'validate-permissions.sh - Permissions Validation'
   # Token Check Tests
   # ============================================================================
 
-  Describe 'check_token()'
-    BeforeEach 'cleanup_check_token'
-    AfterEach 'cleanup_check_token'
+  Describe 'check_github_token()'
+    BeforeEach 'cleanup_check_github_token'
+    AfterEach 'cleanup_check_github_token'
 
-    cleanup_check_token() {
+    cleanup_check_github_token() {
       unset GITHUB_TOKEN GITHUB_OUTPUT
     }
 
     Context 'token is set'
       It 'returns success and outputs progress'
         export GITHUB_TOKEN="ghp_test_token"
-        When call check_token
+        When call check_github_token
         The status should be success
         The output should include "✓ GITHUB_TOKEN is set"
       End
@@ -156,10 +156,47 @@ Describe 'validate-permissions.sh - Permissions Validation'
 
     Context 'token is not set'
       It 'returns failure with error message'
-        When call check_token
+        When call check_github_token
         The status should be failure
         The output should include "Checking GITHUB_TOKEN"
         The stderr should include "GITHUB_TOKEN environment variable is not set"
+      End
+    End
+
+    Context 'token is empty string'
+      It 'returns failure'
+        export GITHUB_TOKEN=""
+        When call check_github_token
+        The status should be failure
+        The output should include "Checking GITHUB_TOKEN"
+        The stderr should include "GITHUB_TOKEN environment variable is not set"
+      End
+    End
+
+    Context 'token is whitespace-only'
+      It 'returns success (non-empty check passes)'
+        export GITHUB_TOKEN="   "
+        When call check_github_token
+        The status should be success
+        The output should include "✓ GITHUB_TOKEN is set"
+      End
+    End
+
+    Context 'classic PAT token via github-token input (ghp_ prefix)'
+      It 'returns success'
+        export GITHUB_TOKEN="ghp_xxxxxxxxxxxxxxxxxxxx"
+        When call check_github_token
+        The status should be success
+        The output should include "✓ GITHUB_TOKEN is set"
+      End
+    End
+
+    Context 'fine-grained PAT token via github-token input (github_pat_ prefix)'
+      It 'returns success'
+        export GITHUB_TOKEN="github_pat_xxxxxxxxxxxxxxxxxxxx"
+        When call check_github_token
+        The status should be success
+        The output should include "✓ GITHUB_TOKEN is set"
       End
     End
   End
@@ -200,52 +237,6 @@ Describe 'validate-permissions.sh - Permissions Validation'
         When call determine_base_branch
         The status should be failure
         The stderr should be blank
-      End
-    End
-  End
-
-  # ============================================================================
-  # GitHub Token Tests
-  # ============================================================================
-
-  Describe 'validate_github_token()'
-    BeforeEach 'cleanup_github_token'
-    AfterEach 'cleanup_github_token'
-
-    cleanup_github_token() {
-      unset GITHUB_TOKEN
-    }
-
-    Context 'valid token'
-      It 'returns SUCCESS status when GITHUB_TOKEN is set'
-        export GITHUB_TOKEN="ghp_test_token_value"
-        When call validate_github_token
-        The status should be success
-        The output should eq "SUCCESS:GITHUB_TOKEN is set"
-      End
-    End
-
-    Context 'invalid token'
-      It 'returns ERROR status when GITHUB_TOKEN is not set'
-        When call validate_github_token
-        The status should be failure
-        The output should eq "ERROR:GITHUB_TOKEN environment variable is not set"
-      End
-
-      It 'returns ERROR status when GITHUB_TOKEN is empty'
-        export GITHUB_TOKEN=""
-        When call validate_github_token
-        The status should be failure
-        The output should eq "ERROR:GITHUB_TOKEN environment variable is not set"
-      End
-    End
-
-    Context 'edge cases'
-      It 'returns SUCCESS when GITHUB_TOKEN has whitespace-only value'
-        export GITHUB_TOKEN="   "
-        When call validate_github_token
-        The status should be success
-        The output should eq "SUCCESS:GITHUB_TOKEN is set"
       End
     End
   End

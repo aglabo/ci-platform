@@ -53,7 +53,7 @@ GitHub Actions と Git Hooks を統合した品質管理テンプレートを提
 **ディレクトリ構成**:
 
 ```bash
-.github/workflows/      # GitHub Actions ワークフロー (ci-scan-all.yml)
+.github/workflows/      # GitHub Actions ワークフロー (ci-scan-secrets.yml / ci-workflows-qa.yml)
 .github/actions/        # Composite Actions (validate-environment)
 configs/                # 品質ツール設定ファイル
 scripts/                # 開発スクリプト (run-specs/setup/prepare-commit-msg)

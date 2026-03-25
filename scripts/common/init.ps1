@@ -1,7 +1,12 @@
 # src: /scripts/common/init.ps1
 # @(#) : Common script initializer
 #
+<<<<<<< HEAD
 # Copyright (c) 2025 atsushifx <http://github.com/atsushifx>
+||||||| 8c2a0ca
+=======
+# Copyright (c) 2026- atsushifx <http://github.com/atsushifx>
+>>>>>>> main
 # This software is released under the MIT License.
 # https://opensource.org/licenses/MIT
 

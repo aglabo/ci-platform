@@ -11,9 +11,12 @@ tags:
 
 <!-- markdownlint-disable no-duplicate-heading -->
 
-本プロジェクト: <https://github.com/aglabo/ci-platform>
+本プロジェクト: [aglabo/ci-platform](https://github.com/aglabo/ci-platform)
 
 ## 💬 フィードバックについて
+
+このプロジェクトへの貢献を考えてくださり、ありがとうございます。
+あなたのアイデアがこのプロジェクトをさらによくしてくれることを願っています。
 
 ci-platform への不具合報告・ドキュメント改善提案・機能要望は GitHub Issue で受け付けています。
 Issue を作成する際は、目的に合ったテンプレートを選択してください。
@@ -43,7 +46,7 @@ Issue を作成する際は、目的に合ったテンプレートを選択し�
 | 項目                | 内容                                                        |
 | ------------------- | ----------------------------------------------------------- |
 | Severity            | 重大度 (Critical / Major / Minor / Cosmetic)                |
-| Bug Summary         | 問題の概要 (1〜2 文)                                        |
+| Bug Summary         | 問題の概要 (1〜2文)                                         |
 | Expected Behavior   | 期待していた動作                                            |
 | Actual Behavior     | 実際に起きた動作                                            |
 | Steps to Reproduce  | 再現手順 (番号付きリスト)                                   |
@@ -52,7 +55,7 @@ Issue を作成する際は、目的に合ったテンプレートを選択し�
 
 **Severity の目安:**
 
-各レベルは影響範囲（CI の停止・破綻・回避可否）を基準とします。
+各レベルは影響範囲 (CI の停止・破綻・回避可否) を基準とします。
 
 | レベル   | 基準                                  |
 | -------- | ------------------------------------- |
@@ -106,10 +109,26 @@ GitHub Security Advisories を通じてプライベートに報告してくだ�
 報告時の注意事項:
 
 - PoC や exploit コードを Issue に含めないでください。
-- 影響範囲（対象バージョン・再現条件・影響を受ける機能）を明記してください。
+- 影響範囲 (対象バージョン・再現条件・影響を受ける機能) を明記してください。
 - 修正が公開されるまでは脆弱性の詳細を公開しないようご協力ください。
 
 [Security Advisory を作成する](https://github.com/aglabo/ci-platform/security/advisories/new)
+
+---
+
+## 🔗 Issue 作成リンク一覧
+
+<!-- markdownlint-disable line-length -->
+
+| 種別             | リンク                                                                                                      |
+| ---------------- | ----------------------------------------------------------------------------------------------------------- |
+| バグ報告         | [Bug Report を作成する](https://github.com/aglabo/ci-platform/issues/new?template=bug_report.yml)           |
+| ドキュメント改善 | [Documentation Issue を作成する](https://github.com/aglabo/ci-platform/issues/new?template=document.yml)    |
+| 機能要望         | [Feature Request を作成する](https://github.com/aglabo/ci-platform/issues/new?template=feature_request.yml) |
+| セキュリティ     | [Security Advisory を作成する](https://github.com/aglabo/ci-platform/security/advisories/new)               |
+| その他・相談     | [Open Topic を作成する](https://github.com/aglabo/ci-platform/issues/new?template=open_topic.yml)           |
+
+<!-- markdownlint-enable line-length -->
 
 ---
 

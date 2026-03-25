@@ -2,23 +2,10 @@
 # src: ./configs/ghalint.yaml
 # @(#) : ghalint configuration file
 #
-# Copyright (c) 2025 atsushifx <https://github.com/atsushifx>
+# Copyright (c) 2026- atsushifx <https://github.com/atsushifx>
 #
 # This software is released under the MIT License.
 # https://opensource.org/licenses/MIT
 
-# Exclude specific policies if needed
-excludes:
-  # Allow version tags for reusable workflow calls instead of SHA pinning
-  - policy_name: action_ref_should_be_full_length_commit_sha
-    workflow_file_path: .github/workflows/ci-scan-all.yml
-    job_name: actionlint
-    action_name: aglabo/.github/.github/workflows/ci-common-lint-actionlint.yml
-  - policy_name: action_ref_should_be_full_length_commit_sha
-    workflow_file_path: .github/workflows/ci-scan-all.yml
-    job_name: ghalint
-    action_name: aglabo/.github/.github/workflows/ci-common-lint-ghalint.yml
-  - policy_name: action_ref_should_be_full_length_commit_sha
-    workflow_file_path: .github/workflows/ci-scan-all.yml
-    job_name: scan-gitleaks
-    action_name: aglabo/.github/.github/workflows/ci-common-scan-gitleaks.yml
+# No custom policy exclusions — all default policies are enforced.
+excludes: []

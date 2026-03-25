@@ -107,7 +107,7 @@ github_api_post() {
     -H "Accept: application/vnd.github+json" \
     -H "Content-Type: application/json" \
     "https://api.github.com${endpoint}" \
-    --data "${json_payload}") || http_status="000"  # "000": Network error (curl failed)
+    --data "${json_payload}") || http_status="000" # "000": Network error (curl failed)
   echo "$http_status"
 }
 
@@ -129,71 +129,57 @@ probe_github_write_permission() {
   local http_status
 
   case "$operation" in
-    commit)
-      local timestamp
-      timestamp=$(date +%s)
-      local payload
-      payload="{\"ref\": \"refs/heads/permission-probe-${timestamp}\", \"sha\": \"0000000000000000000000000000000000000000\"}"
-      http_status=$(github_api_post "/repos/${owner_repo}/git/refs" "$payload")
-      ;;
-    pr)
-      local base_branch
-      if ! base_branch=$(determine_base_branch); then
-        echo "::error::Cannot determine base branch: set GITHUB_BASE_REF or GITHUB_REF_NAME" >&2
-        return 1
-      fi
-      local timestamp
-      timestamp=$(date +%s)
-      local payload
-      payload="{\"title\": \"permission-probe\", \"head\": \"permission-probe-${timestamp}\", \"base\": \"${base_branch}\"}"
-      http_status=$(github_api_post "/repos/${owner_repo}/pulls" "$payload")
-      ;;
-    *)
-      echo "::error::Unknown operation: ${operation}" >&2
+  commit)
+    local timestamp
+    timestamp=$(date +%s)
+    local payload
+    payload="{\"ref\": \"refs/heads/permission-probe-${timestamp}\", \"sha\": \"0000000000000000000000000000000000000000\"}"
+    http_status=$(github_api_post "/repos/${owner_repo}/git/refs" "$payload")
+    ;;
+  pr)
+    local base_branch
+    if ! base_branch=$(determine_base_branch); then
+      echo "::error::Cannot determine base branch: set GITHUB_BASE_REF or GITHUB_REF_NAME" >&2
       return 1
-      ;;
+    fi
+    local timestamp
+    timestamp=$(date +%s)
+    local payload
+    payload="{\"title\": \"permission-probe\", \"head\": \"permission-probe-${timestamp}\", \"base\": \"${base_branch}\"}"
+    http_status=$(github_api_post "/repos/${owner_repo}/pulls" "$payload")
+    ;;
+  *)
+    echo "::error::Unknown operation: ${operation}" >&2
+    return 1
+    ;;
   esac
 
   case "$http_status" in
-    403)
-      echo "::error::Permission denied (403): ${operation} permission not granted." >&2
-      return 1
-      ;;
-    422|409|201)
-      return 0  # Permission granted (API accepted; invalid payload caused rejection)
-      ;;
-    401)
-      echo "::error::Authentication failed (401). Check GITHUB_TOKEN validity." >&2
-      return 1
-      ;;
-    000) # Network error (curl failed)
-      echo "::error::Network error: unable to reach GitHub API (curl failed)." >&2
-      return 1
-      ;;
-    *)
-      echo "::error::Unexpected HTTP response: ${http_status}" >&2
-      return 1
-      ;;
+  403)
+    echo "::error::Permission denied (403): ${operation} permission not granted." >&2
+    return 1
+    ;;
+  422 | 409 | 201)
+    return 0 # Permission granted (API accepted; invalid payload caused rejection)
+    ;;
+  401)
+    echo "::error::Authentication failed (401). Check GITHUB_TOKEN validity." >&2
+    return 1
+    ;;
+  000) # Network error (curl failed)
+    echo "::error::Network error: unable to reach GitHub API (curl failed)." >&2
+    return 1
+    ;;
+  *)
+    echo "::error::Unexpected HTTP response: ${http_status}" >&2
+    return 1
+    ;;
   esac
 }
 
 # ============================================================================
 # Section 5: VALIDATION FUNCTIONS
 # ============================================================================
-
-# @description Validate GitHub token is available
-# @exitcode 0 GITHUB_TOKEN environment variable is set
-# @exitcode 1 GITHUB_TOKEN is not set or empty
-# @stdout STATUS:message format (SUCCESS:... or ERROR:...)
-validate_github_token() {
-  if ! check_env_var "GITHUB_TOKEN"; then
-    echo "ERROR:GITHUB_TOKEN environment variable is not set"
-    return 1
-  fi
-
-  echo "SUCCESS:GITHUB_TOKEN is set"
-  return 0
-}
 
 # @description Validate OIDC permissions are enabled
 # @note This function is provided for reusability but NOT used by this action
@@ -215,27 +201,26 @@ validate_id_token_permissions() {
   return 0
 }
 
-# @description Check GITHUB_TOKEN existence with progress output and GITHUB_OUTPUT write
+# @description Validate GITHUB_TOKEN availability with progress output and GITHUB_OUTPUT write
 # @exitcode 0 Token is present
 # @exitcode 1 Token is missing
 # @stdout Progress messages
 # @stderr Error messages with ::error:: prefix
 # @set GITHUB_OUTPUT Writes status=error and message on failure
-check_token() {
+check_github_token() {
   echo "Checking GITHUB_TOKEN..."
-  local token_output token_status token_message
-  token_output=$(validate_github_token) || true
-  token_status="${token_output%%:*}"
-  token_message="${token_output#*:}"
-
-  if [ "$token_status" = "ERROR" ]; then
-    echo "::error::${token_message}" >&2
+  if ! check_env_var "GITHUB_TOKEN"; then
+    local message="GITHUB_TOKEN environment variable is not set"
+    echo "::error::${message}" >&2
     echo "::error::This action requires a GitHub token for API access" >&2
     echo "::error::Please ensure GITHUB_TOKEN is configured in the workflow" >&2
-    { echo "status=error"; echo "message=${token_message}"; } >> "$(out_status)"
+    {
+      echo "status=error"
+      echo "message=${message}"
+    } >>"$(out_status)"
     return 1
   fi
-  echo "✓ ${token_message}"
+  echo "✓ GITHUB_TOKEN is set"
   echo ""
 }
 
@@ -256,62 +241,76 @@ validate_permissions() {
 
   # Validate actions-type argument
   case "$actions_type" in
-    read|commit|pr|any) ;;
-    *)
-      echo "::error::Invalid actions-type: '${actions_type}'. Must be one of: read, commit, pr, any" >&2
-      { echo "status=error"; echo "message=Invalid actions-type: ${actions_type}"; } >> "$(out_status)"
-      return 1
-      ;;
+  read | commit | pr | any) ;;
+  *)
+    echo "::error::Invalid actions-type: '${actions_type}'. Must be one of: read, commit, pr, any" >&2
+    {
+      echo "status=error"
+      echo "message=Invalid actions-type: ${actions_type}"
+    } >>"$(out_status)"
+    return 1
+    ;;
   esac
-
-  # any: token check only, skip permission probe
-  if [ "$actions_type" = "any" ]; then
-    check_token || return 1
-    echo "=== GitHub permissions validation passed (type=any: permission checks skipped) ==="
-    { echo "status=success"; echo "message=GitHub permissions validated"; } >> "$(out_status)"
-    return 0
-  fi
 
   echo "=== Validating GitHub Permissions ==="
   echo ""
 
-  check_token || return 1
-
   # Validate write permissions via API execution probe
   case "$actions_type" in
-    "pr")
-      echo "Checking permissions for PR operations..."
-      if ! probe_github_write_permission "pr"; then
-        echo "::error::pull-requests: write permission not granted" >&2
-        echo "::error::For GITHUB_TOKEN, configure permissions: contents: write, pull-requests: write" >&2
-        { echo "status=error"; echo "message=Missing PR permissions: pull-requests: write"; } >> "$(out_status)"
-        return 1
-      fi
-      echo "✓ pull-requests: write permission verified"
-      echo "✓ PR operations permissions validated"
-      echo ""
-      ;;
-    "commit")
-      echo "Checking permissions for commit operations..."
-      if ! probe_github_write_permission "commit"; then
-        echo "::error::contents: write permission not granted" >&2
-        echo "::error::For GITHUB_TOKEN, configure permissions: contents: write" >&2
-        { echo "status=error"; echo "message=Missing commit permissions: contents: write"; } >> "$(out_status)"
-        return 1
-      fi
-      echo "✓ contents: write permission verified"
-      echo "✓ Commit operations permissions validated"
-      echo ""
-      ;;
-    "read")
-      # contents: read is a required GitHub Actions permission.
-      # No API check needed — declare it explicitly in your workflow.
-      echo "contents: read is a required permission. Declare it explicitly in your workflow's permissions section."
-      ;;
+  "any")
+    check_github_token || return 1
+    echo "=== GitHub permissions validation passed (type=any: permission checks skipped) ==="
+    {
+      echo "status=success"
+      echo "message=GitHub permissions validated"
+    } >>"$(out_status)"
+    return 0
+    ;;
+  "pr")
+    check_github_token || return 1
+    echo "Checking permissions for PR operations..."
+    if ! probe_github_write_permission "pr"; then
+      echo "::error::pull-requests: write permission not granted" >&2
+      echo "::error::For GITHUB_TOKEN, configure permissions: contents: write, pull-requests: write" >&2
+      {
+        echo "status=error"
+        echo "message=Missing PR permissions: pull-requests: write"
+      } >>"$(out_status)"
+      return 1
+    fi
+    echo "✓ pull-requests: write permission verified"
+    echo "✓ PR operations permissions validated"
+    echo ""
+    ;;
+  "commit")
+    check_github_token || return 1
+    echo "Checking permissions for commit operations..."
+    if ! probe_github_write_permission "commit"; then
+      echo "::error::contents: write permission not granted" >&2
+      echo "::error::For GITHUB_TOKEN, configure permissions: contents: write" >&2
+      {
+        echo "status=error"
+        echo "message=Missing commit permissions: contents: write"
+      } >>"$(out_status)"
+      return 1
+    fi
+    echo "✓ contents: write permission verified"
+    echo "✓ Commit operations permissions validated"
+    echo ""
+    ;;
+  "read")
+    check_github_token || return 1
+    # contents: read is a required GitHub Actions permission.
+    # No API check needed — declare it explicitly in your workflow.
+    echo "contents: read is a required permission. Declare it explicitly in your workflow's permissions section."
+    ;;
   esac
 
   echo "=== GitHub permissions validation passed ==="
-  { echo "status=success"; echo "message=GitHub permissions validated"; } >> "$(out_status)"
+  {
+    echo "status=success"
+    echo "message=GitHub permissions validated"
+  } >>"$(out_status)"
   return 0
 }
 
@@ -321,7 +320,10 @@ validate_permissions() {
 
 # Only execute when script is run directly (not when sourced for testing)
 if [ "${BASH_SOURCE[0]}" = "${0}" ]; then
-  check_curl || { echo "::error::curl is not installed or not found in PATH" >&2; exit 1; }
+  check_curl || {
+    echo "::error::curl is not installed or not found in PATH" >&2
+    exit 1
+  }
   validate_permissions "${1:-${ACTIONS_TYPE:-read}}"
   exit $?
 fi

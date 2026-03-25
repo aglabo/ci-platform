@@ -1,7 +1,7 @@
 # src: .gitignore
 # @(#) : mainly ignored files and directories
 #
-# Copyright (c) 2025- atsushifx <http://github.com/atsushifx>
+# Copyright (c) 2026- atsushifx <http://github.com/atsushifx>
 #
 # This software is released under the MIT License.
 # https://opensource.org/licenses/MIT
@@ -17,10 +17,14 @@ thumbs.db
 *.diff
 *.patch
 
+# ignore release package
+releases/*
+!releases/.keep
+
 #   history, cache
 .history/
 .cache/
-**/*cache
+# **/*cache
 
 
 #   backup/swap/temp
@@ -36,6 +40,9 @@ $~*
 *session
 **/*session.json
 **/*session
+
+# deckrd local config (project-local, not for repository)
+.local/deckrd/
 
 # .env files
 .env*
@@ -60,8 +67,11 @@ $~*
 # agents can tracking
 !.claude/agents/
 !.claude/agents/**
+!.claude/rules/
+!.claude/rules/**
 
 # MCP server dependency files
+.cocoindex_code/
 .serena/
 .lsmcp/
 
@@ -70,10 +80,6 @@ temp/
 tmp/
 **/temp/
 **/tmp/
-
-# lock file
-pnpm*lock.yaml
-
 
 ##  Editor
 #   VSCode

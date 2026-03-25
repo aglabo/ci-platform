@@ -1,11 +1,13 @@
+#!/usr/bin/env bash
+# src: ./.github/actions/validate-environment/scripts/__tests__/is-safe-regex.spec.sh
+# @(#) : ShellSpec tests for is_safe_regex function
+#
 # Copyright (c) 2026 Furukawa Atsushi <atsushifx@gmail.com>
 #
 # This software is released under the MIT License.
 # https://opensource.org/licenses/MIT
 
-#!/usr/bin/env bash
-# shellcheck shell=sh
-# ShellSpec tests for is_safe_regex function
+# shellspec sh=bash
 
 Describe 'is_safe_regex()'
   SCRIPT_PATH="${SHELLSPEC_PROJECT_ROOT}/.github/actions/validate-environment/scripts/validate-apps.sh"
