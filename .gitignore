@@ -17,10 +17,6 @@ thumbs.db
 *.diff
 *.patch
 
-# ignore release package
-releases/*
-!releases/.keep
-
 #   history, cache
 .history/
 .cache/
@@ -31,9 +27,9 @@ releases/*
 $~*
 ~*
 *~
-*tmp
-*swp
-*lock
+*.tmp
+*.swp
+*.lock
 
 # session files
 *session.json
@@ -41,12 +37,16 @@ $~*
 **/*session.json
 **/*session
 
-# deckrd local config (project-local, not for repository)
-.local/deckrd/
-
 # .env files
 .env*
 .env.*
+
+# release
+releases/*
+!releases/.keep
+
+##  Git
+!**/.gitignore
 
 ## Development tools (installed locally)
 .tools/
@@ -65,15 +65,19 @@ $~*
 .claude/*
 
 # agents can tracking
+!**/CLAUDE*.md
 !.claude/agents/
 !.claude/agents/**
 !.claude/rules/
 !.claude/rules/**
+!.claude/commands/
+!.claude/commands/**
 
 # MCP server dependency files
 .cocoindex_code/
 .serena/
 .lsmcp/
+.codegraph/*
 
 ## Temporary directories are never tracked
 temp/
