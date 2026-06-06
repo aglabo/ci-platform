@@ -7,5 +7,6 @@
 # This software is released under the MIT License.
 # https://opensource.org/licenses/MIT
 
-# No custom policy exclusions — all default policies are enforced.
-excludes: []
+# Exclude specific policies if needed
+# excludes:
+# Allow version tags for reusable workflow calls instead of SHA pinning

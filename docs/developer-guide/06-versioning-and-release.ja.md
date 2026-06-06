@@ -10,7 +10,7 @@ tags:
   - release
 ---
 
-<!-- markdownlint-disable line-length -->
+{/* markdownlint-disable line-length */}
 
 ## バージョニングとリリース
 
@@ -100,7 +100,7 @@ BREAKING CHANGE: required-tools input が必須になりました。
 
 利用者がワークフローで ci-platform を参照する方法と推奨度の一覧です。
 
-<!-- textlint-disable ja-technical-writing/ja-no-successive-word -->
+{/* textlint-disable ja-technical-writing/ja-no-successive-word */}
 
 | 参照方法       | 例         | 推奨度     | 備考                                         |
 | -------------- | ---------- | ---------- | -------------------------------------------- |
@@ -109,7 +109,7 @@ BREAKING CHANGE: required-tools input が必須になりました。
 | コミット SHA   | `@abc1234` | ★★☆ 許容   | 完全固定だがメンテナンスが煩雑               |
 | ブランチ名     | `@main`    | ★☆☆ 非推奨 | 最新コミットを追従するため予期しない変更あり |
 
-<!-- textlint-enable -->>
+{/* textlint-enable */}>
 
 ```yaml
 # 推奨: バージョンタグ固定
