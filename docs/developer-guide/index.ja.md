@@ -1,7 +1,7 @@
 ---
 title: 開発者ガイド
 description: ci-platform の内部構造・スクリプト・設定・テストを理解したい開発者向けリファレンス
-slug: developer-guide
+slug: /developer-guide
 sidebar_position: 1
 tags:
   - ci-platform
@@ -17,7 +17,7 @@ tags:
 <!-- textlint-disable ja-hiraku -->
 
 ci-platform を外部から利用する方は [ユーザーガイド](../user-guide/index.ja.md) を、
-開発環境のセットアップ手順は [オンボーディングガイド](../onboarding/index.ja.md) を参照してください。
+開発環境のセットアップ手順はオンボーディングガイド (準備中) を参照してください。
 
 ### 対象読者
 
