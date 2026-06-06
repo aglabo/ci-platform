@@ -8,7 +8,6 @@
 
 ## Files
 globs:
-  - "**/*.md"
 
 ## Ignores
 # ignore gitignore
@@ -17,6 +16,8 @@ gitignore: true
 ignores:
   - ".serena/**"
   - ".tools/**"
+  - "temp/**"
+  - "tmp/**"
 
 ## ruleset
 config:
