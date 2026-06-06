@@ -28,10 +28,7 @@ ignore = true
 [.local/*]
 ignore = true
 
-[**/node_modules/*]
-ignore = true
-
-[*.spec.sh]
+[**/*.spec.sh]
 ignore = true
 
 # ─────────────────────────────
@@ -126,4 +123,3 @@ tab_width = 2
 # [Dockerfile]
 # indent_style = space
 # indent_size = 2
-
