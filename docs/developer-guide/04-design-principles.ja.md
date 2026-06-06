@@ -46,7 +46,7 @@ jobs:
 
 ## ♻️ 再利用可能ワークフローの設計方針
 
-<!-- textlint-disable ja-hiraku -->
+{/* textlint-disable ja-hiraku */}
 
 Reusable Workflows および Composite Actions は次の方針で設計します。
 
@@ -80,7 +80,7 @@ inputs:
   if: steps.scan.outputs.status != 'error'
 ```
 
-<!-- textlint-enable ja-hiraku -->
+{/* textlint-enable ja-hiraku */}
 
 ---
 
@@ -88,7 +88,7 @@ inputs:
 
 ツール設定はすべて `configs/` ディレクトリに集約します。
 
-<!-- markdownlint-disable line-length MD060 -->
+{/* markdownlint-disable line-length MD060 */}
 
 | ファイル                         | 役割                          |
 | -------------------------------- | ----------------------------- |
@@ -98,7 +98,7 @@ inputs:
 | `configs/secretlint.config.yaml` | secretlint 設定               |
 | `configs/.markdownlint.yaml`     | markdownlint ルール設定       |
 
-<!-- markdownlint-enable line-length MD060 -->
+{/* markdownlint-enable line-length MD060 */}
 
 **分離の目的**:
 
@@ -114,7 +114,7 @@ inputs:
 
 ci-platform のスクリプト変更はすべてテストが先行します。
 
-<!-- textlint-disable ja-hiraku -->
+{/* textlint-disable ja-hiraku */}
 
 **テスト配置規約**:
 
@@ -135,7 +135,7 @@ scripts/
 | `integration` | 外部ツール・ファイルシステムとの統合 |
 | `e2e`         | エンドツーエンドのシナリオ検証       |
 
-<!-- textlint-enable ja-hiraku -->
+{/* textlint-enable ja-hiraku */}
 
 **禁止事項**: テストファイル (`__tests__/**/*.spec.sh`) を明示的な指示なしに変更しない。
 
@@ -147,35 +147,35 @@ ci-platform を拡張する際のチェックリストです。
 
 ### 新しい Composite Action / Reusable Workflow を追加する
 
-<!-- textlint-disable ja-hiraku -->
+{/* textlint-disable ja-hiraku */}
 
 1. `permissions` セクションを `contents: read` で明示する
 2. すべての `inputs` にデフォルト値を設定する
 3. `actionlint` と `ghalint` の検証をローカルで実行する
 4. `validate-environment` を CI の最初のステップとして配置する
 
-<!-- textlint-enable ja-hiraku -->
+{/* textlint-enable ja-hiraku */}
 
 ### 新しいスクリプトを追加する
 
-<!-- textlint-disable ja-hiraku -->
+{/* textlint-disable ja-hiraku */}
 
 1. `scripts/` 配下に配置する
 2. `__tests__/` に対応するテストファイルを作成する
 3. `bash ./scripts/run-specs.sh` でテストが全件パスすることを確認する
 4. 関数の入出力を `unit` テストで検証する
 
-<!-- textlint-enable ja-hiraku -->
+{/* textlint-enable ja-hiraku */}
 
 ### 設定ファイルを変更する
 
-<!-- textlint-disable ja-hiraku -->
+{/* textlint-disable ja-hiraku */}
 
 1. 変更理由を PR / コミットメッセージに明記する
 2. `gitleaks.toml`、`secretlint.config.yaml` の除外設定追加は**禁止**
 3. 変更後に対応するリントツールをローカルで実行して確認する
 
-<!-- textlint-enable ja-hiraku -->
+{/* textlint-enable ja-hiraku */}
 
 ---
 

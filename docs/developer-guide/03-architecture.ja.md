@@ -116,7 +116,7 @@ sequenceDiagram
 `validate-environment` は CI パイプラインの**強制停止ゲート**です。
 次の 3 つを検証し、いずれかが失敗した場合は即座に後続ジョブを停止します。
 
-<!-- markdownlint-disable line-length MD060 -->
+{/* markdownlint-disable line-length MD060 */}
 
 | 検証項目         | 内容                                           |
 | ---------------- | ---------------------------------------------- |
@@ -124,7 +124,7 @@ sequenceDiagram
 | permissions 検証 | `contents: write` など過剰権限がないことを確認 |
 | ツール確認       | 必要なツールがランナーに存在することを確認     |
 
-<!-- markdownlint-enable line-length MD060 -->
+{/* markdownlint-enable line-length MD060 */}
 
 ---
 
@@ -161,7 +161,7 @@ sequenceDiagram
 
 ### 設定ファイルと各コンポーネントの対応
 
-<!-- markdownlint-disable line-length MD060 -->
+{/* markdownlint-disable line-length MD060 */}
 
 | 設定ファイル                     | 参照コンポーネント              |
 | -------------------------------- | ------------------------------- |
@@ -173,7 +173,7 @@ sequenceDiagram
 | `configs/.markdownlint.yaml`     | markdownlint (ドキュメント品質) |
 | `lefthook.yml`                   | lefthook (Git Hooks 全体定義)   |
 
-<!-- markdownlint-enable line-length MD060 -->
+{/* markdownlint-enable line-length MD060 */}
 
 ### 外部リポジトリからの参照方式
 
