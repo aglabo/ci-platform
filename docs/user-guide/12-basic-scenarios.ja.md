@@ -141,7 +141,7 @@ jobs:
             jq|jq|regex:([0-9.]+)|1.6
 ```
 
-<!-- markdownlint-disable line-length MD060 -->
+{/* markdownlint-disable line-length MD060 */}
 
 | 列    | 意味                                                                    |
 | ----- | ----------------------------------------------------------------------- |
@@ -150,7 +150,7 @@ jobs:
 | 3列目 | バージョン抽出方法 (`field:N` / `regex:PATTERN` / 空欄=自動抽出)        |
 | 4列目 | 最低バージョン (空欄にするとバージョンチェックをスキップして警告を出す) |
 
-<!-- markdownlint-enable line-length MD060 -->
+{/* markdownlint-enable line-length MD060 */}
 
 > `additional-apps` はインストーラーではなく、既存ツールの検証ゲートです。
 > ツールのセットアップは別ステップで行ってください。

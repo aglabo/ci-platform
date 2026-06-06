@@ -10,7 +10,7 @@ tags:
   - git-hooks
 ---
 
-<!-- markdownlint-disable line-length -->
+{/* markdownlint-disable line-length */}
 
 ## 🏗️ ci-platform とは
 
