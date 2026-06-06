@@ -14,7 +14,7 @@ tags:
 このガイドは、ci-platform の**内部構造・設計・拡張方法を理解したい開発者向け**のリファレンスです。
 スクリプト・GitHub Actions・品質ツール設定・テストの仕組みを体系的に解説します。
 
-<!-- textlint-disable ja-hiraku -->
+{/* textlint-disable ja-hiraku */}
 
 ci-platform を外部から利用する方は [ユーザーガイド](../user-guide/index.ja.md) を、
 開発環境のセットアップ手順はオンボーディングガイド (準備中) を参照してください。
@@ -26,13 +26,13 @@ ci-platform を外部から利用する方は [ユーザーガイド](../user-gu
 - GitHub Actions の Composite Action / Reusable Workflow を改修したい方
 - ShellSpec テストを追加・メンテナンスしたい方
 
-<!-- textlint-enable -->
+{/* textlint-enable */}
 
 ---
 
 ## 📚 ドキュメント構成
 
-<!-- markdownlint-disable line-length MD060 -->
+{/* markdownlint-disable line-length MD060 */}
 
 ### 概要・アーキテクチャ
 
@@ -66,7 +66,7 @@ ci-platform を外部から利用する方は [ユーザーガイド](../user-gu
 | ---- | ------------------ | ------------------------------------------------------ |
 | 50   | [テスト開発ガイド] | ShellSpec テスト開発パターン・規約・ベストプラクティス |
 
-<!-- markdownlint-enable  -->
+{/* markdownlint-enable */}
 
 ---
 
@@ -76,4 +76,4 @@ ci-platform を外部から利用する方は [ユーザーガイド](../user-gu
 - 特定の情報を調べる場合: 上記テーブルから対象ページを直接参照してください。
 - フィードバック歓迎: ドキュメントの改善提案や誤りは [Issue を作成](https://github.com/aglabo/ci-platform/issues/new) してお知らせください。
 
-<!-- textlint-enable ja-hiraku -->
+{/* textlint-enable ja-hiraku */}
