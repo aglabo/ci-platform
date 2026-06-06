@@ -82,7 +82,7 @@ steps:
 `actions-type` に応じて、GitHub トークンの権限を検証します。
 `permissions` セクションの設定と必ず整合させてください。
 
-<!-- markdownlint-disable line-length -->
+{/* markdownlint-disable line-length */}
 
 | `actions-type` 値   | 必要な permissions                         | 用途                                           |
 | ------------------- | ------------------------------------------ | ---------------------------------------------- |
@@ -91,7 +91,7 @@ steps:
 | `pr`                | `contents: write` + `pull-requests: write` | PR の作成・更新を含む                          |
 | `any`               | 権限プローブをスキップ                     | パーミッション検証をスキップ。例外的な用途専用 |
 
-<!-- markdownlint-enable -->
+{/* markdownlint-enable */}
 
 ### GITHUB_TOKEN の設定
 

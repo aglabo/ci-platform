@@ -51,7 +51,7 @@ jobs:
 
 `@` の後ろにバージョンを指定します。**SHA 固定 + タグコメント形式を強く推奨します。**
 
-<!-- markdownlint-disable line-length -->
+{/* markdownlint-disable line-length */}
 
 | 指定方法           | 例                                                   | 特徴                                         |
 | ------------------ | ---------------------------------------------------- | -------------------------------------------- |
@@ -59,7 +59,7 @@ jobs:
 | タグ               | `@v0.1.0`                                            | リリース済みバージョンを固定する             |
 | ブランチ名         | `@main`                                              | 常に最新。破壊的変更の影響を受ける恐れがある |
 
-<!-- markdownlint-enable line-length -->
+{/* markdownlint-enable line-length */}
 
 タグ (`@v0.1.0`) だけでは参照先のコミットを書き換えられるリスクを排除できません。
 SHA 固定により、参照先の内容を変更されても CI への影響をゼロに抑えられます。
@@ -177,7 +177,7 @@ jobs:
 
 ## ⚠️ よくあるミス
 
-<!-- markdownlint-disable line-length -->
+{/* markdownlint-disable line-length */}
 
 | ミス                              | 症状                                                          | 対処                                          |
 | --------------------------------- | ------------------------------------------------------------- | --------------------------------------------- |
@@ -186,7 +186,7 @@ jobs:
 | 非 Linux ランナーで実行する       | macOS・Windows ランナーでは最初のステップで失敗する           | `runs-on: ubuntu-latest` を指定する           |
 | `checkout` より後に配置する       | 不正コードをチェックアウト後に検証が走り意味が薄れる          | `validate-environment` を最初のステップに置く |
 
-<!-- markdownlint-enable line-length -->
+{/* markdownlint-enable line-length */}
 
 ### 実際のエラー例
 
