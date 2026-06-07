@@ -12,7 +12,7 @@ set -euo pipefail
 files=$(git ls-files ".github/workflows/*.yml" ".github/workflows/*.yaml")
 
 if [ -n "$files" ]; then
-  pnpm exec actionlint ${files}
+  pnpm exec actionlint "${files}"
 else
   echo "No workflow files found."
 fi
