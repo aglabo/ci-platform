@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# shellcheck shell=sh
+# shellcheck shell=bash
 # src: ./.github/actions/validate-environment/scripts/__tests__/validate-apps/integration/validate-apps-orchestrator.integration.spec.sh
 # @(#) : Integration tests for validate_apps() orchestration in validate-apps.sh
 
