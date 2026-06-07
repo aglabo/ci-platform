@@ -1,5 +1,15 @@
+#!/usr/bin/env bash
+# src: .github/actions/_libs/version.lib.sh
+# @(#) : version utility functions for composite actions
+#
+# Copyright (c) 2026- atsushifx <https://github.com/atsushifx>
+#
+# This software is released under the MIT License.
+# https://opensource.org/licenses/MIT
+# shellcheck shell=bash
+
 ##
-# @description Normalize version to vX.Y.Z format
+# @description Normalize version to X.Y.Z format
 # @arg $1 string Raw version string
 # @stdout Normalized version (X.Y.Z)
 # @return 0 on success, 1 on invalid format
@@ -25,6 +35,5 @@ normalize_version() {
   minor="${minor:-0}"
   patch="${patch:-0}"
 
-  # Return in vX.Y.Z format
   echo "${major}.${minor}.${patch}"
 }
