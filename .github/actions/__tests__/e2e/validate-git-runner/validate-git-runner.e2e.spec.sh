@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# shellcheck shell=sh
+# shellcheck shell=bash
 # src: ./.github/actions/__tests__/e2e/validate-git-runner.e2e.spec.sh
 # @(#) : E2E tests for validate_git_runner() - end-user facing orchestrator
 
