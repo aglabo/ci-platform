@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# shellcheck shell=sh
+# shellcheck shell=bash
 # src: ./.github/actions/validate-environment/scripts/__tests__/validate-apps/functional/validate-app-version.functional.spec.sh
 # @(#) : Functional tests for validate_app_version() in validate-apps.sh
 
