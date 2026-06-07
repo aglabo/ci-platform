@@ -35,7 +35,7 @@ main() {
   done
   local -a targets=("$@")
   if [[ ${#targets[@]} -eq 0 ]]; then
-    targets=(".")
+    targets=("${PROJECT_ROOT}")
   fi
   targets=("${targets[@]//\\//}")
   local -a files=()
@@ -43,7 +43,7 @@ main() {
     if [[ -d $target ]]; then
       while IFS= read -r -d '' f; do
         files+=("$f")
-      done < <(find "$target" -path "*/.tools/*" -prune -o -name "*.sh" -print0)
+      done < <(find "$target" -path "*/.git/*" -prune -o -path "*/.tools/*" -prune -o -name "*.sh" -print0)
     else
       files+=("$target")
     fi
