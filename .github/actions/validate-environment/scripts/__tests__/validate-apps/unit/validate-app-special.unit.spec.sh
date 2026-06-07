@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# shellcheck shell=sh
+# shellcheck shell=bash
 # ShellSpec tests for validate_app_special function
 
 Describe 'validate_app_special()'
