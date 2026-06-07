@@ -31,7 +31,7 @@ tags:
 
 ## 📥 入力パラメーター
 
-<!-- markdownlint-disable line-length  -->
+{/* markdownlint-disable line-length */}
 
 | パラメーター            | 型     | 必須   | デフォルト            | 説明                                                                      |
 | ----------------------- | ------ | ------ | --------------------- | ------------------------------------------------------------------------- |
@@ -41,21 +41,21 @@ tags:
 | `require-github-hosted` | string | いいえ | `false`               | `true` にすると GitHub ホステッドランナー以外をエラーにする               |
 | `github-token`          | string | いいえ | `${{ github.token }}` | GitHub API アクセス用トークン。PAT を使う場合は `secrets.<MY_PAT>` を渡す |
 
-<!-- markdownlint-enable line-length  -->
+{/* markdownlint-enable line-length */}
 
 ### 🏗️ `architecture`
 
 `architecture` には正規化後の名前 (`amd64` または `arm64`) を指定します。
 スクリプトが `uname -m` の出力を自動的に正規化するため、ランナー側の表記に依存しません。
 
-<!-- markdownlint-disable line-length  -->
+{/* markdownlint-disable line-length */}
 
 | 値                   | 対応する `uname -m` 出力 | 説明                            |
 | -------------------- | ------------------------ | ------------------------------- |
 | `amd64` (デフォルト) | `x86_64`、`amd64`、`x64` | 64 bit Intel/AMD アーキテクチャ |
 | `arm64`              | `aarch64`、`arm64`       | 64 bit ARM アーキテクチャ       |
 
-<!-- markdownlint-enable line-length  -->
+{/* markdownlint-enable line-length */}
 
 補足:
 
@@ -68,7 +68,7 @@ tags:
 
 `actions-type` に応じて、GitHub トークンが必要な権限を持つかを検証します。
 
-<!-- markdownlint-disable line-length  -->
+{/* markdownlint-disable line-length */}
 
 | 値                  | 必要な permissions                         | 動作                                                           |
 | ------------------- | ------------------------------------------ | -------------------------------------------------------------- |
@@ -77,7 +77,7 @@ tags:
 | `pr`                | `contents: write` + `pull-requests: write` | トークンの存在確認 + PR 作成権限プローブ                       |
 | `any`               | 制限なし (permissions を検証しない)        | トークンの存在確認のみ (権限プローブなし)                      |
 
-<!-- markdownlint-enable line-length  -->
+{/* markdownlint-enable line-length */}
 
 ### 📋 `additional-apps`
 
@@ -87,7 +87,7 @@ tags:
 cmd|app_name|version_extractor|min_version
 ```
 
-<!-- markdownlint-disable line-length  -->
+{/* markdownlint-disable line-length */}
 
 | フィールド          | 意味                                                             | 例                        |
 | ------------------- | ---------------------------------------------------------------- | ------------------------- |
@@ -96,7 +96,7 @@ cmd|app_name|version_extractor|min_version
 | `version_extractor` | バージョン抽出方法 (`field:N` / `regex:PATTERN` / `auto` / 空欄) | `regex:version ([0-9.]+)` |
 | `min_version`       | 最低バージョン (空欄にするとチェックをスキップして警告)          | `2.0`                     |
 
-<!-- markdownlint-enable line-length  -->
+{/* markdownlint-enable line-length */}
 
 補足:
 
@@ -124,7 +124,7 @@ cmd|app_name|version_extractor|min_version
 `version_extractor` は、`--version`で出力されたバージョン出力から、指定した型式でバージョン番号を取得します。
 取得には、以下の 3 種類の方式を指定できます。
 
-<!-- markdownlint-disable line-length  -->
+{/* markdownlint-disable line-length */}
 
 | 方式           | 書式            | 動作                                                     | 例                                        |
 | -------------- | --------------- | -------------------------------------------------------- | ----------------------------------------- |
@@ -133,7 +133,7 @@ cmd|app_name|version_extractor|min_version
 | 自動抽出       | `auto`          | `--version` 出力から `X.Y` または `X.Y.Z` 形式を自動検出 | `auto`                                    |
 | デフォルト     | ''              | 抽出方式が空欄のときは、`auto`として自動抽出             | ''                                        |
 
-<!-- markdownlint-enable line-length  -->
+{/* markdownlint-enable line-length */}
 
 補足:
 
@@ -164,14 +164,14 @@ additional-apps: |
 
 GitHub ホステッドランナーか否かを `RUNNER_ENVIRONMENT` 環境変数で判定します。
 
-<!-- markdownlint-disable line-length  -->
+{/* markdownlint-disable line-length */}
 
 | 値                   | 動作                                                           |
 | -------------------- | -------------------------------------------------------------- |
 | `false` (デフォルト) | セルフホストランナーも許可 (デフォルト)                        |
 | `true`               | `RUNNER_ENVIRONMENT` が `github-hosted` でなければエラーにする |
 
-<!-- markdownlint-enable line-length  -->
+{/* markdownlint-enable line-length */}
 
 補足:
 
@@ -186,7 +186,7 @@ GitHub ホステッドランナーか否かを `RUNNER_ENVIRONMENT` 環境変数
 各検証は `runner` → `permissions` → `apps` の順で実行されます。
 いずれかが `error` を返した場合、アクションは即時に非ゼロの終了コードで終了します (`fail-fast`)。後続の検証ステップは実行されません。
 
-<!-- markdownlint-disable line-length  -->
+{/* markdownlint-disable line-length */}
 
 | 出力名                | 値                  | 説明                                 |
 | --------------------- | ------------------- | ------------------------------------ |
@@ -197,7 +197,7 @@ GitHub ホステッドランナーか否かを `RUNNER_ENVIRONMENT` 環境変数
 | `apps-status`         | `success` / `error` | アプリケーション検証の結果           |
 | `apps-message`        | 文字列              | アプリケーション検証の詳細メッセージ |
 
-<!-- markdownlint-enable line-length  -->
+{/* markdownlint-enable line-length */}
 
 ### 📖 出力値の参照方法
 
@@ -220,7 +220,7 @@ steps:
 
 ## 🔒 制約事項
 
-<!-- markdownlint-disable line-length -->
+{/* markdownlint-disable line-length */}
 
 | 制約           | 内容                                                                                                                                                       | 備考                     |
 | -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------ |
@@ -230,7 +230,7 @@ steps:
 | セキュリティ   | `eval` 非使用。バージョン抽出は POSIX ERE (`sed -E`) 準拠。                                                                                                | POSIX ERE 準拠           |
 | 正規表現方言   | 正規表現は POSIX ERE に準拠します (PCRE 記法は使用できません) 。                                                                                           | `sed -E` 使用            |
 
-<!-- markdownlint-enable line-length -->
+{/* markdownlint-enable line-length */}
 
 ---
 

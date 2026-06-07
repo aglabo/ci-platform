@@ -136,7 +136,7 @@ permissions:
 
 **解決方法**: `actions-type` に応じた `permissions` を設定してください。
 
-<!-- markdownlint-disable line-length MD060 -->
+{/* markdownlint-disable line-length MD060 */}
 
 | `actions-type` | 必要な permissions                         |
 | -------------- | ------------------------------------------ |
@@ -144,7 +144,7 @@ permissions:
 | `commit`       | `contents: write`                          |
 | `pr`           | `contents: write` + `pull-requests: write` |
 
-<!-- markdownlint-enable line-length MD060 -->
+{/* markdownlint-enable line-length MD060 */}
 
 ```yaml
 # pr の場合
