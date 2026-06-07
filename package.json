@@ -20,6 +20,10 @@
     "lint:gha:workflows": "bash ./scripts/lint-actionlint.sh && pnpm exec ghalint --config ./configs/ghalint.yaml run",
     "lint:sh": "bash runners/run-shellcheck.sh ",
     "test:sh": "bash runners/run-shellspec.sh ",
-    "test:sh:all": "bash runners/run-shellspec.sh all"
+    "test:sh:all": "bash runners/run-shellspec.sh all",
+    "test:sh:unit": "bash runners/run-shellspec.sh unit",
+    "test:sh:functional": "bash runners/run-shellspec.sh functional",
+    "test:sh:integration": "bash runners/run-shellspec.sh integration --integration",
+    "test:sh:e2e": "bash runners/run-shellspec.sh e2e"
   }
 }

@@ -15,3 +15,15 @@ severity=style
 # SC2317 - unreachable code after return/exit
 #   shellspec test framework patterns; also present in .tools/shellspec/.shellcheckrc
 disable=SC2317
+
+# SC2329 - function never invoked
+#   shellspec mock functions are invoked indirectly by the test framework
+disable=SC2329
+
+# SC2034 - variable appears unused
+#   shellspec global state variables (VALIDATION_RESULTS etc.) are used in subshells
+disable=SC2034
+
+# SC2016 - expressions don't expand in single quotes
+#   shellspec test cases intentionally use single quotes to pass literal $ as test input
+disable=SC2016

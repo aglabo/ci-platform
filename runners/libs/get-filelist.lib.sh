@@ -78,7 +78,8 @@ get_filelist() {
 
   # Enumerate files; normalize separators and prepend ./
   local __result
-  __result=$(cd "$__root" && rg --files -g "$__pattern" 2>/dev/null | sed 's|\\|/|g; s|^[^./]|./&|' || true)
+  # shellcheck disable=SC1003
+  __result=$(cd "$__root" && rg --files --hidden --glob '!.git/**' -g "$__pattern" 2>/dev/null | tr '\\' '/' | sed 's|^[^./]|./&|' || true)
 
   # Apply each filter (AND: narrow results; short-circuit on empty)
   local __pat
