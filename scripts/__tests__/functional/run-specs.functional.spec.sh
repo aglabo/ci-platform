@@ -1,4 +1,4 @@
-#shellcheck shell=sh
+# shellcheck shell=bash
 
 Describe 'run-specs.sh - Functional'
   Include ../../run-specs.sh
@@ -28,9 +28,11 @@ Describe 'run-specs.sh - Functional'
     Context 'directory isolation'
       It 'executes in subshell without changing caller directory'
         check_directory() {
-          local before_dir="$(pwd)"
+          local before_dir
+          before_dir="$(pwd)"
           main "."
-          local after_dir="$(pwd)"
+          local after_dir
+          after_dir="$(pwd)"
           [[ "$before_dir" == "$after_dir" ]] && echo "DIRECTORY_UNCHANGED"
         }
 
