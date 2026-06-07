@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# shellcheck shell=sh
+# shellcheck shell=bash
 # src: ./.github/actions/validate-environment/scripts/__tests__/validate-apps.spec.sh
 # ShellSpec tests for validate_apps function
 
