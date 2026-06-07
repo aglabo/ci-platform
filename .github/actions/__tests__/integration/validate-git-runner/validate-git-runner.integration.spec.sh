@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# shellcheck shell=sh
+# shellcheck shell=bash
 # src: ./.github/actions/__tests__/integration/validate-git-runner.integration.spec.sh
 # @(#) : Integration tests for GitHub environment validation in validate-git-runner.sh
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# shellcheck shell=sh
+# shellcheck shell=bash
 # src: ./.github/actions/validate-environment/scripts/__tests__/validate-apps/unit/check-jq.unit.spec.sh
 # @(#) : Unit tests for check_jq() in validate-apps.sh
 

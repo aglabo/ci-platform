@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-#shellcheck shell=sh
+# shellcheck shell=bash
 
 Describe 'validate-git-runner.sh - Architecture Functional'
   SCRIPT_DIR="${SHELLSPEC_PROJECT_ROOT}/.github/actions/validate-environment/scripts"

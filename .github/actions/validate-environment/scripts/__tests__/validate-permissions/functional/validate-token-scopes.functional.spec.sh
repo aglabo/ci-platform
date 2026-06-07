@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-#shellcheck shell=sh
+# shellcheck shell=bash
 
 Describe 'validate-permissions.sh - probe_github_write_permission() Functional'
   SCRIPT_DIR="${SHELLSPEC_PROJECT_ROOT}/.github/actions/validate-environment/scripts"

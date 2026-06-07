@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# shellcheck shell=sh
+# shellcheck shell=bash
 # src: ./.github/actions/validate-environment/scripts/__tests__/validate-apps/functional/handle-validation-error.functional.spec.sh
 # @(#) : Functional tests for handle_validation_error() in validate-apps.sh
 
