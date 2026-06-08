@@ -75,10 +75,12 @@ get_filelist() {
   local __f __norm
   for __f in "$@"; do
     __norm=$(normalize_path "$__f")
+    # Strip leading ./ so filter matches rg output (which has no ./ prefix)
+    __norm="${__norm#./}"
     if [[ "$__norm" == */* ]]; then
       __filters+=("$__norm")
     else
-      __filters+=("$(args_to_filter "$__f")")
+      __filters+=("$(args_to_filter "$__norm")")
     fi
   done
 
