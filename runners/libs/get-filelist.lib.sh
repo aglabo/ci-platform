@@ -37,7 +37,13 @@ normalize_path() {
   else
     IFS= read -r __path
   fi
-  printf '%s\n' "${__path//\\/\/}"
+  # Convert backslashes to forward slashes
+  __path="${__path//\\/\/}"
+  # Strip leading ./
+  __path="${__path#./}"
+  # Strip trailing /
+  __path="${__path%/}"
+  printf '%s\n' "${__path}"
 }
 
 #
