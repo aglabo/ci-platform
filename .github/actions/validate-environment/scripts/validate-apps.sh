@@ -52,16 +52,16 @@
 
 set -euo pipefail
 
-# ============================================================================
-# Section 1: OUTPUT ABSTRACTION & GLOBALS
-# ============================================================================
+# Load shared utility libraries
+_LIBS_DIR="${GITHUB_ACTION_PATH:+${GITHUB_ACTION_PATH}/../_libs}"
+_LIBS_DIR="${_LIBS_DIR:-${SHELLSPEC_PROJECT_ROOT:+${SHELLSPEC_PROJECT_ROOT}/.github/actions/_libs}}"
+# shellcheck source=.github/actions/_libs/output.lib.sh
+# shellcheck disable=SC1091
+. "${_LIBS_DIR}/output.lib.sh"
 
-# @description Return GITHUB_OUTPUT path for grouped redirect
-# @stdout Path to GITHUB_OUTPUT (fallback: /dev/null)
-# @example { echo "status=success"; echo "message=OK"; } >> "$(out_status)"
-out_status() {
-  echo "${GITHUB_OUTPUT:-/dev/null}"
-}
+# ============================================================================
+# Section 1: GLOBALS
+# ============================================================================
 
 # Maximum number of apps allowed in APPS list
 # Prevents resource exhaustion (DoS) from unbounded stdin input in gate action context
