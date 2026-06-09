@@ -38,14 +38,14 @@ set -euo pipefail
 # Create persistent bin directory in runner temp
 BIN_DIR="${RUNNER_TEMP}/bin"
 mkdir -p "${BIN_DIR}"
-echo "BIN_DIR=${BIN_DIR}" >> "${GITHUB_ENV}"
+echo "BIN_DIR=${BIN_DIR}" >>"${GITHUB_ENV}"
 echo "Installation directory: ${BIN_DIR}"
 
 # Create job-local temp directory
 TEMP_DIR=$(mktemp -d)
-echo "TEMP_DIR=${TEMP_DIR}" >> "${GITHUB_ENV}"
+echo "TEMP_DIR=${TEMP_DIR}" >>"${GITHUB_ENV}"
 echo "Temporary directory: ${TEMP_DIR}"
 
 # Add bin directory to PATH for subsequent steps
-echo "${BIN_DIR}" >> "${GITHUB_PATH}"
+echo "${BIN_DIR}" >>"${GITHUB_PATH}"
 echo "✓ Directories configured and PATH updated"
