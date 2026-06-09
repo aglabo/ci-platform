@@ -30,6 +30,16 @@
 
 set -euo pipefail
 
+# Load shared utility libraries
+_LIBS_DIR="${GITHUB_ACTION_PATH:+${GITHUB_ACTION_PATH}/../_libs}"
+_LIBS_DIR="${_LIBS_DIR:-${SHELLSPEC_PROJECT_ROOT:+${SHELLSPEC_PROJECT_ROOT}/.github/actions/_libs}}"
+# shellcheck source=.github/actions/_libs/output.lib.sh
+# shellcheck disable=SC1091
+. "${_LIBS_DIR}/output.lib.sh"
+# shellcheck source=.github/actions/_libs/env.lib.sh
+# shellcheck disable=SC1091
+. "${_LIBS_DIR}/env.lib.sh"
+
 # ============================================================================
 # Section 1: GLOBAL VARIABLES
 # ============================================================================
@@ -39,32 +49,6 @@ ACTIONS_TYPE="${ACTIONS_TYPE:-read}"
 # ============================================================================
 # Section 2: UTILITY FUNCTIONS
 # ============================================================================
-
-# @description Return GITHUB_OUTPUT path for grouped redirect
-# @stdout Path to GITHUB_OUTPUT (fallback: /dev/null)
-# @example { echo "status=success"; echo "message=OK"; } >> "$(out_status)"
-out_status() {
-  echo "${GITHUB_OUTPUT:-/dev/null}"
-}
-
-# @description Check environment variable existence and value
-# @arg $1 string Variable name to check
-# @arg $2 string Expected value (optional, checks existence only if omitted)
-# @exitcode 0 Variable exists and matches expected value (if provided)
-# @exitcode 1 Variable not set or value mismatch
-check_env_var() {
-  local var_name="$1"
-  local expected_value="${2:-}"
-  local var_value="${!var_name:-}"
-
-  # Check if variable is set
-  [ -n "$var_value" ] || return 1
-
-  # If expected value provided, check if it matches
-  [ -z "$expected_value" ] || [ "$var_value" = "$expected_value" ] || return 1
-
-  return 0
-}
 
 # @description Check if curl is available in PATH
 # @exitcode 0 curl is available
