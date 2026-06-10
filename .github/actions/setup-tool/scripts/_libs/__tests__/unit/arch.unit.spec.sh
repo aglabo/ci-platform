@@ -24,8 +24,8 @@ Describe 'Given: RUNNER_ARCH is X64'
   }
 
   Describe 'When: detect_arch is called'
-    Describe 'Then: Task T-06-01 - Normal Cases'
-      It "T-06-01-01: outputs amd64 and x64"
+    Describe 'Then: Task T-arc-nor - Normal Cases'
+      It "T-arc-nor-01: outputs amd64 and x64"
         When call detect_arch
         The output line 1 should equal "amd64"
         The output line 2 should equal "x64"
@@ -44,8 +44,8 @@ Describe 'Given: RUNNER_ARCH is ARM64'
   }
 
   Describe 'When: detect_arch is called'
-    Describe 'Then: Task T-06-02 - Normal Cases'
-      It "T-06-02-01: outputs arm64 only"
+    Describe 'Then: Task T-arc-nor - Normal Cases'
+      It "T-arc-nor-02: outputs arm64 only"
         When call detect_arch
         The output line 1 should equal "arm64"
         The lines of output should equal 1
@@ -65,8 +65,8 @@ Describe 'Given: RUNNER_ARCH is unsupported or unset'
       RUNNER_ARCH="MIPS"
     }
 
-    Describe 'Then: Task T-06-03 - Error Cases'
-      It "T-06-03-01: outputs ::error:: to stderr and returns 1"
+    Describe 'Then: Task T-arc-err - Error Cases'
+      It "T-arc-err-01: outputs ::error:: to stderr and returns 1"
         When call detect_arch
         The status should eq 1
         The error should include "::error::"
@@ -82,8 +82,8 @@ Describe 'Given: RUNNER_ARCH is unsupported or unset'
       RUNNER_ARCH=""
     }
 
-    Describe 'Then: Task T-06-03 - Error Cases'
-      It "T-06-03-02: outputs ::error:: to stderr and returns 1 when RUNNER_ARCH is empty"
+    Describe 'Then: Task T-arc-err - Error Cases'
+      It "T-arc-err-02: outputs ::error:: to stderr and returns 1 when RUNNER_ARCH is empty"
         When call detect_arch
         The status should eq 1
         The error should include "::error::"
