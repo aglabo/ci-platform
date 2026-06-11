@@ -22,6 +22,7 @@ readonly TEST_TYPES=("all" "unit" "functional" "integration" "system" "e2e")
 # Test mode: set SKIP_INTEGRATION_TESTS=1 by default (development mode)
 # Override with INTEGRATION_TEST=1 env var or --integration flag to run real-machine tests
 SKIP_INTEGRATION_TESTS="${SKIP_INTEGRATION_TESTS:-1}"
+RUN_SYSTEM_TESTS="${RUN_SYSTEM_TESTS:-}"
 
 # Search root for spec file discovery (override in tests to point at a temp dir)
 SPEC_SEARCH_ROOT="${SPEC_SEARCH_ROOT:-${PROJECT_ROOT}}"
@@ -120,6 +121,8 @@ parse_options() {
   for arg in "$@"; do
     if [[ "$arg" == "--integration" ]]; then
       SKIP_INTEGRATION_TESTS=0
+    elif [[ "$arg" == "--use-system" ]]; then
+      RUN_SYSTEM_TESTS=1
     else
       printf '%s\n' "$arg"
     fi
@@ -161,7 +164,10 @@ resolve_spec_files() {
   # ﾃeｽXﾄg種別 → get_spec_files で展開
   local test_type="$1"
   shift
-  [[ "$test_type" == "system" ]] && SKIP_INTEGRATION_TESTS=0
+  if [[ "$test_type" == "system" ]]; then
+    SKIP_INTEGRATION_TESTS=0
+    RUN_SYSTEM_TESTS=1
+  fi
   local -a spec_files
   mapfile -t spec_files < <(get_spec_files "$test_type" "$@")
   if [[ ${#spec_files[@]} -eq 0 || -z "${spec_files[0]}" ]]; then
@@ -185,7 +191,7 @@ run_shellspec() {
 
   # Run ShellSpec from project root using subshell
   # Subshell ensures caller's directory remains unchanged
-  (cd "$PROJECT_ROOT" && export SKIP_INTEGRATION_TESTS && bash "$SHELLSPEC" "${normalized_args[@]}")
+  (cd "$PROJECT_ROOT" && export SKIP_INTEGRATION_TESTS RUN_SYSTEM_TESTS && bash "$SHELLSPEC" "${normalized_args[@]}")
 }
 
 #
@@ -202,9 +208,16 @@ run_shellspec() {
 #
 main() {
   if [[ $# -eq 0 ]]; then
-    echo "Usage: run-shellspec.sh <test-type|spec-file|spec-glob> [--integration] [shellspec-options]" >&2
+    echo "Usage: run-shellspec.sh <test-type|spec-file|spec-glob> [--integration] [--use-system] [shellspec-options]" >&2
     exit 1
   fi
+
+  # Scan flags before parse_options (which runs in a subshell via process substitution)
+  local arg
+  for arg in "$@"; do
+    [[ "$arg" == "--use-system" ]]  && RUN_SYSTEM_TESTS=1
+    [[ "$arg" == "--integration" ]] && SKIP_INTEGRATION_TESTS=0
+  done
 
   local -a filtered_args
   mapfile -t filtered_args < <(parse_options "$@")
