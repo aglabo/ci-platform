@@ -170,26 +170,31 @@ Describe 'validate_repo()'
     It 'T-rep-err-01: returns 1 for "invalidrepo" (no slash)'
       When call validate_repo 'invalidrepo'
       The status should equal 1
+      The stderr should include '::error::'
     End
 
     It 'T-rep-err-02: returns 1 for "owner/repo/extra" (two slashes)'
       When call validate_repo 'owner/repo/extra'
       The status should equal 1
+      The stderr should include '::error::'
     End
 
     It 'T-rep-err-03: returns 1 for "../evil/path" (path traversal)'
       When call validate_repo '../evil/path'
       The status should equal 1
+      The stderr should include '::error::'
     End
 
     It 'T-rep-err-04: returns 1 for "-owner/repo" (hyphen-leading owner)'
       When call validate_repo '-owner/repo'
       The status should equal 1
+      The stderr should include '::error::'
     End
 
     It 'T-rep-err-05: returns 1 for "own_er/repo" (underscore in owner)'
       When call validate_repo 'own_er/repo'
       The status should equal 1
+      The stderr should include '::error::'
     End
 
     It 'T-rep-err-06: returns 1 for "" (empty), stderr includes ::error::'
@@ -208,6 +213,7 @@ Describe 'validate_repo()'
     It 'T-rep-edg-02: returns 1 for owner=40chars/b (owner too long)'
       When call validate_repo 'Aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/b'
       The status should equal 1
+      The stderr should include '::error::'
     End
 
     It 'T-rep-edg-03: returns 0 for a/repo=100chars (max repo boundary)'
@@ -218,11 +224,13 @@ Describe 'validate_repo()'
     It 'T-rep-edg-04: returns 1 for a/repo=101chars (repo too long)'
       When call validate_repo 'a/rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr'
       The status should equal 1
+      The stderr should include '::error::'
     End
 
     It 'T-rep-edg-05: returns 1 for "1owner/repo" (digit-leading owner)'
       When call validate_repo '1owner/repo'
       The status should equal 1
+      The stderr should include '::error::'
     End
 
     It 'T-rep-edg-06: returns 1 for "bad" with no field_name, stderr includes "repo:"'

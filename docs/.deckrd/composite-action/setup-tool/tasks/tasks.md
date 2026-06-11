@@ -49,24 +49,21 @@ source: specifications.md
 
 ## Task Summary
 
-| scope | 対象               | nor | err | edg | 計 | Status       |
-| ----- | ------------------ | --- | --- | --- | -- | ------------ |
-| nrm   | normalize_version  | 5   | 9   | 0   | 14 | done         |
-| vld   | validate_symbol    | 4   | 4   | 13  | 21 | done         |
-| rep   | validate_repo      | 4   | 6   | 6   | 16 | done         |
-| ver   | validate_version   | 5   | 5   | 5   | 15 | done         |
-| dir   | setup_dirs         | 4   | 1   | 1   | 6  | done         |
-| arc   | detect_arch        | 2   | 2   | 0   | 4  | done         |
-| url   | build_url          | 1   | 0   | 1   | 2  | done         |
-| fta   | _fetch_assets      | 1   | 2   | 0   | 3  | done         |
-| fcu   | _find_checksum_url | 1   | 0   | 0   | 1  | done         |
-| res   | resolve_assets     | 3   | 5   | 2   | 10 | done         |
-| dwn   | download_tool      | 2   | 2   | 0   | 4  | done         |
-| vfy   | verify_checksum    | 1   | 4   | 2   | 7  | done         |
-| ext   | extract_install    | 2   | 2   | 1   | 5  | done         |
-| cln   | cleanup            | 2   | 0   | 1   | 3  | done         |
-| sts   | setup-tool.sh      | 12  | 10  | 4   | 26 | 一部 backlog |
-| act   | action.yml         | 7   | 0   | 0   | 7  | done         |
+| #  | Test Target                             | Scenarios | Cases | Status  |
+| -- | --------------------------------------- | --------- | ----- | ------- |
+| 1  | T-01: normalize_version                 | 2         | 5     | done    |
+| 2  | T-02: validate_symbol                   | 2         | 4     | done    |
+| 3  | T-03: validate-environment 移行検証     | 1         | 2     | done    |
+| 4  | T-04: setup-tool 共通ライブラリ移行検証 | 1         | 2     | done    |
+| 5  | T-05: setup_dirs                        | 4         | 6     | pending |
+| 6  | T-06: detect_arch                       | 3         | 4     | pending |
+| 7  | T-07: build_url                         | 2         | 2     | pending |
+| 8  | T-08: resolve_assets                    | 3         | 7     | pending |
+| 9  | T-09: download_tool                     | 2         | 4     | pending |
+| 10 | T-10: verify_checksum                   | 3         | 5     | pending |
+| 11 | T-11: extract_install                   | 3         | 5     | pending |
+| 12 | T-12: cleanup                           | 2         | 3     | pending |
+| 13 | T-13: setup-tool.sh                     | 4         | 7     | pending |
 
 > **注**: sts-err-08〜11 はバックログ（tasks.md に定義済み・spec 未実装）。
 
