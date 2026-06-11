@@ -20,20 +20,21 @@ normalize_version() {
   version="${version#v}"
   version="${version#V}"
 
+  # X.Y format → normalize to X.Y.0
+  if [[ "$version" =~ ^([0-9]+)\.([0-9]+)$ ]]; then
+    version="${version}.0"
+  fi
+
   # Extract version number (first 3 digit groups)
   # Suffixes like -beta are not allowed
-  if [[ ! "$version" =~ ^([0-9]+)(\.[0-9]+)?(\.[0-9]+)?$ ]]; then
+  if [[ ! "$version" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
     echo "Error: Invalid version format: $version" >&2
     return 1
   fi
 
   local major="${BASH_REMATCH[1]}"
-  local minor="${BASH_REMATCH[2]#.}"
-  local patch="${BASH_REMATCH[3]#.}"
-
-  # Set default values
-  minor="${minor:-0}"
-  patch="${patch:-0}"
+  local minor="${BASH_REMATCH[2]}"
+  local patch="${BASH_REMATCH[3]}"
 
   echo "${major}.${minor}.${patch}"
 }

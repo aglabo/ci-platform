@@ -11,78 +11,83 @@ Describe 'normalize_version()'
   Include "$LIB_PATH"
 
   Context '正常系: vプレフィックスを除去する'
-    # T-01-01-01: 小文字 v プレフィックス
-    It 'returns "1.2.3" for input "v1.2.3" (lowercase v prefix)'
+    It 'T-nrm-nor-01: returns "1.2.3" for input "v1.2.3" (lowercase v prefix)'
       When call normalize_version "v1.2.3"
       The output should equal "1.2.3"
     End
 
-    # T-01-01-02: 大文字 V プレフィックス
-    It 'returns "1.2.3" for input "V1.2.3" (uppercase V prefix)'
+    It 'T-nrm-nor-02: returns "1.2.3" for input "V1.2.3" (uppercase V prefix)'
       When call normalize_version "V1.2.3"
       The output should equal "1.2.3"
     End
 
-    # T-01-01-03: プレフィックスなし
-    It 'returns "1.2.3" for input "1.2.3" (no prefix)'
+    It 'T-nrm-nor-03: returns "1.2.3" for input "1.2.3" (no prefix)'
       When call normalize_version "1.2.3"
       The output should equal "1.2.3"
+    End
+
+    It 'T-nrm-nor-04: returns "1.7.0" for input "1.7" (X.Y format, no prefix)'
+      When call normalize_version "1.7"
+      The output should equal "1.7.0"
+    End
+
+    It 'T-nrm-nor-05: returns "1.7.0" for input "v1.7" (X.Y format, v prefix)'
+      When call normalize_version "v1.7"
+      The output should equal "1.7.0"
     End
   End
 
   Context '異常系: 不正なバージョン形式'
-    # T-01-02-01: X.Y.Z 形式でない
-    It 'exits with status 1 for input "latest" (non-semver)'
+    It 'T-nrm-err-01: exits with status 1 for input "latest" (non-semver)'
       When call normalize_version "latest"
       The status should equal 1
       The stderr should include "Error: Invalid version format: latest"
     End
 
-    # T-01-02-02: 空文字列
-    It 'exits with status 1 for input "" (empty string)'
+    It 'T-nrm-err-02: exits with status 1 for input "" (empty string)'
       When call normalize_version ""
       The status should equal 1
       The stderr should include "Error: Invalid version format:"
     End
 
-    # T-01-02-03: prerelease サフィックスは不正
-    It 'exits with status 1 for input "1.2.3-beta" (prerelease suffix)'
+    It 'T-nrm-err-03: exits with status 1 for input "1.2.3-beta" (prerelease suffix)'
       When call normalize_version "1.2.3-beta"
       The status should equal 1
       The stderr should include "Error: Invalid version format:"
     End
 
-    # T-01-02-04: アルファベットを含む形式は不正
-    It 'exits with status 1 for input "1.2.x" (non-numeric patch)'
+    It 'T-nrm-err-04: exits with status 1 for input "1.2.x" (non-numeric patch)'
       When call normalize_version "1.2.x"
       The status should equal 1
       The stderr should include "Error: Invalid version format:"
     End
 
-    # T-01-02-05: v のみ（数字なし）
-    It 'exits with status 1 for input "v" (prefix only, no digits)'
+    It 'T-nrm-err-05: exits with status 1 for input "v" (prefix only, no digits)'
       When call normalize_version "v"
       The status should equal 1
       The stderr should include "Error: Invalid version format:"
     End
 
-    # T-01-02-06: 4要素は不正（X.Y.Z.W）
-    It 'exits with status 1 for input "1.2.3.4" (four components)'
+    It 'T-nrm-err-06: exits with status 1 for input "1.2.3.4" (four components)'
       When call normalize_version "1.2.3.4"
       The status should equal 1
       The stderr should include "Error: Invalid version format:"
     End
 
-    # T-01-02-07: 末尾ドット
-    It 'exits with status 1 for input "1.2." (trailing dot)'
+    It 'T-nrm-err-07: exits with status 1 for input "1.2." (trailing dot)'
       When call normalize_version "1.2."
       The status should equal 1
       The stderr should include "Error: Invalid version format:"
     End
 
-    # T-01-02-08: vv ダブルプレフィックス（v 除去後も v が残る）
-    It 'exits with status 1 for input "vv1.2.3" (double v prefix)'
+    It 'T-nrm-err-08: exits with status 1 for input "vv1.2.3" (double v prefix)'
       When call normalize_version "vv1.2.3"
+      The status should equal 1
+      The stderr should include "Error: Invalid version format:"
+    End
+
+    It 'T-nrm-err-09: exits with status 1 for input "1" (one component, not X.Y.Z)'
+      When call normalize_version "1"
       The status should equal 1
       The stderr should include "Error: Invalid version format:"
     End

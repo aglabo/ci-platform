@@ -43,3 +43,35 @@ validate_symbol() {
     return 1
   fi
 }
+
+##
+# @description Validate a GitHub repository identifier (owner/repo format).
+#              Delegates to validate_symbol with a combined ERE pattern.
+# @arg $1 repo_id    — "owner/repo" string to validate
+# @arg $2 field_name — name for error messages (default: "repo")
+# @stdout (none)
+# @stderr ::error:: message on failure only
+# @return 0 on success, 1 on failure
+validate_repo() {
+  local repo_id="$1"
+  local field_name="${2:-repo}"
+
+  validate_symbol "$repo_id" "$field_name" \
+    '^[a-zA-Z][a-zA-Z0-9-]{0,38}/[a-zA-Z0-9_.-]{1,100}$' 140
+}
+
+##
+# @description Validate a version string (X.Y.Z or X.Y format, optional v/V prefix).
+#              Delegates to validate_symbol with a combined ERE pattern.
+# @arg $1 version    — version string to validate (e.g. "1.2.3", "v1.2", "V2.0.0")
+# @arg $2 field_name — name for error messages (default: "version")
+# @stdout (none)
+# @stderr ::error:: message on failure only
+# @return 0 on success, 1 on failure
+validate_version() {
+  local version="$1"
+  local field_name="${2:-version}"
+
+  validate_symbol "$version" "$field_name" \
+    '^[vV]?[0-9]+\.[0-9]+(\.[0-9]+)?$' 0
+}
