@@ -554,6 +554,32 @@ Describe 'Given: actionlint.tar.gz does NOT exist in TEMP_DIR (only checksums.tx
   End
 End
 
+# ─── T-vfy-edg-sbom: verify_checksum() with .sbom suffix entries (bug regression) ──
+
+# shellcheck disable=SC2329
+_setup_checksum_with_sbom() {
+  _checksum_test_temp_dir=$(mktemp -d)
+  echo "fake tool content" > "${_checksum_test_temp_dir}/ghalint.tar.gz"
+  _expected_hash=$(sha256sum "${_checksum_test_temp_dir}/ghalint.tar.gz" | awk '{print $1}')
+  {
+    echo "${_expected_hash}  ghalint_1.5.6_linux_x86_64.tar.gz"
+    echo "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb  ghalint_1.5.6_linux_x86_64.tar.gz.sbom"
+  } > "${_checksum_test_temp_dir}/checksums.txt"
+}
+
+Describe 'Given: checksums.txt contains both target entry and a .sbom suffix entry for the same base name'
+  BeforeEach '_setup_checksum_with_sbom'
+  AfterEach '_teardown_checksum'
+  Describe 'When: verify_checksum is called'
+    Describe 'Then: Task T-vfy-edg - Edge Cases (bug regression: grep-w vs grep-F)'
+      It "T-vfy-edg-03: matches only the exact filename entry and exits 0 (not tripped by .sbom line)"
+        When call verify_checksum "ghalint" "1.5.6" "x86_64" "$_checksum_test_temp_dir"
+        The status should be success
+      End
+    End
+  End
+End
+
 # ─── T-14-03: _fetch_assets() with HTTP 404 response ────────────────────────
 
 # shellcheck disable=SC2329
