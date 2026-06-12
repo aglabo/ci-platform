@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# shellcheck shell=sh
+# shellcheck shell=bash
 # src: ./.github/actions/validate-environment/scripts/__tests__/validate-app-exists.spec.sh
 # ShellSpec tests for validate_app_exists function
 # Tests command existence checking only
