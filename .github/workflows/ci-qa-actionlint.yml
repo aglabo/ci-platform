@@ -1,0 +1,86 @@
+# src: ./.github/workflows/ci-qa-actionlint.yml
+# @(#) : Reusable workflow for GitHub Actions workflow linting with actionlint
+#
+# Copyright (c) 2026- atsushifx <https://github.com/atsushifx>
+#
+# This software is released under the MIT License.
+# https://opensource.org/licenses/MIT
+
+name: "CI QA Actionlint"
+
+permissions:
+  contents: read
+
+on:
+  workflow_call:
+    inputs:
+      actionlint-version:
+        description: "Version of actionlint to install"
+        required: false
+        default: "1.7.12"
+        type: string
+      config-file:
+        description: "Path to the actionlint configuration file"
+        required: false
+        default: "./shared/configs/actionlint.yaml"
+        type: string
+
+jobs:
+  qa-actionlint:
+    name: Actionlint Workflow QA
+    runs-on: ubuntu-slim
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout target repository
+        id: target-checkout
+        uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0 # v6.0.3
+        with:
+          persist-credentials: false
+
+      - name: Validate environment
+        id: env-validation
+        if: steps.target-checkout.outcome == 'success'
+        uses: ./.github/actions/validate-environment
+        with:
+          actions-type: read
+
+      - name: Install actionlint
+        id: tool-install
+        if: steps.env-validation.outcome == 'success'
+        uses: ./.github/actions/setup-tool
+        with:
+          repo: rhysd/actionlint
+          tool-version: ${{ inputs.actionlint-version }}
+
+      - name: Checkout actionlint config
+        id: config-checkout
+        if: steps.tool-install.outcome == 'success'
+        uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0 # v6.0.3
+        with:
+          repository: aglabo/.github
+          path: shared
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Prepare report directory
+        id: prepare-report
+        if: steps.config-checkout.outcome == 'success'
+        run: mkdir -p .github/report
+
+      - name: Run actionlint
+        id: lint-execute
+        if: steps.prepare-report.outcome == 'success'
+        run: |
+          actionlint -config-file "${{ inputs.config-file }}" 2>&1 | tee .github/report/actionlint-report.txt
+          exit "${PIPESTATUS[0]}"
+
+      - name: Upload actionlint report
+        id: report-upload
+        if: failure() && steps.lint-execute.outcome == 'failure'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: actionlint-report
+          path: .github/report/actionlint-report.txt
+          retention-days: 30
