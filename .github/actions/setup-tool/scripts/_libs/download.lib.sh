@@ -126,7 +126,7 @@ verify_checksum() {
   local _checksums_file="${_temp_dir}/checksums.txt"
 
   local _expected_hash
-  _expected_hash=$(grep -w "$_original_name" "$_checksums_file" | awk '{print $1}')
+  _expected_hash=$(awk -v f="${_original_name}" '$2 == f {print $1}' "$_checksums_file")
   if [ -z "$_expected_hash" ]; then
     echo "::error::No checksum entry found for ${_original_name}" >&2
     return 3
