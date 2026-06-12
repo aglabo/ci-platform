@@ -37,11 +37,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - name: Validate environment
-        uses: aglabo/ci-platform/.github/actions/validate-environment@f80bab4e9e3716456a718300a2d2445c8f7e12a1 # v0.1.1
-        with:
-          actions-type: read
-
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -107,9 +102,9 @@ jobs:
           persist-credentials: false
 
       - name: Validate environment
-        uses: aglabo/ci-platform/.github/actions/validate-environment@991f0aada325e945bab1a21ddd675fba4743ff8a # v0.1.1
+        uses: ./.github/actions/validate-environment
         with:
-          actions-type: any
+          actions-type: read
 
       - name: Deploy to GitHub Pages
         id: deployment
