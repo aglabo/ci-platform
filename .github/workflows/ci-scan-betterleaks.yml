@@ -1,0 +1,98 @@
+# src: ./.github/workflows/ci-scan-betterleaks.yml
+# @(#) : Reusable workflow for secret scanning with betterleaks
+#
+# Copyright (c) 2026- atsushifx <https://github.com/atsushifx>
+#
+# This software is released under the MIT License.
+# https://opensource.org/licenses/MIT
+
+name: "CI Scan Betterleaks"
+
+# Minimal permissions following security best practices
+permissions:
+  contents: read
+
+on:
+  workflow_call:
+    inputs:
+      betterleaks-version:
+        description: "Version of betterleaks to install"
+        required: false
+        default: "1.4.1"
+        type: string
+      config-repo:
+        description: "Repository that contains the betterleaks config"
+        required: false
+        default: "aglabo/.github"
+        type: string
+      fetch-depth:
+        description: "Git history depth to fetch (0 for full history)"
+        required: false
+        default: 50
+        type: number
+
+jobs:
+  scan-betterleaks:
+    name: Betterleaks Secret Scan
+    runs-on: ubuntu-slim
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout target repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: ${{ inputs.fetch-depth }}
+          persist-credentials: false
+
+      - name: Validate environment
+        id: env-validation
+        uses: ./.github/actions/validate-environment
+        with:
+          actions-type: read
+
+      - name: Install betterleaks
+        id: tool-install
+        if: steps.env-validation.outcome == 'success'
+        uses: ./.github/actions/setup-tool
+        with:
+          repo: betterleaks/betterleaks
+          tool-version: ${{ inputs.betterleaks-version }}
+
+      - name: Checkout betterleaks config
+        id: config-checkout
+        if: steps.tool-install.outcome == 'success'
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          repository: ${{ inputs.config-repo }}
+          path: shared
+          persist-credentials: false
+
+      - name: Prepare report directory
+        id: prepare-report
+        if: steps.config-checkout.outcome == 'success'
+        run: mkdir -p .github/report
+
+      - name: Run betterleaks scan
+        id: scan-execute
+        if: steps.prepare-report.outcome == 'success'
+        run: |
+          set +e
+          betterleaks git . \
+            --config shared/configs/betterleaks.toml \
+            --report-path=.github/report/betterleaks-report.json \
+            --exit-code=1 \
+            --verbose
+          betterleaks_status=$?
+          set -e
+          echo "status=${betterleaks_status}" >> "$GITHUB_OUTPUT"
+          exit "${betterleaks_status}"
+
+      - name: Upload betterleaks report
+        id: upload-report
+        if: failure() && steps.scan-execute.outputs.status != '0'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: betterleaks-report
+          path: .github/report/betterleaks-report.json
+          retention-days: 30
