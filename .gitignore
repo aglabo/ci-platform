@@ -1,5 +1,5 @@
 # src: .gitignore
-# @(#) : mainly ignored files and directories
+# @(#) : main ignore settings: ci-platform
 #
 # Copyright (c) 2026- atsushifx <http://github.com/atsushifx>
 #
@@ -63,6 +63,9 @@ releases/*
 
 # claude code setting
 .claude/*
+
+# settings
+!.claude/**/settings.json
 
 # agents can tracking
 !**/CLAUDE*.md
