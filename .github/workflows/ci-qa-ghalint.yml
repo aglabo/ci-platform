@@ -42,14 +42,14 @@ jobs:
       - name: Validate environment
         id: env-validation
         if: steps.target-checkout.outcome == 'success'
-        uses: ./.github/actions/validate-environment
+        uses: aglabo/ci-platform/.github/actions/validate-environment@6988a3ea6c52c239c87369327d8b8318298cfd8f # v0.2.0
         with:
           actions-type: read
 
       - name: Install ghalint
         id: tool-install
         if: steps.env-validation.outcome == 'success'
-        uses: ./.github/actions/setup-tool
+        uses: aglabo/ci-platform/.github/actions/setup-tool@6988a3ea6c52c239c87369327d8b8318298cfd8f # v0.2.0
         with:
           repo: suzuki-shunsuke/ghalint
           tool-version: ${{ inputs.ghalint-version }}
