@@ -9,7 +9,7 @@
 pre-commit:
   parallel: true
   commands:
-    gitleaks:
+    betterleaks:
       run: betterleaks protect --config ./configs/betterleaks.toml
 
     secretlint:
