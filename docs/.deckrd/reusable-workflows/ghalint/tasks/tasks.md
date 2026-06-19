@@ -10,13 +10,13 @@ source: specifications.md
 
 ## Task Summary
 
-| Test Target                  | Scenarios | Cases | Status      |
-| ---------------------------- | --------- | ----- | ----------- |
-| T-01: ci-qa-ghalint.yml      | 4         | 12    | completed   |
-| T-02: trigger-inputs         | 2         | 4     | completed   |
-| T-03: step-gating            | 3         | 8     | completed   |
-| T-04: lint-execute           | 2         | 4     | completed   |
-| T-05: ci-workflows-qa update | 2         | 3     | completed   |
+| Test Target                  | Scenarios | Cases | Status    |
+| ---------------------------- | --------- | ----- | --------- |
+| T-01: ci-qa-ghalint.yml      | 4         | 12    | completed |
+| T-02: trigger-inputs         | 2         | 4     | completed |
+| T-03: step-gating            | 3         | 8     | completed |
+| T-04: lint-execute           | 2         | 4     | completed |
+| T-05: ci-workflows-qa update | 2         | 3     | completed |
 
 ---
 
