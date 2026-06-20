@@ -1,0 +1,69 @@
+# src: ./.github/workflows/_tests_ca_composite-actions.yml
+# @(#) : Test workflow for verifying ca- prefixed composite actions work correctly
+#
+# Copyright (c) 2026- atsushifx <https://github.com/atsushifx>
+#
+# This software is released under the MIT License.
+# https://opensource.org/licenses/MIT
+
+name: "TestRunner for CA Composite Actions"
+
+permissions:
+  contents: read
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+jobs:
+  test-validate-environment:
+    name: Test ca-validate-environment
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        id: checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Test ca-validate-environment
+        id: test-validate-env
+        if: steps.checkout.outcome == 'success'
+        uses: ./.github/actions/ca-validate-environment
+        with:
+          actions-type: read
+
+  summary:
+    name: Test Summary
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: always()
+    needs:
+      - test-validate-environment
+    permissions:
+      contents: read
+    steps:
+      - name: Report results
+        env:
+          RESULT_VALIDATE_ENV: ${{ needs.test-validate-environment.result }}
+        run: |
+          _failed=0
+
+          _status() {
+            if [ "$1" = "success" ]; then echo "OK"; else echo "Error"; fi
+          }
+
+          {
+            echo "## CA Composite Actions Test Results"
+            echo ""
+            echo "| Job | Result |"
+            echo "| --- | ------ |"
+            echo "| test-validate-environment | $(_status "${RESULT_VALIDATE_ENV}") |"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+          [ "${RESULT_VALIDATE_ENV}" = "success" ] || _failed=1
+
+          exit "${_failed}"
