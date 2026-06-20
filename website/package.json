@@ -21,18 +21,21 @@
     "@docusaurus/preset-classic": "3.10.1",
     "@mdx-js/react": "^3.1.1",
     "clsx": "^2.1.1",
-    "joi": "^18.2.1",
+    "joi": "^18.2.3",
     "prism-react-renderer": "^2.4.1",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
-    "serialize-javascript": "^7.0.5",
+    "serialize-javascript": "^7.0.6",
     "uuid": "^14.0.0"
   },
   "devDependencies": {
     "@docusaurus/module-type-aliases": "3.10.1",
     "@docusaurus/tsconfig": "3.10.1",
     "@docusaurus/types": "3.10.1",
-    "typescript": "~6.0.3"
+    "http-proxy-middleware": "4.1.1",
+    "js-yaml": "4.2.0",
+    "typescript": "~6.0.3",
+    "webpack-dev-server": "5.2.5"
   },
   "browserslist": {
     "production": [
@@ -47,7 +50,8 @@
     ]
   },
   "engines": {
-    "node": ">=20.0"
+    "pnpm": ">=10.0",
+    "node": ">=22.0"
   },
   "pnpm": {}
 }
