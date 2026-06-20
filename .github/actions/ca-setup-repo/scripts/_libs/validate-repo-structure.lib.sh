@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# src: .github/actions/setup-tool-repo/scripts/_libs/validate-repo-structure.lib.sh
+# src: .github/actions/ca-setup-tool-repo/scripts/_libs/validate-repo-structure.lib.sh
 # @(#) : validate_repo_structure — チェックアウト済みリポジトリ構造検証ライブラリ
 # shellcheck shell=bash
 

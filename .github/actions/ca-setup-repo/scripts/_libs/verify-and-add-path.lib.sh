@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# src: .github/actions/setup-tool-repo/scripts/_libs/verify-and-add-path.lib.sh
+# src: .github/actions/ca-setup-tool-repo/scripts/_libs/verify-and-add-path.lib.sh
 # @(#) : verify_and_add_path — インストール後検証とPATH追加ライブラリ
 # shellcheck shell=bash
 

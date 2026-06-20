@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# src: .github/actions/setup-tool-repo/scripts/_libs/validate-inputs.lib.sh
+# src: .github/actions/ca-setup-tool-repo/scripts/_libs/validate-inputs.lib.sh
 # @(#) : validate_inputs — repo/path/ref パラメータ検証ライブラリ
 # shellcheck shell=bash
 

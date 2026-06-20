@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# src: .github/actions/setup-tool-repo/scripts/_libs/check-existing.lib.sh
+# src: .github/actions/ca-setup-tool-repo/scripts/_libs/check-existing.lib.sh
 # @(#) : check_existing — 既存チェックアウト確認とロック取得ライブラリ
 # shellcheck shell=bash
 

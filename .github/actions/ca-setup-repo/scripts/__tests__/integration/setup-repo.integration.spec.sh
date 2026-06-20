@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
-# src: .github/actions/setup-tool-repo/scripts/__tests__/integration/setup-tool-repo.integration.spec.sh
+# src: .github/actions/ca-setup-repo/scripts/__tests__/integration/setup-repo.integration.spec.sh
 # @(#) : ShellSpec integration tests for setup-tool-repo composite action
 # shellcheck shell=bash
 
 # cspell:words mytool agla
 
-Include "${SHELLSPEC_PROJECT_ROOT}/.github/actions/setup-tool-repo/scripts/_libs/validate-inputs.lib.sh"
-Include "${SHELLSPEC_PROJECT_ROOT}/.github/actions/setup-tool-repo/scripts/_libs/check-existing.lib.sh"
-Include "${SHELLSPEC_PROJECT_ROOT}/.github/actions/setup-tool-repo/scripts/_libs/validate-repo-structure.lib.sh"
-Include "${SHELLSPEC_PROJECT_ROOT}/.github/actions/setup-tool-repo/scripts/_libs/verify-and-add-path.lib.sh"
+Include "${SHELLSPEC_PROJECT_ROOT}/.github/actions/ca-setup-repo/scripts/_libs/validate-inputs.lib.sh"
+Include "${SHELLSPEC_PROJECT_ROOT}/.github/actions/ca-setup-repo/scripts/_libs/check-existing.lib.sh"
+Include "${SHELLSPEC_PROJECT_ROOT}/.github/actions/ca-setup-repo/scripts/_libs/validate-repo-structure.lib.sh"
+Include "${SHELLSPEC_PROJECT_ROOT}/.github/actions/ca-setup-repo/scripts/_libs/verify-and-add-path.lib.sh"
 
 # ─── Internal Helpers
 

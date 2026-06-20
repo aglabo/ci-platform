@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# src: .github/actions/setup-tool-repo/scripts/__tests__/unit/validate-inputs.unit.spec.sh
+# src: .github/actions/ca-setup-repo/scripts/__tests__/unit/validate-inputs.unit.spec.sh
 # @(#) : ShellSpec unit tests for validate-inputs.lib.sh
 # shellcheck shell=bash
 
-Include "${SHELLSPEC_PROJECT_ROOT}/.github/actions/setup-tool-repo/scripts/_libs/validate-inputs.lib.sh"
+Include "${SHELLSPEC_PROJECT_ROOT}/.github/actions/ca-setup-repo/scripts/_libs/validate-inputs.lib.sh"
 
 # ─── Tests
 

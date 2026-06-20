@@ -66,6 +66,7 @@ runs:
         repository: ${{ inputs.repo }}
         path: ${{ inputs.path }}
         ref: ${{ inputs.ref }}
+        persist-credentials: false
 
     - name: validate-repo-structure
       if: steps.check-existing-repo.outputs.skip != 'true'
