@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# src: .github/actions/setup-tool/scripts/_libs/download.lib.sh
+# src: .github/actions/ca-setup-tool/scripts/_libs/download.lib.sh
 # @(#) : Provide build_url(), _fetch_assets(), _find_download_url(), _find_checksum_url(), resolve_assets(), and download_tool() functions for GitHub release asset resolution
 # Copyright (c) 2026- atsushifx <atsushifx@gmail.com>
 # MIT License

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# src: .github/actions/setup-tool/scripts/_libs/install.lib.sh
+# src: .github/actions/ca-setup-tool/scripts/_libs/install.lib.sh
 # @(#) : Provide extract_install() function for extracting and installing tool binaries
 # Copyright (c) 2026- atsushifx <atsushifx@gmail.com>
 # MIT License

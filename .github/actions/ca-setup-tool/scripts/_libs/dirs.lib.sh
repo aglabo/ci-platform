@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# src: .github/actions/setup-tool/scripts/_libs/dirs.lib.sh
+# src: .github/actions/ca-setup-tool/scripts/_libs/dirs.lib.sh
 # @(#) : Provide setup_dirs() function for creating BIN_DIR and TEMP_DIR
 # Copyright (c) 2026- atsushifx <atsushifx@gmail.com>
 # MIT License

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# src: .github/actions/setup-tool/scripts/setup-tool.sh
+# src: .github/actions/ca-setup-tool/scripts/setup-tool.sh
 # @(#) : Orchestrate tool download, verification, and installation
 #
 # Copyright (c) 2026- atsushifx <atsushifx@gmail.com>

@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# src: .github/actions/setup-tool/scripts/_libs/__tests__/unit/arch.unit.spec.sh
+# src: .github/actions/ca-setup-tool/scripts/_libs/__tests__/unit/arch.unit.spec.sh
 # @(#) : ShellSpec unit tests for detect_arch()
 # Copyright (c) 2026- atsushifx <atsushifx@gmail.com>
 # MIT License
 # shellcheck shell=bash
 
-LIB_PATH="${SHELLSPEC_PROJECT_ROOT}/.github/actions/setup-tool/scripts/_libs/arch.lib.sh"
+LIB_PATH="${SHELLSPEC_PROJECT_ROOT}/.github/actions/ca-setup-tool/scripts/_libs/arch.lib.sh"
 Include "$LIB_PATH"
 
 # ─── Internal Helpers

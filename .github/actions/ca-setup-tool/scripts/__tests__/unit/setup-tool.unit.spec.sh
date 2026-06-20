@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# src: .github/actions/setup-tool/scripts/__tests__/unit/setup-tool.unit.spec.sh
+# src: .github/actions/ca-setup-tool/scripts/__tests__/unit/setup-tool.unit.spec.sh
 # @(#) : ShellSpec unit tests for setup-tool.sh orchestrator
 #
 # Copyright (c) 2026- atsushifx <atsushifx@gmail.com>
@@ -7,7 +7,7 @@
 
 # shellcheck shell=bash
 
-SCRIPT_PATH="${SHELLSPEC_PROJECT_ROOT}/.github/actions/setup-tool/scripts/setup-tool.sh"
+SCRIPT_PATH="${SHELLSPEC_PROJECT_ROOT}/.github/actions/ca-setup-tool/scripts/setup-tool.sh"
 Include "$SCRIPT_PATH"
 
 # ─── Internal Helpers

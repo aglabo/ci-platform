@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# src: .github/actions/setup-tool/scripts/_libs/arch.lib.sh
+# src: .github/actions/ca-setup-tool/scripts/_libs/arch.lib.sh
 # @(#) : Provide detect_arch() function for mapping RUNNER_ARCH to arch strings
 # Copyright (c) 2026- atsushifx <atsushifx@gmail.com>
 # MIT License

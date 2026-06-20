@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# src: .github/actions/setup-tool/scripts/_libs/__tests__/unit/download.unit.spec.sh
+# src: .github/actions/ca-setup-tool/scripts/_libs/__tests__/unit/download.unit.spec.sh
 # @(#) : ShellSpec unit tests for build_url(), resolve_assets(), and download_tool()
 #
 # Copyright (c) 2026- atsushifx <atsushifx@gmail.com>
@@ -8,7 +8,7 @@
 # shellcheck shell=bash
 # cspell:words rhysd
 
-LIB_PATH="${SHELLSPEC_PROJECT_ROOT}/.github/actions/setup-tool/scripts/_libs/download.lib.sh"
+LIB_PATH="${SHELLSPEC_PROJECT_ROOT}/.github/actions/ca-setup-tool/scripts/_libs/download.lib.sh"
 Include "$LIB_PATH"
 
 Describe 'Given: repo is rhysd/actionlint and version is 1.7.7 (no v prefix)'

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# src: .github/actions/setup-tool/scripts/__tests__/system/setup-tool.system.spec.sh
+# src: .github/actions/ca-setup-tool/scripts/__tests__/system/setup-tool.system.spec.sh
 # @(#) : ShellSpec system tests for setup-tool.sh — requires real network (RUN_SYSTEM_TESTS=1)
 #
 # Copyright (c) 2026- atsushifx <atsushifx@gmail.com>
@@ -8,7 +8,7 @@
 # shellcheck shell=bash
 # cspell:words rhysd actionlint RUNNER checksums
 
-SCRIPT_PATH="${SHELLSPEC_PROJECT_ROOT}/.github/actions/setup-tool/scripts/setup-tool.sh"
+SCRIPT_PATH="${SHELLSPEC_PROJECT_ROOT}/.github/actions/ca-setup-tool/scripts/setup-tool.sh"
 Include "$SCRIPT_PATH"
 
 # ─── Fixture constants

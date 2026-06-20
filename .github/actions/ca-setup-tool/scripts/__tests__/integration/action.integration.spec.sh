@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# src: .github/actions/setup-tool/scripts/__tests__/integration/action.integration.spec.sh
+# src: .github/actions/ca-setup-tool/scripts/__tests__/integration/action.integration.spec.sh
 # @(#) : ShellSpec integration tests for action.yml — static analysis of composite action definition
 #
 # Copyright (c) 2026- atsushifx <atsushifx@gmail.com>
@@ -10,7 +10,7 @@
 
 # ─── Fixture constants
 
-readonly _ACTION_YML="${SHELLSPEC_PROJECT_ROOT}/.github/actions/setup-tool/action.yml"
+readonly _ACTION_YML="${SHELLSPEC_PROJECT_ROOT}/.github/actions/ca-setup-tool/action.yml"
 
 # ─── T-17: action.yml 静的解析テスト ─────────────────────────────────────────
 
@@ -50,6 +50,6 @@ End
 
 Describe 'action.yml: script path exists'
   It "T-act-nor-07: setup-tool.sh referenced in action.yml actually exists"
-    The file "${SHELLSPEC_PROJECT_ROOT}/.github/actions/setup-tool/scripts/setup-tool.sh" should be exist
+    The file "${SHELLSPEC_PROJECT_ROOT}/.github/actions/ca-setup-tool/scripts/setup-tool.sh" should be exist
   End
 End
