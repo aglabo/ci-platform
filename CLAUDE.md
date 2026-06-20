@@ -54,7 +54,7 @@ GitHub Actions と Git Hooks を統合した品質管理テンプレートを提
 
 ```bash
 .github/workflows/      # GitHub Actions ワークフロー (ci-scan-secrets.yml / ci-workflows-qa.yml)
-.github/actions/        # Composite Actions (validate-environment)
+.github/actions/        # Composite Actions (ca-validate-environment, ca-setup-tool, ca-setup-tool-repo)
 configs/                # 品質ツール設定ファイル
 scripts/                # 開発スクリプト (run-specs/setup/prepare-commit-msg)
 .serena/memories/       # Serena MCP 技術メモリー
