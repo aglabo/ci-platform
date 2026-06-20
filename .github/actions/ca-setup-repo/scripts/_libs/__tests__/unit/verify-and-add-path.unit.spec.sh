@@ -60,6 +60,7 @@ Describe 'Given: node_modules/.bin/ exists, bin/ has executable file, SKIP_REPO=
         mkdir -p "${_TEST_DIR}/node_modules/.bin"
         mkdir -p "${_TEST_DIR}/bin"
         printf '#!/bin/bash\necho hello\n' > "${_TEST_DIR}/bin/mytool"
+        #shellcheck disable=SC2034
         SKIP_REPO="true"
         When call verify_and_add_path "${_TEST_DIR}" "owner/repo" "abc123"
         The status should equal 0
@@ -177,6 +178,26 @@ Describe 'Given: bin/ has only a symlink pointing to a non-executable target (to
         When run verify_and_add_path "${_TEST_DIR}" "owner/repo" "abc123"
         The stderr should include "::error::"
         The status should equal 1
+      End
+    End
+  End
+End
+
+# T-04-07: [エッジケース] bin/libs/ 以下の非実行ファイルは候補に含まれない
+
+Describe 'Given: bin/ has executable file, bin/libs/ has non-executable .lib.sh'
+  BeforeEach 'setup_env'
+  AfterEach 'cleanup_env'
+  Describe 'When: verify_and_add_path is called'
+    Describe 'Then: Task T-04-07-01 - libs/*.lib.sh excluded from candidates, exit 0'
+      It "T-04-07-01: exits 0 (bin/libs/ subdirectory is not checked for execute permission)"
+        mkdir -p "${_TEST_DIR}/node_modules/.bin"
+        mkdir -p "${_TEST_DIR}/bin/libs"
+        printf '#!/bin/bash\necho hello\n' > "${_TEST_DIR}/bin/mytool"
+        chmod +x "${_TEST_DIR}/bin/mytool"
+        touch "${_TEST_DIR}/bin/libs/resolve-paths.lib.sh"
+        When call verify_and_add_path "${_TEST_DIR}" "owner/repo" "abc123"
+        The status should equal 0
       End
     End
   End
