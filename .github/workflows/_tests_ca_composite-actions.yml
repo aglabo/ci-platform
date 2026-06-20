@@ -91,7 +91,7 @@ jobs:
         with:
           repo: aglabo/agla-dev-tools
           path: ./tools/agla-dev-tools
-          ref: a88f3bf1ecda478ad8ec2e907139bd058ce5ee56 # main(latest)
+          ref: a88f3bf1ecda478ad8ec2e907139bd058ce5ee56 # v0.1.0
 
       - name: Verify ls-lint
         id: verify-ls-lint
