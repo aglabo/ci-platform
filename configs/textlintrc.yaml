@@ -24,7 +24,6 @@ rules:
       "preferInBody": "ですます",
       "preferInList": "",
     }
-    no-exclamation-question-mark: false
     ja-no-mixed-period:
       allowPeriodMarks:
         - ":"
@@ -36,6 +35,16 @@ rules:
       space:
         - alphabets
         - numbers
+    ja-no-space-around-parentheses: false
+    ja-space-around-code:
+      before: true
+      after: true
+    ja-space-around-link:
+      before: true
+      after: true
+    ja-space-around-strong:
+      before: true
+      after: true
   common-misspellings: true
   no-mixed-zenkaku-and-hankaku-alphabet: true
   "@proofdict/proofdict":

@@ -1,0 +1,123 @@
+---
+title: setup-tool / setup-repo 概要
+description: GitHub Releases またはリポジトリからツールをインストールする Composite Actions の概要
+slug: about-setup-tool-repo
+sidebar_position: 20
+tags:
+  - setup-tool
+  - setup-repo
+  - composite-action
+  - github-actions
+---
+
+<!-- cspell:words rhysd -->
+<!-- markdownlint-disable line-length -->
+
+## ⚙️ setup-tool / setup-repo とは
+
+CI でツールを利用する際、毎回インストール手順をワークフローに直書きすると、バージョン管理が分散して再現性が損なわれます。
+`setup-tool` と `setup-repo` は、ツールのインストールを標準化する **Composite Actions** です。
+
+- `setup-tool`: GitHub Releases からバイナリをダウンロード・検証・インストールし、PATH に追加します。
+- `setup-repo`: GitHub リポジトリを checkout して pnpm install を実行し、`bin/` を PATH に追加します。
+
+どちらも `permissions: contents: read` のみで動作し、追加権限を必要としません。
+
+---
+
+## 🎯 設計目標
+
+両アクションは次の目標を共有しています。
+
+- バージョンを明示して再現性を保証する
+- インストール処理をワークフロー本体から分離し、メンテナンスコストを下げる
+- 最小権限（`contents: read`）で動作し、過剰な権限昇格を防ぐ
+
+---
+
+## ✅ 使い分け
+
+| ツールの配布形式                             | 使うアクション |
+| -------------------------------------------- | -------------- |
+| GitHub Releases でバイナリを配布している     | `setup-tool`   |
+| Node.js ベースのリポジトリとして配布している | `setup-repo`   |
+
+### setup-tool を選ぶケース
+
+- `actionlint`、`ghalint`、`gitleaks` などシングルバイナリのツール
+- GitHub Releases に OS・アーキテクチャ別のアセットが存在するツール
+
+### setup-repo を選ぶケース
+
+- `commitlint` などプラグインで機能を追加する形式のツール、かつ、リポジトリ間で共通に使用するツール
+
+---
+
+## ⚙️ setup-tool の概要
+
+GitHub Releases のアセットを自動判定してダウンロードし、チェックサムを検証したうえでインストールします。
+
+```yaml
+- name: Install actionlint
+  uses: aglabo/ci-platform/.github/actions/ca-setup-tool@<SHA> # vX.Y.Z
+  with:
+    repo: rhysd/actionlint
+    tool-version: "1.7.12"
+```
+
+### 動作フロー
+
+1. ランナーの OS・アーキテクチャを検出する
+   (注: 現状、Linux のみ対応しています)
+2. 対応するアセット名を組み立てて GitHub Releases からダウンロードする
+3. チェックサムを検証する
+4. `$RUNNER_TEMP/tools/` へ展開して `$GITHUB_PATH` へ追加する
+
+### 入力パラメータ
+
+| パラメータ     | 必須   | デフォルト | 説明                              |
+| -------------- | ------ | ---------- | --------------------------------- |
+| `repo`         | はい   | —          | GitHub リポジトリ（`owner/repo`） |
+| `tool-version` | いいえ | `0.0.0`    | ツールバージョン（`X.Y.Z` 形式）  |
+
+---
+
+## ⚙️ setup-repo の概要
+
+ツール管理用リポジトリ (例: `agla-dev-tools`) をチェックアウトし、`pnpm`を使用してツールをインストールします。
+その後、ラッパースクリプト用のpath`bin`をGITHUB_PATHに追加します。
+
+```yaml
+- name: Setup agla-dev-tools
+  uses: aglabo/ci-platform/.github/actions/ca-setup-repo@<SHA> # vX.Y.Z
+  with:
+    repo: aglabo/agla-dev-tools
+    path: ./tools/agla-dev-tools
+    ref: a88f3bf1ecda478ad8ec2e907139bd058ce5ee56 # v0.1.0
+```
+
+### 動作フロー
+
+1. 入力パラメータ（`repo`・`path`・`ref`）を検証する
+2. 既存の checkout がある場合はスキップ判定を行う
+3. リポジトリを `path` に checkout する
+4. pnpm / Node.js をセットアップして `pnpm install --frozen-lockfile` を実行する
+5. `bin/` を検証し `$GITHUB_PATH` に追加する
+
+### 入力パラメータ
+
+| パラメータ     | 必須   | デフォルト | 説明                                      |
+| -------------- | ------ | ---------- | ----------------------------------------- |
+| `repo`         | はい   | —          | GitHub リポジトリ（`owner/repo`）         |
+| `path`         | はい   | —          | ローカルチェックアウトパス（`./` 始まり） |
+| `ref`          | はい   | —          | Git ref（タグ・ブランチ・SHA）            |
+| `node-version` | いいえ | `22`       | Node.js バージョン                        |
+| `pnpm-version` | いいえ | `10`       | pnpm バージョン                           |
+
+---
+
+## 📚 関連ドキュメント
+
+- [クイックスタート](./21-quickstart.ja.mdx): 最小構成での利用手順
+- [基本シナリオ](./22-basic-scenarios.ja.mdx): 典型的な利用例
+- [リファレンス](./23-reference.ja.mdx): 入力パラメータの詳細
