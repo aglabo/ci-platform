@@ -1,0 +1,97 @@
+# src: ./.github/actions/setup-tool-repo/action.yml
+# @(#) : composite GitHub Action to setup a tool repository with pnpm install
+
+name: "setup-tool-repo"
+description: "Setup a tool repository: validate, checkout, pnpm install, and add bin/ to PATH"
+
+inputs:
+  repo:
+    description: "GitHub repository in owner/repo format"
+    required: true
+  path:
+    description: "Local checkout path starting with ./"
+    required: true
+  ref:
+    description: "Git ref (tag, branch, or SHA)"
+    required: true
+  node-version:
+    description: "Node.js version"
+    required: false
+    default: "22"
+  pnpm-version:
+    description: "pnpm version"
+    required: false
+    default: "10"
+
+runs:
+  using: composite
+  steps:
+    - name: validate-inputs
+      shell: bash
+      run: |
+        # shellcheck source=/dev/null
+        . "${{ github.action_path }}/scripts/_libs/validate-inputs.lib.sh"
+        validate_inputs "${REPO}" "${PATH_DIR}" "${REF}"
+      env:
+        REPO: ${{ inputs.repo }}
+        PATH_DIR: ${{ inputs.path }}
+        REF: ${{ inputs.ref }}
+
+    - name: check-existing-repo
+      id: check-existing-repo
+      shell: bash
+      run: |
+        # shellcheck source=/dev/null
+        . "${{ github.action_path }}/scripts/_libs/check-existing.lib.sh"
+        check_existing "${REPO}" "${PATH_DIR}"
+      env:
+        REPO: ${{ inputs.repo }}
+        PATH_DIR: ${{ inputs.path }}
+
+    - name: checkout-repo
+      uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0 # v6.0.3
+      with:
+        repository: ${{ inputs.repo }}
+        path: ${{ inputs.path }}
+        ref: ${{ inputs.ref }}
+        persist-credentials: false
+
+    - name: setup-pnpm
+      uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061 # v4.2.0
+      with:
+        version: ${{ inputs.pnpm-version }}
+
+    - name: setup-node
+      uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6.2.0
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: "pnpm"
+        cache-dependency-path: ${{ inputs.path }}/pnpm-lock.yaml
+
+    - name: validate-repo-structure
+      if: steps.check-existing-repo.outputs.skip != 'true'
+      shell: bash
+      run: |
+        # shellcheck source=/dev/null
+        . "${{ github.action_path }}/scripts/_libs/validate-repo-structure.lib.sh"
+        validate_repo_structure "${PATH_DIR}"
+      env:
+        PATH_DIR: ${{ inputs.path }}
+
+    - name: install-packages
+      if: steps.check-existing-repo.outputs.skip != 'true'
+      shell: bash
+      working-directory: ${{ inputs.path }}
+      run: pnpm install --frozen-lockfile
+
+    - name: verify-and-add-path
+      shell: bash
+      run: |
+        # shellcheck source=/dev/null
+        . "${{ github.action_path }}/scripts/_libs/verify-and-add-path.lib.sh"
+        verify_and_add_path "${PATH_DIR}" "${REPO}" "${REF}"
+      env:
+        REPO: ${{ inputs.repo }}
+        PATH_DIR: ${{ inputs.path }}
+        REF: ${{ inputs.ref }}
+        SKIP_REPO: ${{ steps.check-existing-repo.outputs.skip }}

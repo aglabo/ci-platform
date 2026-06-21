@@ -1,0 +1,142 @@
+# src: ./.github/workflows/_tests_ca_composite-actions.yml
+# @(#) : Test workflow for verifying ca- prefixed composite actions work correctly
+#
+# Copyright (c) 2026- atsushifx <https://github.com/atsushifx>
+#
+# This software is released under the MIT License.
+# https://opensource.org/licenses/MIT
+
+# cspell:words rhysd
+
+name: "TestRunner for CA Composite Actions"
+
+permissions:
+  contents: read
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+jobs:
+  setup-foundation:
+    name: Setup Foundation (ca-validate-environment)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        id: checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Validate environment
+        id: validate-env
+        if: steps.checkout.outcome == 'success'
+        uses: ./.github/actions/ca-validate-environment
+        with:
+          actions-type: read
+
+  test-setup-tool:
+    name: Test ca-setup-tool
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs:
+      - setup-foundation
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        id: checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Test ca-setup-tool
+        id: test-setup-tool
+        if: steps.checkout.outcome == 'success'
+        uses: ./.github/actions/ca-setup-tool
+        with:
+          repo: rhysd/actionlint
+          tool-version: "1.7.12"
+
+      - name: Verify installed tool
+        id: verify-tool
+        if: steps.test-setup-tool.outcome == 'success'
+        run: |
+          _version=$(actionlint -version 2>&1 | head -n 1)
+          echo "actionlint version: ${_version}"
+          echo "version=${_version}" >> "${GITHUB_OUTPUT}"
+
+  test-setup-repo:
+    name: Test ca-setup-repo
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs:
+      - setup-foundation
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        id: checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Test ca-setup-repo
+        id: test-setup-repo
+        if: steps.checkout.outcome == 'success'
+        uses: ./.github/actions/ca-setup-repo
+        with:
+          repo: aglabo/agla-dev-tools
+          path: ./tools/agla-dev-tools
+          ref: a88f3bf1ecda478ad8ec2e907139bd058ce5ee56 # v0.1.0
+
+      - name: Verify ls-lint
+        id: verify-ls-lint
+        if: steps.test-setup-repo.outcome == 'success'
+        run: |
+          _version=$(ls-lint --version 2>&1 | head -n 1)
+          echo "ls-lint version: ${_version}"
+          echo "version=${_version}" >> "${GITHUB_OUTPUT}"
+
+  summary:
+    name: Test Summary
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: always()
+    needs:
+      - setup-foundation
+      - test-setup-tool
+      - test-setup-repo
+    permissions:
+      contents: read
+    steps:
+      - name: Report results
+        env:
+          RESULT_FOUNDATION: ${{ needs.setup-foundation.result }}
+          RESULT_SETUP_TOOL: ${{ needs.test-setup-tool.result }}
+          RESULT_SETUP_REPO: ${{ needs.test-setup-repo.result }}
+        run: |
+          _failed=0
+
+          _status() {
+            if [ "$1" = "success" ]; then echo "OK"; else echo "Error"; fi
+          }
+
+          {
+            echo "## CA Composite Actions Test Results"
+            echo ""
+            echo "| Job | Result |"
+            echo "| --- | ------ |"
+            echo "| setup-foundation | $(_status "${RESULT_FOUNDATION}") |"
+            echo "| test-setup-tool  | $(_status "${RESULT_SETUP_TOOL}") |"
+            echo "| test-setup-repo  | $(_status "${RESULT_SETUP_REPO}") |"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+          [ "${RESULT_FOUNDATION}" = "success" ] || _failed=1
+          [ "${RESULT_SETUP_TOOL}" = "success" ] || _failed=1
+          [ "${RESULT_SETUP_REPO}" = "success" ] || _failed=1
+
+          exit "${_failed}"

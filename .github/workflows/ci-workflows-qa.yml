@@ -6,7 +6,7 @@
 # This software is released under the MIT License.
 # https://opensource.org/licenses/MIT
 
-name: "CI Workflows QA"
+name: "CI: Workflows QA"
 
 # Minimal permissions following security best practices
 permissions:
@@ -32,10 +32,10 @@ jobs:
     name: Actionlint
     permissions:
       contents: read
-    uses: ./.github/workflows/ci-qa-actionlint.yml
+    uses: aglabo/ci-platform/.github/workflows/ru-qa-actionlint.yml@4044729d57bc3a119dc4b53eca9fe37a5dfad39d # v0.3.0
 
   ghalint:
     name: Ghalint
     permissions:
       contents: read
-    uses: ./.github/workflows/ci-qa-ghalint.yml
+    uses: aglabo/ci-platform/.github/workflows/ru-qa-ghalint.yml@4044729d57bc3a119dc4b53eca9fe37a5dfad39d # v0.3.0

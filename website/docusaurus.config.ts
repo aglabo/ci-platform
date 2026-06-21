@@ -14,6 +14,12 @@ const config: Config = {
     v4: true, // Improve compatibility with the upcoming Docusaurus v4
   },
 
+  markdown: {
+    mdx1Compat: {
+      comments: true,
+    },
+  },
+
   // Set the production url of your site here
   url: 'https://aglabo.github.io',
   // Set the /<baseUrl>/ pathname under which your site is served
@@ -39,13 +45,17 @@ const config: Config = {
           path: '../docs',
           routeBasePath: '/',
           sidebarPath: './sidebars.ts',
+          includeCurrentVersion: true,
           versions: {
             current: {
-              label: 'Next 🚧',
-              banner: 'unreleased',
+              label: 'Next',
+              badge: true,
+            },
+            '0.3.0': {
+              label: 'v0.3.0',
+              badge: true,
             },
           },
-          // バージョンリリース後: includeCurrentVersion: false を追加すること
         },
         blog: false,
       },
