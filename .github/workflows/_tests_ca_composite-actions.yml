@@ -101,6 +101,124 @@ jobs:
           echo "ls-lint version: ${_version}"
           echo "version=${_version}" >> "${GITHUB_OUTPUT}"
 
+  test-get-changed-files:
+    name: Test ca-get-changed-files
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs:
+      - setup-foundation
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        id: checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Prepare test diff (add temporary file and commit)
+        id: prepare-diff
+        if: steps.checkout.outcome == 'success'
+        run: |
+          git config user.email "ci-test@example.com"
+          git config user.name "CI Test"
+          _before_sha=$(git rev-parse HEAD)
+          mkdir temp
+          echo "ci-test" > temp/ci-test-changed-files.txt
+          git add -f temp/ci-test-changed-files.txt
+          git commit -m "ci-test: temporary file for ca-get-changed-files test"
+          _after_sha=$(git rev-parse HEAD)
+          {
+            echo "before-sha=${_before_sha}"
+            echo "after-sha=${_after_sha}"
+            echo "test-file=temp/ci-test-changed-files.txt"
+          } >> "${GITHUB_OUTPUT}"
+
+      - name: Test ca-get-changed-files (no pattern)
+        id: test-changed-files
+        if: steps.prepare-diff.outcome == 'success'
+        uses: ./.github/actions/ca-get-changed-files
+        with:
+          before-sha: ${{ steps.prepare-diff.outputs.before-sha }}
+          after-sha: ${{ steps.prepare-diff.outputs.after-sha }}
+
+      - name: Test ca-get-changed-files (pattern matches test file)
+        id: test-changed-files-pattern-match
+        if: steps.prepare-diff.outcome == 'success'
+        uses: ./.github/actions/ca-get-changed-files
+        with:
+          before-sha: ${{ steps.prepare-diff.outputs.before-sha }}
+          after-sha: ${{ steps.prepare-diff.outputs.after-sha }}
+          pattern: "*.txt"
+
+      - name: Test ca-get-changed-files (pattern does not match)
+        id: test-changed-files-pattern-nomatch
+        if: steps.prepare-diff.outcome == 'success'
+        uses: ./.github/actions/ca-get-changed-files
+        with:
+          before-sha: ${{ steps.prepare-diff.outputs.before-sha }}
+          after-sha: ${{ steps.prepare-diff.outputs.after-sha }}
+          pattern: "*.yml"
+
+      - name: Verify outputs
+        id: verify
+        if: steps.test-changed-files.outcome == 'success'
+        env:
+          TEST_FILE: ${{ steps.prepare-diff.outputs.test-file }}
+          FILES_ALL: ${{ steps.test-changed-files.outputs.files }}
+          COUNT_ALL: ${{ steps.test-changed-files.outputs.count }}
+          FILES_TXT: ${{ steps.test-changed-files-pattern-match.outputs.files }}
+          COUNT_TXT: ${{ steps.test-changed-files-pattern-match.outputs.count }}
+          FILES_YML: ${{ steps.test-changed-files-pattern-nomatch.outputs.files }}
+          COUNT_YML: ${{ steps.test-changed-files-pattern-nomatch.outputs.count }}
+        run: |
+          _failed=0
+
+          echo "=== no-pattern result ==="
+          echo "count: ${COUNT_ALL}"
+          echo "files: ${FILES_ALL}"
+
+          echo "=== pattern=*.txt result ==="
+          echo "count: ${COUNT_TXT}"
+          echo "files: ${FILES_TXT}"
+
+          echo "=== pattern=*.yml result ==="
+          echo "count: ${COUNT_YML}"
+          echo "files: ${FILES_YML}"
+
+          # no-pattern: test file must be detected
+          if [ "${COUNT_ALL}" -lt 1 ]; then
+            echo "::error::[no-pattern] Expected count >= 1, got: ${COUNT_ALL}"
+            _failed=1
+          fi
+          if ! echo "${FILES_ALL}" | grep -qF "${TEST_FILE}"; then
+            echo "::error::[no-pattern] Expected '${TEST_FILE}' in files, got: ${FILES_ALL}"
+            _failed=1
+          fi
+
+          # pattern=*.txt: test file must be detected
+          if [ "${COUNT_TXT}" -lt 1 ]; then
+            echo "::error::[pattern=*.txt] Expected count >= 1, got: ${COUNT_TXT}"
+            _failed=1
+          fi
+          if ! echo "${FILES_TXT}" | grep -qF "${TEST_FILE}"; then
+            echo "::error::[pattern=*.txt] Expected '${TEST_FILE}' in files, got: ${FILES_TXT}"
+            _failed=1
+          fi
+
+          # pattern=*.yml: test file must NOT appear (no yml changed)
+          if echo "${FILES_YML}" | grep -qF "${TEST_FILE}"; then
+            echo "::error::[pattern=*.yml] '${TEST_FILE}' should not appear, got: ${FILES_YML}"
+            _failed=1
+          fi
+
+          exit "${_failed}"
+
+      - name: Cleanup test diff (reset temporary commit)
+        if: steps.prepare-diff.outcome == 'success'
+        run: git reset --hard HEAD~1
+
   summary:
     name: Test Summary
     runs-on: ubuntu-latest
@@ -110,6 +228,7 @@ jobs:
       - setup-foundation
       - test-setup-tool
       - test-setup-repo
+      - test-get-changed-files
     permissions:
       contents: read
     steps:
@@ -118,6 +237,7 @@ jobs:
           RESULT_FOUNDATION: ${{ needs.setup-foundation.result }}
           RESULT_SETUP_TOOL: ${{ needs.test-setup-tool.result }}
           RESULT_SETUP_REPO: ${{ needs.test-setup-repo.result }}
+          RESULT_GET_CHANGED_FILES: ${{ needs.test-get-changed-files.result }}
         run: |
           _failed=0
 
@@ -130,13 +250,15 @@ jobs:
             echo ""
             echo "| Job | Result |"
             echo "| --- | ------ |"
-            echo "| setup-foundation | $(_status "${RESULT_FOUNDATION}") |"
-            echo "| test-setup-tool  | $(_status "${RESULT_SETUP_TOOL}") |"
-            echo "| test-setup-repo  | $(_status "${RESULT_SETUP_REPO}") |"
+            echo "| setup-foundation        | $(_status "${RESULT_FOUNDATION}") |"
+            echo "| test-setup-tool         | $(_status "${RESULT_SETUP_TOOL}") |"
+            echo "| test-setup-repo         | $(_status "${RESULT_SETUP_REPO}") |"
+            echo "| test-get-changed-files  | $(_status "${RESULT_GET_CHANGED_FILES}") |"
           } >> "${GITHUB_STEP_SUMMARY}"
 
           [ "${RESULT_FOUNDATION}" = "success" ] || _failed=1
           [ "${RESULT_SETUP_TOOL}" = "success" ] || _failed=1
           [ "${RESULT_SETUP_REPO}" = "success" ] || _failed=1
+          [ "${RESULT_GET_CHANGED_FILES}" = "success" ] || _failed=1
 
           exit "${_failed}"
