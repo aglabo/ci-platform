@@ -1,67 +1,71 @@
-# src: ./.github/workflows/ci-qa-ghalint.yml
-# @(#) : Reusable workflow for GitHub Actions workflow linting with ghalint
+# src: ./.github/workflows/ru-scan-betterleaks.yml
+# @(#) : Reusable workflow for secret scanning with betterleaks
 #
 # Copyright (c) 2026- atsushifx <https://github.com/atsushifx>
 #
 # This software is released under the MIT License.
 # https://opensource.org/licenses/MIT
 
-name: "CI QA Ghalint"
+name: "Reusable: Scan Betterleaks"
 
+# Minimal permissions following security best practices
 permissions:
   contents: read
 
 on:
   workflow_call:
     inputs:
-      ghalint-version:
-        description: "Version of ghalint to install"
+      betterleaks-version:
+        description: "Version of betterleaks to install"
         required: false
-        default: "1.5.6"
+        default: "1.4.1"
         type: string
-      config-file:
-        description: "Path to the ghalint configuration file"
+      config-repo:
+        description: "Repository that contains the betterleaks config"
         required: false
-        default: "./shared/configs/ghalint.yaml"
+        default: "aglabo/.github"
         type: string
+      fetch-depth:
+        description: "Git history depth to fetch (0 for full history)"
+        required: false
+        default: 50
+        type: number
 
 jobs:
-  qa-ghalint:
-    name: Ghalint Workflow QA
+  scan-betterleaks:
+    name: Betterleaks Secret Scan
     runs-on: ubuntu-slim
     timeout-minutes: 10
     permissions:
       contents: read
     steps:
       - name: Checkout target repository
-        id: target-checkout
         uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0 # v6.0.3
         with:
+          fetch-depth: ${{ inputs.fetch-depth }}
           persist-credentials: false
 
       - name: Validate environment
         id: env-validation
-        if: steps.target-checkout.outcome == 'success'
         uses: aglabo/ci-platform/.github/actions/validate-environment@2ac45debcb9c2902597abda02bcce3e6ff0121f0 # v0.2.1
         with:
           actions-type: read
 
-      - name: Install ghalint
+      - name: Install betterleaks
         id: tool-install
         if: steps.env-validation.outcome == 'success'
         uses: aglabo/ci-platform/.github/actions/setup-tool@2ac45debcb9c2902597abda02bcce3e6ff0121f0 # v0.2.1
         with:
-          repo: suzuki-shunsuke/ghalint
-          tool-version: ${{ inputs.ghalint-version }}
+          repo: betterleaks/betterleaks
+          tool-version: ${{ inputs.betterleaks-version }}
 
-      - name: Checkout ghalint config
+      - name: Checkout betterleaks config
         id: config-checkout
         if: steps.tool-install.outcome == 'success'
         uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0 # v6.0.3
         with:
-          repository: aglabo/.github
+          repository: ${{ inputs.config-repo }}
           path: shared
-          fetch-depth: 1
           persist-credentials: false
 
       - name: Prepare report directory
@@ -69,18 +73,26 @@ jobs:
         if: steps.config-checkout.outcome == 'success'
         run: mkdir -p .github/report
 
-      - name: Run ghalint
-        id: lint-execute
+      - name: Run betterleaks scan
+        id: scan-execute
         if: steps.prepare-report.outcome == 'success'
         run: |
-          ghalint run --config "${{ inputs.config-file }}" 2>&1 | tee .github/report/ghalint-report.txt
-          exit "${PIPESTATUS[0]}"
+          set +e
+          betterleaks git . \
+            --config shared/configs/betterleaks.toml \
+            --report-path=.github/report/betterleaks-report.json \
+            --exit-code=1 \
+            --verbose
+          betterleaks_status=$?
+          set -e
+          echo "status=${betterleaks_status}" >> "$GITHUB_OUTPUT"
+          exit "${betterleaks_status}"
 
-      - name: Upload ghalint report
-        id: report-upload
-        if: failure() && steps.lint-execute.outcome == 'failure'
+      - name: Upload betterleaks report
+        id: upload-report
+        if: failure() && steps.scan-execute.outputs.status != '0'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: ghalint-report
-          path: .github/report/ghalint-report.txt
+          name: betterleaks-report
+          path: .github/report/betterleaks-report.json
           retention-days: 30
