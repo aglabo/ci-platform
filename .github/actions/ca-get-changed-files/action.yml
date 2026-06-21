@@ -1,0 +1,39 @@
+# src: ./.github/actions/validate-environment/action.yml
+# @(#) : Composite: get changes files on push
+#
+# Copyright (c) 2026- aglabo <https://github.com/aglabo>
+#
+# This software is released under the MIT License.
+# https://opensource.org/licenses/MIT
+
+name: "get-changed-files"
+description: |
+  Get changed files between push before/after commits using git diff.
+  IMPORTANT: Requires fetch-depth: 0 in actions/checkout step.
+  Only works with push events (uses github.event.before and github.sha internally).
+
+inputs:
+  pattern:
+    description: "Git pathspec glob filter (e.g. '*.ts', 'src/**/*.sh'). Empty = all files."
+    required: false
+    default: ""
+
+outputs:
+  files:
+    description: "Newline-separated list of changed file paths (added/copied/modified/renamed)"
+    value: ${{ steps.get-changed-files.outputs.files }}
+  count:
+    description: "Number of changed files"
+    value: ${{ steps.get-changed-files.outputs.count }}
+
+runs:
+  using: composite
+  steps:
+    - name: Get changed files
+      id: get-changed-files
+      shell: bash
+      run: bash "${{ github.action_path }}/scripts/get-changed-files.sh"
+      env:
+        BEFORE_SHA: ${{ github.event.before }}
+        AFTER_SHA: ${{ github.sha }}
+        PATTERN: ${{ inputs.pattern }}
