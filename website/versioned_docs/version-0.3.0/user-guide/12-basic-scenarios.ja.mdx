@@ -1,6 +1,7 @@
 ---
 title: 利用シナリオ
 description: validate-environment の典型的な利用例 (read / commit / PR パーミッション)
+id: validate-environment-basic-scenarios
 slug: basic-scenarios
 sidebar_position: 12
 tags:
@@ -141,16 +142,12 @@ jobs:
             jq|jq|regex:([0-9.]+)|1.6
 ```
 
-{/* markdownlint-disable line-length MD060 */}
-
 | 列    | 意味                                                                    |
 | ----- | ----------------------------------------------------------------------- |
 | 1列目 | コマンド名 (PATH 上の実行ファイル名)                                    |
 | 2列目 | 表示名 (ログやエラーメッセージで使用)                                   |
 | 3列目 | バージョン抽出方法 (`field:N` / `regex:PATTERN` / 空欄=自動抽出)        |
 | 4列目 | 最低バージョン (空欄にするとバージョンチェックをスキップして警告を出す) |
-
-{/* markdownlint-enable line-length MD060 */}
 
 > `additional-apps` はインストーラーではなく、既存ツールの検証ゲートです。
 > ツールのセットアップは別ステップで行ってください。
@@ -185,5 +182,5 @@ jobs:
 
 ## 📚 関連ドキュメント
 
-- [クイックスタート](./11-quickstart.ja.md): 最小構成での利用手順
-- [リファレンス](./13-reference.ja.md): 全入力パラメータ・出力の詳細
+- [クイックスタート](./11-quickstart.ja.mdx): 最小構成での利用手順
+- [リファレンス](./13-reference.ja.mdx): 全入力パラメータ・出力の詳細

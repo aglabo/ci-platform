@@ -10,6 +10,8 @@ tags:
   - github-actions
 ---
 
+<!-- markdownlint-disable line-length -->
+
 ## 📖 このガイドについて
 
 `aglabo/ci-platform` の Actions・Workflows を自分のリポジトリから参照する方法を説明します。
@@ -17,7 +19,7 @@ tags:
 
 **前提**: GitHub Actions に慣れており、`steps: uses:` / `jobs: uses:` の使い分けを把握していること。
 
-> **最短で試したい場合** → [クイックスタート](./11-quickstart.ja.md)
+> **最短で試したい場合** → [クイックスタート](./11-quickstart.ja.mdx)
 
 ---
 
@@ -51,15 +53,11 @@ jobs:
 
 `@` の後ろにバージョンを指定します。**SHA 固定 + タグコメント形式を強く推奨します。**
 
-{/* markdownlint-disable line-length */}
-
 | 指定方法           | 例                                                   | 特徴                                         |
 | ------------------ | ---------------------------------------------------- | -------------------------------------------- |
 | SHA + タグコメント | `@21e02575bb3c3ec61a149801d696b53669f85208 # v0.1.0` | 最も厳密。改ざん耐性が高い (推奨)            |
 | タグ               | `@v0.1.0`                                            | リリース済みバージョンを固定する             |
 | ブランチ名         | `@main`                                              | 常に最新。破壊的変更の影響を受ける恐れがある |
-
-{/* markdownlint-enable line-length */}
 
 タグ (`@v0.1.0`) だけでは参照先のコミットを書き換えられるリスクを排除できません。
 SHA 固定により、参照先の内容を変更されても CI への影響をゼロに抑えられます。
@@ -93,16 +91,16 @@ jobs:
 ```
 
 `actions-type` は `permissions` の `actions:` 設定と整合する値を指定します。
-詳細は[リファレンス](./13-reference.ja.md)を参照してください。
+詳細は [リファレンス](./13-reference.ja.mdx) を参照してください。
 
 > Linux 系ランナー専用です。非 Linux ランナー (macOS・Windows) では処理が失敗します。
 
 詳細は以下を参照してください。
 
-- [Validate Environment 概要](./10-about-validate-environment.ja.md)
-- [クイックスタート](./11-quickstart.ja.md)
-- [利用シナリオ](./12-basic-scenarios.ja.md)
-- [リファレンス](./13-reference.ja.md)
+- [Validate Environment 概要](./10-about-validate-environment.ja.mdx)
+- [クイックスタート](./11-quickstart.ja.mdx)
+- [利用シナリオ](./12-basic-scenarios.ja.mdx)
+- [リファレンス](./13-reference.ja.mdx)
 
 ---
 
@@ -128,7 +126,7 @@ jobs:
     uses: aglabo/.github/.github/workflows/ci-common-scan-gitleaks.yml@r1.1.2
 ```
 
-現在の実装状況の詳細は [ci-platform とは](./00-platform-overview.ja.md#️-現在の実装状況) を参照してください。
+現在の実装状況の詳細は [ci-platform とは](./00-platform-overview.ja.mdx#️-現在の実装状況) を参照してください。
 
 ---
 
@@ -171,13 +169,11 @@ jobs:
 
 > SHA は最新の値に更新してから使用してください。
 
-さらに詳細な使い方 (複数ジョブの組み合わせ・段階導入パターンなど) は [利用シナリオ](./12-basic-scenarios.ja.md) を参照してください。
+さらに詳細な使い方 (複数ジョブの組み合わせ・段階導入パターンなど) は [利用シナリオ](./12-basic-scenarios.ja.mdx) を参照してください。
 
 ---
 
 ## ⚠️ よくあるミス
-
-{/* markdownlint-disable line-length */}
 
 | ミス                              | 症状                                                          | 対処                                          |
 | --------------------------------- | ------------------------------------------------------------- | --------------------------------------------- |
@@ -185,8 +181,6 @@ jobs:
 | `permissions:` を未設定のまま使う | validate-environment が権限不足を検出してジョブが即終了する   | `permissions: contents: read` を明示する      |
 | 非 Linux ランナーで実行する       | macOS・Windows ランナーでは最初のステップで失敗する           | `runs-on: ubuntu-latest` を指定する           |
 | `checkout` より後に配置する       | 不正コードをチェックアウト後に検証が走り意味が薄れる          | `validate-environment` を最初のステップに置く |
-
-{/* markdownlint-enable line-length */}
 
 ### 実際のエラー例
 
@@ -211,6 +205,6 @@ jobs:
 
 ## 📚 関連ドキュメント
 
-- [ci-platform とは](./00-platform-overview.ja.md): プロジェクト概要と設計方針
-- [Validate Environment 概要](./10-about-validate-environment.ja.md): validate-environment の詳細
-- [クイックスタート](./11-quickstart.ja.md): 最小構成での導入手順
+- [ci-platform とは](./00-platform-overview.ja.mdx): プロジェクト概要と設計方針
+- [Validate Environment 概要](./10-about-validate-environment.ja.mdx): validate-environment の詳細
+- [クイックスタート](./11-quickstart.ja.mdx): 最小構成での導入手順
