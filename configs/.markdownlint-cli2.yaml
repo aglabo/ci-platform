@@ -22,3 +22,5 @@ ignores:
 ## ruleset
 config:
   extends: .markdownlint.yaml
+
+## per-directory overrides
