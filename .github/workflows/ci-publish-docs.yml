@@ -6,7 +6,7 @@
 # This software is released under the MIT License.
 # https://opensource.org/licenses/MIT
 
-name: "CI Publish Docs"
+name: "CI: Build document site and Publish this to GitHub Pages"
 
 # Minimal permissions following security best practices
 permissions:
