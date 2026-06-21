@@ -9,6 +9,8 @@ tags:
   - errors
 ---
 
+<!-- markdownlint-disable line-length -->
+
 ## 🔍 トラブルシューティング
 
 `validate-environment` の実行時に発生しやすいエラーと解決方法を説明します。
@@ -136,15 +138,11 @@ permissions:
 
 **解決方法**: `actions-type` に応じた `permissions` を設定してください。
 
-{/* markdownlint-disable line-length MD060 */}
-
 | `actions-type` | 必要な permissions                         |
 | -------------- | ------------------------------------------ |
 | `read`         | `contents: read`                           |
 | `commit`       | `contents: write`                          |
 | `pr`           | `contents: write` + `pull-requests: write` |
-
-{/* markdownlint-enable line-length MD060 */}
 
 ```yaml
 # pr の場合
@@ -230,7 +228,7 @@ additional-apps: |
   gh|GitHub CLI|regex:version ([0-9.]+)|2.0
 ```
 
-バージョン抽出方式の詳細は[リファレンス](./13-reference.ja.md)を参照してください。
+バージョン抽出方式の詳細は [リファレンス](./13-reference.ja.mdx) を参照してください。
 
 ### Invalid app definition format
 
@@ -292,5 +290,5 @@ steps:
 
 ## 📚 関連ドキュメント
 
-- [リファレンス](./13-reference.ja.md): 全入力パラメータ・出力の詳細
-- [利用シナリオ](./12-basic-scenarios.ja.md): 典型的な利用例
+- [リファレンス](./13-reference.ja.mdx): 全入力パラメータ・出力の詳細
+- [利用シナリオ](./12-basic-scenarios.ja.mdx): 典型的な利用例
