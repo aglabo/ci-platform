@@ -39,13 +39,13 @@ const config: Config = {
           path: '../docs',
           routeBasePath: '/',
           sidebarPath: './sidebars.ts',
+          includeCurrentVersion: false,
           versions: {
-            current: {
-              label: 'Next 🚧',
-              banner: 'unreleased',
+            '0.3.0': {
+              label: 'v0.3.0',
+              badge: true,
             },
           },
-          // バージョンリリース後: includeCurrentVersion: false を追加すること
         },
         blog: false,
       },
