@@ -11,12 +11,11 @@ tags:
 
 ## ci-platform 開発者ガイド
 
-このガイドは、ci-platform の**内部構造・設計・拡張方法を理解したい開発者向け**のリファレンスです。
+このガイドは、ci-platform の **内部構造・設計・拡張方法を理解したい開発者向け** のリファレンスです。
 スクリプト・GitHub Actions・品質ツール設定・テストの仕組みを体系的に解説します。
 
-{/* textlint-disable ja-hiraku */}
 
-ci-platform を外部から利用する方は [ユーザーガイド](../user-guide/index.ja.md) を、
+ci-platform を外部から利用する方は [ユーザーガイド](../user-guide/index.ja.mdx) を、
 開発環境のセットアップ手順はオンボーディングガイド (準備中) を参照してください。
 
 ### 対象読者
@@ -38,13 +37,13 @@ ci-platform を外部から利用する方は [ユーザーガイド](../user-gu
 
 | 番号 | ファイル名                                                  | 内容                                                     |
 | ---- | ----------------------------------------------------------- | -------------------------------------------------------- |
-| 00   | [ci-platform 概要](00-overview.ja.md)                       | ci-platform の目的・機能・対象範囲                       |
-| 01   | [コア哲学](01-core-philosophy.ja.md)                        | 設計思想・品質自動化の考え方                             |
-| 02   | [ゲートパターン](02-gate-pattern.ja.md)                     | ゲートチェックパターン・validate-environment             |
-| 03   | [アーキテクチャ](03-architecture.ja.md)                     | コンポーネント構成・CI/CD フロー・Git Hooks フロー全体像 |
-| 04   | [デザインプリンシプル](04-design-principles.ja.md)          | 設計原則・実装方針・拡張ガイドライン                     |
-| 05   | [セキュリティモデル](05-security-model.ja.md)               | 最小権限・シークレット検出・保護領域                     |
-| 06   | [バージョニングとリリース](06-versioning-and-release.ja.md) | SemVer・ロードマップ・リリース方針                       |
+| 00   | [ci-platform 概要](00-overview.ja.mdx)                       | ci-platform の目的・機能・対象範囲                       |
+| 01   | [コア哲学](01-core-philosophy.ja.mdx)                        | 設計思想・品質自動化の考え方                             |
+| 02   | [ゲートパターン](02-gate-pattern.ja.mdx)                     | ゲートチェックパターン・validate-environment             |
+| 03   | [アーキテクチャ](03-architecture.ja.mdx)                     | コンポーネント構成・CI/CD フロー・Git Hooks フロー全体像 |
+| 04   | [デザインプリンシプル](04-design-principles.ja.mdx)          | 設計原則・実装方針・拡張ガイドライン                     |
+| 05   | [セキュリティモデル](05-security-model.ja.mdx)               | 最小権限・シークレット検出・保護領域                     |
+| 06   | [バージョニングとリリース](06-versioning-and-release.ja.mdx) | SemVer・ロードマップ・リリース方針                       |
 
 ### 実装リファレンス
 
@@ -76,4 +75,3 @@ ci-platform を外部から利用する方は [ユーザーガイド](../user-gu
 - 特定の情報を調べる場合: 上記テーブルから対象ページを直接参照してください。
 - フィードバック歓迎: ドキュメントの改善提案や誤りは [Issue を作成](https://github.com/aglabo/ci-platform/issues/new) してお知らせください。
 
-{/* textlint-enable ja-hiraku */}
