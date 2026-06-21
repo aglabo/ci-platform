@@ -1,4 +1,4 @@
-# src: ./.github/workflows/ci-qa-actionlint.yml
+# src: ./.github/workflows/ru-qa-actionlint.yml
 # @(#) : Reusable workflow for GitHub Actions workflow linting with actionlint
 #
 # Copyright (c) 2026- atsushifx <https://github.com/atsushifx>
@@ -6,7 +6,9 @@
 # This software is released under the MIT License.
 # https://opensource.org/licenses/MIT
 
-name: "CI QA Actionlint"
+# cspell:words rhysd
+
+name: "Reusable: QA by Actionlint"
 
 permissions:
   contents: read

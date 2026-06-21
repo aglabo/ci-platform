@@ -1,4 +1,4 @@
-# src: ./.github/workflows/ci-build-docs.yml
+# src: ./.github/workflows/ci-publish-docs.yml
 # @(#) : Workflow for building and deploying Docusaurus documentation to GitHub Pages
 #
 # Copyright (c) 2025- atsushifx <https://github.com/atsushifx>
@@ -6,7 +6,7 @@
 # This software is released under the MIT License.
 # https://opensource.org/licenses/MIT
 
-name: "CI Build Docs"
+name: "CI: Build document site and Publish this to GitHub Pages"
 
 # Minimal permissions following security best practices
 permissions:
