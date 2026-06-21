@@ -13,6 +13,14 @@ description: |
   Only works with push events (uses github.event.before and github.sha internally).
 
 inputs:
+  before-sha:
+    description: "SHA of the commit before the push. Defaults to github.event.before (push events). Override for testing or non-push events."
+    required: false
+    default: ${{ github.event.before }}
+  after-sha:
+    description: "SHA of the commit after the push. Defaults to github.sha."
+    required: false
+    default: ${{ github.sha }}
   pattern:
     description: "Git pathspec glob filter (e.g. '*.ts', 'src/**/*.sh'). Empty = all files."
     required: false
@@ -34,6 +42,6 @@ runs:
       shell: bash
       run: bash "${{ github.action_path }}/scripts/get-changed-files.sh"
       env:
-        BEFORE_SHA: ${{ github.event.before }}
-        AFTER_SHA: ${{ github.sha }}
+        BEFORE_SHA: ${{ inputs.before-sha }}
+        AFTER_SHA: ${{ inputs.after-sha }}
         PATTERN: ${{ inputs.pattern }}
