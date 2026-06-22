@@ -43,7 +43,7 @@ jobs:
           persist-credentials: false
 
       - name: Validate environment
-        uses: aglabo/ci-platform/.github/actions/ca-validate-environment@4044729d57bc3a119dc4b53eca9fe37a5dfad39d # v0.3.0
+        uses: aglabo/ci-platform/.github/actions/ca-validate-environment@91ec746f34b7e3c1ed547f66889dfb4b0e03c7dd # v0.3.1
         with:
           actions-type: read
 
@@ -102,7 +102,7 @@ jobs:
           persist-credentials: false
 
       - name: Validate environment
-        uses: aglabo/ci-platform/.github/actions/ca-validate-environment@4044729d57bc3a119dc4b53eca9fe37a5dfad39d # v0.3.0
+        uses: aglabo/ci-platform/.github/actions/ca-validate-environment@91ec746f34b7e3c1ed547f66889dfb4b0e03c7dd # v0.3.1
         with:
           actions-type: read
 
