@@ -113,6 +113,88 @@ Describe 'resolve_sha_for_event'
       End
     End
   End
+
+  Describe 'When: before-sha と after-sha が両方指定された'
+    check_explicit_push() {
+      GITHUB_BASE_SHA="$_BASE_SHA" GITHUB_HEAD_SHA="$_HEAD_SHA" \
+        resolve_sha_for_event "$_BEFORE_SHA" "$_AFTER_SHA" "push"
+    }
+
+    check_explicit_pr() {
+      GITHUB_BASE_SHA="$_BASE_SHA" GITHUB_HEAD_SHA="$_HEAD_SHA" \
+        resolve_sha_for_event "$_BEFORE_SHA" "$_AFTER_SHA" "pull_request"
+    }
+
+    check_explicit_before_only_pr() {
+      GITHUB_BASE_SHA="$_BASE_SHA" GITHUB_HEAD_SHA="$_HEAD_SHA" \
+        resolve_sha_for_event "$_BEFORE_SHA" "" "pull_request"
+    }
+
+    check_explicit_after_only_pr() {
+      GITHUB_BASE_SHA="$_BASE_SHA" GITHUB_HEAD_SHA="$_HEAD_SHA" \
+        resolve_sha_for_event "" "$_AFTER_SHA" "pull_request"
+    }
+
+    check_explicit_before_only_push() {
+      resolve_sha_for_event "$_BEFORE_SHA" "" "push"
+    }
+
+    check_explicit_after_only_push() {
+      resolve_sha_for_event "" "$_AFTER_SHA" "push"
+    }
+
+    Describe 'Then: T-rsv-sha-01 - push イベントで両方指定 → 指定値を返す'
+      It "T-rsv-sha-01: push, before=abc..., after=def... → 指定値を2行出力"
+        When call check_explicit_push
+        The output should equal "$(printf '%s\n%s' "$_BEFORE_SHA" "$_AFTER_SHA")"
+        The status should equal 0
+      End
+    End
+
+    Describe 'Then: T-rsv-sha-02 - pull_request イベントで両方指定 → 指定値を優先する'
+      It "T-rsv-sha-02: pull_request, before=abc..., after=def... → 指定値を優先（GITHUB_BASE/HEAD_SHA を無視）"
+        When call check_explicit_pr
+        The output should equal "$(printf '%s\n%s' "$_BEFORE_SHA" "$_AFTER_SHA")"
+        The status should equal 0
+      End
+    End
+
+    Describe 'Then: T-rsv-sha-03 - pull_request, before のみ指定 → エラーを返す'
+      It "T-rsv-sha-03: pull_request, before=abc..., after=empty → エラーメッセージ + status 1"
+        When call check_explicit_before_only_pr
+        The output should equal ""
+        The error should include "before-sha and after-sha must both be specified or both be empty"
+        The status should equal 1
+      End
+    End
+
+    Describe 'Then: T-rsv-sha-04 - pull_request, after のみ指定 → エラーを返す'
+      It "T-rsv-sha-04: pull_request, before=empty, after=def... → エラーメッセージ + status 1"
+        When call check_explicit_after_only_pr
+        The output should equal ""
+        The error should include "before-sha and after-sha must both be specified or both be empty"
+        The status should equal 1
+      End
+    End
+
+    Describe 'Then: T-rsv-sha-05 - push, before のみ指定 → エラーを返す'
+      It "T-rsv-sha-05: push, before=abc..., after=empty → エラーメッセージ + status 1"
+        When call check_explicit_before_only_push
+        The output should equal ""
+        The error should include "before-sha and after-sha must both be specified or both be empty"
+        The status should equal 1
+      End
+    End
+
+    Describe 'Then: T-rsv-sha-06 - push, after のみ指定 → エラーを返す'
+      It "T-rsv-sha-06: push, before=empty, after=def... → エラーメッセージ + status 1"
+        When call check_explicit_after_only_push
+        The output should equal ""
+        The error should include "before-sha and after-sha must both be specified or both be empty"
+        The status should equal 1
+      End
+    End
+  End
 End
 
 Describe 'resolve_before_sha'
