@@ -1,16 +1,50 @@
 ---
 title: "ci-platform Change Log"
-version: "0.3.0"
-date: 2026-06-21
+version: "0.3.1"
+date: 2026-06-22
 tags:
   - release
   - composite-actions
-  - reusable-workflows
   - ci-platform
 summary: >
-  v0.3.0 unifies composite action and reusable workflow naming conventions,
-  adds the ca-setup-repo composite action, introduces a Docusaurus documentation
-  publishing pipeline, and pins all caller workflows to external repository references.
+  v0.3.1 adds the ca-get-changed-files composite action for detecting changed files
+  between commits in push events.
+---
+
+<!-- textlint-disable
+  ja-technical-writing/sentence-length,
+  ja-technical-writing/max-comma
+  -->
+
+## [0.3.1] - 2026-06-22
+
+### Overview
+
+This release adds `ca-get-changed-files`, a composite action that detects changed files
+between before/after commits in push events.
+
+It supports glob pattern filtering and outputs the changed file list and count,
+enabling downstream jobs and steps to use them for conditional branching or file processing.
+
+---
+
+### Added
+
+#### Composite Actions
+
+- `ca-get-changed-files`: Detects changed files between commits in push events.
+  Accepts an optional `pattern` input for glob filtering, and exposes `before-sha` / `after-sha`
+  inputs to override the default commit SHAs (`github.event.before` / `github.sha`).
+  Outputs `files` (newline-separated paths) and `count` (number of changed files).
+  Requires `actions/checkout` with `fetch-depth: 0`.
+
+---
+
+### Notes
+
+- `ca-get-changed-files` behavior is verified by integration tests covering
+  no-pattern, pattern-match, and pattern-no-match scenarios.
+
 ---
 
 ## [0.3.0] - 2026-06-21
