@@ -15,6 +15,14 @@ resolve_sha_for_event() {
   local _before_sha="${1:-}"
   local _after_sha="${2:-}"
   local _event_name="${3:-}"
+  if [[ -n "$_before_sha" ]] && [[ -n "$_after_sha" ]]; then
+    printf '%s\n%s\n' "$_before_sha" "$_after_sha"
+    return 0
+  fi
+  if [[ -n "$_before_sha" ]] || [[ -n "$_after_sha" ]]; then
+    echo "::error::before-sha and after-sha must both be specified or both be empty" >&2
+    return 1
+  fi
   if [[ "$_event_name" == "pull_request" ]]; then
     if [[ -z "${GITHUB_BASE_SHA:-}" ]] || [[ -z "${GITHUB_HEAD_SHA:-}" ]]; then
       echo "::error::pull_request event requires GITHUB_BASE_SHA and GITHUB_HEAD_SHA" >&2
