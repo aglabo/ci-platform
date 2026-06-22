@@ -1,5 +1,5 @@
 # src: ./.github/actions/validate-environment/action.yml
-# @(#) : Composite: get changes files on push
+# @(#) : Composite: get changed files on push or pull_request
 #
 # Copyright (c) 2026- aglabo <https://github.com/aglabo>
 #
@@ -8,19 +8,19 @@
 
 name: "get-changed-files"
 description: |
-  Get changed files between push before/after commits using git diff.
+  Get changed files between commits using git diff.
   IMPORTANT: Requires fetch-depth: 0 in actions/checkout step.
-  Only works with push events (uses github.event.before and github.sha internally).
+  Supports push and pull_request events. For pull_request, uses base/head SHA automatically.
 
 inputs:
   before-sha:
-    description: "SHA of the commit before the push. Defaults to github.event.before (push events). Override for testing or non-push events."
+    description: "Base commit SHA. Defaults to pull_request.base.sha for PR events, github.event.before for push events."
     required: false
-    default: ${{ github.event.before }}
+    default: ""
   after-sha:
-    description: "SHA of the commit after the push. Defaults to github.sha."
+    description: "Head commit SHA. Defaults to pull_request.head.sha for PR events, github.sha for push events."
     required: false
-    default: ${{ github.sha }}
+    default: ""
   pattern:
     description: "Git pathspec glob filter (e.g. '*.ts', 'src/**/*.sh'). Empty = all files."
     required: false
@@ -37,11 +37,30 @@ outputs:
 runs:
   using: composite
   steps:
+    - name: Resolve SHA for event
+      id: resolve-sha
+      shell: bash
+      run: |
+        . "${{ github.action_path }}/scripts/_libs/filter.lib.sh"
+        if ! _result=$(resolve_sha_for_event \
+          "${{ inputs.before-sha }}" \
+          "${{ inputs.after-sha }}" \
+          "${{ github.event_name }}"); then
+          exit 1
+        fi
+        _before=$(echo "$_result" | head -n1)
+        _after=$(echo "$_result" | tail -n1)
+        echo "before_sha=${_before}" >> "$GITHUB_OUTPUT"
+        echo "after_sha=${_after}" >> "$GITHUB_OUTPUT"
+      env:
+        GITHUB_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        GITHUB_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+
     - name: Get changed files
       id: get-changed-files
       shell: bash
       run: bash "${{ github.action_path }}/scripts/get-changed-files.sh"
       env:
-        BEFORE_SHA: ${{ inputs.before-sha }}
-        AFTER_SHA: ${{ inputs.after-sha }}
+        BEFORE_SHA: ${{ steps.resolve-sha.outputs.before_sha }}
+        AFTER_SHA: ${{ steps.resolve-sha.outputs.after_sha }}
         PATTERN: ${{ inputs.pattern }}
