@@ -113,6 +113,7 @@ Describe 'get-changed-files.sh'
         export AFTER_SHA="$_NORMAL_AFTER"
         export PATTERN=""
         When call run_script
+        The error should include "BEFORE_SHA is required"
         The status should equal 1
       End
     End
