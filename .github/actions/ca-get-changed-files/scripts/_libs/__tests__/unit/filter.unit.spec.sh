@@ -6,6 +6,8 @@
 # MIT License
 # shellcheck shell=bash
 
+# cspell:words aabbccddee
+
 Include "${SHELLSPEC_PROJECT_ROOT}/.github/actions/ca-get-changed-files/scripts/_libs/filter.lib.sh"
 
 # ─── Internal Helpers ───────────────────────────────────────────────────────
@@ -42,6 +44,76 @@ check_zero_value_output() {
 }
 
 # ─── Tests ──────────────────────────────────────────────────────────────────
+
+Describe 'resolve_sha_for_event'
+  _BEFORE_SHA="abc1234567890abcdef1234567890abcdef123456"
+  _AFTER_SHA="def1234567890abcdef1234567890abcdef123456"
+  _BASE_SHA="base111aabbccddee000000000000000000000000"
+  _HEAD_SHA="head222aabbccddee000000000000000000000000"
+
+  Describe 'When: workflow_dispatch イベントが渡された'
+    Describe 'Then: T-rsv-edg-01 - 引数の before/after SHA を2行で出力する'
+      It "T-rsv-edg-01: workflow_dispatch, before=abc..., after=def... → 2行出力"
+        When call resolve_sha_for_event "$_BEFORE_SHA" "$_AFTER_SHA" "workflow_dispatch"
+        The output should equal "$(printf '%s\n%s' "$_BEFORE_SHA" "$_AFTER_SHA")"
+        The status should equal 0
+      End
+    End
+  End
+
+  Describe 'When: push イベントが渡された'
+    Describe 'Then: T-rsv-nor-01 - 引数の before/after SHA を2行で出力する'
+      It "T-rsv-nor-01: push, before=abc..., after=def... → 2行出力"
+        When call resolve_sha_for_event "$_BEFORE_SHA" "$_AFTER_SHA" "push"
+        The output should equal "$(printf '%s\n%s' "$_BEFORE_SHA" "$_AFTER_SHA")"
+        The status should equal 0
+      End
+    End
+  End
+
+  Describe 'When: pull_request イベントが渡された'
+    check_pr_shas() {
+      GITHUB_BASE_SHA="$_BASE_SHA" GITHUB_HEAD_SHA="$_HEAD_SHA" \
+        resolve_sha_for_event "" "" "pull_request"
+    }
+
+    check_pr_base_empty() {
+      GITHUB_BASE_SHA="" GITHUB_HEAD_SHA="$_HEAD_SHA" \
+        resolve_sha_for_event "" "" "pull_request"
+    }
+
+    check_pr_head_empty() {
+      GITHUB_BASE_SHA="$_BASE_SHA" GITHUB_HEAD_SHA="" \
+        resolve_sha_for_event "" "" "pull_request"
+    }
+
+    Describe 'Then: T-rsv-nor-02 - GITHUB_BASE_SHA / GITHUB_HEAD_SHA を2行で出力する'
+      It "T-rsv-nor-02: pull_request, BASE=base111..., HEAD=head222... → 2行出力"
+        When call check_pr_shas
+        The output should equal "$(printf '%s\n%s' "$_BASE_SHA" "$_HEAD_SHA")"
+        The status should equal 0
+      End
+    End
+
+    Describe 'Then: T-rsv-err-01 - GITHUB_BASE_SHA が空のときエラーを返す'
+      It "T-rsv-err-01: pull_request, GITHUB_BASE_SHA="" → エラーメッセージ + status 1"
+        When call check_pr_base_empty
+        The output should equal ""
+        The error should include "pull_request event requires GITHUB_BASE_SHA and GITHUB_HEAD_SHA"
+        The status should equal 1
+      End
+    End
+
+    Describe 'Then: T-rsv-err-02 - GITHUB_HEAD_SHA が空のときエラーを返す'
+      It "T-rsv-err-02: pull_request, GITHUB_HEAD_SHA="" → エラーメッセージ + status 1"
+        When call check_pr_head_empty
+        The output should equal ""
+        The error should include "pull_request event requires GITHUB_BASE_SHA and GITHUB_HEAD_SHA"
+        The status should equal 1
+      End
+    End
+  End
+End
 
 Describe 'resolve_before_sha'
   Describe 'When: 正常なSHAが入力された'
