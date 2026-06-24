@@ -59,6 +59,15 @@ Describe 'resolve_sha_for_event'
         The status should equal 0
       End
     End
+
+    Describe 'Then: T-rsv-edg-02 - 引数なし + 環境変数なしのときエラーを返す'
+      It "T-rsv-edg-02: workflow_dispatch, no args, no env → Unsupported event エラー + status 1"
+        When call resolve_sha_for_event "" "" "workflow_dispatch"
+        The output should equal ""
+        The error should include "Unsupported event"
+        The status should equal 1
+      End
+    End
   End
 
   Describe 'When: push イベントが渡された'
@@ -67,6 +76,47 @@ Describe 'resolve_sha_for_event'
         When call resolve_sha_for_event "$_BEFORE_SHA" "$_AFTER_SHA" "push"
         The output should equal "$(printf '%s\n%s' "$_BEFORE_SHA" "$_AFTER_SHA")"
         The status should equal 0
+      End
+    End
+
+    check_push_shas() {
+      GITHUB_BEFORE_SHA="$_BEFORE_SHA" GITHUB_AFTER_SHA="$_AFTER_SHA" \
+        resolve_sha_for_event "" "" "push"
+    }
+
+    check_push_before_empty() {
+      GITHUB_BEFORE_SHA="" GITHUB_AFTER_SHA="$_AFTER_SHA" \
+        resolve_sha_for_event "" "" "push"
+    }
+
+    check_push_after_empty() {
+      GITHUB_BEFORE_SHA="$_BEFORE_SHA" GITHUB_AFTER_SHA="" \
+        resolve_sha_for_event "" "" "push"
+    }
+
+    Describe 'Then: T-rsv-psh-01 - 環境変数から push SHA を解決する'
+      It "T-rsv-psh-01: push, GITHUB_BEFORE/AFTER_SHA 設定済み → 2行出力"
+        When call check_push_shas
+        The output should equal "$(printf '%s\n%s' "$_BEFORE_SHA" "$_AFTER_SHA")"
+        The status should equal 0
+      End
+    End
+
+    Describe 'Then: T-rsv-psh-02 - GITHUB_BEFORE_SHA が空のときエラーを返す'
+      It "T-rsv-psh-02: push, GITHUB_BEFORE_SHA="" → エラーメッセージ + status 1"
+        When call check_push_before_empty
+        The output should equal ""
+        The error should include "push event requires GITHUB_BEFORE_SHA and GITHUB_AFTER_SHA"
+        The status should equal 1
+      End
+    End
+
+    Describe 'Then: T-rsv-psh-03 - GITHUB_AFTER_SHA が空のときエラーを返す'
+      It "T-rsv-psh-03: push, GITHUB_AFTER_SHA="" → エラーメッセージ + status 1"
+        When call check_push_after_empty
+        The output should equal ""
+        The error should include "push event requires GITHUB_BEFORE_SHA and GITHUB_AFTER_SHA"
+        The status should equal 1
       End
     End
   End
