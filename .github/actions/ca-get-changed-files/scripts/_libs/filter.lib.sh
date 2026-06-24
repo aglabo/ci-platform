@@ -29,8 +29,15 @@ resolve_sha_for_event() {
       return 1
     fi
     printf '%s\n%s\n' "$GITHUB_BASE_SHA" "$GITHUB_HEAD_SHA"
+  elif [[ "$_event_name" == "push" ]]; then
+    if [[ -z "${GITHUB_BEFORE_SHA:-}" ]] || [[ -z "${GITHUB_AFTER_SHA:-}" ]]; then
+      echo "::error::push event requires GITHUB_BEFORE_SHA and GITHUB_AFTER_SHA" >&2
+      return 1
+    fi
+    printf '%s\n%s\n' "$GITHUB_BEFORE_SHA" "$GITHUB_AFTER_SHA"
   else
-    printf '%s\n%s\n' "$_before_sha" "$_after_sha"
+    echo "::error::Unsupported event: $_event_name. Use before-sha and after-sha inputs explicitly." >&2
+    return 1
   fi
 }
 
