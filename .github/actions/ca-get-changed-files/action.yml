@@ -55,6 +55,8 @@ runs:
       env:
         GITHUB_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         GITHUB_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        GITHUB_BEFORE_SHA: ${{ github.event.before }}
+        GITHUB_AFTER_SHA: ${{ github.sha }}
 
     - name: Get changed files
       id: get-changed-files
