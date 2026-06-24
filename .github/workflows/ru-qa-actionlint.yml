@@ -37,21 +37,21 @@ jobs:
     steps:
       - name: Checkout target repository
         id: target-checkout
-        uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0 # v6.0.3
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
 
       - name: Validate environment
         id: env-validation
         if: steps.target-checkout.outcome == 'success'
-        uses: aglabo/ci-platform/.github/actions/validate-environment@91ec746f34b7e3c1ed547f66889dfb4b0e03c7dd # v0.3.1
+        uses: aglabo/ci-platform/.github/actions/validate-environment@8d63776a598f98913915e57b74e63ba5d06d5a47 # v0.3.2
         with:
           actions-type: read
 
       - name: Install actionlint
         id: tool-install
         if: steps.env-validation.outcome == 'success'
-        uses: aglabo/ci-platform/.github/actions/setup-tool@91ec746f34b7e3c1ed547f66889dfb4b0e03c7dd # v0.3.1
+        uses: aglabo/ci-platform/.github/actions/setup-tool@8d63776a598f98913915e57b74e63ba5d06d5a47 # v0.3.2
         with:
           repo: rhysd/actionlint
           tool-version: ${{ inputs.actionlint-version }}
@@ -59,7 +59,7 @@ jobs:
       - name: Checkout actionlint config
         id: config-checkout
         if: steps.tool-install.outcome == 'success'
-        uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0 # v6.0.3
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           repository: aglabo/.github
           path: shared
