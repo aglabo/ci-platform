@@ -15,7 +15,7 @@ permissions:
 on:
   workflow_call:
     inputs:
-      betterleaks-version:
+      version:
         description: "Version of betterleaks to install"
         required: false
         default: "1.4.1"
@@ -57,7 +57,7 @@ jobs:
         uses: aglabo/ci-platform/.github/actions/ca-setup-tool@88dd4b6b3cd448ca31dda101ee890c896f9ae41a # v0.3.2
         with:
           repo: betterleaks/betterleaks
-          tool-version: ${{ inputs.betterleaks-version }}
+          tool-version: ${{ inputs.version }}
 
       - name: Checkout betterleaks config
         id: config-checkout

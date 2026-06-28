@@ -16,12 +16,12 @@ permissions:
 on:
   workflow_call:
     inputs:
-      actionlint-version:
+      version:
         description: "Version of actionlint to install"
         required: false
         default: "1.7.12"
         type: string
-      config-file:
+      config:
         description: "Path to the actionlint configuration file"
         required: false
         default: "./shared/configs/actionlint.yaml"
@@ -54,7 +54,7 @@ jobs:
         uses: aglabo/ci-platform/.github/actions/ca-setup-tool@88dd4b6b3cd448ca31dda101ee890c896f9ae41a # v0.3.2
         with:
           repo: rhysd/actionlint
-          tool-version: ${{ inputs.actionlint-version }}
+          tool-version: ${{ inputs.version }}
 
       - name: Checkout actionlint config
         id: config-checkout
@@ -75,7 +75,7 @@ jobs:
         id: lint-execute
         if: steps.prepare-report.outcome == 'success'
         run: |
-          actionlint -config-file "${{ inputs.config-file }}" 2>&1 | tee .github/report/actionlint-report.txt
+          actionlint -config-file "${{ inputs.config }}" 2>&1 | tee .github/report/actionlint-report.txt
           exit "${PIPESTATUS[0]}"
 
       - name: Upload actionlint report

@@ -14,12 +14,12 @@ permissions:
 on:
   workflow_call:
     inputs:
-      ghalint-version:
+      version:
         description: "Version of ghalint to install"
         required: false
         default: "1.5.6"
         type: string
-      config-file:
+      config:
         description: "Path to the ghalint configuration file"
         required: false
         default: "./shared/configs/ghalint.yaml"
@@ -52,7 +52,7 @@ jobs:
         uses: aglabo/ci-platform/.github/actions/ca-setup-tool@88dd4b6b3cd448ca31dda101ee890c896f9ae41a # v0.3.2
         with:
           repo: suzuki-shunsuke/ghalint
-          tool-version: ${{ inputs.ghalint-version }}
+          tool-version: ${{ inputs.version }}
 
       - name: Checkout ghalint config
         id: config-checkout
@@ -73,7 +73,7 @@ jobs:
         id: lint-execute
         if: steps.prepare-report.outcome == 'success'
         run: |
-          ghalint run --config "${{ inputs.config-file }}" 2>&1 | tee .github/report/ghalint-report.txt
+          ghalint run --config "${{ inputs.config }}" 2>&1 | tee .github/report/ghalint-report.txt
           exit "${PIPESTATUS[0]}"
 
       - name: Upload ghalint report
