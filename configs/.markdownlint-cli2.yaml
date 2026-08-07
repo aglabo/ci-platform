@@ -18,6 +18,8 @@ ignores:
   - ".tools/**"
   - "temp/**"
   - "tmp/**"
+  - ".github/**"
+  - ".vscode/**"
 
 ## ruleset
 config:
