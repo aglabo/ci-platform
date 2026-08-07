@@ -1,4 +1,17 @@
 {
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "command": "bash .claude/hooks/check-tasks.sh",
+            "type": "command"
+          }
+        ],
+        "matcher": ""
+      }
+    ]
+  },
   "permissions": {
     "allow": [
       "Bash(git status:*)",
@@ -19,6 +32,7 @@
       "Bash(pnpm:*)",
       "Read(docs/**)"
     ],
+    "defaultMode": "plan",
     "deny": [
       "Bash(git commit:*)",
       "Bash(git push:*)",
@@ -32,15 +46,5 @@
       "Bash(git stash:*)"
     ]
   },
-  "hooks": {
-    "Stop": [{
-      "matcher": "",
-      "hooks": [{
-        "type": "command",
-        "command": "bash .claude/hooks/check-tasks.sh"
-      }]
-    }]
-  },
-  "defaultMode": "plan",
   "skipAutoPermissionPrompt": false
 }
