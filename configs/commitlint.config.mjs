@@ -7,7 +7,7 @@
 // https://opensource.org/licenses/MIT
 
 // commit lint common configs
-module.exports = {
+const BaseConfig = {
   extends: ['@commitlint/config-conventional'],
   parserPreset: {
     parserOpts: {
@@ -45,3 +45,5 @@ module.exports = {
     'header-max-length': [2, 'always', 76],
   },
 };
+
+export default BaseConfig;
