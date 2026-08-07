@@ -37,13 +37,7 @@ normalize_path() {
   else
     IFS= read -r __path
   fi
-  # Convert backslashes to forward slashes
-  __path="${__path//\\/\/}"
-  # Strip leading ./
-  __path="${__path#./}"
-  # Strip trailing /
-  __path="${__path%/}"
-  printf '%s\n' "${__path}"
+  printf '%s\n' "${__path//\\/\/}"
 }
 
 #
@@ -75,7 +69,7 @@ get_filelist() {
   local __f __norm
   for __f in "$@"; do
     __norm=$(normalize_path "$__f")
-    # Strip leading ./ so filter matches rg output (which has no ./ prefix)
+    # Strip leading ./ so filter matches rg output (hidden paths have no ./ prefix)
     __norm="${__norm#./}"
     if [[ "$__norm" == */* ]]; then
       __filters+=("$__norm")
@@ -86,8 +80,7 @@ get_filelist() {
 
   # Enumerate files; normalize separators and prepend ./
   local __result
-  # shellcheck disable=SC1003
-  __result=$(fd -tf -H -E '.git' -g "$__pattern" -C "$__root" 2>/dev/null | tr '\\' '/' | sed 's|^[^./]|./&|' || true)
+  __result=$(cd "$__root" && rg --files --hidden --glob '!.git' -g "$__pattern" 2>/dev/null | sed 's|\\|/|g; s|^[^./]|./&|' || true)
 
   # Apply each filter (AND: narrow results; short-circuit on empty)
   local __pat
