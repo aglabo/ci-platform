@@ -30,20 +30,34 @@
 # Enable color output
 --color
 
+# Show execution times
+# --profile
+--profile-limit=10
+
+# Show failure messages in detail
+--fail-fast=1
+
+# Fail if no examples found (prevent silent failures)
+--fail-no-examples
+
 # Execution directory (run from spec file location for relative imports)
 --execdir @specfile
 
 # Skip message severity (moderate = hide skipped test details)
 --skip-message moderate
 
-# Fail if no examples found (prevent silent failures)
---fail-no-examples
 
 # Don't treat warnings as failures (allow exit code 0 with warnings)
 --no-warning-as-failure
 
 # === Parallel Execution ===
+# --random none
+
+# Output directory for reports
+--reportdir "temp/shellspec-reports"
+
 # Spec file parallel execution
 # @note: use in Windows is dangerous.
---jobs 4
+--jobs 16
+
 
