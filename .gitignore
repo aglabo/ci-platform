@@ -45,8 +45,6 @@ $~*
 releases/*
 !releases/.keep
 
-##  Git
-!**/.gitignore
 
 ## Development tools (installed locally)
 .tools/
@@ -100,3 +98,9 @@ tmp/
 
 ## Node
 node_modules/
+
+
+### Website
+
+##  Git
+!**/.gitignore
