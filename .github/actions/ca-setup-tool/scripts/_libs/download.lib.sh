@@ -21,8 +21,8 @@ _fetch_assets() {
     echo "::error::Failed to fetch release assets from ${_api_url}" >&2
     return 2
   fi
-  _http_status=$(tail -1 <<< "$_raw")
-  _body=$(head -n -1 <<< "$_raw")
+  _http_status=$(tail -1 <<<"$_raw")
+  _body=$(head -n -1 <<<"$_raw")
   if [[ "$_http_status" != "200" ]]; then
     echo "::error::Release not found (HTTP ${_http_status}) for ${_api_url}" >&2
     return 2
@@ -43,7 +43,7 @@ _find_download_url() {
         _arch_suffix="$arch"
         break 2
       fi
-    done <<< "$_pairs"
+    done <<<"$_pairs"
   done
   if [ -z "$_download_url" ]; then
     echo "::error::No matching asset found for arch candidates: ${_arch_candidates[*]}" >&2
@@ -58,15 +58,17 @@ _find_checksum_url() {
   local _checksum_url=""
   while IFS=$'\t' read -r _name _url; do
     if [[ "$_name" == "checksums.txt" ]]; then
-      _checksum_url="$_url"; break
+      _checksum_url="$_url"
+      break
     fi
-  done <<< "$_pairs"
+  done <<<"$_pairs"
   if [ -z "$_checksum_url" ]; then
     while IFS=$'\t' read -r _name _url; do
       if [[ "$_name" == *"_checksums.txt" ]]; then
-        _checksum_url="$_url"; break
+        _checksum_url="$_url"
+        break
       fi
-    done <<< "$_pairs"
+    done <<<"$_pairs"
   fi
   if [ -z "$_checksum_url" ]; then
     echo "::error::No checksums file found in release assets" >&2

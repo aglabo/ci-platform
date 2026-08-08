@@ -54,5 +54,5 @@ resolve_before_sha() {
 write_multiline_output() {
   local _key="$1"
   local _value="$2"
-  printf '%s<<EOF\n%s\nEOF\n' "$_key" "$_value" >> "${GITHUB_OUTPUT:-/dev/null}"
+  printf '%s<<EOF\n%s\nEOF\n' "$_key" "$_value" >>"${GITHUB_OUTPUT:-/dev/null}"
 }

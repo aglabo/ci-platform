@@ -16,16 +16,16 @@ detect_arch() {
   fi
 
   case "$_runner_arch" in
-    X64)
-      echo "amd64"
-      echo "x64"
-      ;;
-    ARM64)
-      echo "arm64"
-      ;;
-    *)
-      echo "::error::Unsupported RUNNER_ARCH: ${_runner_arch}" >&2
-      return 1
-      ;;
+  X64)
+    echo "amd64"
+    echo "x64"
+    ;;
+  ARM64)
+    echo "arm64"
+    ;;
+  *)
+    echo "::error::Unsupported RUNNER_ARCH: ${_runner_arch}" >&2
+    return 1
+    ;;
   esac
 }

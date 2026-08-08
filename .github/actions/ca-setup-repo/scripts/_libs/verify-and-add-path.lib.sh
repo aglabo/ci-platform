@@ -57,7 +57,7 @@ verify_and_add_path() {
   if [[ -n "${_shebang_files}" ]]; then
     while IFS= read -r _f; do
       chmod +x "${_f}"
-    done <<< "${_shebang_files}"
+    done <<<"${_shebang_files}"
   fi
 
   local _failed=false
@@ -66,15 +66,15 @@ verify_and_add_path() {
       echo "::error::verify-and-add-path: file not executable: ${_f}" >&2
       _failed=true
     fi
-  done <<< "${_candidates}"
+  done <<<"${_candidates}"
   [[ "${_failed}" == true ]] && return 1
 
   # R-019: append bin/ to GITHUB_PATH
-  echo "${_path}/bin" >> "${GITHUB_PATH}"
+  echo "${_path}/bin" >>"${GITHUB_PATH}"
 
   # R-020 / R-020S: write .repo unless SKIP_REPO=true
   if [[ "${SKIP_REPO}" != "true" ]]; then
-    printf '%s@%s' "${_repo}" "${_sha}" > "${_path}/.repo"
+    printf '%s@%s' "${_repo}" "${_sha}" >"${_path}/.repo"
   fi
 
   # Release lock

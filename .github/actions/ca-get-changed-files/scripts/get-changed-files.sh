@@ -19,8 +19,14 @@ main() {
   local _after_sha="${AFTER_SHA:-}"
   local _pattern="${PATTERN:-}"
 
-  [[ -z "$_before_sha" ]] && { echo "::error::BEFORE_SHA is required" >&2; return 1; }
-  [[ -z "$_after_sha" ]] && { echo "::error::AFTER_SHA is required" >&2; return 1; }
+  [[ -z "$_before_sha" ]] && {
+    echo "::error::BEFORE_SHA is required" >&2
+    return 1
+  }
+  [[ -z "$_after_sha" ]] && {
+    echo "::error::AFTER_SHA is required" >&2
+    return 1
+  }
 
   local _before
   _before=$(resolve_before_sha "$_before_sha")
@@ -38,7 +44,7 @@ main() {
   fi
 
   write_multiline_output "files" "$_files"
-  echo "count=${_count}" >> "${GITHUB_OUTPUT:-/dev/null}"
+  echo "count=${_count}" >>"${GITHUB_OUTPUT:-/dev/null}"
 }
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
