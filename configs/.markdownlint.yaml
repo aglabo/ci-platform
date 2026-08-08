@@ -15,8 +15,8 @@ default: true
 whitespace: true
 
 # heading
-no-duplicate-heading: true
-siblings_only: true # allow duplicate headings if they are not siblings
+no-duplicate-heading:
+  siblings_only: true # allow duplicate headings if they are not siblings
 
 # line length
 line-length:
@@ -39,3 +39,7 @@ no-hard-tabs: true
 # Table columns
 table-column-style:
   style: aligned
+
+## for MDX settings
+# allow MDX comments
+no-space-in-emphasis: false
