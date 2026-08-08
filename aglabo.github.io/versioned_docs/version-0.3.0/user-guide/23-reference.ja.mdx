@@ -1,0 +1,141 @@
+---
+title: リファレンス - setup-tool / setup-repo
+description: setup-tool と setup-repo の入力パラメータ・制約事項リファレンス
+id: setup-tool-repo-reference
+slug: setup-tool-repo-reference
+sidebar_position: 23
+tags:
+  - setup-tool
+  - setup-repo
+  - reference
+  - inputs
+---
+
+<!-- cspell:words rhysd -->
+<!-- markdownlint-disable line-length -->
+
+## 📖 リファレンス
+
+このページでは `setup-tool` と `setup-repo` の入力パラメータ・制約事項を網羅的に説明します。
+
+---
+
+## setup-tool
+
+### 🔧 アクション基本情報
+
+```yaml
+- uses: aglabo/ci-platform/.github/actions/ca-setup-tool@<SHA> # vX.Y.Z
+```
+
+### 📥 入力パラメータ
+
+| パラメータ     | 型     | 必須   | デフォルト | 説明                                   |
+| -------------- | ------ | ------ | ---------- | -------------------------------------- |
+| `repo`         | string | はい   | —          | GitHub リポジトリ（`owner/repo` 形式） |
+| `tool-version` | string | いいえ | `0.0.0`    | ツールバージョン（`X.Y.Z` 形式）       |
+
+#### `repo`
+
+`owner/repo` 形式で指定します。GitHub Releases にアセットが公開されているリポジトリである必要があります。
+
+```yaml
+with:
+  repo: rhysd/actionlint
+```
+
+#### `tool-version`
+
+インストールするバージョンを `X.Y.Z` 形式で指定します。省略した場合は `0.0.0`（最新判定）になります。
+再現性のため、バージョンを明示することを推奨します。
+
+```yaml
+with:
+  repo: rhysd/actionlint
+  tool-version: "1.7.12"
+```
+
+### 🔒 制約事項
+
+| 制約           | 内容                                                |
+| -------------- | --------------------------------------------------- |
+| OS             | Linux ランナー専用（`ubuntu-latest` など）          |
+| アーキテクチャ | `amd64`・`arm64` に対応                             |
+| アセット形式   | GitHub Releases の `.tar.gz` または `.zip` アセット |
+| バージョン形式 | `X.Y.Z` 形式（semver）                              |
+
+---
+
+## setup-repo
+
+### 🔧 アクション基本情報
+
+```yaml
+- uses: aglabo/ci-platform/.github/actions/ca-setup-repo@<SHA> # vX.Y.Z
+```
+
+### 📥 入力パラメータ
+
+| パラメータ     | 型     | 必須   | デフォルト | 説明                                      |
+| -------------- | ------ | ------ | ---------- | ----------------------------------------- |
+| `repo`         | string | はい   | —          | GitHub リポジトリ（`owner/repo` 形式）    |
+| `path`         | string | はい   | —          | ローカルチェックアウトパス（`./` 始まり） |
+| `ref`          | string | はい   | —          | Git ref（タグ・ブランチ・SHA）            |
+| `node-version` | string | いいえ | `22`       | Node.js バージョン                        |
+| `pnpm-version` | string | いいえ | `10`       | pnpm バージョン                           |
+
+#### `repo`
+
+`owner/repo` 形式で指定します。pnpm ワークスペースと `bin/` ディレクトリを持つリポジトリである必要があります。
+
+```yaml
+with:
+  repo: aglabo/agla-dev-tools
+```
+
+#### `path`
+
+チェックアウト先のパスを `./` 始まりで指定します。`./` 始まりでない場合はエラーになります。
+
+```yaml
+with:
+  path: ./tools/agla-dev-tools
+```
+
+#### `ref`
+
+チェックアウトする Git ref を指定します。タグ・ブランチ・SHA のいずれかを指定できます。
+再現性のため、SHA または固定タグを推奨します。SHA を使う場合はタグをコメントで残してください。
+
+```yaml
+with:
+  ref: a88f3bf1ecda478ad8ec2e907139bd058ce5ee56 # v0.1.0
+```
+
+#### `node-version` / `pnpm-version`
+
+`pnpm install` で使用する Node.js と pnpm のバージョンを指定します。省略時はそれぞれ `22` / `10` が使われます。
+
+```yaml
+with:
+  node-version: "22"
+  pnpm-version: "10"
+```
+
+### 🔒 制約事項
+
+| 制約                   | 内容                                                                 |
+| ---------------------- | -------------------------------------------------------------------- |
+| OS                     | Linux ランナー専用（`ubuntu-latest` など）                           |
+| `path`                 | `./` 始まりのパスのみ有効。ルート直下や絶対パスはエラー              |
+| リポジトリ構造         | `pnpm-lock.yaml` と `bin/` ディレクトリが必須                        |
+| パッケージインストール | `pnpm install --frozen-lockfile` で実行（lockfile がないとエラー）   |
+| 既存チェックアウト     | 同一 `path` に既存の checkout がある場合、インストールをスキップする |
+
+---
+
+## 📚 関連ドキュメント
+
+- [概要](./20-about-setup-tool-repo.ja.mdx): 両アクションの設計目標・使い分け
+- [クイックスタート](./21-quickstart.ja.mdx): 最小構成での利用手順
+- [基本シナリオ](./22-basic-scenarios.ja.mdx): 典型的な利用例
