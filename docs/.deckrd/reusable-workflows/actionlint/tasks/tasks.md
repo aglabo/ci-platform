@@ -6,6 +6,10 @@ created: "2026-06-12 00:00:00"
 source: specifications.md
 ---
 
+<!-- cspell:words rhysd  -->
+<!-- textlint-disable
+  ja-technical-writing/sentence-length,
+  -->
 <!-- markdownlint-disable line-length -->
 
 各 task は単一ユニットテストケース（`it()` ブロック）に対応する。

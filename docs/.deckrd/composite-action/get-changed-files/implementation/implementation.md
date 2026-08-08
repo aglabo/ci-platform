@@ -9,7 +9,7 @@ refs: [SPEC]
 
 ## File Structure
 
-```
+```bash
 .github/actions/ca-get-changed-files/
 ├── action.yml
 └── scripts/
@@ -28,29 +28,29 @@ refs: [SPEC]
 ### action.yml
 
 - `runs.using: composite`
-- SHA（BEFORE_SHA/AFTER_SHA）はenv:セクションで`github.event.before`/`github.sha`から注入
-- inputは`pattern`のみ
+- SHA（BEFORE_SHA/AFTER_SHA）は env:セクションで `github.event.before`/`github.sha` から注入
+- input は `pattern` のみ
 
 ### get-changed-files.sh
 
 - ヘッダー: `#!/usr/bin/env bash` + `# src:` + `# @(#):` + MIT + `# shellcheck shell=bash`
 - `set -euo pipefail`
 - `SCRIPT_DIR="${BASH_SOURCE[0]%/*}"`
-- `_libs/filter.lib.sh` をsource
+- `_libs/filter.lib.sh` を source
 - main()関数にロジックを集約
-- `[[ "${BASH_SOURCE[0]}" == "${0}" ]]` でmain呼び出し
+- `[[ "${BASH_SOURCE[0]}" == "${0}" ]]` で main 呼び出し
 
 ### filter.lib.sh
 
 - guard pattern: `[ -n "${FILTER_LIB_LOADED:-}" ] && return 0`
-- `resolve_before_sha()`: ゼロSHA→empty-tree変換
-- `write_multiline_output()`: GITHUB_OUTPUT multiline書き出し
+- `resolve_before_sha()`: ゼロ SHA→empty-tree 変換
+- `write_multiline_output()`: GITHUB_OUTPUT multiline 書き出し
 
 ## Commit Linkage
 
-各実装ファイルは以下のcommit参照を含める:
+各実装ファイルは以下の commit 参照を含む。
 
-```
+```text
 ci(actions): add ca-get-changed-files composite action
 
 Implements: IMPL-001

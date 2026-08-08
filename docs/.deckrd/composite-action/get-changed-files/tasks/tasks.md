@@ -20,9 +20,9 @@ refs: [IMPL]
 
 #### resolve_before_sha()
 
-- `[nrm-01]` 正常SHA → そのまま返す
-- `[nrm-02]` ゼロSHA（40桁）→ empty-tree SHAを返す
-- `[edg-01]` 空文字 → empty-tree SHAを返す
+- `[nrm-01]` 正常 SHA → そのまま返す
+- `[nrm-02]` ゼロ SHA（40桁）→ empty-tree SHA を返す
+- `[edg-01]` 空文字 → empty-tree SHA を返す
 - `[edg-02]` 短いゼロ列 → そのまま返す（40桁のみフォールバック対象）
 
 #### write_multiline_output()
@@ -40,11 +40,11 @@ refs: [IMPL]
 
 **テストケース:**
 
-- `[nrm-01]` 正常なBEFORE/AFTER SHA → 変更ファイル一覧を出力
-- `[nrm-02]` pattern指定あり → フィルターされたファイルのみ出力
-- `[nrm-03]` pattern空（デフォルト）→ 全ファイルを出力
-- `[edg-01]` ゼロSHA → empty-treeとdiffして正常動作
-- `[err-01]` BEFORE_SHA未設定 → エラー終了
+- `[nrm-01]` 正常な BEFORE/AFTER SHA → 変更ファイル一覧を出力
+- `[nrm-02]` pattern 指定あり → フィルターされたファイルのみ出力
+- `[nrm-03]` pattern 空（デフォルト）→ 全ファイルを出力
+- `[edg-01]` ゼロ SHA → empty-tree と diff して正常動作
+- `[err-01]` BEFORE_SHA 未設定 → エラー終了
 
 ### T-03: action.yml の作成
 
@@ -52,17 +52,17 @@ refs: [IMPL]
 
 - `action.yml`
 
-**内容:** SPEC記載のaction.yml構造に従って作成（BDDサイクル対象外、ドキュメント作成）
+**内容:** SPEC 記載の action.yml 構造に従って作成（BDD サイクル対象外、ドキュメント作成）
 
 ## Execution Order
 
-1. T-01: filter.lib.sh（bdd-coderで実装）
-2. T-02: get-changed-files.sh（bdd-coderで実装）
+1. T-01: filter.lib.sh（bdd-coder で実装）
+2. T-02: get-changed-files.sh（bdd-coder で実装）
 3. T-03: action.yml（直接作成）
 
 ## BDD Coder Handoff
 
-T-01, T-02はbdd-coderエージェントに委譲する。
+T-01, T-02 は bdd-coder エージェントに委譲する。
 引き継ぎ情報:
 
 - 作業種別: 新機能追加

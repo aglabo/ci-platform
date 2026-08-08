@@ -7,6 +7,10 @@ created: "2026-06-18"
 updated: "2026-06-18"
 ---
 
+<!-- textlint-disable
+  ja-technical-writing/sentence-length -->
+<!-- markdownlint-disable line-length -->
+
 > **Normative Statement**
 > This document defines binding requirements.
 > Implementations MUST conform to this document.
@@ -31,9 +35,9 @@ GitHub Actions ワークフロー内で、Node.js ベースのツール管理リ
 **Out of Scope**:
 
 - プライベートリポジトリへのアクセス（認証トークンは使用しない）
-- macOS / Windows ランナーのサポート（Linux ubuntu runner のみ）
+- macOS/Windows ランナーのサポート（Linux ubuntu runner のみ）
 - チェックサム検証やセキュリティスキャン（呼び出し元ワークフロー側の責務）
-- npm / yarn など pnpm 以外のパッケージマネージャーのサポート
+- npm/yarn など pnpm 以外のパッケージマネージャーのサポート
 - インストールキャッシュの提供（呼び出し元ワークフロー側の責務）
 
 ## 2. Context
@@ -249,7 +253,7 @@ macOS および Windows ランナーはサポートしない。
 
 ### REQ-C-005: repo パラメータのフォーマット
 
-`repo` パラメータは `<owner>/<repo>` 形式（英数字・ハイフン・アンダースコア、スラッシュ1つ）でなければならない。
+`repo` パラメータは `<owner>/<repo>` 形式（英数字・ハイフン・アンダースコア、スラッシュ 1つ）でなければならない。
 フォーマットが不正な場合はエラーを出力してアクションを失敗させる。
 
 ### REQ-C-006: path パラメータのフォーマット

@@ -79,7 +79,7 @@ source: specifications.md
   - Scenario: Given version=`v1.2.3`、When `normalize_version` を呼び出す
   - Expected: Then stdout が `1.2.3` である
 
-- [x] **T-nrm-nor-02**: `V1.2.3`（大文字V）も `1.2.3` に正規化される
+- [x] **T-nrm-nor-02**: `V1.2.3`（大文字 V）も `1.2.3` に正規化される
   - Scenario: Given version=`V1.2.3`、When `normalize_version` を呼び出す
   - Expected: Then stdout が `1.2.3` である
 
@@ -117,7 +117,7 @@ source: specifications.md
   - Scenario: Given version=`v`、When `normalize_version` を呼び出す
   - Expected: Then stderr に `Invalid version format` が出力されて exit 1 で終了する
 
-- [x] **T-nrm-err-06**: 4要素の `1.2.3.4` は exit 1 で失敗する
+- [x] **T-nrm-err-06**: 4 要素の `1.2.3.4` は exit 1 で失敗する
   - Scenario: Given version=`1.2.3.4`、When `normalize_version` を呼び出す
   - Expected: Then stderr に `Invalid version format` が出力されて exit 1 で終了する
 
@@ -189,12 +189,12 @@ source: specifications.md
   - Scenario: Given value=`abc!`・pattern=`[a-z]+`、When `validate_symbol` を呼び出す
   - Expected: Then `^[a-z]+$` 相当の完全一致として評価され、exit 1 で終了する
 
-- [x] **T-vld-edg-04**: 64文字の tool-name は長さ境界として成功する
-  - Scenario: Given value が64文字・pattern=`^[a-z][a-z0-9_-]{0,63}$`・max_length=0、When `validate_symbol` を呼び出す
+- [x] **T-vld-edg-04**: 64 文字の tool-name は長さ境界として成功する
+  - Scenario: Given value が 64 文字・pattern=`^[a-z][a-z0-9_-]{0,63}$`・max_length=0、When `validate_symbol` を呼び出す
   - Expected: Then exit 0 で正常終了する
 
-- [x] **T-vld-edg-05**: 65文字の tool-name はパターン不一致で拒否される
-  - Scenario: Given value が65文字・pattern=`^[a-z][a-z0-9_-]{0,63}$`・max_length=0、When `validate_symbol` を呼び出す
+- [x] **T-vld-edg-05**: 65 文字の tool-name はパターン不一致で拒否される
+  - Scenario: Given value が 65 文字・pattern=`^[a-z][a-z0-9_-]{0,63}$`・max_length=0、When `validate_symbol` を呼び出す
   - Expected: Then `::error::` が stderr に出力されて exit 1 で終了する
 
 - [x] **T-vld-edg-06**: max_length と同じ長さの値は成功する
@@ -421,13 +421,13 @@ source: specifications.md
 
 ### [正常] Normal Cases
 
-- [x] **T-arc-nor-01**: RUNNER_ARCH=X64 のとき amd64 と x64 を1行1値で出力する
+- [x] **T-arc-nor-01**: RUNNER_ARCH=X64 のとき amd64 と x64 を 1行1値で出力する
   - Scenario: Given RUNNER_ARCH=X64、When `detect_arch` を呼び出す
-  - Expected: Then stdout の1行目が `amd64`、2行目が `x64` である
+  - Expected: Then stdout の 1行目が `amd64`、2行目が `x64` である
 
-- [x] **T-arc-nor-02**: RUNNER_ARCH=ARM64 のとき arm64 を1行で出力する
+- [x] **T-arc-nor-02**: RUNNER_ARCH=ARM64 のとき arm64 を 1行で出力する
   - Scenario: Given RUNNER_ARCH=ARM64、When `detect_arch` を呼び出す
-  - Expected: Then stdout の1行目が `arm64` のみである
+  - Expected: Then stdout の 1行目が `arm64` のみである
 
 ### [異常] Error Cases
 
@@ -499,17 +499,17 @@ source: specifications.md
 
 ### [正常] Normal Cases
 
-- [x] **T-res-nor-01**: ARCH_CANDIDATES の最初の候補に一致する tar.gz URL が1行目に出力される
+- [x] **T-res-nor-01**: ARCH_CANDIDATES の最初の候補に一致する tar.gz URL が 1行目に出力される
   - Scenario: Given API レスポンスに `actionlint_1.7.7_linux_amd64.tar.gz` が含まれる、When `resolve_assets` を ARCH_CANDIDATES=`[amd64,x64]` で呼び出す
-  - Expected: Then stdout の1行目が amd64 のダウンロード URL、3行目が `amd64` である
+  - Expected: Then stdout の 1行目が amd64 のダウンロード URL、3行目が `amd64` である
 
-- [x] **T-res-nor-02**: `checksums.txt` が存在する場合はそちらが2行目に出力される
+- [x] **T-res-nor-02**: `checksums.txt` が存在する場合はそちらが 2行目に出力される
   - Scenario: Given アセット一覧に `checksums.txt` が含まれる、When `resolve_assets` を呼び出す
-  - Expected: Then stdout の2行目の URL に `checksums.txt` が含まれる
+  - Expected: Then stdout の 2行目の URL に `checksums.txt` が含まれる
 
 - [x] **T-res-nor-03**: `{tool}_{version}_checksums.txt` 形式にフォールバックする
-  - Scenario: Given `checksums.txt` がなく `actionlint_1.7.7_checksums.txt` がある、When `resolve_assets` を呼び出す
-  - Expected: Then stdout の2行目の URL に `actionlint_1.7.7_checksums.txt` が含まれる
+  - Scenario: Given `checksums.txt` ではなく `actionlint_1.7.7_checksums.txt` がある、When `resolve_assets` を呼び出す
+  - Expected: Then stdout の 2行目の URL に `actionlint_1.7.7_checksums.txt` が含まれる
 
 ### [異常] Error Cases
 
@@ -535,13 +535,14 @@ source: specifications.md
 
 ### [エッジケース] Edge Cases
 
-- [x] **T-res-edg-01**: amd64 がなく x64 がある場合に x64 が ARCH_SUFFIX として採用される
-  - Scenario: Given アセット一覧に `linux_amd64.tar.gz` がなく `linux_x64.tar.gz` がある、When `resolve_assets` を ARCH_CANDIDATES=`[amd64,x64]` で呼び出す
-  - Expected: Then stdout の3行目が `x64` であり、1行目の URL に `x64` が含まれる
+- [x] **T-res-edg-01**: amd64 ではなく x64 がある場合に x64 が ARCH_SUFFIX として採用される
+  - Scenario: Given アセット一覧に `linux_amd64.tar.gz` の代わりに `linux_x64.tar.gz` がある、
+    When `resolve_assets` を ARCH_CANDIDATES=`[amd64,x64]` で呼び出す
+  - Expected: Then stdout の 3行目が `x64` であり、1行目の URL に `x64` が含まれる
 
 - [x] **T-res-edg-02**: ARM64 候補で arm64 アセットが採用される
   - Scenario: Given アセット一覧に `linux_arm64.tar.gz` がある、When `resolve_assets` を ARCH_CANDIDATES=`[arm64]` で呼び出す
-  - Expected: Then stdout の3行目が `arm64` であり、1行目の URL に `arm64` が含まれる
+  - Expected: Then stdout の 3行目が `arm64` であり、1行目の URL に `arm64` が含まれる
 
 ---
 
@@ -603,7 +604,7 @@ source: specifications.md
 
 - [x] **T-vfy-edg-01**: grep の検索キーがリネーム前の形式（tool_ver_linux_arch.tar.gz）である
   - Scenario: Given checksums.txt に `actionlint_1.7.7_linux_amd64.tar.gz` のエントリがある、When `verify_checksum` を tool=actionlint・ver=1.7.7・arch=amd64 で呼び出す
-  - Expected: Then エントリが見つかり検証が成功する
+  - Expected: Then エントリが見つかり、検証が成功する
 
 - [x] **T-vfy-edg-02**: sha256sum の対象がリネーム後の ${TOOL_NAME}.tar.gz である
   - Scenario: Given TEMP_DIR に `actionlint.tar.gz`（リネーム後）が存在する、When `verify_checksum` を呼び出す
@@ -700,7 +701,7 @@ source: specifications.md
   - Expected: Then TEMP_DIR が存在しない（trap による cleanup が実行済み）
 
 - [x] **T-sts-nor-07**: BIN_DIR が `${RUNNER_TEMP}/bin` として作成されている（統合）
-  - Scenario: Given RUNNER_TEMP が設定済みで main が正常終了した状態で、When `${RUNNER_TEMP}/bin` を確認する
+  - Scenario: Given RUNNER_TEMP が設定済み、かつ main が正常終了した状態で、When `${RUNNER_TEMP}/bin` を確認する
   - Expected: Then `${RUNNER_TEMP}/bin` ディレクトリが存在する
 
 - [x] **T-sts-nor-08**: `v1.7.7` を指定しても正常終了する（統合）
@@ -751,7 +752,7 @@ source: specifications.md
   - Scenario: Given REPO=`../evil/path`、When `setup-tool.sh` を実行する
   - Expected: Then `::error::` が stderr に出力されて exit 1 で終了する
 
-- [x] **T-sts-err-04**: スラッシュが2個ある repo は exit 1 で拒否される
+- [x] **T-sts-err-04**: スラッシュが 2個ある repo は exit 1 で拒否される
   - Scenario: Given REPO=`owner/repo/extra`、When `setup-tool.sh` を実行する
   - Expected: Then `::error::` が stderr に出力されて exit 1 で終了する
 
@@ -805,8 +806,8 @@ source: specifications.md
 
 ### [エッジケース] Edge Cases — Functional
 
-- [x] **T-sts-edg-02**: `checksums.txt` がなく `{tool}_{version}_checksums.txt` がある場合も正常終了する（統合）
-  - Scenario: Given アセット一覧に `checksums.txt` がなく `actionlint_1.7.7_checksums.txt` がある、When `setup-tool.sh` を実行する
+- [x] **T-sts-edg-02**: `checksums.txt` の代わりに `{tool}_{version}_checksums.txt` がある場合も正常終了する（統合）
+  - Scenario: Given アセット一覧に `checksums.txt` の代わりに `actionlint_1.7.7_checksums.txt` がある、When `setup-tool.sh` を実行する
   - Expected: Then versioned checksums URL が選択され、exit 0 で正常終了する
 
 - [x] **T-sts-edg-03**: download_tool 失敗後も TEMP_DIR が削除される（統合）
@@ -843,7 +844,7 @@ source: specifications.md
   - Scenario: Given action.yml、When YAML を検査する
   - Expected: Then `runs.using` が `composite` である
 
-- [x] **T-act-nor-04**: setup-tool.sh が1ステップで呼び出される
+- [x] **T-act-nor-04**: setup-tool.sh が 1 ステップで呼び出される
   - Scenario: Given action.yml、When `runs.steps` を検査する
   - Expected: Then `scripts/setup-tool.sh` を呼び出す step が存在する
 
