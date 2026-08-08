@@ -33,7 +33,7 @@
     "@docusaurus/tsconfig": "3.10.1",
     "@docusaurus/types": "3.10.1",
     "http-proxy-middleware": "4.1.1",
-    "js-yaml": "4.2.0",
+    "js-yaml": "4.3.1",
     "typescript": "~6.0.3",
     "webpack-dev-server": "5.2.6"
   },
