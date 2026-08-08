@@ -16,8 +16,8 @@
 /build
 
 ## AI related
-.serena/**
-.claude/**
+.serena/
+.claude/
 
 
 # Generated files
@@ -35,3 +35,21 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+## Contents
+# content directory
+!/src/
+!/src/**
+!/versioned_docs
+!/versioned_docs/**
+!/static
+!/static/**
+#
+!README*
+!/pnpm*yaml
+!/pnpm*json
+!**/*.json
+!**/*.ts
+!**/*.tsx
+!**/*.css
+
