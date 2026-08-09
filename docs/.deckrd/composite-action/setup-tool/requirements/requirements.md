@@ -6,6 +6,9 @@ version: 1.0
 created: "2026-06-07"
 ---
 
+<!-- textlint-disable
+  ja-technical-writing/sentence-length,
+  ja-technical-writing/max-comma  -->
 <!-- cspell:words rhysd -->
 <!-- markdownlint-disable line-length -->
 
@@ -13,9 +16,13 @@ created: "2026-06-07"
 
 ### 1.1 Purpose
 
-GitHub Actions の composite action として、指定された GitHub リポジトリのリリースから
-ツールをダウンロードし、チェックサム検証・アーカイブ展開を行い、
-ツールバイナリを実行可能な PATH に配置する。
+GitHub Actions の composite action として、以下を実行する。
+
+- 指定した GitHub リポジトリからのツールのダウンロード
+- ツールのチェックサム検証
+- アーカイブの展開
+
+その後、ツールバイナリを実行可能な PATH に配置する。
 
 ### 1.2 Scope
 
@@ -35,7 +42,7 @@ GitHub Actions の composite action として、指定された GitHub リポジ
 
 ## 2. Context
 
-- Target Environment: GitHub Actions ubuntu runner（Linux x86_64 / ARM64）
+- Target Environment: GitHub Actions ubuntu runner（Linux x86_64/ARM64）
 - Related Components:
   - `.github/actions/setup-tool/scripts/setup-directories.sh`
   - `.github/actions/setup-tool/scripts/download-tool.sh`
@@ -236,7 +243,7 @@ tar.gz 形式のみ対応する。zip など他の形式は対象外。
 
 既存の個別スクリプト（`setup-directories.sh`, `download-tool.sh`, `verify-checksum.sh`,
 `extract-install.sh`, `cleanup.sh`）を参考実装として扱い、新規実装を作成する。
-各処理（ディレクトリ準備・URL構築・ダウンロード・検証・展開・配置・クリーンアップ）は
+各処理（ディレクトリ準備・URL 構築・ダウンロード・検証・展開・配置・クリーンアップ）は
 ファイル分割の有無に関わらず、関数として定義し関数呼び出しで構造化する。
 コードは読みやすさを優先し、処理の意図が関数名と呼び出し順から明確に読み取れる構成とする。
 

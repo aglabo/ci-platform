@@ -7,14 +7,19 @@ title: Requirements: Actionlint Reusable Workflow
   created: 2026-06-12
 ---
 
-# Requirements: Actionlint Reusable Workflow
+<!-- cspell:words rhysd -->
+<!-- textlint-disable
+  ja-technical-writing/sentence-length  -->
+<!-- markdownlint-disable line-length -->
+
+## Requirements: Actionlint Reusable Workflow
 
 ## 1. Overview
 
 ### Purpose
 
 外部の `aglabo/.github` ワークフローに依存しない独立した GitHub Actions ワークフローとして、
-actionlint ベースの GitHub Actions ワークフロー構文検証を実行する。
+actionlint ベースの GitHub Actions ワークフロー構文を検証する。
 
 ### Scope
 
@@ -30,7 +35,7 @@ actionlint ベースの GitHub Actions ワークフロー構文検証を実行�
 
 - ghalint スキャン（別ワークフローで対応）
 - セルフホスト以外のランナー対応
-- Windows / macOS ランナー対応
+- Windows/macOS ランナー対応
 
 ---
 

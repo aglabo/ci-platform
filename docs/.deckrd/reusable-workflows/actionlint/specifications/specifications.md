@@ -4,21 +4,30 @@ based-on: requirements.md v1.5
 status: Draft
 ---
 
+<!-- cspell::words rhysd -->
+<!-- textlint-disable
+  ja-technical-writing/sentence-length,
+  ja-technical-writing/max-comma
+  -->
 <!-- markdownlint-disable line-length -->
 
 ## 1. Overview
 
 ### 1.1 Purpose
 
-This specification defines the behavioral design for the Actionlint reusable workflow. It describes workflow inputs, validation behavior, installation behavior, external configuration resolution, lint execution, report generation, and failure semantics.
+This specification defines the behavioral design for the Actionlint reusable workflow. It describes workflow inputs,
+validation behavior, installation behavior, external configuration resolution, lint execution,
+report generation, and failure semantics.
 
 <!-- impl-note: Module path: reusable-workflows/actionlint -->
 
 ### 1.2 Scope
 
-This specification covers the reusable workflow behavior from trigger input resolution through environment validation, tool installation, configuration checkout, lint execution, and optional report upload.
+This specification covers the reusable workflow behavior from trigger input resolution through environment validation,
+tool installation, configuration checkout, lint execution, and optional report upload.
 
-It defines observable workflow behavior only. Implementation-specific action wiring, exact YAML syntax, and local file layout are implementation details unless carried in `impl-note` comments.
+It defines observable workflow behavior only. Implementation-specific action wiring, exact YAML syntax,
+and local file layout are implementation details unless carried in `impl-note` comments.
 
 ---
 
@@ -259,6 +268,8 @@ The lint execution unit SHALL fail fast. It MUST NOT ignore a non-zero linter ex
 ---
 
 ## 4. Decision Rules
+
+<!-- markdownlint-disable line-length -->
 
 | Rule ID | Step            | Condition                                                | Outcome                                                                                                                           |
 | ------- | --------------- | -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |

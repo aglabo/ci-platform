@@ -6,6 +6,9 @@ created: "2026-06-12 00:00:00"
 source: specifications.md
 ---
 
+<!-- textlint-disable
+  ja-technical-writing/sentence-length, ja-technical-writing/max-comma
+  -->
 <!-- markdownlint-disable no-duplicate-heading line-length -->
 
 > This document contains implementation tasks derived from specifications.

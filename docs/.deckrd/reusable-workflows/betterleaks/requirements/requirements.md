@@ -6,6 +6,12 @@ version: 1.0
 created: "2026-06-12"
 ---
 
+<!-- textlint-disable
+  ja-technical-writing/sentence-length,
+  ja-technical-writing/no-exclamation-question-mark
+  -->
+<!-- markdownlint-disable line-length -->
+
 > **Normative Statement**
 > This document defines binding requirements.
 > Implementations MUST conform to this document.
@@ -15,25 +21,35 @@ created: "2026-06-12"
 
 ### 1.1 Purpose
 
-This document defines the requirements for an independent reusable GitHub Actions workflow that performs betterleaks-based secret scanning without depending on the external `aglabo/.github` reusable workflow version `r1.1.2`. The workflow provides both reusable and manual execution paths, validates the runner environment before scanning, installs the configured betterleaks version through the local setup action, checks out a user-configurable configuration repository (defaulting to `aglabo/.github`) to obtain the betterleaks scan configuration, and fails immediately when secret scanning detects a failure.
+This document defines the requirements for a standalone reusable GitHub Actions workflow that scans for secrets with betterleaks. The workflow does not depend on the external `aglabo/.github` reusable workflow `r1.1.2`.
+
+Callers invoke the workflow through `workflow_call`, and users can also start it manually through `workflow_dispatch`. The workflow validates the runner environment, then installs the configured betterleaks version with the local setup-tool action. It checks out a configurable configuration repository (default: `aglabo/.github`) to obtain the scan configuration. When the scan detects a secret, the workflow fails immediately.
 
 ### 1.2 Scope
 
 - Provide a reusable GitHub Actions workflow for betterleaks secret scanning.
-- Support `workflow_call` execution from caller workflows.
-- Support `workflow_dispatch` manual execution.
+- Run from caller workflows through `workflow_call`.
+- Run manually through `workflow_dispatch`.
 - Validate the GitHub Actions environment before tool setup and scan execution.
-- Install betterleaks through the local `setup-tool` action.
-- Allow the betterleaks version to be configured through an input parameter with a default value.
-- Allow the configuration repository to be specified via an input parameter (default: `aglabo/.github`).
-- Allow the git fetch depth to be configured via an input parameter (default: 1, latest commit only).
-- Checkout the specified configuration repository to access the betterleaks configuration.
-- Run betterleaks using `shared/configs/betterleaks.toml` from the checked-out configuration repository.
-- Output the scan result as a JSON report file.
-- Upload the scan report as a workflow artifact when a violation is detected.
-- Fail the workflow immediately when betterleaks returns a non-zero exit code.
+- Install betterleaks with the local `setup-tool` action.
+- Take the betterleaks version from an input parameter that has a default value.
+- Take the configuration repository from an input parameter (default: `aglabo/.github`).
+- Take the git fetch depth from an input parameter (default: 1, latest commit only).
+- Check out the specified configuration repository to read the betterleaks configuration.
+- Run betterleaks with `shared/configs/betterleaks.toml` from that checkout.
+- Write the scan result to a JSON report file.
+- Upload the report as a workflow artifact when the scan finds a violation.
+- Fail the workflow as soon as betterleaks returns a non-zero exit code.
 
-**Out of Scope**: Implementing or modifying the betterleaks tool itself; changing the local `validate-environment` action; changing the local `setup-tool` action; managing findings suppression policy; supporting non-Ubuntu runners; using the local `configs/betterleaks.toml` as the workflow scan configuration; making the config-repo checkout directory or branch configurable by callers.
+**Out of Scope**:
+
+- Implementing or changing the betterleaks tool itself.
+- Changing the local `validate-environment` action.
+- Changing the local `setup-tool` action.
+- Managing findings suppression policy.
+- Supporting runners other than Ubuntu.
+- Using the local `configs/betterleaks.toml` as the scan configuration.
+- Letting callers configure the config-repo checkout directory or branch.
 
 ## 2. Context
 
@@ -43,19 +59,19 @@ This document defines the requirements for an independent reusable GitHub Action
   - Local `validate-environment` action `v0.1.1`
   - Local `setup-tool` action
   - `aglabo/.github` repository
-  - `global/configs/betterleaks.toml`
+  - `shared/configs/betterleaks.toml`
   - betterleaks CLI
   - Caller workflows using `workflow_call`
   - Manual users using `workflow_dispatch`
 - Assumptions:
-  - The workflow executes on `ubuntu-latest`.
+  - The workflow runs on `ubuntu-latest`.
   - The workflow has `contents: read` permission.
-  - The caller repository is checked out or otherwise available to the scan job before betterleaks execution.
-  - The configuration repository specified by the input parameter is readable by the workflow.
-  - The betterleaks configuration exists at `global/configs/betterleaks.toml` in the default branch of the configuration repository.
-  - The local `setup-tool` action can install betterleaks when passed `repo` and `tool-version`.
-  - The configured betterleaks version is compatible with the shared configuration.
-  - The shared configuration requires betterleaks minimum version `v1.0.0` and gitleaks minimum version `v8.25.0`.
+  - The scan job can reach the caller repository before betterleaks runs.
+  - The workflow can read the configuration repository given by the input parameter.
+  - The default branch of that repository holds the betterleaks configuration at `configs/betterleaks.toml`, which the workflow reads as `shared/configs/betterleaks.toml` after checking the repository out into `shared/`.
+  - The local `setup-tool` action installs betterleaks when given `repo` and `tool-version`.
+  - The configured betterleaks version works with the shared configuration.
+  - The shared configuration needs betterleaks `v1.0.0` or later and gitleaks `v8.25.0` or later.
 
 ### System Context Diagram
 
@@ -95,8 +111,8 @@ This document defines the requirements for an independent reusable GitHub Action
                             v
         +---------------------------------------+
         | betterleaks protect                   |
-        | --config shared/global/configs/       |
-        |          betterleaks.toml             |
+        | --config                              |
+        |   shared/configs/betterleaks.toml     |
         +-------------------+-------------------+
                             |
               +-------------+-------------+
@@ -139,7 +155,7 @@ GIVEN the local validate-environment action returns a failed validation state
 THEN the workflow MUST stop before betterleaks installation and scan execution.
 ```
 
-**Rationale**: Environment validation ensures the runner meets prerequisites before any tool installation or scan execution.
+**Rationale**: Validating first confirms the runner meets its prerequisites before the workflow installs any tool or runs a scan.
 
 ### REQ-F-001b: Target Repository Checkout Depth
 
@@ -157,7 +173,7 @@ GIVEN no fetch-depth input is provided
 THEN the workflow MUST use a default fetch-depth of 1 (latest commit only).
 ```
 
-**Rationale**: Limiting fetch depth to the latest commit reduces checkout time and scan surface. Full history (fetch-depth: 0) is available when callers need to scan all commits.
+**Rationale**: Fetching only the latest commit shortens checkout time and narrows the scan surface. Callers who need to scan every commit can still ask for full history with `fetch-depth: 0`.
 
 ### REQ-F-002: Tool Installation
 
@@ -176,7 +192,7 @@ GIVEN no betterleaks version input is provided
 THEN the workflow MUST use the workflow-defined default betterleaks version.
 ```
 
-**Rationale**: Using setup-tool centralizes tool installation logic and ensures checksum verification.
+**Rationale**: Installing through setup-tool keeps the install logic in one place and verifies the checksum.
 
 ### REQ-F-003: Config Checkout
 
@@ -202,7 +218,7 @@ THEN the workflow MUST NOT use the local configs/betterleaks.toml
      as the scan configuration.
 ```
 
-**Rationale**: Making the configuration repository configurable allows users to fork or replace the shared configuration while keeping `aglabo/.github` as a sensible default.
+**Rationale**: A configurable repository lets users fork or replace the shared configuration, while `aglabo/.github` stays a sensible default.
 
 ### REQ-F-004: Secret Scan Execution
 
@@ -216,7 +232,7 @@ THEN the workflow MUST run betterleaks against the target repository
      equivalent to: betterleaks protect --config shared/configs/betterleaks.toml.
 ```
 
-**Rationale**: Scanning with a shared configuration guarantees uniform secret detection rules.
+**Rationale**: A shared configuration gives every repository the same secret detection rules.
 
 ### REQ-F-007: Scan Report Output
 
@@ -234,7 +250,7 @@ GIVEN the report directory does not exist
 THEN the workflow MUST create the .github/report/ directory before running betterleaks.
 ```
 
-**Rationale**: A machine-readable report enables downstream processing and artifact retention for audit purposes.
+**Rationale**: A machine-readable report lets other tools process the result and keeps an artifact for audits.
 
 ### REQ-F-008: Report Upload on Failure
 
@@ -252,7 +268,7 @@ GIVEN betterleaks exits with exit code 0 (no violations)
 THEN the workflow MUST NOT upload any artifact.
 ```
 
-**Rationale**: Uploading the report only on failure avoids artifact storage costs on clean runs while ensuring evidence is preserved when secrets are detected.
+**Rationale**: Uploading only on failure saves storage on clean runs and still preserves evidence when the scan finds a secret.
 
 ### REQ-F-005: Fail-Fast on Scan Failure
 
@@ -264,7 +280,7 @@ GIVEN betterleaks exits with a non-zero exit code
 THEN the workflow MUST immediately fail the scan step and job.
 ```
 
-**Rationale**: Secret findings must block unsafe changes without exception.
+**Rationale**: A secret finding has to block an unsafe change every time, with no exceptions.
 
 ### REQ-F-006: Workflow Triggers
 
@@ -294,33 +310,33 @@ GIVEN either workflow_call or workflow_dispatch is used
 THEN the workflow MUST use the supplied value as the configuration repository to checkout.
 ```
 
-**Rationale**: Supporting both triggers and configurable inputs provides flexibility for automated and ad-hoc scanning across different configurations.
+**Rationale**: Two triggers and configurable inputs cover both automated and ad-hoc scans across different configurations.
 
 ## 5. Non-Functional Requirements
 
 ### REQ-NF-001: Maintainability
 
-The workflow SHOULD keep tool setup, environment validation, configuration checkout, and scan execution as separate named steps.
+The workflow SHOULD keep environment validation, tool setup, configuration checkout, and the scan as separate named steps.
 
 ### REQ-NF-002: Security — Minimum Permissions
 
-The workflow MUST request only the minimum permissions required and MUST include `contents: read`.
+The workflow MUST request only the permissions it needs and MUST include `contents: read`.
 
 ### REQ-NF-003: Security — No Hard-coded Tokens
 
-The workflow MUST use GitHub Actions secrets or context values for `github-token` and MUST NOT hard-code tokens.
+The workflow MUST take `github-token` from a GitHub Actions secret or context value and MUST NOT hard-code any token.
 
 ### REQ-NF-004: Reproducibility — Version Pinning
 
-The betterleaks version MUST be resolved from the explicit workflow input or default value.
+The workflow MUST take the betterleaks version from the workflow input, or from the default value when no input is given.
 
 ### REQ-NF-005: Reproducibility — Config Path
 
-The workflow MUST reference the checked-out `aglabo/.github` configuration path deterministically.
+The workflow MUST point to the same configuration path on every run, relative to the `aglabo/.github` checkout.
 
 ### REQ-NF-006: Observability
 
-Failed step names and command context SHOULD make the failure source identifiable from the GitHub Actions log.
+Step names and command output SHOULD make the cause of a failure clear from the GitHub Actions log alone.
 
 ## 6. Constraints
 
@@ -334,28 +350,28 @@ The workflow MUST include `contents: read` in its permissions block.
 
 ### REQ-C-003: Tool Version Format
 
-The betterleaks version input SHOULD use `X.Y.Z` version format.
+The betterleaks version input SHOULD use the `X.Y.Z` format.
 
 ### REQ-C-004: Minimum Compatible Versions
 
-The default betterleaks version SHALL be `1.4.1`, which is compatible with betterleaks minimum version `v1.0.0` and gitleaks minimum version `v8.25.0`.
+The default betterleaks version SHALL be `1.4.1`. This version meets the shared configuration's minimums of betterleaks `v1.0.0` and gitleaks `v8.25.0`.
 
 ### REQ-C-005: Local Actions Only
 
-The workflow MUST use local actions from this repository rather than the external `aglabo/.github` reusable workflow `r1.1.2` for environment validation and tool installation.
+For environment validation and tool installation, the workflow MUST use local actions from this repository instead of the external `aglabo/.github` reusable workflow `r1.1.2`.
 
 ### REQ-C-006: Configuration Source
 
-The workflow MUST checkout the configuration repository into the `shared/` directory and use `shared/configs/betterleaks.toml` as the scan configuration. The configuration repository MUST default to `aglabo/.github` when no `config-repo` input is provided.
+The workflow MUST check out the configuration repository into the `shared/` directory and MUST use `shared/configs/betterleaks.toml` as the scan configuration. When no `config-repo` input is given, the repository MUST default to `aglabo/.github`.
 
 ## 7. User Stories
 
-- As a platform engineer, I want a local reusable betterleaks workflow. Because repository workflows should not depend on the external `aglabo/.github` reusable workflow `r1.1.2`.
-- As a repository maintainer, I want to call the betterleaks scan from my CI workflow. Because secret scanning should be reusable across repositories.
-- As a security engineer, I want the workflow to use the shared `aglabo/.github` betterleaks configuration by default. Because scan policy should be centralized and consistent.
-- As a user of a forked environment, I want to specify my own configuration repository. Because my organization may maintain a customized betterleaks configuration.
-- As a CI operator, I want betterleaks failures to fail the workflow immediately. Because secret findings must block unsafe changes.
-- As a developer, I want to manually run the betterleaks workflow. Because I may need to verify a branch outside normal CI execution.
+- As a platform engineer, I want a local reusable betterleaks workflow, so that our workflows no longer depend on the external `aglabo/.github` workflow `r1.1.2`.
+- As a repository maintainer, I want to call the betterleaks scan from my CI workflow, so that every repository can reuse the same scan.
+- As a security engineer, I want the shared `aglabo/.github` configuration by default, so that scan policy stays central and consistent.
+- As a user of a forked environment, I want to name my own configuration repository, so that I can use my organization's customized betterleaks configuration.
+- As a CI operator, I want a betterleaks failure to fail the workflow at once, so that a secret finding blocks the unsafe change.
+- As a developer, I want to run the workflow by hand, so that I can check a branch outside the normal CI run.
 
 ## 8. Acceptance Criteria
 

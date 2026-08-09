@@ -33,8 +33,8 @@ enabling downstream jobs and steps to use them for conditional branching or file
 #### Composite Actions
 
 - `ca-get-changed-files`: Detects changed files between commits in push events.
-  Accepts an optional `pattern` input for glob filtering, and exposes `before-sha` / `after-sha`
-  inputs to override the default commit SHAs (`github.event.before` / `github.sha`).
+  Accepts an optional `pattern` input for glob filtering, and exposes `before-sha`/`after-sha`
+  inputs to override the default commit SHAs (`github.event.before`/`github.sha`).
   Outputs `files` (newline-separated paths) and `count` (number of changed files).
   Requires `actions/checkout` with `fetch-depth: 0`.
 

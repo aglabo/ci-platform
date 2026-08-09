@@ -6,6 +6,10 @@ version: 1.0.2
 created: "2026-06-18"
 ---
 
+<!-- textlint-disable
+  ja-technical-writing/sentence-length -->
+<!-- markdownlint-disable line-length -->
+
 > **Normative Statement**
 > This document defines behavioral contracts for implementation.
 > RFC 2119 keywords apply to this document only.
@@ -31,10 +35,10 @@ GitHub Actions ワークフローが Node.js ベースのツール管理リポ�
 
 ### 2.1 Design Philosophy
 
-- **Fail-fast**: 各ユニットは事前条件が満たされない場合、後続処理を実行せず即座に失敗する
-- **順序保証**: 6 ユニットは定義された順序で実行され、前ユニットの成功が次ユニットの事前条件となる
-- **最小副作用**: 副作用（GITHUB_PATH への書き込み）は最終ユニット（add-path）のみに集約する
-- **公式アクション委譲**: Node.js / pnpm のセットアップとリポジトリチェックアウトは公式アクションに委譲する
+- Fail-fast: 各ユニットは事前条件が満たされない場合、後続処理を実行せず即座に失敗する
+- 順序保証: 6 ユニットは定義された順序で実行され、前ユニットの成功が次ユニットの事前条件となる
+- 最小副作用: 副作用（GITHUB_PATH への書き込み）は最終ユニット（add-path）のみに集約する
+- 公式アクション委譲: Node.js/pnpm のセットアップとリポジトリチェックアウトは公式アクションに委譲する
 
 ### 2.2 Design Assumptions
 
@@ -157,9 +161,9 @@ GitHub Actions ワークフローが Node.js ベースのツール管理リポ�
 > **Derivation**: requirements.md Section 1.2 Out of Scope より。
 
 - プライベートリポジトリへのアクセス ← REQ-C-002
-- macOS / Windows ランナーのサポート ← REQ-C-001
+- macOS/Windows ランナーのサポート ← REQ-C-001
 - チェックサム検証やセキュリティスキャン（呼び出し元責務）
-- npm / yarn など pnpm 以外のパッケージマネージャーのサポート
+- npm/yarn など pnpm 以外のパッケージマネージャーのサポート
 - インストールキャッシュの提供（呼び出し元責務）
 
 ### 2.5 Behavioral Design Decisions
@@ -246,7 +250,7 @@ DD-01〜DD-05 は本仕様ローカルな決定であり、現状 DR 昇格の�
 
 ### Unit 2: check-existing-repo
 
-`<path>` ディレクトリの存在と `.repo` ファイルを確認し、同一リポジトリの再利用またはコンフリクト検出を行う。
+`<path>` ディレクトリの存在と `.repo` ファイルを確認し、同一リポジトリの再利用またはコンフリクトを検出する。
 
 | Rule ID | Step | Condition                                         | Outcome                         |
 | ------- | ---: | ------------------------------------------------- | ------------------------------- |
@@ -306,7 +310,7 @@ checkout 完了後、ランナー環境とリポジトリ構造を検証する�
 
 ### Unit 7: add-path
 
-全ステップが成功した後、PATH 追加と `.repo` ファイルの作成を行う。
+全ステップが成功した後、PATH を追加し `.repo` ファイルを作成する。
 
 | Rule ID | Step | Condition                                                    | Outcome             |
 | ------- | ---: | ------------------------------------------------------------ | ------------------- |
@@ -357,15 +361,16 @@ checkout 完了後、ランナー環境とリポジトリ構造を検証する�
 | REQ-NF-002     | —                                        | action.yml の permissions 定義で対応               |
 | REQ-NF-003     | 全 E 系ルール                            | 各ユニット失敗時の即時終了                         |
 | REQ-NF-004     | —                                        | 実装フェーズで既存ライブラリ規約に準拠             |
+| REQ-C-001      | R-010                                    | validate-env でランナー OS を確認                  |
+| REQ-C-002      | —                                        | token 入力パラメータを持たない                     |
+| REQ-C-003      | R-012                                    | validate-env で bin/存在を確認                     |
+| REQ-C-004      | R-011                                    | validate-env で pnpm-lock.yaml 存在を確認          |
+| REQ-C-005      | R-001                                    | repo の owner/repo 形式検証                        |
+| REQ-C-006      | R-002                                    | path の ./始まり・.. セグメント禁止                |
 
-<!-- impl-note: validate-inputs の repo フォーマット検証は .github/actions/_libs/validation.lib.sh の validate_repo() を再利用できる。path の .. チェックは validate_symbol() では困難なため、個別のパターンマッチで実装すること。 -->
-
-| REQ-C-001 | R-010 | validate-env でランナー OS を確認 |
-| REQ-C-002 | — | token 入力パラメータを持たない |
-| REQ-C-003 | R-012 | validate-env で bin/ 存在を確認 |
-| REQ-C-004 | R-011 | validate-env で pnpm-lock.yaml 存在を確認 |
-| REQ-C-005 | R-001 | repo の owner/repo 形式検証 |
-| REQ-C-006 | R-002 | path の ./ 始まり・.. セグメント禁止 |
+<!-- impl-note:
+  validate-inputs の repo フォーマット検証は .github/actions/_libs/validation.lib.sh の validate_repo() を再利用できる。
+  path の .. チェックは validate_symbol() では困難なため、個別のパターンマッチで実装すること。 -->
 
 ---
 

@@ -6,6 +6,11 @@ version: 1.0
 created: "2026-06-13"
 ---
 
+<!-- textlint-disable
+  ja-technical-writing/sentence-length,
+  ja-technical-writing/max-comma,
+  ja-technical-writing/no-exclamation-question-mark
+   -->
 <!-- markdownlint-disable line-length -->
 
 ## 1. Overview
