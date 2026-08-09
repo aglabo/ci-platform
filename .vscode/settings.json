@@ -9,10 +9,20 @@
   "markdownlint.configFile": "configs/.markdownlint.yaml",
 
   // YAML
+  // Composite action files must not be validated against the workflow schema,
+  // which requires `on`/`jobs` and rejects `inputs`/`runs`.
+  "github-actions.workflows.pinned.workflows": [
+    ".github/workflows/*.yml",
+    ".github/workflows/*.yaml"
+  ],
   "yaml.schemas": {
     "https://json.schemastore.org/github-action.json": [
       ".github/actions/**/action.yml",
       ".github/actions/**/action.yaml"
+    ],
+    "https://json.schemastore.org/github-workflow.json": [
+      ".github/workflows/*.yml",
+      ".github/workflows/*.yaml"
     ]
   }
 }
