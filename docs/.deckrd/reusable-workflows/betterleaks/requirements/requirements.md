@@ -68,7 +68,7 @@ Callers invoke the workflow through `workflow_call`, and users can also start it
   - The workflow has `contents: read` permission.
   - The scan job can reach the caller repository before betterleaks runs.
   - The workflow can read the configuration repository given by the input parameter.
-  - The default branch of that repository holds the betterleaks configuration at `shared/configs/betterleaks.toml`.
+  - The default branch of that repository holds the betterleaks configuration at `configs/betterleaks.toml`, which the workflow reads as `shared/configs/betterleaks.toml` after checking the repository out into `shared/`.
   - The local `setup-tool` action installs betterleaks when given `repo` and `tool-version`.
   - The configured betterleaks version works with the shared configuration.
   - The shared configuration needs betterleaks `v1.0.0` or later and gitleaks `v8.25.0` or later.
