@@ -25,8 +25,12 @@ fixes vulnerable dependencies in the documentation site,
 and standardizes development environment configuration, runner scripts, and the setup script.
 
 No changes were made to composite action or reusable workflow interfaces.
-All `action.yml` and `ru-*.yml` files are unchanged from v0.3.3, so this release is fully
-backward compatible for external consumers.
+The `on`/`inputs`/`outputs` blocks of every `action.yml` and `ru-*.yml` are identical to v0.3.3;
+the only edits to those files are pinned-SHA bumps. Callers require no changes.
+
+Note that `actions/setup-node` was bumped to v7.0.0 (major) inside `ca-setup-repo`.
+The inputs this action uses (`node-version`, `cache`, `cache-dependency-path`) are unaffected
+by the v7 breaking changes, but consumers of `ca-setup-repo` will run the v7 series.
 
 ---
 
