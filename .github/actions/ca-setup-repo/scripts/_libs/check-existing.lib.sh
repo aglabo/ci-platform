@@ -31,7 +31,7 @@ check_existing() {
   fi
 
   # 4. Write REPO_LOCK_DIR to GITHUB_ENV (required in all success paths)
-  echo "REPO_LOCK_DIR=${_lock_dir}" >> "${GITHUB_ENV}"
+  echo "REPO_LOCK_DIR=${_lock_dir}" >>"${GITHUB_ENV}"
 
   # 5. Path exists: validate .repo
   if [[ "${_path_existed}" == true ]]; then
@@ -43,7 +43,7 @@ check_existing() {
 
     # Parse .repo and compare; mismatch → error
     local _recorded
-    _recorded=$(< "${_path}/.repo")
+    _recorded=$(<"${_path}/.repo")
     local _recorded_repo="${_recorded%%@*}"
 
     if [[ "${_recorded_repo}" != "${_repo}" ]]; then
@@ -51,11 +51,11 @@ check_existing() {
       return 1
     fi
 
-    echo "skip=true" >> "${GITHUB_OUTPUT}"
+    echo "skip=true" >>"${GITHUB_OUTPUT}"
     return 0
   fi
 
   # 6. Path didn't exist → new checkout
-  echo "skip=false" >> "${GITHUB_OUTPUT}"
+  echo "skip=false" >>"${GITHUB_OUTPUT}"
   return 0
 }

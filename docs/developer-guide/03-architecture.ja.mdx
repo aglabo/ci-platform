@@ -73,10 +73,13 @@ ci-platform/
 │   ├── .markdownlint.yaml
 │   └── textlintrc.yaml
 ├── scripts/                        # 開発スクリプト
-│   ├── run-specs.sh                # ShellSpec 実行ラッパー
 │   ├── setup-dev-env.sh            # 開発環境セットアップ
 │   ├── prepare-commit-msg.sh       # AI コミットメッセージ生成
 │   └── __tests__/                  # ShellSpec テスト
+├── runners/                        # 品質ツール実行ラッパー
+│   ├── run-shellspec.sh            # ShellSpec 実行ラッパー
+│   ├── run-shellcheck.sh           # ShellCheck 実行ラッパー
+│   └── libs/                       # ランナー共通ライブラリ
 ├── docs/                           # Docusaurus ドキュメント
 │   ├── user-guide/
 │   └── developer-guide/

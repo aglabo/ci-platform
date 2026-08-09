@@ -31,7 +31,7 @@ validate_inputs() {
 
   local _segment
   local -a _segments
-  IFS='/' read -ra _segments <<< "$_path"
+  IFS='/' read -ra _segments <<<"$_path"
   for _segment in "${_segments[@]}"; do
     if [[ "$_segment" == ".." ]]; then
       echo "::error::validate-inputs: path must not contain '..' segments (got: '${_path}')" >&2

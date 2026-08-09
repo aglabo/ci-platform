@@ -43,14 +43,14 @@ main() {
 
   local _arch_out
   _arch_out=$(detect_arch) || return $?
-  mapfile -t _arch_candidates <<< "$_arch_out"
+  mapfile -t _arch_candidates <<<"$_arch_out"
 
   local _api_url
   _api_url=$(build_url "$_repo" "$_version")
 
   local _assets_out
   _assets_out=$(resolve_assets "$_api_url" "$_tool_name" "${_arch_candidates[@]}") || return $?
-  mapfile -t _assets <<< "$_assets_out"
+  mapfile -t _assets <<<"$_assets_out"
 
   local _download_url="${_assets[0]}"
   local _checksum_url="${_assets[1]}"

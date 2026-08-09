@@ -10,11 +10,11 @@
 # shellcheck disable=SC1091
 set -euo pipefail
 
-# shellcheck source=runners/libs/init-vars.lib.sh
+# shellcheck disable=SC1091
 . "$(dirname "${BASH_SOURCE[0]}")/libs/init-vars.lib.sh"
-cd "${SCRIPT_ROOT}"
+cd "${SCRIPT_ROOT}/.."
 
-SHELLCHECKRC="${SHELLCHECKRC:-${PROJECT_ROOT}/configs/shellcheckrc}"
+SHELLCHECKRC="${SHELLCHECKRC:-${SCRIPT_ROOT}/../configs/shellcheckrc}"
 main() {
   while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -35,7 +35,7 @@ main() {
   done
   local -a targets=("$@")
   if [[ ${#targets[@]} -eq 0 ]]; then
-    targets=("${PROJECT_ROOT}")
+    targets=(".")
   fi
   targets=("${targets[@]//\\//}")
   local -a files=()
@@ -43,7 +43,10 @@ main() {
     if [[ -d $target ]]; then
       while IFS= read -r -d '' f; do
         files+=("$f")
-      done < <(find "$target" -path "*/.git/*" -prune -o -path "*/.tools/*" -prune -o -name "*.sh" -print0)
+      done < <(find "$target" \
+        -path "*/.tools/*" -prune -o \
+        -path "*/node_modules/*" -prune -o \
+        -name "*.sh" -print0)
     else
       files+=("$target")
     fi

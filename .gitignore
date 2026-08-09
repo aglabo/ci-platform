@@ -49,6 +49,9 @@ releases/*
 ## Development tools (installed locally)
 .tools/
 
+## beads
+.beads/*
+
 ## Worktrees
 # worktree base dir
 .worktrees/
@@ -57,7 +60,6 @@ releases/*
 
 ## Coding AI depended
 # SDD (Spec-Driven Development) files
-**/.cc-sdd/
 
 # claude code setting
 .claude/*
@@ -97,6 +99,7 @@ tmp/
 !.vscode/cspell*
 
 ## Node
+.pnpm-store/
 node_modules/
 
 
