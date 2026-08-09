@@ -56,7 +56,8 @@ GitHub Actions と Git Hooks を統合した品質管理テンプレートを提
 .github/workflows/      # GitHub Actions ワークフロー (ci-scan-secrets.yml / ci-workflows-qa.yml)
 .github/actions/        # Composite Actions (ca-validate-environment, ca-setup-tool, ca-setup-tool-repo)
 configs/                # 品質ツール設定ファイル
-scripts/                # 開発スクリプト (run-specs/setup/prepare-commit-msg)
+scripts/                # 開発スクリプト (setup-dev-env/prepare-commit-msg)
+runners/                # 品質ツール実行ラッパー (run-shellspec/run-shellcheck/run-shfmt ほか)
 .serena/memories/       # Serena MCP 技術メモリー
 ```
 
@@ -75,8 +76,8 @@ scripts/                # 開発スクリプト (run-specs/setup/prepare-commit-
 # 1. mktemp で一意ファイルを作成してテスト実行 (Unix/Windows パスを両方出力)
 _spec_out=$(mktemp)
 PROJECT_ROOT="/c/Users/atsushifx/workspaces/develop/ci-platform" \
-bash "/c/Users/atsushifx/workspaces/develop/ci-platform/scripts/run-specs.sh" \
-  "<relative-spec-path>" --format tap --no-color > "$_spec_out" 2>&1
+bash "/c/Users/atsushifx/workspaces/develop/ci-platform/runners/run-shellspec.sh" \
+  "<test-type|spec-file|glob>" --format tap --no-color > "$_spec_out" 2>&1
 echo "exit:$?"; echo "win:$(cygpath -w "$_spec_out")"; echo "unix:$_spec_out"
 
 # 2. Read ツールで結果を確認 (win: 行の Windows パスを使用)
@@ -96,11 +97,13 @@ rm /w/temp/tmp.XXXXXXXXXX
 # 開発環境セットアップ
 bash ./scripts/setup-dev-env.sh           # lefthook + ShellSpec インストール
 
-# テスト実行 (shellspec 直接呼び出し禁止、run-specs.sh 経由のみ)
-bash ./scripts/run-specs.sh               # 全テスト
-bash ./scripts/run-specs.sh --focus       # フォーカスモード
-bash ./scripts/run-specs.sh scripts/__tests__  # ディレクトリ指定
-pnpm test:sh                              # pnpm 経由
+# テスト実行 (shellspec 直接呼び出し禁止、run-shellspec.sh 経由のみ)
+# 引数は「テスト種別 / spec ファイル / glob」のいずれか (ディレクトリ指定は不可)
+bash ./runners/run-shellspec.sh all       # 全テスト
+bash ./runners/run-shellspec.sh unit      # 種別指定 (all/unit/functional/integration/system/e2e)
+bash ./runners/run-shellspec.sh "runners/libs/__tests__/*.spec.sh"  # glob 指定
+pnpm test:sh unit                         # pnpm 経由 (種別を引数で渡す)
+pnpm test:sh:all                          # pnpm 経由 (全テスト)
 
 # ドキュメント検証
 pnpm run lint:text                        # textlint 検証
