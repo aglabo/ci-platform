@@ -35,21 +35,21 @@ jobs:
     steps:
       - name: Checkout target repository
         id: target-checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
       - name: Validate environment
         id: env-validation
         if: steps.target-checkout.outcome == 'success'
-        uses: aglabo/ci-platform/.github/actions/ca-validate-environment@88dd4b6b3cd448ca31dda101ee890c896f9ae41a # v0.3.2
+        uses: aglabo/ci-platform/.github/actions/ca-validate-environment@2357c586125a2ce50568c08a81d9996873de93f1 # v0.3.4
         with:
           actions-type: read
 
       - name: Install ghalint
         id: tool-install
         if: steps.env-validation.outcome == 'success'
-        uses: aglabo/ci-platform/.github/actions/ca-setup-tool@88dd4b6b3cd448ca31dda101ee890c896f9ae41a # v0.3.2
+        uses: aglabo/ci-platform/.github/actions/ca-setup-tool@2357c586125a2ce50568c08a81d9996873de93f1 # v0.3.4
         with:
           repo: suzuki-shunsuke/ghalint
           tool-version: ${{ inputs.version }}
@@ -57,7 +57,7 @@ jobs:
       - name: Checkout ghalint config
         id: config-checkout
         if: steps.tool-install.outcome == 'success'
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: aglabo/.github
           path: shared
