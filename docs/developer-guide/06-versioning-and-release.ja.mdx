@@ -91,8 +91,20 @@ BREAKING CHANGE: required-tools input が必須になりました。
 1. **テスト実行**: `bash ./runners/run-shellspec.sh all` で全テストが PASS することを確認する
 2. **CI 検証**: ローカルで `actionlint`・`ghalint`・`gitleaks` を実行して問題がないことを確認する
 3. **CHANGELOG 更新**: `CHANGELOG.md` に変更内容・影響範囲を記載する
-4. **バージョンタグ**: `git tag v0.X.Y` でタグを作成する
-5. **GitHub リリース**: GitHub Releases にリリースノートを作成する
+4. **リリースノート更新**: `Release-Note.md` を今回のバージョンの内容に更新する
+5. **バージョン同期**: `package.json` の `version` をこれから付けるタグに合わせて更新する
+6. **バージョンタグ**: `git tag v0.X.Y` でタグを作成する
+7. **自己参照 SHA 更新**: ワークフロー内の `aglabo/ci-platform` 参照をタグ対象コミットの SHA に更新し、別コミットとして記録する
+8. **GitHub リリース**: GitHub Releases にリリースノートを作成する
+
+:::note
+
+`package.json` は `private: true` のため npm には公開されませんが、
+バージョン情報の食い違いを防ぐためタグと同期させます。
+手順 7 の SHA はタグ対象コミットの SHA を指すため、その更新コミット自身をタグに含めることはできません。
+タグ作成後に別コミットとして実施します。
+
+:::
 
 ## 📌 バージョン参照方法 (利用者向け)
 

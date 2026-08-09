@@ -1,7 +1,7 @@
 {
   "name": "ci-platform",
   "private": true,
-  "version": "0.3.1",
+  "version": "0.3.4",
   "description": "CI platform actions, workflow for GitHub Actions",
   "author": "atsushifx <https://github.com/atsushifx>",
   "license": "MIT",
