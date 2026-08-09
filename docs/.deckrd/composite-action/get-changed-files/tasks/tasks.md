@@ -67,5 +67,5 @@ T-01, T-02 は bdd-coder エージェントに委譲する。
 
 - 作業種別: 新機能追加
 - テストフレームワーク: ShellSpec
-- テストコマンド: `bash ./scripts/run-specs.sh <spec-path> --format tap --no-color`
+- テストコマンド: `bash ./runners/run-shellspec.sh <spec-path> --format tap --no-color`
 - プロジェクトルート: `/c/Users/atsushifx/workspaces/develop/ci-platform`
