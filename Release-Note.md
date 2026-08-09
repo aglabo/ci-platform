@@ -1,69 +1,69 @@
 ---
-title: "ci-platform Release Notes v0.3.1"
-version: "0.3.1"
-date: 2026-06-22
+title: "ci-platform Release Notes v0.3.4"
+version: "0.3.4"
+date: 2026-08-09
 tags:
   - release
-  - composite-actions
+  - documentation
 summary: >
-  v0.3.1 では、push イベントでコミット間の変更ファイルを検出する
-  ca-get-changed-files コンポジットアクションを追加しました。
+  v0.3.4 では、dprint・markdownlint の MDX 対応、ドキュメントサイトの脆弱な依存関係の修正、
+  開発環境設定とランナースクリプトの標準化を行いました。
 ---
 
-## [0.3.1] - 2026-06-22
+## [0.3.4] - 2026-08-09
 
 ### Overview
 
-このリリースでは、`ca-get-changed-files` コンポジットアクションを新たに追加しました。
+このリリースでは、ドキュメント整形ツールチェーンの MDX 対応を追加しました。
 
-push イベントの before/after コミット間で変更されたファイルを取得し、
-glob パターンによるフィルタリングに対応します。
-変更ファイルの一覧と件数を出力として提供するため、
-後続のジョブやステップで条件分岐・ファイル処理に活用できます。
+あわせてドキュメントサイトの脆弱な依存関係を修正し、
+開発環境設定・ランナースクリプト・セットアップスクリプトを標準化しています。
+
+コンポジットアクションおよび再利用可能ワークフローのインターフェースに変更はありません。
+`action.yml`・`ru-*.yml` は v0.3.3 から変更がないため、
+外部から利用する場合は完全な後方互換性を保っています。
 
 ---
 
 ### Added
 
-#### Composite Actions
+#### ドキュメントツール
 
-- `ca-get-changed-files`: push イベントで変更されたファイルを検出するコンポジットアクション。
+- `dprint`: `.mdx` ファイルの整形に対応しました。
+- `markdownlint`: ネストした `siblings_only` オプションと MDX の強調表現に対応しました。
+- VS Code: `.mdx` ファイル向けの Markdown 整形設定を追加しました。
 
-  入力パラメータ:
+---
 
-  | パラメータ   | 必須 | デフォルト            | 説明                                 |
-  | ------------ | ---- | --------------------- | ------------------------------------ |
-  | `pattern`    | 任意 | `""` (全ファイル)     | 変更ファイルを絞り込む glob パターン |
-  | `before-sha` | 任意 | `github.event.before` | 比較元コミット SHA                   |
-  | `after-sha`  | 任意 | `github.sha`          | 比較先コミット SHA                   |
+### Fixed
 
-  出力:
+- `dprint`: markdown associations キーのタイポを修正しました。
+  これにより、意図したファイルパターンがマッチしない不具合を解消しています。
+- ドキュメントサイトの脆弱な依存関係を更新しました。
 
-  | 出力    | 説明                                 |
-  | ------- | ------------------------------------ |
-  | `files` | 変更ファイルのパス一覧（改行区切り） |
-  | `count` | 変更ファイルの件数                   |
+---
 
-  前提条件: `actions/checkout` で `fetch-depth: 0` の設定が必須です。
+### Changed
 
-  使用例:
+#### ドキュメント
 
-  ```yaml
-  - uses: actions/checkout@v4
-    with:
-      fetch-depth: 0
+- Docusaurus サイトを `aglabo.github.io` へ移行しました。
+- すべてのドキュメントで文体を統一しました。
 
-  - uses: aglabo/ci-platform/.github/actions/ca-get-changed-files@v0.3.1
-    id: changed
-    with:
-      pattern: "src/**/*.ts"
+#### 開発環境
 
-  - run: echo "Changed files: ${{ steps.changed.outputs.files }}"
-  ```
+- 開発環境設定・ランナースクリプト・`setup-dev-env.sh` を標準化しました。
+- `commitlint.config.cjs` を `commitlint.config.mjs` にリネームしました。
+- ランナーライブラリのテストを `runners/libs/__tests__/` へ移動しました。
+- 使われなくなった PowerShell セットアップスクリプトを削除しました。
+  対象は `install-dev-tools.ps1`・`install-doc-tools.ps1`・`libs/AgInstaller.ps1`・`common/init.ps1` です。
+- 役割を終えた `scripts/run-specs.sh`・`scripts/lint-actionlint.sh` を削除しました。
 
 ---
 
 ### Notes
 
-- `ca-get-changed-files` はパターンなし・マッチあり・マッチなしのシナリオを含む
-  インテグレーションテストで動作を検証済みです。
+- 本リリースの `.github/actions/**/scripts/` 配下の変更は `shfmt` による整形のみです。
+  リダイレクトの空白・`case` のインデント・文の分割が対象で、動作の変更はありません。
+- 削除した PowerShell スクリプトおよび改修した `runners/` 配下のスクリプトは、
+  リポジトリ内部の開発用ツールであり、バージョニングの対象範囲外です。

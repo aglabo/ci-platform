@@ -1,20 +1,167 @@
 ---
 title: "ci-platform Change Log"
-version: "0.3.1"
-date: 2026-06-22
+version: "0.3.4"
+date: 2026-08-09
 tags:
   - release
   - composite-actions
   - ci-platform
 summary: >
-  v0.3.1 adds the ca-get-changed-files composite action for detecting changed files
-  between commits in push events.
+  v0.3.4 adds MDX formatting support to dprint and markdownlint, fixes vulnerable
+  site dependencies, and standardizes development environment configs and runners.
 ---
 
 <!-- textlint-disable
   ja-technical-writing/sentence-length,
   ja-technical-writing/max-comma
   -->
+
+## [0.3.4] - 2026-08-09
+
+### Overview
+
+This release adds MDX support to the documentation formatting toolchain,
+fixes vulnerable dependencies in the documentation site,
+and standardizes development environment configuration, runner scripts, and the setup script.
+
+No changes were made to composite action or reusable workflow interfaces.
+All `action.yml` and `ru-*.yml` files are unchanged from v0.3.3, so this release is fully
+backward compatible for external consumers.
+
+---
+
+### Added
+
+#### Documentation Tooling
+
+- `dprint`: Added `.mdx` file formatting support.
+- `markdownlint`: Added support for the nested `siblings_only` option and MDX emphasis handling.
+- VS Code: Added markdown formatting settings for `.mdx` files.
+
+---
+
+### Fixed
+
+- `dprint`: Corrected a typo in the markdown associations key that prevented
+  the intended file patterns from being matched.
+- Updated vulnerable dependencies in the documentation site.
+
+---
+
+### Changed
+
+#### Documentation
+
+- Migrated the Docusaurus site to `aglabo.github.io`.
+- Unified documentation style across all documents.
+
+#### Development Environment
+
+- Standardized development environment configs, runner scripts, and `setup-dev-env.sh`.
+- Renamed `commitlint.config.cjs` → `commitlint.config.mjs`.
+- Relocated runner lib tests to `runners/libs/__tests__/`.
+- Removed obsolete PowerShell setup scripts: `install-dev-tools.ps1`, `install-doc-tools.ps1`,
+  `libs/AgInstaller.ps1`, and `common/init.ps1`.
+- Removed the superseded `scripts/run-specs.sh` and `scripts/lint-actionlint.sh`.
+
+---
+
+### Notes
+
+- Changes under `.github/actions/**/scripts/` in this release are `shfmt` formatting only
+  (redirection spacing, `case` indentation, statement separation) with no behavioral change.
+- The removed PowerShell scripts and the reworked `runners/` scripts are repository-internal
+  development tooling and are outside the versioned public surface.
+
+---
+
+## [0.3.3] - 2026-06-28
+
+### Overview
+
+This release normalizes input parameter names across reusable workflows for consistency.
+
+**Breaking change:** Reusable workflow input parameter names have changed.
+Callers passing the old parameter names must update them.
+
+---
+
+### Breaking Changes
+
+- `ru-qa-actionlint.yml`: Renamed inputs `actionlint-version` → `version`,
+  `config-file` → `config`.
+- `ru-qa-ghalint.yml`: Renamed inputs `ghalint-version` → `version`,
+  `config-file` → `config`.
+- `ru-scan-betterleaks.yml`: Renamed input `betterleaks-version` → `version`.
+
+**Policy note:** Under the backward compatibility policy, an input rename is a breaking change
+and warrants a MAJOR bump. This release was published as a PATCH tag before that policy was
+applied consistently. The tag is left as-is for reproducibility; callers pinned to v0.3.2
+or earlier are unaffected.
+
+Migration: update `with:` keys in caller workflows.
+
+```yaml
+# Before (v0.3.2)
+uses: aglabo/ci-platform/.github/workflows/ru-qa-actionlint.yml@v0.3.2
+with:
+  actionlint-version: "1.7.7"
+  config-file: ./configs/actionlint.yaml
+
+# After (v0.3.3)
+uses: aglabo/ci-platform/.github/workflows/ru-qa-actionlint.yml@v0.3.3
+with:
+  version: "1.7.7"
+  config: ./configs/actionlint.yaml
+```
+
+---
+
+## [0.3.2] - 2026-06-24
+
+### Overview
+
+This release extends `ca-get-changed-files` with event-aware SHA resolution,
+adding `pull_request` support alongside `push`, and updates GitHub Actions dependencies
+across all workflows.
+
+The `before-sha`/`after-sha` inputs shipped in v0.3.1; this release implements the
+resolution logic behind them.
+
+---
+
+### Added
+
+#### Composite Actions
+
+- `ca-get-changed-files`: Added `pull_request` event support.
+  A `resolve-sha` step now derives base/head SHAs for pull request events,
+  and the `before-sha`/`after-sha` inputs default to empty.
+- `ca-get-changed-files`: `resolve_sha_for_event` now honors explicitly supplied
+  `before-sha`/`after-sha` values, taking precedence over event-derived SHAs.
+  Supplying only one of the pair is rejected with an error.
+
+---
+
+### Fixed
+
+- `ca-get-changed-files`: Added `push` event SHA resolution via `GITHUB_BEFORE_SHA`/
+  `GITHUB_AFTER_SHA`. Events other than `push` and `pull_request` are now explicitly
+  rejected instead of silently passing through unresolved values.
+- Fixed the `ca-validate-environment` action reference in reusable workflows.
+
+---
+
+### Changed
+
+#### Dependencies
+
+- `actions/checkout`: v6.0.2/v6.0.3 → v7.0.0.
+- `pnpm/action-setup`: v4.2.0 → v6.0.9.
+- `actions/setup-node`: v6.2.0 → v6.4.0.
+- Updated pinned self-reference SHAs to the v0.3.2 commit hash across all workflows.
+
+---
 
 ## [0.3.1] - 2026-06-22
 
