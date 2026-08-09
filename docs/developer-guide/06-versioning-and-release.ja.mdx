@@ -88,7 +88,7 @@ BREAKING CHANGE: required-tools input が必須になりました。
 
 リリースは次の手順で行います。
 
-1. **テスト実行**: `bash ./scripts/run-specs.sh` で全テストが PASS することを確認する
+1. **テスト実行**: `bash ./runners/run-shellspec.sh all` で全テストが PASS することを確認する
 2. **CI 検証**: ローカルで `actionlint`・`ghalint`・`gitleaks` を実行して問題がないことを確認する
 3. **CHANGELOG 更新**: `CHANGELOG.md` に変更内容・影響範囲を記載する
 4. **バージョンタグ**: `git tag v0.X.Y` でタグを作成する
