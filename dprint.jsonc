@@ -25,6 +25,7 @@
     "**/*.toml",
     // Documents
     "**/*.md",
+    "**/*.mdx",
   ],
   "excludes": [
     "**/node_modules/**",
@@ -58,6 +59,9 @@
   },
   "json": {},
   "markdown": {
+    "associations": [
+      "**/*.mdx"
+    ],
     "emphasisKind": "asterisks",
   },
   "yaml": {},

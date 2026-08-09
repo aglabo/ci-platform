@@ -43,7 +43,6 @@ GitHub Actions のすべてのワークフロー・アクションは、必要�
 | secretlint | ローカル       | コミット前のファイル            | 認証情報パターンの検出・阻止       |
 | gitleaks   | CI             | リポジトリ全体 (全コミット履歴) | ローカルを通過した漏洩を CI で捕捉 |
 
-
 **ローカル検出 (gitleaks + secretlint)**:
 
 lefthook の `pre-commit` フックで実行されます。
@@ -54,7 +53,6 @@ lefthook の `pre-commit` フックで実行されます。
 GitHub Actions で実行されます。
 リポジトリ全体の履歴をスキャンし、ローカル検出をすり抜けた漏洩を捕捉します。
 
-
 ---
 
 ## 🔑 権限管理
@@ -63,11 +61,9 @@ GitHub Actions で実行されます。
 
 `ghalint` は GitHub Actions ワークフローの権限設定を静的解析します。
 
-
 - `permissions` セクションが未定義のジョブを検出する
 - 過剰権限 (`write` 系の不必要な権限) を検出する
 - CI パイプライン内で自動実行され、違反があれば失敗する
-
 
 ### validate-environment の動的権限検証
 
@@ -88,16 +84,13 @@ GitHub Actions で実行されます。
 
 ### ローカルレイヤー (Git Hooks)
 
-
 | 施策                   | ツール     | タイミング |
 | ---------------------- | ---------- | ---------- |
 | シークレット検出       | gitleaks   | pre-commit |
 | 認証情報パターン検出   | secretlint | pre-commit |
 | コミットメッセージ検証 | commitlint | commit-msg |
 
-
 ### CI レイヤー (GitHub Actions)
-
 
 | 施策                   | ツール               | タイミング       |
 | ---------------------- | -------------------- | ---------------- |

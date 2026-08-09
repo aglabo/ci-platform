@@ -1,6 +1,0 @@
-allowBuilds:
-  "@swc/core": false
-  core-js: true
-  core-js-pure: true
-minimumReleaseAgeExclude:
-  - joi@17.13.4

@@ -67,8 +67,8 @@ created: "2026-06-18"
 #### Commit 1: feat(setup-tool-repo): add action.yml skeleton with inputs
 
 - `.github/actions/setup-tool-repo/action.yml` を新規作成
-- `inputs:` に `repo`（required）/ `path`（required）/ `ref`（required）/ `node-version`（default: `"22"`）/ `pnpm-version`（default: `"10"`）を定義
-- `permissions:` は**宣言しない**（コンポジットアクションでは宣言不可。呼び出し元 job で `contents: read` を設定する旨をコメントで明記）
+- `inputs:` に `repo`（required）/`path`（required）/`ref`（required）/`node-version`（default: `"22"`）/`pnpm-version`（default: `"10"`）を定義
+- `permissions:` は **宣言しない**（コンポジットアクションでは宣言不可。呼び出し元 job で `contents: read` を設定する旨をコメントで明記）
 - `runs.using: composite`、ステップは空（後続フェーズで追加）
 
 #### Commit 2: feat(setup-tool-repo): add validate-inputs.lib.sh
@@ -178,7 +178,7 @@ created: "2026-06-18"
   5. `actions/checkout` — `uses:` + `with: repository/path/ref` を inputs から渡す
   6. `validate-repo-structure` — `run: bash` + env + `if: steps.check-existing-repo.outputs.skip != 'true'`
   7. `pnpm install --frozen-lockfile` — `run: pnpm install --frozen-lockfile` + `working-directory` + `if: steps.check-existing-repo.outputs.skip != 'true'`
-  8. `verify-and-add-path` — `run: bash` + env（`SKIP_REPO` / `REPO` / `PATH_DIR`）
+  8. `verify-and-add-path` — `run: bash` + env（`SKIP_REPO`/`REPO`/`PATH_DIR`）
 - 各外部アクションはコミット SHA でピン留め（`# vX.Y.Z` コメント付き）
 
 #### Commit 11: test(setup-tool-repo): add integration test for action.yml
@@ -200,7 +200,7 @@ created: "2026-06-18"
 
 ### ライブラリ規約（既存 setup-tool に準拠）
 
-- `set -euo pipefail` をすべてのスクリプトおよびライブラリ（`_libs/*.lib.sh`）の先頭に**必ず**記載する（HARDEN-03）
+- `set -euo pipefail` をすべてのスクリプトおよびライブラリ（`_libs/*.lib.sh`）の先頭に **必ず** 記載する（HARDEN-03）
 - double-source guard（`[ -n "${LIB_LOADED:-}" ] && return 0`）
 - エラー出力: `echo "::error::<message>" >&2`
 - 正常出力: `echo "✓ <message>"`
@@ -208,8 +208,8 @@ created: "2026-06-18"
 ### GITHUB_PATH / GITHUB_OUTPUT への書き込み（HARDEN-01）
 
 `GITHUB_OUTPUT` および `GITHUB_PATH` への書き込みを行うすべてのスクリプトは、
-書き込み前に `:?` 演算子で未設定チェックを**必ず**実施しなければならない。
-`:-/dev/null` フォールバックは**使用禁止**とする。
+書き込み前に `:?` 演算子で未設定チェックを **必ず** 実施しなければならない。
+`:-/dev/null` フォールバックは **使用禁止** とする。
 
 ```bash
 echo "<path>/bin" >> "${GITHUB_PATH:?GITHUB_PATH is not set}"
@@ -257,7 +257,7 @@ mv "$_tmp" "${PATH_DIR}/.repo"
 
 ### 外部アクションのピン留め（HARDEN-02）
 
-`action.yml` で使用するすべての外部アクションは、バージョンタグではなく**コミット SHA でピン留めしなければならない**。
+`action.yml` で使用するすべての外部アクションは、バージョンタグではなく **コミット SHA でピン留めしなければならない**。
 バージョンタグのみ（例: `@v4`）の参照は禁止する。
 
 ```yaml

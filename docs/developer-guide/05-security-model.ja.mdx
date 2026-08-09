@@ -9,8 +9,6 @@ tags:
   - security
 ---
 
-{/* markdownlint-disable line-length */}
-
 ## セキュリティモデル
 
 ci-platform のセキュリティ設計は **多層防御** と **最小権限原則** の 2 原則を基盤としています。
@@ -43,7 +41,6 @@ GitHub Actions のすべてのワークフロー・アクションは、必要�
 | secretlint | ローカル       | コミット前のファイル            | 認証情報パターンの検出・阻止       |
 | gitleaks   | CI             | リポジトリ全体 (全コミット履歴) | ローカルを通過した漏洩を CI で捕捉 |
 
-
 **ローカル検出 (gitleaks + secretlint)**:
 
 lefthook の `pre-commit` フックで実行されます。
@@ -54,7 +51,6 @@ lefthook の `pre-commit` フックで実行されます。
 GitHub Actions で実行されます。
 リポジトリ全体の履歴をスキャンし、ローカル検出をすり抜けた漏洩を捕捉します。
 
-
 ---
 
 ## 🔑 権限管理
@@ -63,24 +59,22 @@ GitHub Actions で実行されます。
 
 `ghalint` は GitHub Actions ワークフローの権限設定を静的解析します。
 
-
 - `permissions` セクションが未定義のジョブを検出する
 - 過剰権限 (`write` 系の不必要な権限) を検出する
 - CI パイプライン内で自動実行され、違反があれば失敗する
-
 
 ### validate-environment の動的権限検証
 
 `validate-environment` は CI 実行時に権限設定を動的に検証します。
 
-{/* markdownlint-disable line-length MD060 */}
+{/* markdownlint-disable line-length */}
 
 | 検証項目                 | 内容                                                      |
 | ------------------------ | --------------------------------------------------------- |
 | `contents: write` の検出 | 書き込み権限が設定されている場合に警告・停止              |
 | `id-token: write` の検出 | OIDC トークン発行権限が不要な場面で使われていないかを確認 |
 
-{/* markdownlint-enable line-length MD060 */}
+{/* markdownlint-enable line-length */}
 
 ---
 
@@ -88,16 +82,13 @@ GitHub Actions で実行されます。
 
 ### ローカルレイヤー (Git Hooks)
 
-
 | 施策                   | ツール     | タイミング |
 | ---------------------- | ---------- | ---------- |
 | シークレット検出       | gitleaks   | pre-commit |
 | 認証情報パターン検出   | secretlint | pre-commit |
 | コミットメッセージ検証 | commitlint | commit-msg |
 
-
 ### CI レイヤー (GitHub Actions)
-
 
 | 施策                   | ツール               | タイミング       |
 | ---------------------- | -------------------- | ---------------- |
@@ -105,8 +96,6 @@ GitHub Actions で実行されます。
 | ワークフロー構文検証   | actionlint           | Push / PR        |
 | 権限ポリシー違反検出   | ghalint              | Push / PR        |
 | リポジトリ全体スキャン | gitleaks             | Push / PR        |
-
-{/* textlint-enable */}
 
 ---
 
@@ -119,14 +108,10 @@ GitHub Actions で実行されます。
 | `configs/gitleaks.toml`          | gitleaks のシークレット検出設定 | 除外設定 (allowlist) の追加        |
 | `configs/secretlint.config.yaml` | secretlint の認証情報検出設定   | 除外設定の追加・検出ルールの無効化 |
 
-{/* textlint-disable ja-technical-writing/no-doubled-joshi */}
-
 **なぜ保護するか**:
 
 除外設定を安易に追加すると、実際のシークレット漏洩が発生するリスクがあります。
 変更が必要な場合は、PR に変更理由・影響範囲・代替手段を明記してレビューを受けてください。
-
-{/* textlint-enable */}
 
 ---
 

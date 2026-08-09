@@ -30,7 +30,7 @@ GitHub Actions と Git Hooks を統合した品質管理テンプレートを提
 - Issue 編集: `/claude-idd-framework:\idd\issue:edit`
 - Issue 一覧: `/claude-idd-framework:\idd\issue:list`
 - Issue Push: `/claude-idd-framework:\idd\issue:push`
-- PR 作成/Push: `/claude-idd-framework:idd-pr new` / `/claude-idd-framework:idd-pr push`
+- PR 作成/Push: `/claude-idd-framework:idd-pr new`/`/claude-idd-framework:idd-pr push`
 - コミットメッセージ: `/claude-idd-framework:idd-commit-message`
 
 **絶対禁止**:
@@ -138,7 +138,7 @@ lefthook uninstall && lefthook install    # lefthook 再設定
 
 ## ドキュメント参照
 
-- `README.md` / `README.ja.md` - プロジェクト概要・セットアップガイド
+- `README.md`/`README.ja.md` - プロジェクト概要・セットアップガイド
 - `.serena/memories/` - Serena MCP 技術メモリー (構造・テスト・スクリプト・設定)
 - `configs/*` - 品質ツール設定ファイル
 - `lefthook.yml` - Git Hook 統合設定

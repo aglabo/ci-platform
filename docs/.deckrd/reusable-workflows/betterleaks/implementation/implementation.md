@@ -4,6 +4,8 @@ based-on: specifications.md v1.1
 status: Draft
 ---
 
+<!-- textlint-disable
+  ja-technical-writing/sentence-length -->
 <!-- markdownlint-disable line-length -->
 
 ## 1. Overview
@@ -27,7 +29,7 @@ The workflow will enforce read-only repository access with `contents: read` at b
 
 ### 1.2 Reference
 
-- Prior Art / Reference PR: none
+- Prior Art/Reference PR: none
 - Specifications: specifications.md
 - Output workflow file: `.github/workflows/ci-scan-betterleaks.yml`
 
@@ -103,7 +105,7 @@ The workflow will enforce read-only repository access with `contents: read` at b
   -- Add `if: steps.config-checkout.outcome == 'success'`.
 
 - Add step ID `scan-execute` after `prepare-report`:
-  -- Use a shell `run` step with `set +e` / `set -e` pattern to capture exit code.
+  -- Use a shell `run` step with `set +e`/`set -e` pattern to capture exit code.
   -- Run betterleaks with:
   `betterleaks protect --config shared/configs/betterleaks.toml --report-path=.github/report/betterleaks-report.json --exit-code=1 --verbose`
   -- Capture exit code into `$GITHUB_OUTPUT` as `status`.
