@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# src: ./scripts/run-specs.sh
+# src: ./runners/run-shellspec.sh
 # @(#) : shellspec runner
 #
 # Copyright (c) 2026- atsushifx <https://github.com/atsushifx>
