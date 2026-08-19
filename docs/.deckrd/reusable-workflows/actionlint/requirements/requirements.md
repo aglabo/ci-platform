@@ -47,7 +47,7 @@ actionlint ベースの GitHub Actions ワークフロー構文を検証する�
 
 - GitHub Actions 環境
 - ランナー: `ubuntu-slim` (セルフホスト)
-- 言語: YAML GitHub Actions workflow syntax)
+- 言語: YAML (GitHub Actions workflow syntax)
 
 ### Related Components
 
