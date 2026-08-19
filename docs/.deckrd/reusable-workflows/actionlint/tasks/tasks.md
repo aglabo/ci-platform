@@ -269,7 +269,7 @@ source: specifications.md
   - Expected: `actionlint` の exit code が 0
   - `run: actionlint -config-file ./configs/actionlint.yaml .github/workflows/ci-qa-actionlint.yml`
 
-- [x] **T-04-01-02**: workflow が正確に 1 つの job `qa-actionlint` を持ち、必須ステップ ID を全て含むこと
+- [x] **T-04-01-02**: workflow が正確に 1 つの job `qa-actionlint` を持ち、必須ステップ ID をすべて含むこと
   - Target: `ci-qa-actionlint.yml` `.jobs`
   - Scenario: Given `ci-qa-actionlint.yml` が存在する、When job と step 構造を検査する
   - Expected: job が `qa-actionlint` のみ、step IDs に `target-checkout`、`env-validation`、`tool-install`、`config-checkout`、`prepare-report`、`lint-execute`、`report-upload` が全て含まれる
