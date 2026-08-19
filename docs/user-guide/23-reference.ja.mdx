@@ -82,7 +82,7 @@ with:
 | `path`         | string | はい   | —          | ローカルチェックアウトパス（`./` 始まり） |
 | `ref`          | string | はい   | —          | Git ref（タグ・ブランチ・SHA）            |
 | `node-version` | string | いいえ | `22`       | Node.js バージョン                        |
-| `pnpm-version` | string | いいえ | `10`       | pnpm バージョン                           |
+| `pnpm-version` | string | いいえ | `11.22.0`  | pnpm バージョン                           |
 
 #### `repo`
 
@@ -114,12 +114,12 @@ with:
 
 #### `node-version` / `pnpm-version`
 
-`pnpm install` で使用する Node.js と pnpm のバージョンを指定します。省略時はそれぞれ `22` / `10` が使われます。
+`pnpm install` で使用する Node.js と pnpm のバージョンを指定します。省略時はそれぞれ `22` / `11.22.0` が使われます。
 
 ```yaml
 with:
   node-version: "22"
-  pnpm-version: "10"
+  pnpm-version: "11.22.0"
 ```
 
 ### 🔒 制約事項

@@ -67,7 +67,7 @@ created: "2026-06-18"
 #### Commit 1: feat(setup-tool-repo): add action.yml skeleton with inputs
 
 - `.github/actions/setup-tool-repo/action.yml` を新規作成
-- `inputs:` に `repo`（required）/`path`（required）/`ref`（required）/`node-version`（default: `"22"`）/`pnpm-version`（default: `"10"`）を定義
+- `inputs:` に `repo`（required）/`path`（required）/`ref`（required）/`node-version`（default: `"22"`）/`pnpm-version`（default: `"11.22.0"`）を定義
 - `permissions:` は **宣言しない**（コンポジットアクションでは宣言不可。呼び出し元 job で `contents: read` を設定する旨をコメントで明記）
 - `runs.using: composite`、ステップは空（後続フェーズで追加）
 
