@@ -44,14 +44,14 @@ jobs:
       - name: Validate environment
         id: env-validation
         if: steps.target-checkout.outcome == 'success'
-        uses: aglabo/ci-platform/.github/actions/ca-validate-environment@9cb47798728e228340f72e3450bfbea9319d1007 # v0.3.4
+        uses: aglabo/ci-platform/.github/actions/ca-validate-environment@d49d96532dbf95a356a5756864fa45e33a0fa033 # v0.3.4
         with:
           actions-type: read
 
       - name: Install actionlint
         id: tool-install
         if: steps.env-validation.outcome == 'success'
-        uses: aglabo/ci-platform/.github/actions/ca-setup-tool@9cb47798728e228340f72e3450bfbea9319d1007 # v0.3.4
+        uses: aglabo/ci-platform/.github/actions/ca-setup-tool@d49d96532dbf95a356a5756864fa45e33a0fa033 # v0.3.4
         with:
           repo: rhysd/actionlint
           tool-version: ${{ inputs.version }}
