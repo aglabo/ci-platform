@@ -10,7 +10,7 @@
 *
 
 # Git settings
-!.git*
+!.gitignore
 
 # settings
 !settings.json

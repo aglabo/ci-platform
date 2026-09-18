@@ -44,6 +44,8 @@ yarn-error.log*
 !/versioned_docs/**
 !/static
 !/static/**
+!/versioned_sidebars
+!/versioned_sidebars/**
 #
 !README*
 !/pnpm*yaml
