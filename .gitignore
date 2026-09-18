@@ -42,14 +42,25 @@
 
 
 ## Project directories
+# サブディレクトリを allow してから拡張子ごとに allow する
+# (親ディレクトリが除外されたままだと、その中のファイルは再許可できない)
+# ブレース展開 {a,b} は .gitignore では使えないため、拡張子は 1 行ずつ書く
 !/scripts/
-!/scripts/**
+!/scripts/**/
+!/scripts/**/*.sh
 !/runners/
-!/runners/**
+!/runners/**/
+!/runners/**/*.sh
 !/configs/
-!/configs/**
+!/configs/**/
+!/configs/**/*.json
+!/configs/**/*.yml
+!/configs/**/*.yaml
+!/configs/**/*.toml
+!/configs/**/*.sh
 !/docs/
-!/docs/**
+!/docs/**/
+!/docs/**/*.md
 
 # Website (allowlist details: aglabo.github.io/.gitignore)
 !/aglabo.github.io/
@@ -77,3 +88,45 @@
 ##  Git
 # allow all gitignore
 !**/.gitignore
+
+
+## Deny rules (keep last)
+# 上の再帰 allowlist (!/scripts/**, !.github/** など) は最後に一致した規則が
+# 勝つため、機密・生成物までも再び追跡対象にしてしまう。
+# それらを再度除外するこのセクションは、必ずファイル末尾に置くこと。
+
+#   OS specific files
+.DS_Store
+thumbs.db
+
+#   logs, patches
+**/*.log
+**/*.diff
+**/*.patch
+
+#   history, cache
+**/.history/
+**/.cache/
+
+#   backup/swap/temp
+**/$~*
+**/~*
+**/*~
+**/*.tmp
+**/*.swp
+**/*.lock
+
+#   session files
+**/*session.json
+**/*session
+
+#   .env files
+**/.env*
+
+#   temporary directories
+**/temp/
+**/tmp/
+
+#   node
+**/node_modules/
+**/.pnpm-store/
