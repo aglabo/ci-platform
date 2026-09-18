@@ -1,5 +1,5 @@
 # src: .gitignore
-# @(#) : main ignore settings: ci-platform
+# @(#) : main ignore settings (allowlist): ci-platform
 #
 # Copyright (c) 2026- atsushifx <http://github.com/atsushifx>
 #
@@ -7,103 +7,73 @@
 # https://opensource.org/licenses/MIT
 
 
-##  General
-#   OS specific files
-.DS_Store
-thumbs.db
+# default: ignore all files
+*
 
-#   logs, patches
-*.log
-*.diff
-*.patch
+# Allow README, LICENSE, CONTRIBUTING
+!**/README*
+!**/LICENSE*
+!**/CONTRIBUTING*
 
-#   history, cache
-.history/
-.cache/
-# **/*cache
+# Allow .github directories
+!.github/
+!.github/**
 
+# Allow other ignore
+!*ignore
 
-#   backup/swap/temp
-$~*
-~*
-*~
-*.tmp
-*.swp
-*.lock
+# Allow editorconfig
+!**/.editorconfig
 
-# session files
-*session.json
-*session
-**/*session.json
-**/*session
-
-# .env files
-.env*
-.env.*
-
-# release
-releases/*
-!releases/.keep
+# Allow settings
+!**/settings.json
 
 
-## Development tools (installed locally)
-.tools/
+## Root configs
+!/package.json
+!/pnpm-lock.yaml
+!/renovate.json
+!/lefthook.yml
+!/dprint.jsonc
+!/.shellspec
+!/.mcp.json
+!/CHANGELOG.md
+!/Release-Note.md
 
-## beads
-.beads/*
 
-## Worktrees
-# worktree base dir
-.worktrees/
+## Project directories
+!/scripts/
+!/scripts/**
+!/runners/
+!/runners/**
+!/configs/
+!/configs/**
+!/docs/
+!/docs/**
 
-## AI generated files
+# Website (allowlist details: aglabo.github.io/.gitignore)
+!/aglabo.github.io/
 
-## Coding AI depended
-# SDD (Spec-Driven Development) files
 
-# claude code setting
-.claude/*
-
-# settings
-!.claude/**/settings.json
-
-# agents can tracking
+## AI Agents
+# claude code
 !**/CLAUDE*.md
-!.claude/agents/
-!.claude/agents/**
-!.claude/rules/
-!.claude/rules/**
-!.claude/commands/
-!.claude/commands/**
+# allowlist details: .claude/.gitignore
+!.claude/
 
-# MCP server dependency files
-.cocoindex_code/
-.serena/
-.lsmcp/
-.codegraph/*
-
-## Temporary directories are never tracked
-temp/
-tmp/
-**/temp/
-**/tmp/
 
 ##  Editor
 #   VSCode
-.vscode/*
+!.vscode/
 !.vscode/settings.json
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
 !.vscode/*.code-snippets
 !.vscode/cspell*
+!.vscode/cspell*/**
 
-## Node
-.pnpm-store/
-node_modules/
-
-
-### Website
 
 ##  Git
+# allow all gitignore
 !**/.gitignore
