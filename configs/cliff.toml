@@ -1,5 +1,5 @@
-# src: ./configs/gitcliff.toml
-# @(#): git-cliff configs for agla-dic-tools
+# src: ./configs/cliff.toml
+# @(#): git-cliff configs: for ci-platform
 #
 # Copyright (c) 2026- atsushifx <https://github.com/atsushifx>
 #
@@ -17,13 +17,22 @@ body = """
 {% endif %}\
 {% for group, commits in commits | group_by(attribute="group") %}
     ### {{ group | striptags | trim | upper_first }}
-    {% for commit in commits %}
-        - {% if commit.scope %}*({{ commit.scope }})* {% endif %}\
-            {% if commit.breaking %}[**breaking**] {% endif %}\
+    {% for commit in commits %}{% if not commit.scope %}
+        - {% if commit.breaking %}[**breaking**] {% endif %}\
             {{ commit.message | upper_first }}
         {% if commit.body %}
 {{ commit.body | indent(prefix="          ") }}
         {% endif %}\
+    {% endif %}{% endfor %}\
+    {% for scope, scoped in commits | group_by(attribute="scope") %}
+        #### {{ scope | upper_first }}
+        {% for commit in scoped %}
+            - {% if commit.breaking %}[**breaking**] {% endif %}\
+                {{ commit.message | upper_first }}
+            {% if commit.body %}
+{{ commit.body | indent(prefix="          ") }}
+            {% endif %}\
+        {% endfor %}
     {% endfor %}
 {% endfor %}
 """
@@ -55,7 +64,7 @@ split_commits = false
 # An array of regex based parsers to modify commit messages prior to further processing.
 commit_preprocessors = [
   # Strip GitHub squash-merge prefix: "merge (#xx): "
-  { pattern = "^merge \\(#\\d+\\):\\s*", replace = "" },
+  { pattern = "^merge\\s*\\(#\\d+\\)[:\\]]\\s*", replace = "" },
 
   # Replace issue numbers with link templates to be updated in `changelog.postprocessors`.
   # { pattern = '\((\w+\s)?#([0-9]+)\)', replace = "([#${2}](<REPO>/issues/${2}))"},
@@ -70,20 +79,33 @@ protect_breaking_commits = false
 # Optionally sets the commit's scope and can decide to exclude commits from further processing.
 commit_parsers = [
   { message = "^Initial", skip = true },
+
+  # docs 型（docs: / docs(scope): / docs/config: すべて）
+  { message = "^docs", group = "<!-- 02 --> Documentation" },
+  # ドキュメント系 scope は型を問わず集約する
+  { message = "^\\w+\\((docs|website|user-guide|developer-guide|readme|changelog|license)[/)]", group = "<!-- 02 --> Documentation" },
+  # ドキュメントサイトの依存更新
+  { message = "(?i)^deps.*(docs|website|docusaurus)", group = "<!-- 02 --> Documentation" },
+
   { message = "dependabot", skip = true },
+  # 真のマージコミット（squash ではない）は変更内容を持たない
+  { message = "^Merge branch", skip = true },
 
-  { message = "^feat", group = "<!-- 0 --> Features" },
-  { message = "^fix", group = "<!-- 1 --> Bug Fixes" },
-  { message = "^docs", group = "<!-- 2 --> Documentation" },
-  { message = "^refactor", group = "<!-- 3 --> Refactor" },
-  { message = "^perf", group = "<!-- 4 --> Performance" },
-  { message = "^style", group = "<!-- 5 --> Styling" },
-  { message = "^test", group = "<!-- 6 --> Testing" },
-  { message = "^chore|^ci", group = "<!-- 7 --> Miscellaneous Tasks" },
+  { message = "^feat", group = "<!-- 00 --> Features" },
+  { message = "^fix", group = "<!-- 01 --> Bug Fixes" },
+  { message = "^refactor", group = "<!-- 03 --> Refactor" },
+  { message = "^perf", group = "<!-- 04 --> Performance" },
+  { message = "^style", group = "<!-- 05 --> Styling" },
+  { message = "^test", group = "<!-- 06 --> Testing" },
+  { message = "^config", group = "<!-- 09 --> Miscellaneous Tasks", scope = "Config" },
+  { message = "^deps", group = "<!-- 09 --> Miscellaneous Tasks", scope = "Deps" },
+  { message = "^chore", group = "<!-- 09 --> Miscellaneous Tasks", scope = "Chore" },
+  { message = "^ci|^build", group = "<!-- 09 --> Miscellaneous Tasks", scope = "CI" },
 
-  { body = ".*security", group = "<!-- 8 --> Security" },
-  { message = "^revert", group = "<!-- 9 --> Revert" },
-  { message = ".*", group = "<!-- 10 --> Other" },
+  { body = ".*security", group = "<!-- 10 --> Security" },
+  { message = "^revert", group = "<!-- 11 --> Revert" },
+  { message = "^release", group = "<!-- 12 --> Release" },
+  { message = ".*", group = "<!-- 13 --> Other" },
 ]
 
 # Exclude commits that are not matched by any commit parser.
