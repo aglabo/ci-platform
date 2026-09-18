@@ -91,6 +91,8 @@ commit_parsers = [
   # 真のマージコミット（squash ではない）は変更内容を持たない
   { message = "^Merge branch", skip = true },
 
+  { body = ".*security", group = "<!-- 10 --> Security" },
+
   { message = "^feat", group = "<!-- 00 --> Features" },
   { message = "^fix", group = "<!-- 01 --> Bug Fixes" },
   { message = "^refactor", group = "<!-- 03 --> Refactor" },
@@ -102,7 +104,6 @@ commit_parsers = [
   { message = "^chore", group = "<!-- 09 --> Miscellaneous Tasks", scope = "Chore" },
   { message = "^ci|^build", group = "<!-- 09 --> Miscellaneous Tasks", scope = "CI" },
 
-  { body = ".*security", group = "<!-- 10 --> Security" },
   { message = "^revert", group = "<!-- 11 --> Revert" },
   { message = "^release", group = "<!-- 12 --> Release" },
   { message = ".*", group = "<!-- 13 --> Other" },
