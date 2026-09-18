@@ -1,20 +1,101 @@
 ---
 title: "ci-platform Change Log"
-version: "0.3.4"
-date: 2026-08-09
+version: "0.3.5"
+date: 2026-09-18
 tags:
   - release
   - composite-actions
   - ci-platform
 summary: >
-  v0.3.4 adds MDX formatting support to dprint and markdownlint, fixes vulnerable
-  site dependencies, and standardizes development environment configs and runners.
+  v0.3.5 closes all Dependabot alerts on the documentation site, unifies the pnpm and
+  Node.js version requirements across the repository, adds MDX support to textlint,
+  and switches the repository `.gitignore` to an allowlist.
 ---
 
 <!-- textlint-disable
   ja-technical-writing/sentence-length,
   ja-technical-writing/max-comma
   -->
+
+## [0.3.5] - 2026-09-18
+
+### Overview
+
+This release closes every outstanding Dependabot alert on the documentation site.
+
+It also unifies the pnpm and Node.js version requirements across the repository
+and switches `.gitignore` to an allowlist. On the documentation side,
+textlint gains MDX support.
+
+No changes were made to composite action or reusable workflow interfaces.
+The `on`/`inputs`/`outputs` keys of every `action.yml` and `ru-*.yml` are identical to v0.3.4;
+callers require no changes.
+
+Note that the default value of the `pnpm-version` input of `ca-setup-repo` was changed
+from `"10"` to `"11.22.0"`. Consumers that do not set this input explicitly will run pnpm 11.22.0.
+
+---
+
+### Added
+
+#### Documentation Tooling
+
+- `textlint`: Enabled the MDX plugin, allowing `.mdx` files to be linted.
+- `run-textlint.sh`: Enabled caching, stored at `.cache/textlint/textlintCache`.
+
+---
+
+### Fixed
+
+- Updated all vulnerable dependencies in the documentation site and closed the
+  Dependabot alerts: `joi` (18.2.9), `react`/`react-dom` (19.3.0), `nanoid` (3.3.18),
+  `js-yaml`, and `fast-uri`.
+
+---
+
+### Changed
+
+#### GitHub Actions
+
+- `ca-setup-repo`: Changed the default of the `pnpm-version` input from `"10"` to `"11.22.0"`.
+- Bumped `pnpm/action-setup` from v6.0.10 to v6.1.0.
+- Bumped `actions/deploy-pages` from v5.0.0 to v5.0.1.
+- Pinned reusable workflow and composite action refs to the v0.3.4 commit (`d49d965`).
+- `ci-publish-docs.yml`: Dropped the explicit pnpm version and delegated it to
+  the `packageManager` field in `package.json`.
+
+#### Development Environment
+
+- `package.json`: Added `packageManager: pnpm@12.4.2` and `engines` of `node >=24` / `pnpm >=12`.
+- `aglabo.github.io/package.json`: Aligned to the same pnpm 12.4.2 and Node.js 24 requirements.
+- Switched `.gitignore` to an allowlist: everything is ignored by default and
+  repository content is allowed explicitly.
+- `.claude/.gitignore`: Narrowed the `.git*` exception to `.gitignore` only.
+- `aglabo.github.io/.gitignore`: Added the `versioned_sidebars` directory to tracked paths.
+- `dprint`: Migrated the TypeScript, JSON, Markdown, YAML, and TOML plugins to npm packages,
+  and bumped the JSON and Markdown plugins to 0.24.0 and the TOML plugin to 0.8.0.
+- `.editorconfig`: Moved shell and PowerShell formatting rules into dedicated sections
+  and removed duplicate shfmt settings.
+- `lefthook.yml`: Changed the `prepare-commit-msg` model from `gpt-5.4-mini` to `gpt-5.6-luna`.
+
+#### Documentation
+
+- Updated the documented default pnpm version to `11.22.0` across the user guide
+  and the `docs/.deckrd/` design documents.
+- Standardized punctuation and parenthesis notation, and normalized nested list indentation.
+
+---
+
+### Notes
+
+- This release contains no composite action or reusable workflow interface changes.
+  The only edits to those files are pinned-SHA bumps and the `ca-setup-repo`
+  `pnpm-version` default change.
+- The `.gitignore` allowlist migration, the `engines` additions, and the `.editorconfig`
+  reorganization are repository-internal development tooling and are outside
+  the versioned public surface.
+
+---
 
 ## [0.3.4] - 2026-08-09
 

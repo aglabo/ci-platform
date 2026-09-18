@@ -1,32 +1,32 @@
 ---
-title: "ci-platform Release Notes v0.3.4"
-version: "0.3.4"
-date: 2026-08-09
+title: "ci-platform Release Notes v0.3.5"
+version: "0.3.5"
+date: 2026-09-18
 tags:
   - release
   - documentation
 summary: >
-  v0.3.4 では、dprint・markdownlint の MDX 対応、ドキュメントサイトの脆弱な依存関係の修正、
-  開発環境設定とランナースクリプトの標準化を行いました。
+  v0.3.5 では、ドキュメントサイトの脆弱な依存関係をすべて解消し、pnpm・Node.js の
+  バージョン要件を統一しました。あわせて textlint の MDX 対応と、リポジトリ設定の
+  allowlist 化を行っています。
 ---
 
-## [0.3.4] - 2026-08-09
+## [0.3.5] - 2026-09-18
 
 ### Overview
 
-このリリースでは、ドキュメント整形ツールチェーンの MDX 対応を追加しました。
+このリリースでは、ドキュメントサイトに残っていた Dependabot アラートをすべて解消しました。
 
-あわせてドキュメントサイトの脆弱な依存関係を修正し、
-開発環境設定・ランナースクリプト・セットアップスクリプトを標準化しています。
+あわせて pnpm・Node.js のバージョン要件をリポジトリ全体で統一し、
+`.gitignore` を allowlist 方式へ切り替えています。
+ドキュメント側では textlint の MDX 対応を追加しました。
 
 コンポジットアクションおよび再利用可能ワークフローのインターフェースに変更はありません。
-`action.yml`・`ru-*.yml` の `on`・`inputs`・`outputs` ブロックは v0.3.3 と同一です。
-これらのファイルの変更はピン留め SHA の更新のみであり、呼び出し側の修正は不要です。
+`action.yml`・`ru-*.yml` の `on`・`inputs`・`outputs` のキーは v0.3.4 と同一であり、
+呼び出し側の修正は不要です。
 
-なお `ca-setup-repo` 内部の `actions/setup-node` を v7.0.0 (メジャー) に更新しています。
-本アクションが使用する入力は `node-version`・`cache`・`cache-dependency-path` の 3 つです。
-いずれも v7 の破壊的変更の影響を受けません。
-ただし `ca-setup-repo` の利用者は v7 系で動作する点にご留意ください。
+ただし `ca-setup-repo` の入力 `pnpm-version` の既定値を `"10"` から `"11.22.0"` に変更しています。
+本入力を明示的に指定していない利用者は、pnpm 11.22.0 で動作する点にご留意ください。
 
 ---
 
@@ -34,41 +34,53 @@ summary: >
 
 #### ドキュメントツール
 
-- `dprint`: `.mdx` ファイルの整形に対応しました。
-- `markdownlint`: ネストした `siblings_only` オプションと MDX の強調表現に対応しました。
-- VS Code: `.mdx` ファイル向けの Markdown 整形設定を追加しました。
+- `textlint`: MDX プラグインを有効化しました。これにより `.mdx` ファイルを検証対象に含められます。
+- `run-textlint.sh`: キャッシュを有効化しました。キャッシュは `.cache/textlint/textlintCache` に保存されます。
 
 ---
 
 ### Fixed
 
-- `dprint`: markdown associations キーのタイポを修正しました。
-  これにより、意図したファイルパターンがマッチしない不具合を解消しています。
-- ドキュメントサイトの脆弱な依存関係を更新しました。
+- ドキュメントサイトの脆弱な依存関係をすべて更新し、Dependabot アラートを解消しました。
+  対象は `joi` (18.2.9)・`react` / `react-dom` (19.3.0)・`nanoid` (3.3.18)・`js-yaml`・`fast-uri` です。
 
 ---
 
 ### Changed
 
-#### ドキュメント
+#### GitHub Actions
 
-- Docusaurus サイトを `aglabo.github.io` へ移行しました。
-- すべてのドキュメントで文体を統一しました。
+- `ca-setup-repo`: 入力 `pnpm-version` の既定値を `"10"` から `"11.22.0"` に変更しました。
+- `pnpm/action-setup` を v6.0.10 から v6.1.0 に更新しました。
+- `actions/deploy-pages` を v5.0.0 から v5.0.1 に更新しました。
+- 再利用可能ワークフローおよびコンポジットアクションの参照 SHA を、
+  v0.3.4 のコミット (`d49d965`) に統一しました。
+- `ci-publish-docs.yml`: pnpm のバージョン指定を削除し、`package.json` の `packageManager` に委譲しました。
 
 #### 開発環境
 
-- 開発環境設定・ランナースクリプト・`setup-dev-env.sh` を標準化しました。
-- `commitlint.config.cjs` を `commitlint.config.mjs` にリネームしました。
-- ランナーライブラリのテストを `runners/libs/__tests__/` へ移動しました。
-- 使われなくなった PowerShell セットアップスクリプトを削除しました。
-  対象は `install-dev-tools.ps1`・`install-doc-tools.ps1`・`libs/AgInstaller.ps1`・`common/init.ps1` です。
-- 役割を終えた `scripts/run-specs.sh`・`scripts/lint-actionlint.sh` を削除しました。
+- `package.json`: `packageManager` に `pnpm@12.4.2` を追加し、`engines` に `node >=24`・`pnpm >=12` を追加しました。
+- `aglabo.github.io/package.json`: 同様に pnpm 12.4.2 と Node.js 24 以降を要求するよう統一しました。
+- `.gitignore` を allowlist 方式に変更しました。
+  既定ですべてを無視し、リポジトリの構成要素を明示的に許可する方式です。
+- `.claude/.gitignore`: `.git*` の許可パターンを `.gitignore` のみに絞り込みました。
+- `aglabo.github.io/.gitignore`: `versioned_sidebars` ディレクトリを追跡対象に追加しました。
+- `dprint`: TypeScript・JSON・Markdown・YAML・TOML の各プラグインを npm パッケージ形式へ移行しました。
+  あわせて JSON・Markdown プラグインを 0.24.0 に、TOML プラグインを 0.8.0 に更新しています。
+- `.editorconfig`: shell・PowerShell の整形設定を専用セクションへ集約し、重複した shfmt 設定を削除しました。
+- `lefthook.yml`: `prepare-commit-msg` のモデル指定を `gpt-5.4-mini` から `gpt-5.6-luna` に変更しました。
+
+#### ドキュメント
+
+- pnpm の既定バージョン表記を `11.22.0` に更新しました。
+  対象はユーザーガイドおよび `docs/.deckrd/` 配下の設計ドキュメントです。
+- 句読点・括弧表記を統一し、ネストした箇条書きのインデントを Markdown 形式に揃えました。
 
 ---
 
 ### Notes
 
-- 本リリースの `.github/actions/**/scripts/` 配下の変更は `shfmt` による整形のみです。
-  リダイレクトの空白・`case` のインデント・文の分割が対象で、動作の変更はありません。
-- 削除した PowerShell スクリプトおよび改修した `runners/` 配下のスクリプトは、
-  リポジトリ内部の開発用ツールであり、バージョニングの対象範囲外です。
+- 本リリースにコンポジットアクション・再利用可能ワークフローのインターフェース変更は含まれません。
+  変更はピン留め SHA の更新と、`ca-setup-repo` の `pnpm-version` 既定値の変更のみです。
+- `.gitignore` の allowlist 化・`engines` の追加・`.editorconfig` の整理は、
+  リポジトリ内部の開発環境に対する変更であり、バージョニングの対象範囲外です。
