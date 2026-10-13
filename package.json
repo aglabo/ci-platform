@@ -13,10 +13,12 @@
   "scripts": {
     "prepare": "bash ./scripts/setup-dev-env.sh",
     "scan:secrets": "concurrently \"betterleaks protect --config ./configs/betterleaks.toml\" \"secretlint --secretlintrc ./configs/secretlint.config.yaml .\"",
-    "check:dprint": "dprint check",
+    "check:dprint": "dprint check --list-different",
+    "check:dprint:diff": "dprint check",
     "format:dprint": "dprint fmt",
     "check:sh": "bash runners/run-shfmt.sh --list .",
     "format:sh": "bash runners/run-shfmt.sh --format .",
+    "lint:sh": "bash runners/run-shellcheck.sh ",
     "lint:gha": "concurrently \"pnpm run lint:gha:actions\" \"pnpm run lint:gha:workflows\"",
     "lint:gha:actions": "pnpm exec actionlint --config-file ./configs/actionlint.yaml",
     "lint:gha:workflows": "concurrently \"pnpm exec ghalint run --config ./configs/ghalint.yaml\" \"pnpm exec ghalint act --config ./configs/ghalint.yaml\"",
@@ -25,7 +27,6 @@
     "lint:markdown": "bash runners/run-markdownlint.sh ",
     "docs:dev": "pnpm run --dir aglabo.github.io start",
     "docs:build": "pnpm run --dir aglabo.github.io build:docs",
-    "lint:sh": "bash runners/run-shellcheck.sh ",
     "test:sh": "bash runners/run-shellspec.sh ",
     "test:sh:all": "bash runners/run-shellspec.sh all",
     "test:sh:unit": "bash runners/run-shellspec.sh unit",
@@ -33,7 +34,7 @@
     "test:sh:integration": "bash runners/run-shellspec.sh integration --integration",
     "test:sh:e2e": "bash runners/run-shellspec.sh e2e"
   },
-  "packageManager": "pnpm@12.4.2",
+  "packageManager": "pnpm@12.11.2",
   "engines": {
     "node": ">=24",
     "pnpm": ">=12"
