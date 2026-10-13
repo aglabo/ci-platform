@@ -6,8 +6,9 @@
 # This software is released under the MIT License.
 # https://opensource.org/licenses/MIT
 
-plugins:
-  "mdx": true
+plugins: {
+  mdx: true,
+}
 filters:
   comments: true
   allowlist:
@@ -25,6 +26,7 @@ rules:
       "preferInBody": "ですます",
       "preferInList": "",
     }
+    no-exclamation-question-mark: false
     ja-no-mixed-period:
       allowPeriodMarks:
         - ":"
@@ -32,11 +34,12 @@ rules:
       strict: false
   "@textlint-ja/preset-ai-writing": true
   preset-ja-spacing:
+    ja-no-space-around-slash: false
+    ja-no-space-around-parentheses: false
     ja-space-between-half-and-full-width:
       space:
         - alphabets
         - numbers
-    ja-no-space-around-parentheses: false
     ja-space-around-code:
       before: true
       after: true
@@ -46,6 +49,10 @@ rules:
     ja-space-around-strong:
       before: true
       after: true
+    ja-space-around-emphasis:
+      before: true
+      after: true
+  "@textlint-ja/no-synonyms": true
   common-misspellings: true
   no-mixed-zenkaku-and-hankaku-alphabet: true
   "@proofdict/proofdict":
