@@ -42,9 +42,9 @@
 
 
 ## Project directories
-# サブディレクトリを allow してから拡張子ごとに allow する
-# (親ディレクトリが除外されたままだと、その中のファイルは再許可できない)
-# ブレース展開 {a,b} は .gitignore では使えないため、拡張子は 1 行ずつ書く
+# Allow each subdirectory first, then allow files by extension
+# (files cannot be re-included while their parent directory is still ignored)
+# Brace expansion {a,b} does not work in .gitignore, so list one extension per line
 !/scripts/
 !/scripts/**/
 !/scripts/**/*.sh
@@ -91,9 +91,7 @@
 
 
 ## Deny rules (keep last)
-# 上の再帰 allowlist (!/scripts/**, !.github/** など) は最後に一致した規則が
-# 勝つため、機密・生成物までも再び追跡対象にしてしまう。
-# それらを再度除外するこのセクションは、必ずファイル末尾に置くこと。
+# default deny rules
 
 #   OS specific files
 .DS_Store

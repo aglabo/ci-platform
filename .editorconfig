@@ -20,6 +20,22 @@ indent_size = 2
 tab_width = 2
 
 # ─────────────────────────────
+# Exclude directories/files
+# ─────────────────────────────
+[**/node_modules/*]
+ignore = true
+
+[.tools/*]
+ignore = true
+
+[.local/*]
+ignore = true
+
+[**/*.spec.sh]
+ignore = true
+
+
+# ─────────────────────────────
 # Shell Scripts
 # ─────────────────────────────
 [*.{sh,bash,zsh}]
@@ -38,8 +54,8 @@ space_redirects    = true
 keep_padding       = true
 # --func-next-line
 function_next_line = true
+# --minify
 minify             = false
-
 
 # PowerShell
 [*.ps1]
@@ -48,24 +64,15 @@ indent_size = 4
 tab_width = 4
 
 
-
-# Exclude from shfmt
-[**/node_modules/*]
-ignore = true
-
-[.tools/*]
-ignore = true
-
-[.local/*]
-ignore = true
-
-[**/*.spec.sh]
-ignore = true
-
-
 # ─────────────────────────────
 # Source Code Files
 # ─────────────────────────────
+# TypeScript
+#[*.{ts,tsx}]
+#indent_style = space
+#indent_size = 2
+#tab_width = 2
+
 
 # ─────────────────────────────
 # Documents
@@ -74,6 +81,7 @@ ignore = true
 indent_style = space
 indent_size = 2
 tab_width = 2
+
 
 # ─────────────────────────────
 # configuration files
