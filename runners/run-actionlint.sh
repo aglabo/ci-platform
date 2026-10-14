@@ -12,7 +12,7 @@ set -euo pipefail
 main() {
   local globalConfig="${XDG_CONFIG_HOME:-${HOME}/.config}"
 
-  jactionlint --config-file "${globalConfig}/jactionlint/jactionlint.yaml"
+  jactionlint --config-file "${globalConfig}/jactionlint/jactionlint.yaml" "$@"
 }
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
