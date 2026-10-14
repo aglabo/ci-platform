@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# get-filelist.sh — file list and argument normalization library
+# get-filelist.lib.sh — file list and argument normalization library
 # Provides path normalization, glob-to-regex conversion, and file list retrieval
 
 # Guard against double sourcing
@@ -69,18 +69,16 @@ get_filelist() {
   local __f __norm
   for __f in "$@"; do
     __norm=$(normalize_path "$__f")
-    # Strip leading ./ so filter matches rg output (hidden paths have no ./ prefix)
-    __norm="${__norm#./}"
     if [[ "$__norm" == */* ]]; then
       __filters+=("$__norm")
     else
-      __filters+=("$(args_to_filter "$__norm")")
+      __filters+=("$(args_to_filter "$__f")")
     fi
   done
 
   # Enumerate files; normalize separators and prepend ./
   local __result
-  __result=$(cd "$__root" && rg --files --hidden --glob '!.git' -g "$__pattern" 2>/dev/null | sed 's|\\|/|g; s|^[^./]|./&|' || true)
+  __result=$(cd "$__root" && rg --files -g "$__pattern" 2>/dev/null | sed 's|\\|/|g; s|^[^./]|./&|' || true)
 
   # Apply each filter (AND: narrow results; short-circuit on empty)
   local __pat
