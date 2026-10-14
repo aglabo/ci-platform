@@ -77,12 +77,12 @@ readonly SCRIPT_DIR
 OUTPUT_FILE=""
 
 ##
-# @description AI model name for commit message generation (default: sonnet)
+# @description AI model name for commit message generation (default: gpt-6-luna)
 DEFAULT_AI_MODEL="gpt-6-luna"
 
 ###
-# @description AI model name for commit message generation (default: sonnet)
-AI_MODEL="sonnet"
+# @description AI model name for commit message generation (default: gpt-6-luna)
+AI_MODEL="${DEFAULT_AI_MODEL}"
 
 ##
 # @description Path to commit message generator template
@@ -122,7 +122,7 @@ Arguments:
 
 Options:
   --output FILE, -o FILE      Write commit message to FILE instead of stdout
-  --model MODEL               AI model name (default: sonnet)
+  --model MODEL               AI model name (default: gpt-6-luna)
                               Supported: gpt-*, o1-*, claude-*, haiku, sonnet, opus
   -h, --help                  Show this help message
 
@@ -147,7 +147,7 @@ EOF
 # @description Parse command-line options and set configuration
 # @arg $@ string Command-line arguments to parse
 # @option --output FILE|-o FILE Write commit message to FILE instead of stdout
-# @option --model MODEL Specify AI model name (default: sonnet)
+# @option --model MODEL Specify AI model name (default: gpt-6-luna)
 # @option -h|--help Display usage information
 # @arg $1 string When symlinked as a git hook: commit message file (used as output file)
 # @arg $2 string When symlinked as a git hook: message source (ignored)
@@ -259,7 +259,7 @@ make_context_block() {
 # - All model names validated before array creation
 # - Unknown models exit with error
 #
-# @arg $1 string AI model name (default: sonnet)
+# @arg $1 string AI model name (default: gpt-6-luna)
 # @return 0 If model is supported and AI_COMMAND is set
 # @return 1 If model is unsupported
 # @global AI_COMMAND Array populated with (command arg1 arg2 ...)
