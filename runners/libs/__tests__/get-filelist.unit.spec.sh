@@ -7,8 +7,7 @@
 # Target: runners/libs/get-filelist.lib.sh
 
 Describe 'get_filelist()'
-  # --execdir @specfile → cwd is runners/__tests__/unit/
-  Include ../../libs/get-filelist.lib.sh
+  Include "${SHELLSPEC_PROJECT_ROOT}/runners/libs/get-filelist.lib.sh"
 
   # ─── Internal Helpers
 

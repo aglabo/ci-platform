@@ -22,9 +22,13 @@ no-duplicate-heading:
 line-length:
   line_length: 120
   code_block_line_length: 120
+  tables: false # tables cannot be wrapped; exclude them from the line length check
 
 # list item
 ol-prefix: true
+
+# html
+no-inline-html: false
 
 # styles
 emphasis-style:
@@ -39,7 +43,3 @@ no-hard-tabs: true
 # Table columns
 table-column-style:
   style: aligned
-
-## for MDX settings
-# allow MDX comments
-no-space-in-emphasis: false

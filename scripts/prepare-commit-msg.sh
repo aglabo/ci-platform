@@ -2,7 +2,7 @@
 # src: ./scripts/prepare-commit-msg.sh
 # @(#) : Prepare commit message using Codex CLI
 #
-# Copyright (c) 2025- atsushifx <http://github.com/atsushifx>
+# Copyright (c) 2026- atsushifx <http://github.com/atsushifx>
 #
 # This software is released under the MIT License.
 # https://opensource.org/licenses/MIT
@@ -77,12 +77,12 @@ readonly SCRIPT_DIR
 OUTPUT_FILE=""
 
 ##
-# @description AI model name for commit message generation (default: sonnet)
-DEFAULT_AI_MODEL="sonnet"
+# @description AI model name for commit message generation (default: gpt-6-luna)
+DEFAULT_AI_MODEL="gpt-6-luna"
 
 ###
-# @description AI model name for commit message generation (default: sonnet)
-AI_MODEL="sonnet"
+# @description AI model name for commit message generation (default: gpt-6-luna)
+AI_MODEL="${DEFAULT_AI_MODEL}"
 
 ##
 # @description Path to commit message generator template
@@ -116,9 +116,13 @@ Usage: $script_name [OPTIONS]
 Generate Conventional Commits format messages by analyzing staged changes
 and recent commit history using AI.
 
+Arguments:
+  FILE                        Commit message file passed by git in hook mode
+                              (equivalent to --output FILE)
+
 Options:
   --output FILE, -o FILE      Write commit message to FILE instead of stdout
-  --model MODEL               AI model name (default: sonnet)
+  --model MODEL               AI model name (default: gpt-6-luna)
                               Supported: gpt-*, o1-*, claude-*, haiku, sonnet, opus
   -h, --help                  Show this help message
 
@@ -131,6 +135,11 @@ Examples:
 
   # Short option form
   $script_name -o .git/COMMIT_EDITMSG
+
+  # Git hook form (symlinked as .git/hooks/prepare-commit-msg)
+  # Git passes the message file, the message source, and the commit SHA;
+  # the first positional argument is used as the output file.
+  $script_name .git/COMMIT_EDITMSG message
 EOF
 }
 
@@ -138,11 +147,15 @@ EOF
 # @description Parse command-line options and set configuration
 # @arg $@ string Command-line arguments to parse
 # @option --output FILE|-o FILE Write commit message to FILE instead of stdout
-# @option --model MODEL Specify AI model name (default: sonnet)
+# @option --model MODEL Specify AI model name (default: gpt-6-luna)
 # @option -h|--help Display usage information
+# @arg $1 string When symlinked as a git hook: commit message file (used as output file)
+# @arg $2 string When symlinked as a git hook: message source (ignored)
+# @arg $3 string When symlinked as a git hook: commit SHA (ignored)
 # @example
 #   parse_options "$@"
 #   parse_options --model claude-sonnet-4-5 --output .git/COMMIT_EDITMSG
+#   parse_options .git/COMMIT_EDITMSG message   # git hook invocation
 # @exitcode 0 If parsing succeeds
 # @exitcode 1 If unknown option provided or required argument missing
 # @global OUTPUT_FILE
@@ -173,6 +186,14 @@ parse_options() {
     -*)
       echo "Error: Unknown option: $1" >&2
       exit 1
+      ;;
+    *)
+      # Git hook interface: $1 = commit message file, $2 = message source, $3 = SHA.
+      # Take the first positional as the output file, drop the remaining metadata.
+      if [[ -z "$OUTPUT_FILE" ]]; then
+        OUTPUT_FILE="$1"
+      fi
+      shift
       ;;
     esac
   done
@@ -229,7 +250,7 @@ make_context_block() {
 # - Supports piped stdin: ... | "${AI_COMMAND[@]}"
 #
 # **Supported Providers:**
-# - OpenAI (gpt-*, o1-*) → codex exec --model <model>
+# - OpenAI (gpt-*, o1-*) → codex exec -s read-only --color never --model <model>
 # - Anthropic (claude-*, haiku, sonnet, opus) → claude -p --model <model>
 # - OpenCode (org/model) → opencode run --model <model>
 #
@@ -238,7 +259,7 @@ make_context_block() {
 # - All model names validated before array creation
 # - Unknown models exit with error
 #
-# @arg $1 string AI model name (default: sonnet)
+# @arg $1 string AI model name (default: gpt-6-luna)
 # @return 0 If model is supported and AI_COMMAND is set
 # @return 1 If model is unsupported
 # @global AI_COMMAND Array populated with (command arg1 arg2 ...)
@@ -253,13 +274,14 @@ get_model_command() {
   case "$model" in
   # OpenAI models
   gpt-* | o1-*)
-    AI_COMMAND=("codex" "exec" "--model" "${model}")
+    AI_COMMAND=("codex" "exec" "-s" "read-only" "--color" "never" "--model" "${model}")
     ;;
 
   # Anthropic (Claude) models
   claude-* | haiku | sonnet | opus)
-    # execute claude with no-mcp, accept edits permission
-    AI_COMMAND=("claude" "-p" "--permission-mode" "acceptEdits" "--strict-mcp-config" "--mcp-config" '{"mcpServers":{}}' "--model" "${model}")
+    # execute claude with no-mcp and read-only tools (mirrors codex -s read-only):
+    # the staged diff is untrusted input, so the generator must not write
+    AI_COMMAND=("claude" "-p" "--tools" "Read,Grep,Glob" "--strict-mcp-config" "--mcp-config" '{"mcpServers":{}}' "--model" "${model}")
     ;;
 
   # Copilot models (copilot/model format)
