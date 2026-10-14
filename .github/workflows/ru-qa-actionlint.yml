@@ -13,13 +13,17 @@ name: "Reusable: QA by jactionlint"
 permissions:
   contents: read
 
+defaults:
+  run:
+    shell: bash
+
 on:
   workflow_call:
     inputs:
       version:
         description: "Version of jactionlint to install"
         required: false
-        default: "2.1.0"
+        default: "2.2.0"
         type: string
       config:
         description: "Path to the jactionlint configuration file"
@@ -44,14 +48,14 @@ jobs:
       - name: Validate environment
         id: env-validation
         if: steps.target-checkout.outcome == 'success'
-        uses: aglabo/ci-platform/.github/actions/ca-validate-environment@89ce7e7491ef66e280a58bfcc27aff3d76f7d8c8 # v0.3.5
+        uses: aglabo/ci-platform/.github/actions/ca-validate-environment@3b2c72908e3a933f66e7c6730aff11413d161629 # main
         with:
           actions-type: read
 
       - name: Install jactionlint
         id: tool-install
         if: steps.env-validation.outcome == 'success'
-        uses: aglabo/ci-platform/.github/actions/ca-setup-tool@89ce7e7491ef66e280a58bfcc27aff3d76f7d8c8 # v0.3.5
+        uses: aglabo/ci-platform/.github/actions/ca-setup-tool@3b2c72908e3a933f66e7c6730aff11413d161629 # main
         with:
           repo: jdx/jactionlint
           tool-version: ${{ inputs.version }}
@@ -83,7 +87,7 @@ jobs:
       - name: Upload jactionlint report
         id: report-upload
         if: failure() && steps.lint-execute.outcome == 'failure'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: jactionlint-report
           path: .github/report/jactionlint-report.txt
