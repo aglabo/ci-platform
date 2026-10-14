@@ -7,8 +7,6 @@
 # This software is released under the MIT License.
 # https://opensource.org/licenses/MIT
 
-# shellcheck disable=SC1091
-
 set -euo pipefail
 
 # shellcheck source=runners/libs/init-vars.lib.sh
