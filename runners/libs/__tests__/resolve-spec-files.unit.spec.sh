@@ -7,9 +7,7 @@
 # Target: runners/run-shellspec.sh
 
 Describe 'resolve_spec_files()'
-  # --execdir @specfile → cwd is runners/__tests__/unit/
-  # Include paths are relative to that directory
-  Include ../../run-shellspec.sh
+  Include "${SHELLSPEC_PROJECT_ROOT}/runners/run-shellspec.sh"
 
   # ─── Internal Helpers
 
