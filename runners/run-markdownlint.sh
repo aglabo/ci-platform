@@ -15,8 +15,9 @@ set -euo pipefail
 # @exitcode 1 Lint error
 main() {
   local -a targets=("$@")
+  local globalConfig="${XDG_CONFIG_HOME:-${HOME}/.config}"
 
-  markdownlint --config "${XDG_CONFIG_HOME}/linters/markdownlint/.markdownlint-cli2.yaml" "${targets[@]+"${targets[@]}"}"
+  markdownlint --config "${globalConfig}/linters/markdownlint/.markdownlint-cli2.yaml" "${targets[@]+"${targets[@]}"}"
 }
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then

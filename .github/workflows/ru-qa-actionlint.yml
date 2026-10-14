@@ -1,14 +1,14 @@
 # src: ./.github/workflows/ru-qa-actionlint.yml
-# @(#) : Reusable workflow for GitHub Actions workflow linting with actionlint
+# @(#) : Reusable workflow for GitHub Actions workflow linting with jactionlint
 #
 # Copyright (c) 2026- atsushifx <https://github.com/atsushifx>
 #
 # This software is released under the MIT License.
 # https://opensource.org/licenses/MIT
 
-# cspell:words rhysd
+# cspell:words jactionlint jdx
 
-name: "Reusable: QA by Actionlint"
+name: "Reusable: QA by jactionlint"
 
 permissions:
   contents: read
@@ -17,14 +17,14 @@ on:
   workflow_call:
     inputs:
       version:
-        description: "Version of actionlint to install"
+        description: "Version of jactionlint to install"
         required: false
-        default: "1.7.12"
+        default: "2.1.0"
         type: string
       config:
-        description: "Path to the actionlint configuration file"
+        description: "Path to the jactionlint configuration file"
         required: false
-        default: "./shared/configs/actionlint.yaml"
+        default: "./shared/configs/jactionlint.yaml"
         type: string
 
 jobs:
@@ -48,15 +48,15 @@ jobs:
         with:
           actions-type: read
 
-      - name: Install actionlint
+      - name: Install jactionlint
         id: tool-install
         if: steps.env-validation.outcome == 'success'
         uses: aglabo/ci-platform/.github/actions/ca-setup-tool@89ce7e7491ef66e280a58bfcc27aff3d76f7d8c8 # v0.3.5
         with:
-          repo: rhysd/actionlint
+          repo: jdx/jactionlint
           tool-version: ${{ inputs.version }}
 
-      - name: Checkout actionlint config
+      - name: Checkout jactionlint config
         id: config-checkout
         if: steps.tool-install.outcome == 'success'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -71,18 +71,20 @@ jobs:
         if: steps.config-checkout.outcome == 'success'
         run: mkdir -p .github/report
 
-      - name: Run actionlint
+      - name: Run jactionlint
         id: lint-execute
         if: steps.prepare-report.outcome == 'success'
+        env:
+          CONFIG_FILE: ${{ inputs.config }}
         run: |
-          actionlint -config-file "${{ inputs.config }}" 2>&1 | tee .github/report/actionlint-report.txt
+          jactionlint --config-file "${CONFIG_FILE}" 2>&1 | tee .github/report/jactionlint-report.txt
           exit "${PIPESTATUS[0]}"
 
-      - name: Upload actionlint report
+      - name: Upload jactionlint report
         id: report-upload
         if: failure() && steps.lint-execute.outcome == 'failure'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: actionlint-report
-          path: .github/report/actionlint-report.txt
+          name: jactionlint-report
+          path: .github/report/jactionlint-report.txt
           retention-days: 30

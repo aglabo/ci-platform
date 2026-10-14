@@ -15,8 +15,9 @@ set -euo pipefail
 # @exitcode 1 Lint error
 main() {
   local -a targets=("$@")
+  local globalConfig="${XDG_CONFIG_HOME:-${HOME}/.config}"
 
-  textlint --config "${XDG_CONFIG_HOME}/linters/textlint/textlintrc.yaml" --cache --cache-location .cache/textlint/textlintcache "${targets[@]+"${targets[@]}"}"
+  textlint --config "${globalConfig}/linters/textlint/textlintrc.yaml" --cache --cache-location .cache/textlint/textlintcache "${targets[@]+"${targets[@]}"}"
 }
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
