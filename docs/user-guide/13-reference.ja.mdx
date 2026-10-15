@@ -27,7 +27,7 @@ tags:
 ワークフローから以下のように参照します。
 
 ```yaml
-- uses: aglabo/ci-platform/.github/actions/validate-environment@21e02575bb3c3ec61a149801d696b53669f85208 # v0.1.0
+- uses: aglabo/ci-platform/.github/actions/ca-validate-environment@ff5ff3dd020860b4a95bc97c1121af0c24f02aa1 # v0.4.0
 ```
 
 > 安全のため、SHAを指定しています。実際に使用する際には、最新バージョンのSHAを使用してください。
@@ -90,7 +90,7 @@ cmd|app_name|version_extractor|min_version
 - 複数アプリを検証する場合は YAML の multiline 文字列で記述します。
 
 ```yaml
-- uses: aglabo/ci-platform/.github/actions/validate-environment@21e02575bb3c3ec61a149801d696b53669f85208 # v0.1.0
+- uses: aglabo/ci-platform/.github/actions/ca-validate-environment@ff5ff3dd020860b4a95bc97c1121af0c24f02aa1 # v0.4.0
   with:
     additional-apps: |
       gh|GitHub CLI|field:3|2.0
@@ -182,7 +182,7 @@ GitHub ホステッドランナーか否かを `RUNNER_ENVIRONMENT` 環境変数
 steps:
   - name: Validate environment
     id: validate
-    uses: aglabo/ci-platform/.github/actions/validate-environment@21e02575bb3c3ec61a149801d696b53669f85208 # v0.1.0
+    uses: aglabo/ci-platform/.github/actions/ca-validate-environment@ff5ff3dd020860b4a95bc97c1121af0c24f02aa1 # v0.4.0
     with:
       actions-type: read
 

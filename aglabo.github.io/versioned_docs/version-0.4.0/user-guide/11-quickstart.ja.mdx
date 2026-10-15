@@ -43,7 +43,7 @@ jobs:
       # checkout より前に配置して環境不整合を最初に検知する
       - name: Validate environment
         id: validate
-        uses: aglabo/ci-platform/.github/actions/validate-environment@21e02575bb3c3ec61a149801d696b53669f85208 # v0.1.0
+        uses: aglabo/ci-platform/.github/actions/ca-validate-environment@ff5ff3dd020860b4a95bc97c1121af0c24f02aa1 # v0.4.0
       # SHA は Dependabot または Renovate で自動更新できます
 
       - name: Checkout

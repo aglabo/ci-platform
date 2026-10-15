@@ -22,7 +22,7 @@ CI は設定が誤ったまま実行されると、後続ステップで権限�
 steps:
   # checkout より前に配置することで、環境不整合を最初のステップで検知する
   - name: Validate environment
-    uses: aglabo/ci-platform/.github/actions/validate-environment@21e02575bb3c3ec61a149801d696b53669f85208 # v0.1.0
+    uses: aglabo/ci-platform/.github/actions/ca-validate-environment@ff5ff3dd020860b4a95bc97c1121af0c24f02aa1 # v0.4.0
 ```
 
 ---
@@ -100,7 +100,7 @@ permissions:
 
 steps:
   - name: Validate environment
-    uses: aglabo/ci-platform/.github/actions/validate-environment@21e02575bb3c3ec61a149801d696b53669f85208 # v0.1.0
+    uses: aglabo/ci-platform/.github/actions/ca-validate-environment@ff5ff3dd020860b4a95bc97c1121af0c24f02aa1 # v0.4.0
     with:
       actions-type: read
     # github-token は省略可。${{ github.token }} が自動的に使われる
@@ -111,7 +111,7 @@ PAT など別のトークンを使う場合は `github-token` に明示的に渡
 ```yaml
 steps:
   - name: Validate environment
-    uses: aglabo/ci-platform/.github/actions/validate-environment@21e02575bb3c3ec61a149801d696b53669f85208 # v0.1.0
+    uses: aglabo/ci-platform/.github/actions/ca-validate-environment@ff5ff3dd020860b4a95bc97c1121af0c24f02aa1 # v0.4.0
     with:
       actions-type: commit
       github-token: ${{ secrets.MY_PAT }}
@@ -129,7 +129,7 @@ Git と curl をデフォルトで検証します。`additional-apps` で任意�
 各アプリは `cmd|表示名|バージョン抽出方式|最低バージョン` の形式で指定します。
 
 ```yaml
-- uses: aglabo/ci-platform/.github/actions/validate-environment@21e02575bb3c3ec61a149801d696b53669f85208 # v0.1.0
+- uses: aglabo/ci-platform/.github/actions/ca-validate-environment@ff5ff3dd020860b4a95bc97c1121af0c24f02aa1 # v0.4.0
   with:
     additional-apps: |
       gh|GitHub CLI|field:3|2.0
@@ -162,7 +162,7 @@ Git と curl をデフォルトで検証します。`additional-apps` で任意�
 steps:
   - name: Validate environment
     id: validate
-    uses: aglabo/ci-platform/.github/actions/validate-environment@21e02575bb3c3ec61a149801d696b53669f85208 # v0.1.0
+    uses: aglabo/ci-platform/.github/actions/ca-validate-environment@ff5ff3dd020860b4a95bc97c1121af0c24f02aa1 # v0.4.0
     with:
       actions-type: read
 

@@ -34,7 +34,7 @@ CI 設定を各リポジトリへコピーして運用していると、次の�
 GitHub Actions の Composite Action と Reusable Workflow を SHA 固定で参照するだけで利用できます。
 
 ```yaml
-- uses: aglabo/ci-platform/.github/actions/validate-environment@21e02575bb3c3ec61a149801d696b53669f85208 # v0.1.0
+- uses: aglabo/ci-platform/.github/actions/ca-validate-environment@ff5ff3dd020860b4a95bc97c1121af0c24f02aa1 # v0.4.0
 ```
 
 > **クイックスタートはこちら** → [最小構成で今すぐ導入](./11-quickstart.ja.mdx)
@@ -145,7 +145,7 @@ ci-platform では **SHA 固定 + タグコメント** を標準的な参照方�
 
 ```yaml
 # 推奨: SHA 固定でサプライチェーン攻撃への耐性を確保
-- uses: aglabo/ci-platform/.github/actions/validate-environment@21e02575bb3c3ec61a149801d696b53669f85208 # v0.1.0
+- uses: aglabo/ci-platform/.github/actions/ca-validate-environment@ff5ff3dd020860b4a95bc97c1121af0c24f02aa1 # v0.4.0
 ```
 
 タグ (`@v0.1.0`) だけでは参照先のコミットが後から書き換えられるリスクを排除できません。
@@ -170,7 +170,7 @@ SHA 固定により、参照先の内容が変更されても CI への影響を
 
 | 原則                    | 内容                                                                                   | 具体例                                                                     |
 | ----------------------- | -------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| Immutable reference     | SHA 固定により、参照先コミットが変わらない限り CI は影響を受けない                     | `@21e02575...` のようにフル SHA で固定する                                 |
+| Immutable reference     | SHA 固定により、参照先コミットが変わらない限り CI は影響を受けない                     | `@ff5ff3dd...` のようにフル SHA で固定する                                 |
 | Centralized enforcement | セキュリティポリシーを単一リポジトリで一元管理し、各リポジトリ間の設定のずれを防ぎます | `permissions:` ポリシーを ci-platform 側で定義し、全リポジトリから参照する |
 | Fail early, fail loudly | `validate-environment` がジョブ冒頭でポリシー違反を即検出・即終了する                  | ランナー OS が `ubuntu` でなければ最初のステップで即 `exit 1`              |
 

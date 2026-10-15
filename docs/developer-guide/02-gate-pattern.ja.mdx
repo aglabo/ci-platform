@@ -89,7 +89,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: aglabo/ci-platform/.github/actions/validate-environment@v0.1.0
+      - uses: aglabo/ci-platform/.github/actions/ca-validate-environment@v0.4.0
       # validate-environment が OK の場合のみ後続ステップが実行される
       - name: Run scan
         run: actionlint ...

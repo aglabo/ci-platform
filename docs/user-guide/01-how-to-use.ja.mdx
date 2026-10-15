@@ -55,7 +55,7 @@ jobs:
 
 | 指定方法           | 例                                                   | 特徴                                         |
 | ------------------ | ---------------------------------------------------- | -------------------------------------------- |
-| SHA + タグコメント | `@21e02575bb3c3ec61a149801d696b53669f85208 # v0.1.0` | 最も厳密。改ざん耐性が高い (推奨)            |
+| SHA + タグコメント | `@ff5ff3dd020860b4a95bc97c1121af0c24f02aa1 # v0.4.0` | 最も厳密。改ざん耐性が高い (推奨)            |
 | タグ               | `@v0.1.0`                                            | リリース済みバージョンを固定する             |
 | ブランチ名         | `@main`                                              | 常に最新。破壊的変更の影響を受ける恐れがある |
 
@@ -83,7 +83,7 @@ jobs:
 
     steps:
       - name: Validate environment
-        uses: aglabo/ci-platform/.github/actions/validate-environment@21e02575bb3c3ec61a149801d696b53669f85208 # v0.1.0
+        uses: aglabo/ci-platform/.github/actions/ca-validate-environment@ff5ff3dd020860b4a95bc97c1121af0c24f02aa1 # v0.4.0
         with:
           actions-type: read
 
@@ -158,7 +158,7 @@ jobs:
       contents: read
     steps:
       - name: Validate environment
-        uses: aglabo/ci-platform/.github/actions/validate-environment@21e02575bb3c3ec61a149801d696b53669f85208 # v0.1.0
+        uses: aglabo/ci-platform/.github/actions/ca-validate-environment@ff5ff3dd020860b4a95bc97c1121af0c24f02aa1 # v0.4.0
         with:
           actions-type: read
 
