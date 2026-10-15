@@ -17,6 +17,75 @@ summary: >
   ja-technical-writing/max-comma
   -->
 
+## [0.4.0] - 2026-10-15
+
+### Overview
+
+This release switches workflow linting to jactionlint, improves CI concurrency control,
+and adds WSL support to the ShellSpec runner.
+
+It also fixes runner path resolution and updates development tools and setup scripts.
+
+---
+
+### Added
+
+#### Development Tooling
+
+- Added a jactionlint runner with argument forwarding and configuration lookup.
+- Added WSL delegation for ShellSpec execution on Windows.
+- Added CODEOWNERS with `@atsushifx` as the owner of all files.
+
+---
+
+### Fixed
+
+- Fixed project root lookup to use the runner library location.
+- Normalized leading `./` in file filters.
+- Excluded `node_modules` from ShellCheck directory scans.
+- Fixed markdownlint configuration and textlint cache paths.
+- Added a `~/.config` fallback when `XDG_CONFIG_HOME` is unset.
+- Fixed setup failure handling and dependency installation for AGLa tools.
+
+---
+
+### Changed
+
+#### GitHub Actions
+
+- `ru-qa-actionlint.yml`: Replaced actionlint with jactionlint 2.2.0.
+- Changed the default lint configuration to `./shared/configs/jactionlint.yaml`
+  and the report name to `jactionlint-report`.
+- Passed action inputs and lint configuration paths through environment variables.
+- Updated pinned workflow and composite action references.
+- Added concurrency control to QA, secret scanning, and composite action tests.
+- Limited documentation deployment cancellation to pull request runs.
+- Set Bash as the default run shell in updated workflows.
+- Updated `actions/setup-node` to v7.1.0 and pinned `actions/upload-artifact` to v7.0.2.
+- Updated the default betterleaks version to 1.9.0.
+
+#### Development Environment
+
+- Updated pnpm to 12.11.2 and refreshed dependencies.
+- Updated the dprint JSON, Markdown, and TOML plugins.
+- Changed `check:dprint` to list differing files and added `check:dprint:diff`.
+- Reduced ShellSpec parallel jobs from 16 to 4 and simplified its options.
+- Updated textlint and markdownlint rules and exclusions.
+- Improved Git hook argument handling and changed the default AI model to `gpt-6-luna`.
+- Added Lefthook installation checks and improved development setup.
+- Cleaned up configuration comments and obsolete test helpers.
+
+---
+
+### Notes
+
+- `ru-qa-actionlint.yml` keeps its filename but now runs jactionlint.
+  Review custom configuration files and explicit tool version settings before upgrading.
+- Update downstream report references to `jactionlint-report`.
+- Use `check:dprint:diff` where a formatting check is required.
+
+---
+
 ## [0.3.5] - 2026-09-18
 
 ### Overview
