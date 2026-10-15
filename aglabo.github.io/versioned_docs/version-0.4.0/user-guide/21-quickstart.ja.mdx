@@ -1,0 +1,125 @@
+---
+title: クイックスタート - setup-tool / setup-repo
+description: setup-tool と setup-repo の最小構成での利用手順
+id: setup-tool-repo-quickstart
+slug: setup-tool-repo-quickstart
+sidebar_position: 21
+tags:
+  - setup-tool
+  - setup-repo
+  - quickstart
+---
+
+<!-- cspell:words rhysd -->
+
+## 🚀 クイックスタート
+
+このページでは、`setup-tool` と `setup-repo` を最小構成で使うための手順を説明します。
+
+---
+
+## 前提条件
+
+- GitHub Actions ワークフローが `ubuntu-latest` で動作していること
+- `permissions: contents: read` が設定されていること
+
+---
+
+## setup-tool の最小構成
+
+GitHub Releases からバイナリツールをインストールする最小構成です。
+`actionlint` を例に示します。
+
+```yaml
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        id: checkout
+        uses: actions/checkout@<SHA> # vX.Y.Z
+        with:
+          persist-credentials: false
+
+      - name: Install actionlint
+        id: setup-tool
+        if: steps.checkout.outcome == 'success'
+        uses: aglabo/ci-platform/.github/actions/ca-setup-tool@<SHA> # vX.Y.Z
+        with:
+          repo: rhysd/actionlint
+          tool-version: "1.7.12"
+
+      - name: Run actionlint
+        if: steps.setup-tool.outcome == 'success'
+        run: actionlint .github/workflows/*.yml
+```
+
+インストール後は `actionlint` コマンドがそのまま使えます。
+
+---
+
+## setup-repo の最小構成
+
+Node.js ベースのツールリポジトリをセットアップする最小構成です。
+`agla-dev-tools` を例に示します。
+
+```yaml
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        id: checkout
+        uses: actions/checkout@<SHA> # vX.Y.Z
+        with:
+          persist-credentials: false
+
+      - name: Setup agla-dev-tools
+        id: setup-repo
+        if: steps.checkout.outcome == 'success'
+        uses: aglabo/ci-platform/.github/actions/ca-setup-repo@<SHA> # vX.Y.Z
+        with:
+          repo: aglabo/agla-dev-tools
+          path: ./tools/agla-dev-tools
+          ref: a88f3bf1ecda478ad8ec2e907139bd058ce5ee56 # v0.1.0
+
+      - name: Run ls-lint
+        if: steps.setup-repo.outcome == 'success'
+        run: ls-lint
+```
+
+セットアップ後はリポジトリの `bin/` 配下のコマンドが使えます。
+
+---
+
+## 共通の注意点
+
+### SHA 固定参照を推奨
+
+セキュリティのため、アクション参照は SHA で固定することを推奨します。
+タグ（`vX.Y.Z`）をコメントとして残しておくと可読性を保てます。
+
+```yaml
+uses: aglabo/ci-platform/.github/actions/ca-setup-tool@<SHA> # vX.Y.Z
+```
+
+### `if: steps.<id>.outcome == 'success'` パターン
+
+各ステップに `id` を設定し、前のステップが成功した場合のみ実行する条件を付けてください。
+これにより、途中のステップが失敗しても後続の意図しない処理が走りません。
+
+### `persist-credentials: false`
+
+`actions/checkout` では `persist-credentials: false` を設定し、不要な認証情報を残さないようにしてください。
+
+---
+
+## 📚 関連ドキュメント
+
+- [概要](./20-about-setup-tool-repo.ja.mdx): 両アクションの設計目標・使い分け
+- [基本シナリオ](./22-basic-scenarios.ja.mdx): 典型的な利用例
+- [リファレンス](./23-reference.ja.mdx): 入力パラメータの詳細

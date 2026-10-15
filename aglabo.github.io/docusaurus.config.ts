@@ -45,10 +45,22 @@ const config: Config = {
           path: '../docs',
           routeBasePath: '/',
           sidebarPath: './sidebars.ts',
+          // Docusaurus defaults + Deckrd design documents (docs/.deckrd)
+          exclude: [
+            '**/_*.{js,jsx,ts,tsx,md,mdx}',
+            '**/_*/**',
+            '**/*.test.{js,jsx,ts,tsx}',
+            '**/__tests__/**',
+            '**/.deckrd/**',
+          ],
           includeCurrentVersion: true,
           versions: {
             current: {
               label: 'Next',
+              badge: true,
+            },
+            '0.4.0': {
+              label: 'v0.4.0',
               badge: true,
             },
             '0.3.0': {

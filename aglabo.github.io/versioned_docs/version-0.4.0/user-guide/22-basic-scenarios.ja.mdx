@@ -1,0 +1,178 @@
+---
+title: 基本シナリオ - setup-tool / setup-repo
+description: setup-tool と setup-repo の典型的な利用例
+id: setup-tool-repo-basic-scenarios
+slug: setup-tool-repo-scenarios
+sidebar_position: 22
+tags:
+  - setup-tool
+  - setup-repo
+  - scenarios
+---
+
+<!-- cspell:words rhysd -->
+
+## 📋 基本シナリオ
+
+このページでは `setup-tool` と `setup-repo` の典型的な利用例を示します。
+
+---
+
+## シナリオ A: setup-tool で actionlint をインストールして lint を実行
+
+GitHub Actions ワークフローの構文を検証する `actionlint` をインストールして実行します。
+
+```yaml
+jobs:
+  actionlint:
+    name: Lint GitHub Actions workflows
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        id: checkout
+        uses: actions/checkout@<SHA> # vX.Y.Z
+        with:
+          persist-credentials: false
+
+      - name: Install actionlint
+        id: setup-tool
+        if: steps.checkout.outcome == 'success'
+        uses: aglabo/ci-platform/.github/actions/ca-setup-tool@<SHA> # vX.Y.Z
+        with:
+          repo: rhysd/actionlint
+          tool-version: "1.7.12"
+
+      - name: Run actionlint
+        if: steps.setup-tool.outcome == 'success'
+        run: |
+          actionlint -config-file ./configs/actionlint.yaml .github/workflows/*.yml
+```
+
+---
+
+## シナリオ B: setup-repo で agla-dev-tools をセットアップして ls-lint を実行
+
+Node.js ベースのツールリポジトリ `agla-dev-tools` をセットアップし、`ls-lint` でファイル名を検証します。
+
+```yaml
+jobs:
+  ls-lint:
+    name: Lint file names
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        id: checkout
+        uses: actions/checkout@<SHA> # vX.Y.Z
+        with:
+          persist-credentials: false
+
+      - name: Setup agla-dev-tools
+        id: setup-repo
+        if: steps.checkout.outcome == 'success'
+        uses: aglabo/ci-platform/.github/actions/ca-setup-repo@<SHA> # vX.Y.Z
+        with:
+          repo: aglabo/agla-dev-tools
+          path: ./tools/agla-dev-tools
+          ref: a88f3bf1ecda478ad8ec2e907139bd058ce5ee56 # v0.1.0
+
+      - name: Run ls-lint
+        if: steps.setup-repo.outcome == 'success'
+        run: ls-lint
+```
+
+---
+
+## シナリオ C: 両アクションを組み合わせてマルチツール CI を構成
+
+`setup-tool` と `setup-repo` を同一ジョブで組み合わせ、複数のツールを使う CI を構成します。
+
+```yaml
+jobs:
+  quality-check:
+    name: Quality check
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        id: checkout
+        uses: actions/checkout@<SHA> # vX.Y.Z
+        with:
+          persist-credentials: false
+
+      - name: Install actionlint
+        id: setup-actionlint
+        if: steps.checkout.outcome == 'success'
+        uses: aglabo/ci-platform/.github/actions/ca-setup-tool@<SHA> # vX.Y.Z
+        with:
+          repo: rhysd/actionlint
+          tool-version: "1.7.12"
+
+      - name: Setup agla-dev-tools
+        id: setup-repo
+        if: steps.checkout.outcome == 'success'
+        uses: aglabo/ci-platform/.github/actions/ca-setup-repo@<SHA> # vX.Y.Z
+        with:
+          repo: aglabo/agla-dev-tools
+          path: ./tools/agla-dev-tools
+          ref: a88f3bf1ecda478ad8ec2e907139bd058ce5ee56 # v0.1.0
+
+      - name: Run actionlint
+        if: steps.setup-actionlint.outcome == 'success'
+        run: actionlint -config-file ./configs/actionlint.yaml .github/workflows/*.yml
+
+      - name: Run ls-lint
+        if: steps.setup-repo.outcome == 'success'
+        run: ls-lint
+```
+
+`setup-tool` と `setup-repo` は独立して動作するため、それぞれの `id` で条件を分けて管理できます。
+
+---
+
+## シナリオ D: ghalint のインストールと実行
+
+GitHub Actions ワークフローのセキュリティポリシーを検証する `ghalint` を使う例です。
+
+```yaml
+jobs:
+  ghalint:
+    name: Security lint GitHub Actions
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        id: checkout
+        uses: actions/checkout@<SHA> # vX.Y.Z
+        with:
+          persist-credentials: false
+
+      - name: Install ghalint
+        id: setup-tool
+        if: steps.checkout.outcome == 'success'
+        uses: aglabo/ci-platform/.github/actions/ca-setup-tool@<SHA> # vX.Y.Z
+        with:
+          repo: suzuki-shunsuke/ghalint
+          tool-version: "1.3.2"
+
+      - name: Run ghalint
+        if: steps.setup-tool.outcome == 'success'
+        run: ghalint run --config ./configs/ghalint.yaml
+```
+
+---
+
+## 📚 関連ドキュメント
+
+- [概要](./20-about-setup-tool-repo.ja.mdx): 両アクションの設計目標・使い分け
+- [クイックスタート](./21-quickstart.ja.mdx): 最小構成での利用手順
+- [リファレンス](./23-reference.ja.mdx): 入力パラメータの詳細

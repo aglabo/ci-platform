@@ -51,14 +51,14 @@ jobs:
 
       - name: Validate environment
         id: env-validation
-        uses: aglabo/ci-platform/.github/actions/ca-validate-environment@3b2c72908e3a933f66e7c6730aff11413d161629 # main
+        uses: aglabo/ci-platform/.github/actions/ca-validate-environment@ff5ff3dd020860b4a95bc97c1121af0c24f02aa1 # v0.4.0
         with:
           actions-type: read
 
       - name: Install betterleaks
         id: tool-install
         if: steps.env-validation.outcome == 'success'
-        uses: aglabo/ci-platform/.github/actions/ca-setup-tool@3b2c72908e3a933f66e7c6730aff11413d161629 # main
+        uses: aglabo/ci-platform/.github/actions/ca-setup-tool@ff5ff3dd020860b4a95bc97c1121af0c24f02aa1 # v0.4.0
         with:
           repo: betterleaks/betterleaks
           tool-version: ${{ inputs.version }}
