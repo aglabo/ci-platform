@@ -13,9 +13,17 @@ name: "TestRunner for CA Composite Actions"
 permissions:
   contents: read
 
+defaults:
+  run:
+    shell: bash
+
 on:
   workflow_call:
   workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-ca-tests-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   setup-foundation:

@@ -11,6 +11,10 @@ name: "Reusable: QA by Ghalint"
 permissions:
   contents: read
 
+defaults:
+  run:
+    shell: bash
+
 on:
   workflow_call:
     inputs:
@@ -42,14 +46,14 @@ jobs:
       - name: Validate environment
         id: env-validation
         if: steps.target-checkout.outcome == 'success'
-        uses: aglabo/ci-platform/.github/actions/ca-validate-environment@89ce7e7491ef66e280a58bfcc27aff3d76f7d8c8 # v0.3.5
+        uses: aglabo/ci-platform/.github/actions/ca-validate-environment@3b2c72908e3a933f66e7c6730aff11413d161629 # main
         with:
           actions-type: read
 
       - name: Install ghalint
         id: tool-install
         if: steps.env-validation.outcome == 'success'
-        uses: aglabo/ci-platform/.github/actions/ca-setup-tool@89ce7e7491ef66e280a58bfcc27aff3d76f7d8c8 # v0.3.5
+        uses: aglabo/ci-platform/.github/actions/ca-setup-tool@3b2c72908e3a933f66e7c6730aff11413d161629 # main
         with:
           repo: suzuki-shunsuke/ghalint
           tool-version: ${{ inputs.version }}
@@ -72,14 +76,16 @@ jobs:
       - name: Run ghalint
         id: lint-execute
         if: steps.prepare-report.outcome == 'success'
+        env:
+          CONFIG_FILE: ${{ inputs.config }}
         run: |
-          ghalint run --config "${{ inputs.config }}" 2>&1 | tee .github/report/ghalint-report.txt
+          ghalint run --config "${CONFIG_FILE}" 2>&1 | tee .github/report/ghalint-report.txt
           exit "${PIPESTATUS[0]}"
 
       - name: Upload ghalint report
         id: report-upload
         if: failure() && steps.lint-execute.outcome == 'failure'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: ghalint-report
           path: .github/report/ghalint-report.txt

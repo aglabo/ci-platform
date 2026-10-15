@@ -43,9 +43,9 @@ runs:
       run: |
         . "${{ github.action_path }}/scripts/_libs/filter.lib.sh"
         if ! _result=$(resolve_sha_for_event \
-          "${{ inputs.before-sha }}" \
-          "${{ inputs.after-sha }}" \
-          "${{ github.event_name }}"); then
+          "${INPUT_BEFORE_SHA}" \
+          "${INPUT_AFTER_SHA}" \
+          "${GITHUB_EVENT_NAME}"); then
           exit 1
         fi
         _before=$(echo "$_result" | head -n1)
@@ -53,6 +53,8 @@ runs:
         echo "before_sha=${_before}" >> "$GITHUB_OUTPUT"
         echo "after_sha=${_after}" >> "$GITHUB_OUTPUT"
       env:
+        INPUT_BEFORE_SHA: ${{ inputs.before-sha }}
+        INPUT_AFTER_SHA: ${{ inputs.after-sha }}
         GITHUB_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         GITHUB_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         GITHUB_BEFORE_SHA: ${{ github.event.before }}

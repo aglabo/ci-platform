@@ -27,15 +27,19 @@ on:
 
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-caller-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   actionlint:
     name: Actionlint
     permissions:
       contents: read
-    uses: aglabo/ci-platform/.github/workflows/ru-qa-actionlint.yml@89ce7e7491ef66e280a58bfcc27aff3d76f7d8c8 # v0.3.5
+    uses: aglabo/ci-platform/.github/workflows/ru-qa-actionlint.yml@3b2c72908e3a933f66e7c6730aff11413d161629 # main
 
   ghalint:
     name: Ghalint
     permissions:
       contents: read
-    uses: aglabo/ci-platform/.github/workflows/ru-qa-ghalint.yml@89ce7e7491ef66e280a58bfcc27aff3d76f7d8c8 # v0.3.5
+    uses: aglabo/ci-platform/.github/workflows/ru-qa-ghalint.yml@3b2c72908e3a933f66e7c6730aff11413d161629 # main
