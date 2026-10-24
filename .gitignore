@@ -45,12 +45,17 @@
 # Allow each subdirectory first, then allow files by extension
 # (files cannot be re-included while their parent directory is still ignored)
 # Brace expansion {a,b} does not work in .gitignore, so list one extension per line
+
+# Scripts & Runners
 !/scripts/
 !/scripts/**/
 !/scripts/**/*.sh
+!/scripts/**/*.ts
 !/runners/
 !/runners/**/
 !/runners/**/*.sh
+
+# Configs
 !/configs/
 !/configs/**/
 !/configs/**/*.json
@@ -58,6 +63,8 @@
 !/configs/**/*.yaml
 !/configs/**/*.toml
 !/configs/**/*.sh
+
+# Documents
 !/docs/
 !/docs/**/
 !/docs/**/*.md
@@ -88,6 +95,22 @@
 ##  Git
 # allow all gitignore
 !**/.gitignore
+
+### Reposiroy Specific
+# Root
+
+# Ignore deckrd docs, works
+
+
+# Websites
+!aglabo.github.io/
+!aglabo.github.io/**
+!aglabo.github.io/**/*.md
+!aglabo.github.io/**/*.json
+!aglabo.github.io/**/*.ts
+
+
+
 
 
 ## Deny rules (keep last)
