@@ -2,7 +2,7 @@
 title: "Decision Records: _ca-resolve-sha"
 module: "composite-action/resolve-sha"
 status: Draft
-version: 2.0.0
+version: 2.1.0
 created: "2026-10-25"
 ---
 
@@ -241,6 +241,38 @@ created: "2026-10-25"
 - Trade-offs: partial clone で本 Action を使う呼び出し元は、通常の clone に切り替える必要がある。対象外の入力は検出しないため、前提が破れた場合の挙動は保証しない。
 - Related: REQ-F-005 / REQ-F-006 / REQ-F-013 / REQ-F-019 / REQ-NF-002 / DR-09 / DR-10 / DR-19
 
+## DR-24: オーバーライド値に空ツリー SHA を受け付けない
+
+- Status: Accepted
+- Context: REQ-F-013 は before-sha 側の空ツリー SHA を実在検証から免除する。一方、REQ-F-011 と AC-007 は、オーバーライド値がコミットとして存在する前提に立つ。このため、入力 before-sha に空ツリー SHA を指定できるかが曖昧であった (codex review)。現行の `ca-get-changed-files` は、オーバーライド値をそのまま通し、空ツリー SHA の指定も受け付けていた。ただし、空ツリー SHA を指定する利用元はない。
+- Decision:
+  - オーバーライド値は、before-sha / after-sha とも、コミットとして存在する完全長 SHA に限る。
+  - 入力 before-sha / after-sha に空ツリー SHA が指定された場合は、`::error::` で終了する。
+  - 空ツリー SHA の実在検証の免除は、REQ-F-007 の経路で本 Action が生成した before-sha に限る。
+- Alternatives:
+  - 入力 before-sha に限り空ツリー SHA を許容する。`resolution=override` で before が空ツリーとなる状態が生まれ、`empty-tree` 経路と区別できなくなるため不採用。
+- Rationale: オーバーライドの契約を「実在するコミットのペア」に統一する。ゼロ SHA のオーバーライドがすでに REQ-F-013 でエラーとなることとも整合する。`resolution` の値と比較基準の対応も一意に保てる。
+- Trade-offs: 現行実装からの挙動変更となる。全ファイルを比較したい呼び出し元は、本 Action を経由せずに空ツリー SHA を自ら基準とする必要がある。
+- Related: REQ-F-011 / REQ-F-013 / REQ-F-016 / AC-009 / DR-07 / DR-08 / DR-10 / DR-14
+
+## DR-25: push はブランチの作成・更新に限り、それ以外はエラーとする
+
+- Status: Accepted
+- Context: push の分岐は `github.event.before` の状態だけで決めており、ブランチ削除やタグの作成・移動・削除を区別していなかった (codex review)。ブランチ削除では、`github.sha` と `github.ref` がデフォルトブランチに戻る。このため clone の深さに応じて、次のどちらかが正常終了で返る。「削除したブランチの先頭とデフォルトブランチの先頭の比較」(`resolution=event`) か、デフォルトブランチの HEAD~N (`fallback-head-n`) である。タグの push でも、比較の意味を持たない基準が正常終了で返る。いずれもエラーにならず、誤った基準が呼び出し元に渡る。
+- Decision:
+  - オーバーライドが指定されていない push では、`GITHUB_REF` が `refs/heads/` で始まり、かつ `GITHUB_EVENT_DELETED` が `true` でない場合だけ解決する。それ以外は `::error::` で終了する (許可リスト方式)。
+  - 削除の判定には `github.event.deleted` を使う。削除時は `github.ref` がデフォルトブランチに戻るため、ref だけでは削除を検出できない。
+  - オーバーライドが指定されている場合は、この検証を適用しない。オーバーライドではイベントの before / after と ref を参照しないためである。
+  - DR-17 のイベント名の検証は環境の契約の検査であり、全経路に適用する。本 DR の検証は、イベント別解決の意味に対する制限であり、push のイベント別解決にだけ適用する。
+  - push 以外のイベントは、ref がタグであっても REQ-F-009 で解決する。本 DR の制限は、push の before / after の意味に依存するものだからである。
+- Alternatives:
+  - 前提として Out of Scope に記載し、検出しない。前提が破れると誤った基準が正常終了で返り、fail-first の方針 (DR-10, DR-14) に反するため不採用。
+  - 削除・タグの push を、その他イベントと同様に HEAD~N / HEAD で解決する。削除時の比較は意味を持たず、`resolution` で区別できるだけであるため不採用。
+  - オーバーライド指定時にも検証を適用する。タグの push で任意の二点を比較する用途を塞ぐため不採用。
+- Rationale: 誤った基準を正常終了で返す経路をなくす。判定は環境変数だけで行い、git の操作を要しない。
+- Trade-offs: `on: push` を絞っていない呼び出し元では、ブランチ削除やタグの push のたびに本 Action がエラーとなる。呼び出し元は、これらの push を除外する必要がある。除外には `branches:` での絞り込みか `if: ${{ !github.event.deleted }}` を使う。現行の `ca-get-changed-files` は、タグ作成 (before が全ゼロ) を空ツリーとの比較として成功させていた。このため挙動変更となるが、該当する呼び出し元はない。オーバーライド値の妥当性は呼び出し元の責務とし、REQ-F-013 / REQ-F-016 の検証だけを適用する。
+- Related: REQ-F-003 / REQ-F-004..006 / REQ-F-009 / REQ-F-011 / REQ-F-020 / REQ-C-003 / REQ-C-006 / DR-10 / DR-14 / DR-17
+
 ## Change History
 
 | Date       | Version | Description                                                                             |
@@ -249,3 +281,4 @@ created: "2026-10-25"
 | 2026-10-25 | 1.1.0   | Add DR-07..DR-14 (review harden / req revision / codex review); clarify DR-03 threshold |
 | 2026-10-25 | 1.2.0   | Add DR-15..DR-22 (spec review explore / harden / codex review, req revision)            |
 | 2026-10-25 | 2.0.0   | Remove DR-15/16/20/21/22 (over-scoped); add DR-23 (partial clone is an error)           |
+| 2026-10-25 | 2.1.0   | Add DR-24 (reject empty tree override), DR-25 (push limited to branch create/update)    |

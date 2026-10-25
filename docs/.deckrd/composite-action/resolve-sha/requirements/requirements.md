@@ -2,7 +2,7 @@
 title: "Requirements: _ca-resolve-sha"
 module: "composite-action/resolve-sha"
 status: Draft
-version: 2.0.0
+version: 2.1.0
 created: "2026-10-25"
 ---
 
@@ -25,7 +25,8 @@ created: "2026-10-25"
 - shallow clone による履歴不足
 
 push とその他イベントでは、`actions/checkout` の `fetch-depth` を N+1 (N は commit-count) とする前提を置く。
-リポジトリの履歴が N+1 コミットに満たず HEAD~N を解決できない場合は、エラーにせず空ツリー SHA へフォールバックする。
+リポジトリの履歴が N+1 コミットに満たず (shallow 境界への到達を含む)、HEAD~N を解決できない場合は、エラーにせず空ツリー SHA へフォールバックする。
+祖先オブジェクトの欠損等、それ以外の原因による解決失敗はエラーとする (REQ-F-014)。
 pull_request では、base を含む履歴の取得 (`fetch-depth: 0` 等) を前提とする。
 
 また、呼び出し元が解決経路を判別できるよう、出力 `resolution` で経路を通知する。
@@ -41,6 +42,7 @@ pull_request では、base を含む履歴の取得 (`fetch-depth: 0` 等) を�
 - 出力 `before-sha` / `after-sha` / `resolution` の算出と `$GITHUB_OUTPUT` への書き出し
 - スクリプト `.github/actions/_ca-resolve-sha/scripts/resolve-sha.sh` の実装
 - push / pull_request / その他イベントごとの SHA 解決
+- push の ref 種別の検証 (ブランチの作成・更新以外はエラー)
 - 異常系 (新規ブランチ、force push、履歴不足、不在コミット、HEAD 解決不能) の扱い
 - `.github/actions/_libs/` への追加 (汎用 key=value 出力関数、正整数検証関数、ロードガード)
 
@@ -109,6 +111,8 @@ pull_request では、base を含む履歴の取得 (`fetch-depth: 0` 等) を�
 | DR-18 | 書き出し中の I/O 失敗による部分出力は、呼び出し元の契約で扱う                                       | ../decision-records.md |
 | DR-19 | 前提と非保証を明記し、追加の入出力は設けない                                                        | ../decision-records.md |
 | DR-23 | partial clone はエラーとし、対象外の環境を前提として扱う                                            | ../decision-records.md |
+| DR-24 | オーバーライド値に空ツリー SHA を受け付けない                                                       | ../decision-records.md |
+| DR-25 | push はブランチの作成・更新に限り、それ以外はエラーとする                                           | ../decision-records.md |
 
 ## 4. Functional Requirements
 
@@ -169,9 +173,10 @@ THEN the system SHALL イベント種別の判定より先に commit-count を�
 1. commit-count の検証
 2. オーバーライドの検証
 3. イベント名の検証 (REQ-F-018)
-4. partial clone の検出 (REQ-F-019)
-5. SHA の解決
-6. 出力の書き出し
+4. push の ref 種別の検証 (REQ-F-020、オーバーライドがない場合のみ)
+5. partial clone の検出 (REQ-F-019)
+6. SHA の解決
+7. 出力の書き出し
 
 **Rationale**: 検証をイベントに依存させず、全イベントで同一の入力契約を保証する。
 
@@ -359,6 +364,7 @@ THEN the system SHALL イベント別解決を行わず、指定された値を�
 
 オーバーライド値にも、REQ-F-013 のコミット実在検証を適用する。
 オーバーライド値の形式は REQ-F-016 で検証する。
+オーバーライド値は、before-sha / after-sha とも空ツリー SHA を受け付けない (DR-24)。
 
 **Rationale**: 現行の `ca-get-changed-files` が持つ入力契約を継承し、置き換えタスクを単純な置換にする (DR-07)。
 
@@ -404,14 +410,14 @@ resolution は解決経路を示すだけであり、比較範囲が呼び出し
 - EARS Type: WHEN (event-driven)
 
 ```text
-GIVEN 出力しようとする SHA が、before-sha 側の空ツリー SHA ではない
+GIVEN 出力しようとする SHA が、REQ-F-007 の経路で生成した before-sha の空ツリー SHA ではない
   WHEN オーバーライド値、pull_request の base/head、または push の after (github.sha) が空、あるいはコミットとして存在しない
 THEN the system SHALL "::error::" を出力し、非ゼロ終了コードで終了する.
 ```
 
 実在検証には `git cat-file -e <sha>^{commit}` を使う。
-空ツリー SHA の検証免除は before-sha に限る。
-after-sha が空ツリー SHA の場合は、コミットとして存在しない場合と同様にエラーとする (DR-14)。
+空ツリー SHA の検証免除は、REQ-F-007 の経路で本 Action が生成した before-sha に限る。
+オーバーライド値 (before-sha / after-sha) または after-sha が空ツリー SHA の場合は、コミットとして存在しない場合と同様にエラーとする (DR-14, DR-24)。
 
 `pull_request.base.sha` / `pull_request.head.sha` が空の場合も、同様にエラーとする。
 push の after (`github.sha`) は、通常解決 (REQ-F-004) で出力する場合に検証する。
@@ -509,7 +515,7 @@ THEN the system SHALL オーバーライドの有無に関わらず "::error::" 
 - EARS Type: WHEN (event-driven)
 
 ```text
-GIVEN commit-count、オーバーライド、イベント名の検証に成功している
+GIVEN commit-count、オーバーライド、イベント名、push の ref 種別の検証に成功している
   WHEN 作業ディレクトリのリポジトリが partial clone である (remote.<name>.promisor または extensions.partialClone が設定されている)
 THEN the system SHALL オブジェクトを参照する前に "::error::" を出力し、非ゼロ終了コードで終了する.
 ```
@@ -524,6 +530,32 @@ THEN the system SHALL オブジェクトを参照する前に "::error::" を出
 | AC ID  | Scenario                             |
 | ------ | ------------------------------------ |
 | AC-018 | partial clone の場合はエラー終了する |
+
+### REQ-F-020: push の ref 種別の検証
+
+- EARS Type: WHEN (event-driven)
+
+```text
+GIVEN イベントが push で、オーバーライドが指定されておらず、commit-count とイベント名の検証に成功している
+  WHEN GITHUB_REF が refs/heads/ で始まらない、または GITHUB_EVENT_DELETED が true である
+THEN the system SHALL "::error::" を出力し、非ゼロ終了コードで終了する.
+```
+
+ブランチの作成・更新だけを許可する (許可リスト方式)。タグの作成・移動・削除と、ブランチの削除はエラーとする。
+削除の判定は `GITHUB_EVENT_DELETED` で行う。削除時は `GITHUB_REF` がデフォルトブランチに戻るため、ref だけでは判定しない。
+REQ-F-004 から REQ-F-006 は、この検証に成功した push にだけ適用する。
+
+オーバーライドが指定されている場合は、この検証を適用しない (DR-25)。
+push 以外のイベントは、ref がタグであっても REQ-F-009 で解決する。
+
+**Rationale**: ブランチ削除やタグの push では、before / after がブランチ更新の前後を表さない。
+解決を続けると、比較の意味を持たない基準が正常終了で返る (DR-25)。
+
+**Acceptance Criteria**:
+
+| AC ID  | Scenario                                         |
+| ------ | ------------------------------------------------ |
+| AC-019 | ブランチの作成・更新以外の push はエラー終了する |
 
 ## 5. Non-Functional Requirements
 
@@ -569,6 +601,7 @@ Composite Action は `permissions` を宣言できない。
 - HEAD~N が shallow 境界やリポジトリの先頭を越える場合は、空ツリー SHA へフォールバックしなければならない (MUST, REQ-F-007)。
 - push で `github.event.before` が shallow 範囲外にある場合は、HEAD~N へフォールバックする (REQ-F-006)。
 - partial clone (`filter` を指定した checkout) を使ってはならない (MUST NOT, REQ-F-019)。
+- push で本 Action を使う場合は、ブランチ削除とタグの push を `branches:` での絞り込み、または `if: ${{ !github.event.deleted }}` 等で除外しなければならない (MUST)。除外しない場合は REQ-F-020 でエラーとなる。
 
 ### REQ-C-004: 内部専用
 
@@ -589,6 +622,8 @@ Action 名は `_` プレフィックス (`_ca-resolve-sha`) とし、内部専�
 - スクリプト: `.github/actions/_ca-resolve-sha/scripts/resolve-sha.sh`
 - スクリプトが env 経由で受け取る値:
   - `GITHUB_EVENT_NAME` (イベント名)
+  - `GITHUB_REF` (`github.ref`)
+  - `GITHUB_EVENT_DELETED` (`github.event.deleted`。push 以外のイベントでは空)
   - `GITHUB_BEFORE_SHA` (`github.event.before`)
   - `GITHUB_AFTER_SHA` (`github.sha`)
   - `GITHUB_BASE_SHA` (`pull_request.base.sha`)
@@ -627,7 +662,7 @@ Action 名は `_` プレフィックス (`_ca-resolve-sha`) とし、内部専�
 | US-001   | 内部の呼び出し元 Action (ca-get-changed-files) | イベント種別に依存せず before-sha / after-sha を取得したい        | SHA 解決ロジックを自前で持たずに差分取得へ集中するため | REQ-F-004, REQ-F-008, REQ-F-009, REQ-F-010     |
 | US-002   | 将来の内部 Action の開発者                     | commit-count を指定するだけで差分基準 SHA を得たい                | 同一ロジックの重複実装を避けるため                     | REQ-F-001, REQ-F-009                           |
 | US-003   | リポジトリメンテナー                           | force push や新規ブランチでもワークフローが失敗しないようにしたい | 履歴操作のたびに CI を手当てする運用負荷をなくすため   | REQ-F-005, REQ-F-006, REQ-F-007                |
-| US-004   | リポジトリメンテナー                           | 不正な入力や不在コミットを早期にエラーとして検出したい            | 後続の git diff で原因不明の失敗になるのを避けるため   | REQ-F-002, REQ-F-003, REQ-F-013 から REQ-F-019 |
+| US-004   | リポジトリメンテナー                           | 不正な入力や不在コミットを早期にエラーとして検出したい            | 後続の git diff で原因不明の失敗になるのを避けるため   | REQ-F-002, REQ-F-003, REQ-F-013 から REQ-F-020 |
 | US-005   | 内部の呼び出し元 Action (ca-get-changed-files) | 現行の before-sha / after-sha 明示指定を引き続き使いたい          | 置き換え時に入力契約を失わず移行コストを抑えるため     | REQ-F-011, REQ-F-015                           |
 | US-006   | 内部の呼び出し元 Action (ca-get-changed-files) | どの経路で SHA を解決したかを resolution で判別したい             | フォールバック時に全件検査へ切り替える判断をするため   | REQ-F-012                                      |
 
@@ -740,13 +775,13 @@ Scenario Outline: 解決経路ごとに resolution を設定する
   Then  resolution は <resolution> である
 
   Examples:
-    | condition                                   | resolution      |
-    | 入力 before-sha / after-sha を両方指定      | override        |
-    | push で before がコミットとして存在する     | event           |
-    | pull_request                                | event           |
-    | push で before が無効で HEAD~N を解決できる | fallback-head-n |
-    | workflow_dispatch で HEAD~N を解決できる    | fallback-head-n |
-    | HEAD~N を解決できない                       | empty-tree      |
+    | condition                                                   | resolution      |
+    | 入力 before-sha / after-sha を両方指定                      | override        |
+    | push で before がコミットとして存在する                     | event           |
+    | pull_request                                                | event           |
+    | push で before が無効で HEAD~N を解決できる                 | fallback-head-n |
+    | workflow_dispatch で HEAD~N を解決できる                    | fallback-head-n |
+    | HEAD は有効で、HEAD~N が履歴終端または shallow 境界を越える | empty-tree      |
 
 # AC-009: 不在コミットまたは空のイベント値でエラー終了する
 # Requirement: REQ-F-013
@@ -766,6 +801,7 @@ Scenario Outline: 不在コミットまたは空のイベント値でエラー�
     | pull_request.head.sha が空                              |
     | push の通常解決で github.sha が空                       |
     | push の通常解決で github.sha がコミットとして存在しない |
+    | オーバーライドの before-sha が空ツリー SHA              |
     | オーバーライドの after-sha が空ツリー SHA               |
 
 # AC-010: HEAD を解決できない場合はエラー終了する
@@ -860,13 +896,36 @@ Scenario: partial clone の場合はエラー終了する
   And   終了コードは非ゼロである
   And   git fetch の子プロセスは起動されない
   And   before-sha / after-sha / resolution は出力されない
+
+# AC-019: ブランチの作成・更新以外の push はエラー終了する
+# Requirement: REQ-F-020
+Scenario Outline: ブランチの作成・更新以外の push はエラー終了する
+  Given イベントが push で、オーバーライドが指定されていない
+  And   GITHUB_REF が "<ref>" で、GITHUB_EVENT_DELETED が "<deleted>" である
+  When  _ca-resolve-sha を実行する
+  Then  "::error::" が出力される
+  And   終了コードは非ゼロである
+  And   before-sha / after-sha / resolution は出力されない
+
+  Examples:
+    | ref              | deleted |
+    | refs/tags/v1.0.0 | false   |
+    | refs/tags/v1.0.0 | true    |
+    | refs/heads/main  | true    |
+
+Scenario: オーバーライド指定時は push の ref 種別を検証しない
+  Given イベントが push で、GITHUB_REF が "refs/tags/v1.0.0" である
+  And   入力 before-sha と after-sha がどちらもコミットとして存在する SHA である
+  When  _ca-resolve-sha を実行する
+  Then  before-sha / after-sha は指定値と一致する
+  And   resolution は override である
 ```
 
 ## 9. Open Questions
 
 | Question                                                                                                        | Type      | Impact Area | Owner |
 | --------------------------------------------------------------------------------------------------------------- | --------- | ----------- | ----- |
-| REQ-F-002, REQ-F-013 から REQ-F-019: エラーメッセージの文言・形式 (spec で形式を決定済み、文言は spec が定める) | EARS/THEN | FR outcome  | spec  |
+| REQ-F-002, REQ-F-013 から REQ-F-020: エラーメッセージの文言・形式 (spec で形式を決定済み、文言は spec が定める) | EARS/THEN | FR outcome  | spec  |
 
 ## 10. Traceability
 
@@ -890,11 +949,12 @@ Scenario: partial clone の場合はエラー終了する
 | REQ-F-016  | AC-013                                 | Functional     |
 | REQ-F-018  | AC-016                                 | Functional     |
 | REQ-F-019  | AC-018                                 | Functional     |
+| REQ-F-020  | AC-019                                 | Functional     |
 | REQ-NF-001 | N/A                                    | Non-Functional |
 | REQ-NF-002 | AC-018                                 | Non-Functional |
 | REQ-C-001  | N/A                                    | Constraint     |
 | REQ-C-002  | N/A                                    | Constraint     |
-| REQ-C-003  | AC-012                                 | Constraint     |
+| REQ-C-003  | AC-012, AC-019                         | Constraint     |
 | REQ-C-004  | N/A                                    | Constraint     |
 | REQ-C-005  | N/A                                    | Constraint     |
 | REQ-C-006  | N/A                                    | Constraint     |
@@ -903,9 +963,10 @@ Scenario: partial clone の場合はエラー終了する
 
 ## 11. Change History
 
-| Date       | Version | Description                                                                                                                   |
-| ---------- | ------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| 2026-10-25 | 1.0.0   | Initial release                                                                                                               |
-| 2026-10-25 | 1.1.0   | Apply DR-07..DR-14: add REQ-F-011..016, REQ-C-008, AC-007..014; revise REQ-F-002/005/006/007/010/013/014, REQ-C-002/003/006   |
-| 2026-10-25 | 1.2.0   | Apply DR-15..DR-22: add REQ-F-017/018, AC-015..017; revise REQ-F-003..007/009/010/012/013, REQ-NF-002, REQ-C-003/006          |
-| 2026-10-25 | 2.0.0   | Apply DR-23: withdraw REQ-F-017, AC-015, AC-017; add REQ-F-019, AC-018; simplify REQ-F-004/005/006/013, REQ-NF-002, REQ-C-003 |
+| Date       | Version | Description                                                                                                                                              |
+| ---------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-10-25 | 1.0.0   | Initial release                                                                                                                                          |
+| 2026-10-25 | 1.1.0   | Apply DR-07..DR-14: add REQ-F-011..016, REQ-C-008, AC-007..014; revise REQ-F-002/005/006/007/010/013/014, REQ-C-002/003/006                              |
+| 2026-10-25 | 1.2.0   | Apply DR-15..DR-22: add REQ-F-017/018, AC-015..017; revise REQ-F-003..007/009/010/012/013, REQ-NF-002, REQ-C-003/006                                     |
+| 2026-10-25 | 2.0.0   | Apply DR-23: withdraw REQ-F-017, AC-015, AC-017; add REQ-F-019, AC-018; simplify REQ-F-004/005/006/013, REQ-NF-002, REQ-C-003                            |
+| 2026-10-25 | 2.1.0   | Apply DR-24/25: reject empty tree override; add REQ-F-020, AC-019; revise REQ-F-003/011/013/019, REQ-C-003/006, AC-008/009; clarify empty-tree condition |
