@@ -1,16 +1,5 @@
 {
   "hooks": {
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "command": "bash .claude/hooks/check-tasks.sh",
-            "type": "command"
-          }
-        ],
-        "matcher": ""
-      }
-    ]
   },
   "permissions": {
     "allow": [
