@@ -14,6 +14,7 @@ created: "2026-10-25"
 - Decision: `.github/actions/_ca-resolve-sha/` を内部 Composite Action として新設する。入力は `commit-count`、出力は `before-sha` / `after-sha` とする。
 - Alternatives:
   - 現状維持: `ca-get-changed-files` 内に保持する。再利用できないため不採用。
+  - 責務の縮小: イベント値の取得と方針の決定を呼び出し元に置き、本 Action は明示 SHA ペアの検証、または HEAD と世代数からの解決に限定する (codex review)。イベントごとの解決方針が呼び出し元ごとに重複し、乖離していくため不採用。
 - Rationale: 将来の内部 Action でも同じ解決ロジックを共有できる。
 - Trade-offs: Action が 1 つ増える。`ca-get-changed-files` 側の置き換えは別タスクとなる。
 - Related: REQ-F-001, REQ-C-004, REQ-C-006
@@ -275,10 +276,10 @@ created: "2026-10-25"
 
 ## Change History
 
-| Date       | Version | Description                                                                             |
-| ---------- | ------- | --------------------------------------------------------------------------------------- |
-| 2026-10-25 | 1.0.0   | Initial release                                                                         |
-| 2026-10-25 | 1.1.0   | Add DR-07..DR-14 (review harden / req revision / codex review); clarify DR-03 threshold |
-| 2026-10-25 | 1.2.0   | Add DR-15..DR-22 (spec review explore / harden / codex review, req revision)            |
-| 2026-10-25 | 2.0.0   | Remove DR-15/16/20/21/22 (over-scoped); add DR-23 (partial clone is an error)           |
-| 2026-10-25 | 2.1.0   | Add DR-24 (reject empty tree override), DR-25 (push limited to branch create/update)    |
+| Date       | Version | Description                                                                                                 |
+| ---------- | ------- | ----------------------------------------------------------------------------------------------------------- |
+| 2026-10-25 | 1.0.0   | Initial release                                                                                             |
+| 2026-10-25 | 1.1.0   | Add DR-07..DR-14 (review harden / req revision / codex review); clarify DR-03 threshold                     |
+| 2026-10-25 | 1.2.0   | Add DR-15..DR-22 (spec review explore / harden / codex review, req revision)                                |
+| 2026-10-25 | 2.0.0   | Remove DR-15/16/20/21/22 (over-scoped); add DR-23 (partial clone is an error)                               |
+| 2026-10-25 | 2.1.0   | Add DR-24 (reject empty tree override), DR-25 (push limited to branch create/update); add DR-01 alternative |
