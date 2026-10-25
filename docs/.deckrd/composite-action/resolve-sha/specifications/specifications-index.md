@@ -2,7 +2,7 @@
 title: "Design Specification: _ca-resolve-sha (Index)"
 based-on: requirements.md v2.1.0
 status: Draft
-version: 2.1.0
+version: 2.1.1
 created: "2026-10-25"
 ---
 
@@ -293,6 +293,7 @@ checkout の深さと取得対象は REQ-C-003 に従う。本仕様での帰結
 - オーバーライドを指定しない push で、ブランチの削除またはタグの push の場合は、エラーとする。
   呼び出し元は、`branches:` での絞り込みや `if: ${{ !github.event.deleted }}` で、これらの push を除外する。
 - push で checkout したコミットが `github.sha` と異なる場合、通常解決とフォールバックとで after が異なり得る。この差は許容する (DR-23)。
+- `after-sha` は、checkout 済みの作業ツリーの内容と一致するとは限らない。pull_request (head) とオーバーライドでも同様であり、作業ツリーとの整合は呼び出し元の責務とする。
 
 ### 3.5 Function List
 
@@ -301,7 +302,9 @@ checkout の深さと取得対象は REQ-C-003 に従う。本仕様での帰結
 
   | 略称 | 関数                                                                      | 所在                             | 担当分割ファイル    |
   | ---- | ------------------------------------------------------------------------- | -------------------------------- | ------------------- |
-  | VPI  | validate_positive_int <value> <field> <max>                               | _libs/validation.lib.sh          | input               |
+  | VLG  | validation.lib.sh のロードガード                                          | _libs/validation.lib.sh          | —                   |
+  | VPI  | validate_positive_int <value> <max>                                       | _libs/validation.lib.sh          | input               |
+  | RE   | rs_error <target> <problem> [<value>]                                     | scripts/_libs/resolve-sha.lib.sh | index 3.3           |
   | NCC  | normalize_commit_count <value>                                            | scripts/_libs/resolve-sha.lib.sh | input               |
   | VOV  | validate_override <before> <after>                                        | scripts/_libs/resolve-sha.lib.sh | input               |
   | IPC  | is_partial_clone                                                          | scripts/_libs/resolve-sha.lib.sh | resolution          |
@@ -309,16 +312,21 @@ checkout の深さと取得対象は REQ-C-003 に従う。本仕様での帰結
   | VC   | verify_commit <sha> <field>                                               | scripts/_libs/resolve-sha.lib.sh | resolution          |
   | RHN  | resolve_head_n <n>                                                        | scripts/_libs/resolve-sha.lib.sh | resolution          |
   | RSH  | resolve_sha <event> <n> <ov_before> <ov_after> <ev_before> <ev_after> <base> <head> <ref> <deleted> | scripts/_libs/resolve-sha.lib.sh | resolution |
-  | WO   | write_output <key> <value>                                                | _libs/output.lib.sh              | output              |
-  | EO   | emit_outputs <before> <after> <resolution>                                | scripts/_libs/resolve-sha.lib.sh | output              |
+  | WO   | write_output <file> <key> <value>                                         | _libs/output.lib.sh              | output              |
+  | EO   | emit_outputs <file> <before> <after> <resolution>                         | scripts/_libs/resolve-sha.lib.sh | output              |
   | MAIN | main (scripts/resolve-sha.sh)                                             | scripts/resolve-sha.sh           | output (functional) |
+  | ACT  | action.yml の静的検査                                                     | action.yml                       | index 3.1           |
 
   - 空ツリー SHA の定数は、モジュール専用ライブラリに置く。他モジュールが必要とした時点で共有ライブラリへ昇格する。
   - 共有ライブラリへの追加は、WO、VPI、validation.lib.sh のロードガードの 3 点のみとする (REQ-C-008)。
   - MAIN の functional テストは、レイヤサフィックス F を付けた MAINF となる。
   - 戻り値の規約: 内部の解決処理は "<before> <after> <resolution>" を空白区切りの 1 行で標準出力へ返す。
     呼び出し側は `if ! out=$(...); then exit 1; fi` で失敗を検知し、`read -r` で分解する。
-  - 環境変数を読むのは MAIN のみとし、他の関数は引数だけを入力とする。
+  - 環境変数を読むのは MAIN のみとし、他の関数は引数だけを入力とする。`$GITHUB_OUTPUT` も MAIN が読み、EO 経由で WO へ渡す。
+  - VPI と WO はエラーを出さず、終了コードだけを返す (DR-26)。エラーは呼び出し側が RE で 3.3 の形式で出す。
+    WO は不正な引数 (出力先が空、値に CR / LF) で終了コード 1、書き込みの失敗で終了コード 2 を返す。
+  - VLG・VPI・WO のテストは _libs/__tests__/unit/ の新しいテストファイルに置き、RS モジュールが所有する。
+  - ACT は action.yml を grep で静的に検査する (DR-27)。
   - v1.1.0 の RG (rs_git)、IFO (is_full_oid) は廃止した。オーバーライドの形式判定は VOV の内部で行う。
   - VPI は、数値として比較する前に桁数を <max> の桁数以下に制限する。bash の算術比較は符号付き 64 bit で桁あふれするため。
     テストの代表値: 18446744073709551617 (2^64+1。桁あふれで 1 となり、桁数の検査がないと上限をすり抜ける)、
@@ -423,9 +431,10 @@ REQUIREMENTS の Open Question (merge 履歴で第一親の系列が shallow 境
 
 ## 8. Change History
 
-| Date       | Version | Description                                                                                                                                            |
-| ---------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 2026-10-25 | 1.0.0   | Initial specification                                                                                                                                  |
-| 2026-10-25 | 1.1.0   | Apply requirements v1.2.0 and DR-15..DR-22: git environment contract, commit type check, ID scheme                                                     |
-| 2026-10-25 | 2.0.0   | Apply requirements v2.0.0 and DR-23: remove git environment contract, add partial clone rejection                                                      |
-| 2026-10-25 | 2.1.0   | Apply requirements v2.1.0 and DR-24/25: push ref check in evaluation order, GITHUB_REF / GITHUB_EVENT_DELETED, error value encoding, fetch-depth scope |
+| Date       | Version | Description                                                                                                                                                                        |
+| ---------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-10-25 | 1.0.0   | Initial specification                                                                                                                                                              |
+| 2026-10-25 | 1.1.0   | Apply requirements v1.2.0 and DR-15..DR-22: git environment contract, commit type check, ID scheme                                                                                 |
+| 2026-10-25 | 2.0.0   | Apply requirements v2.0.0 and DR-23: remove git environment contract, add partial clone rejection                                                                                  |
+| 2026-10-25 | 2.1.0   | Apply requirements v2.1.0 and DR-24/25: push ref check in evaluation order, GITHUB_REF / GITHUB_EVENT_DELETED, error value encoding, fetch-depth scope, after vs working tree note |
+| 2026-10-25 | 2.1.1   | Update impl-note function list: add VLG / RE / ACT, WO and EO take output file, VPI drops field (DR-26, DR-27)                                                                     |

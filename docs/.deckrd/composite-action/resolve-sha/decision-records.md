@@ -2,7 +2,7 @@
 title: "Decision Records: _ca-resolve-sha"
 module: "composite-action/resolve-sha"
 status: Draft
-version: 2.1.0
+version: 2.1.1
 created: "2026-10-25"
 ---
 
@@ -274,6 +274,42 @@ created: "2026-10-25"
 - Trade-offs: `on: push` を絞っていない呼び出し元では、ブランチ削除やタグの push のたびに本 Action がエラーとなる。呼び出し元は、これらの push を除外する必要がある。除外には `branches:` での絞り込みか `if: ${{ !github.event.deleted }}` を使う。現行の `ca-get-changed-files` は、タグ作成 (before が全ゼロ) を空ツリーとの比較として成功させていた。このため挙動変更となるが、該当する呼び出し元はない。オーバーライド値の妥当性は呼び出し元の責務とし、REQ-F-013 / REQ-F-016 の検証だけを適用する。
 - Related: REQ-F-003 / REQ-F-004..006 / REQ-F-009 / REQ-F-011 / REQ-F-020 / REQ-C-003 / REQ-C-006 / DR-10 / DR-14 / DR-17
 
+## DR-26: 共有ライブラリの追加関数はエラーを出さず、出力先を引数で受け取る
+
+- Status: Accepted
+- Context: REQ-C-007 / REQ-C-008 により、正整数の検証 (VPI) と key=value の出力 (WO) は `_libs/` に追加する。一方、既存の `validation.lib.sh` のエラー形式は、spec index §3.3 の形式 (`(got: '<値>')` と `%` / CR / LF のエンコード) と異なる。既存関数は変更できず、エンコードの補助関数を共有ライブラリに追加することも REQ-C-008 の範囲外となる。また、既存の `write_status` は `$GITHUB_OUTPUT` を直接読み、未設定時は `/dev/null` へ黙って書き込む。これは「環境変数を読むのは入口だけ」(spec index §3.5) と R-OUT-003 に合わない (impl explore review)。
+- Decision:
+  - VPI と WO は、エラーを出さずに終了コードだけを返す。エラーは呼び出し側 (NCC、EO) が、モジュール専用の補助関数 (RE) で spec index §3.3 の形式で出す。
+  - WO は `write_output <file> <key> <value>` とし、出力先を引数で受け取る。不正な引数 (出力先が空、値に CR / LF を含む) は rc 1、書き込みの失敗は rc 2 を返す。
+  - 出力の事前検査 (R-OUT-003 から R-OUT-006) は EO が正とする。WO の検査は、共有ライブラリの関数としての防御にとどめる。
+  - VLG・VPI・WO のテストは、`_libs/__tests__/unit/` に新しい spec ファイルとして置き、RS モジュールの `owns` にファイル単位で含める。
+- Alternatives:
+  - VPI / WO が既存の形式でエラーを出す。spec のエラー形式と二種類が混在し、DD-IDX-01 に反するため不採用。
+  - エンコードの補助関数を共有ライブラリに追加する。REQ-C-008 の追加範囲を広げるため不採用。
+  - WO が `$GITHUB_OUTPUT` を直接読む (既存の `write_status` と同じ)。入口以外が環境変数を読むことになり、テストでも環境変数の差し替えが必要になるため不採用。
+- Rationale: 共有ライブラリへの追加を最小に保ったまま、エラー形式を spec の形式に統一する。出力先を引数にすることで、環境変数の読み取りを入口に集約できる。
+- Trade-offs: VPI / WO を他のモジュールが使う場合、エラー出力は呼び出し側の責務となる。WO の呼び出し方は、既存の `write_status` と異なる。
+- Related: REQ-C-007 / REQ-C-008 / REQ-F-010 / DR-11 / DR-14 / DR-18
+
+## DR-27: action.yml の検証は CI ジョブを追加せず、静的検査で行う
+
+- Status: Accepted
+- Context: 本モジュールの範囲は Composite Action の作成までとし、既存のワークフローとアクションは変更しない (impl Phase 5)。このため、`_tests_ca_composite-actions.yml` に本 Action を実行するジョブを追加しない。一方、action.yml で環境変数の対応付けが欠けると、入力は空として届き、既定値で静かに解決される (spec index §5)。この欠落は、スクリプトの単体テストでは検出できない (impl explore review)。
+- Decision:
+  - action.yml は、actionlint / ghalint に加え、ShellSpec の静的検査 (T-RS-ACT-*) で確かめる。検査は grep で行い、外部ツールを増やさない。
+  - 静的検査では、次の 3 点を確かめる。
+    - REQ-C-006 の 10 個の環境変数が step の `env` にそろっている
+    - `run` 内に `${{ }}` が無い
+    - outputs が `before-sha` / `after-sha` / `resolution` の 3 つである
+  - git に依存する振る舞いは、本物の git リポジトリを作るフィクスチャで検証する (REQ-NF-001)。
+  - ランナー上で本 Action を実行する検証は、`ca-get-changed-files` への組み込み (#134) で行う。
+- Alternatives:
+  - `_tests_ca_composite-actions.yml` に `test-resolve-sha` ジョブを追加する。保護領域の変更となり、本モジュールの範囲を超えるため不採用。
+  - yq 等で action.yml を構造的に解析する。外部ツールへの依存が増えるため不採用。
+- Rationale: 範囲を Composite Action の作成に限ったまま、対応付けの欠落という静かな失敗を検出する。
+- Trade-offs: ランナー上での実行 (イベントコンテキストの実値の受け渡し) は、#134 まで検証されない。grep による検査は、YAML の構造の変化 (インデントや書式の変更) に影響を受け得る。
+- Related: REQ-NF-001 / REQ-C-001 / REQ-C-005 / REQ-C-006 / DR-11
+
 ## Change History
 
 | Date       | Version | Description                                                                                                 |
@@ -283,3 +319,4 @@ created: "2026-10-25"
 | 2026-10-25 | 1.2.0   | Add DR-15..DR-22 (spec review explore / harden / codex review, req revision)                                |
 | 2026-10-25 | 2.0.0   | Remove DR-15/16/20/21/22 (over-scoped); add DR-23 (partial clone is an error)                               |
 | 2026-10-25 | 2.1.0   | Add DR-24 (reject empty tree override), DR-25 (push limited to branch create/update); add DR-01 alternative |
+| 2026-10-25 | 2.1.1   | Add DR-26 (shared lib additions stay silent, WO takes output file), DR-27 (action.yml verified statically)  |

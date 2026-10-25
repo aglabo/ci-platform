@@ -187,7 +187,7 @@ Evaluation MUST follow this order:
 | R-OUT-002 |    2 | `specifications-index.md` §4 の Step 1 から Step 6 のいずれかが失敗した | 書き出しを開始せず、非ゼロで終了する                           |
 | R-OUT-003 |    3 | `GITHUB_OUTPUT` が未設定または空                                        | エラー終了する。出力は書かない                                 |
 | R-OUT-004 |    4 | `GITHUB_OUTPUT` が書き込み不能                                          | エラー終了する。出力は書かない                                 |
-| R-OUT-005 |    5 | 3 つの値のいずれかに改行が含まれる                                      | エラー終了する。出力は書かない                                 |
+| R-OUT-005 |    5 | 3 つの値のいずれかに改行 (CR または LF) が含まれる                      | エラー終了する。出力は書かない                                 |
 | R-OUT-006 |    6 | resolution が 4 値のいずれでもない                                      | エラー終了する。出力は書かない                                 |
 | R-OUT-007 |    7 | R-OUT-003 から R-OUT-006 にいずれも当たらない                           | 3 つの出力を書き出し、終了コード 0 で終了する                  |
 | R-OUT-008 |    8 | R-OUT-007 の書き出し中に、書き込みが失敗した                            | エラー終了する。残りの出力は書かない。先に書いた出力は残り得る |
@@ -200,13 +200,13 @@ No reordering is permitted.
 
 **エラーの文言:**
 
-| Rule ID   | 対象                     | 問題                    |
-| --------- | ------------------------ | ----------------------- |
-| R-OUT-003 | `GITHUB_OUTPUT`          | 値が空 (空の形式を使う) |
-| R-OUT-004 | `GITHUB_OUTPUT`          | 書き込みできない        |
-| R-OUT-005 | 改行を含む出力名         | 値が改行を含む          |
-| R-OUT-006 | `resolution`             | 4 値のいずれでもない    |
-| R-OUT-008 | 書き込みに失敗した出力名 | 書き込みに失敗した      |
+| Rule ID   | 対象                     | 問題                           |
+| --------- | ------------------------ | ------------------------------ |
+| R-OUT-003 | `GITHUB_OUTPUT`          | 値が空 (空の形式を使う)        |
+| R-OUT-004 | `GITHUB_OUTPUT`          | 書き込みできない               |
+| R-OUT-005 | 改行を含む出力名         | 値が改行 (CR または LF) を含む |
+| R-OUT-006 | `resolution`             | 4 値のいずれでもない           |
+| R-OUT-008 | 書き込みに失敗した出力名 | 書き込みに失敗した             |
 
 エラーの形式は `specifications-index.md` 3.3 に従う。
 
@@ -221,19 +221,19 @@ No reordering is permitted.
 
 ## 5. Edge Cases
 
-| Input                                                             | Classification                                  | REQ                  | Rationale                                                      |
-| ----------------------------------------------------------------- | ----------------------------------------------- | -------------------- | -------------------------------------------------------------- |
-| `GITHUB_OUTPUT` が未設定                                          | エラー終了。出力なし                            | REQ-F-010            | 出力先が無いまま成功すると、呼び出し元が空の出力を受け取るため |
-| `GITHUB_OUTPUT` が書き込み不能 (読み取り専用、不在ディレクトリ等) | エラー終了。出力なし                            | REQ-F-010            | 書き込み失敗を成功として扱わない                               |
-| before、after、resolution のいずれかに改行を含む                  | エラー終了。出力なし                            | REQ-F-010            | 1 行の契約を保ち、出力の注入を防ぐため                         |
-| 検証の失敗 (commit-count 不正、コミット不在 等)                   | 出力なし。非ゼロ終了                            | REQ-F-010            | 検証の失敗では書き出しを開始しない                             |
-| 2 つ目の出力を書く途中で I/O 障害が起きる                         | 非ゼロ終了。1 つ目の出力が残り得る              | REQ-F-010            | 部分出力は許容し、呼び出し元の契約で扱う (DR-18)               |
-| 履歴が初回コミットのみで HEAD~N を解決できない                    | resolution は empty-tree。終了コード 0          | REQ-F-007, REQ-F-012 | 履歴不足は異常ではなく、空ツリーへのフォールバック経路         |
-| 入力 before-sha と after-sha の両方を指定                         | resolution は override                          | REQ-F-011, REQ-F-012 | オーバーライドはイベント別解決より優先する                     |
-| オーバーライドの before が空ツリー SHA                            | エラー終了。出力なし                            | REQ-F-013            | オーバーライドは実在コミットのペアに限る (DR-24)               |
-| オーバーライドなしのタグの push、またはブランチ削除の push        | エラー終了。出力なし                            | REQ-F-020            | ブランチの作成・更新以外の push は解決しない (DR-25)           |
-| push で before と after が同一の SHA                              | resolution は event                             | REQ-F-004, REQ-F-012 | 値の同一性は経路の判定に影響しない                             |
-| pull_request_target                                               | resolution は fallback-head-n または empty-tree | REQ-F-009, REQ-F-012 | その他イベントとして扱う (DR-06)                               |
+| Input                                                                         | Classification                                  | REQ                  | Rationale                                                      |
+| ----------------------------------------------------------------------------- | ----------------------------------------------- | -------------------- | -------------------------------------------------------------- |
+| `GITHUB_OUTPUT` が未設定                                                      | エラー終了。出力なし                            | REQ-F-010            | 出力先が無いまま成功すると、呼び出し元が空の出力を受け取るため |
+| `GITHUB_OUTPUT` が書き込み不能 (読み取り専用、不在ディレクトリ等)             | エラー終了。出力なし                            | REQ-F-010            | 書き込み失敗を成功として扱わない                               |
+| before、after、resolution のいずれかに CR または LF を含む (単独の CR を含む) | エラー終了。出力なし                            | REQ-F-010            | 1 行の契約を保ち、出力の注入を防ぐため                         |
+| 検証の失敗 (commit-count 不正、コミット不在 等)                               | 出力なし。非ゼロ終了                            | REQ-F-010            | 検証の失敗では書き出しを開始しない                             |
+| 2 つ目の出力を書く途中で I/O 障害が起きる                                     | 非ゼロ終了。1 つ目の出力が残り得る              | REQ-F-010            | 部分出力は許容し、呼び出し元の契約で扱う (DR-18)               |
+| 履歴が初回コミットのみで HEAD~N を解決できない                                | resolution は empty-tree。終了コード 0          | REQ-F-007, REQ-F-012 | 履歴不足は異常ではなく、空ツリーへのフォールバック経路         |
+| 入力 before-sha と after-sha の両方を指定                                     | resolution は override                          | REQ-F-011, REQ-F-012 | オーバーライドはイベント別解決より優先する                     |
+| オーバーライドの before が空ツリー SHA                                        | エラー終了。出力なし                            | REQ-F-013            | オーバーライドは実在コミットのペアに限る (DR-24)               |
+| オーバーライドなしのタグの push、またはブランチ削除の push                    | エラー終了。出力なし                            | REQ-F-020            | ブランチの作成・更新以外の push は解決しない (DR-25)           |
+| push で before と after が同一の SHA                                          | resolution は event                             | REQ-F-004, REQ-F-012 | 値の同一性は経路の判定に影響しない                             |
+| pull_request_target                                                           | resolution は fallback-head-n または empty-tree | REQ-F-009, REQ-F-012 | その他イベントとして扱う (DR-06)                               |
 
 ---
 
@@ -263,9 +263,9 @@ No reordering is permitted.
 
 <!-- SemVer: see .claude/rules/deckrd-rule-document-versioning.md -->
 
-| Date       | Version | Description                                                                                        |
-| ---------- | ------- | -------------------------------------------------------------------------------------------------- |
-| 2026-10-25 | 1.0.0   | Initial specification                                                                              |
-| 2026-10-25 | 1.1.0   | Apply requirements v1.2.0: partial write on I/O failure, empty-tree label, R-OUT- renumbering      |
-| 2026-10-25 | 1.1.1   | Follow requirements v2.0.0 (based-on refresh only)                                                 |
-| 2026-10-25 | 1.2.0   | Apply requirements v2.1.0: override with empty tree before is an error, empty-tree route condition |
+| Date       | Version | Description                                                                                                             |
+| ---------- | ------- | ----------------------------------------------------------------------------------------------------------------------- |
+| 2026-10-25 | 1.0.0   | Initial specification                                                                                                   |
+| 2026-10-25 | 1.1.0   | Apply requirements v1.2.0: partial write on I/O failure, empty-tree label, R-OUT- renumbering                           |
+| 2026-10-25 | 1.1.1   | Follow requirements v2.0.0 (based-on refresh only)                                                                      |
+| 2026-10-25 | 1.2.0   | Apply requirements v2.1.0: override with empty tree before is an error, empty-tree route condition, CR in newline check |
