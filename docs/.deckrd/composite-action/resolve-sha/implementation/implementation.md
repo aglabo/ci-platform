@@ -2,7 +2,7 @@
 title: "Implementation Plan: _ca-resolve-sha"
 based-on: specifications-index.md v2.1.1
 status: Draft
-version: 1.1.2
+version: 1.1.3
 created: "2026-10-25"
 ---
 
@@ -86,6 +86,22 @@ created: "2026-10-25"
   - フィクスチャ内で `user.name` / `user.email` を設定する。partial clone は、元リポジトリで `uploadpack.allowFilter` を有効にして作る。
   - VPI の `<max>` と WO の `<key>` は、呼び出し側が妥当性を保証する内部引数とし、VPI / WO では検証しない。
   - Windows では `runners/run-shellspec.sh` が WSL で実行するため、フィクスチャの git は WSL 側のものとなる。
+
+**関数ごとの実装上の詳細:**
+
+specifications-index.md §3.5 の impl-note を補う。tasks.md はこの記述に従う。
+
+- IPC はエラーを出さず、終了コードで状態を返す。エラーは RSH が RE で出す (R-RES-008、R-RES-010)。
+  - 終了コード 0: partial clone である
+  - 終了コード 1: 該当なし (git リポジトリでない場合を含む)
+  - 終了コード 2: 設定の参照に失敗した
+- NCC は、確定した commit-count (N) を stdout に 1 行で出す。エラー時は stdout に何も出さない。
+- RE は stdout に何も出さず、stderr に 1 行だけ出す。
+  - 第 3 引数 (値) を省略した場合は、空の形式 (`::error::<対象>: value must not be empty`) を出す。
+  - 値を渡した場合は、空文字列であっても通常の形式 (`(got: '<値>')`) を出す。
+- RSH は、オーバーライドの値が両方とも空でない場合に override の経路と判定する。組み合わせと形式は VOV で検証済みとする。
+- EO のエラーの対象は、step の出力キー (`before_sha` / `after_sha` / `resolution`) とする。出力先の異常は `GITHUB_OUTPUT` を対象とする。
+- エラーの問題を説明する文言は、英語の短い句とする。テストでは `::error::` の接頭辞、対象、`(got: '<値>')` の部分を確かめ、問題の文言は固定しない。
 
 ---
 
@@ -221,9 +237,10 @@ created: "2026-10-25"
      `based-on` must cite a three-part version that exists in specifications.md.
      See docs/.deckrd/rules/deckrd-rule-document-versioning.md -->
 
-| Date       | Version | Description                                                                                                                         |
-| ---------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| 2026-10-25 | 1.0.0   | Initial implementation plan                                                                                                         |
-| 2026-10-25 | 1.1.0   | Apply explore review: shell lint and test ID checks, WO takes output file, action.yml static check, fixture placement               |
-| 2026-10-25 | 1.1.1   | Apply harden / fix review: spec impl-note moved out of Phase 0, Phase 1 stop condition, DR-26/27 refs, wording                      |
-| 2026-10-25 | 1.1.2   | Apply codex review: action.yml wiring checks, no-fetch and partial-write tests, file:// shallow fixture, env and exit-code handling |
+| Date       | Version | Description                                                                                                                            |
+| ---------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-10-25 | 1.0.0   | Initial implementation plan                                                                                                            |
+| 2026-10-25 | 1.1.0   | Apply explore review: shell lint and test ID checks, WO takes output file, action.yml static check, fixture placement                  |
+| 2026-10-25 | 1.1.1   | Apply harden / fix review: spec impl-note moved out of Phase 0, Phase 1 stop condition, DR-26/27 refs, wording                         |
+| 2026-10-25 | 1.1.2   | Apply codex review: action.yml wiring checks, no-fetch and partial-write tests, file:// shallow fixture, env and exit-code handling    |
+| 2026-10-25 | 1.1.3   | Add per-function implementation details (IPC exit codes, NCC stdout, RE forms, RSH override detection, EO error target, error wording) |
