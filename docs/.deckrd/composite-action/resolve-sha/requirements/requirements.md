@@ -147,6 +147,8 @@ THEN the system SHALL "::error::" を出力し、非ゼロ終了コードで終�
 許容する形式は、先頭ゼロなしの正整数のみとする。
 0、負数、非数値、前後の空白、先頭ゼロ (例: "01") は不正とする。
 上限は 1000 とする (DR-14)。
+上限の判定は、数値として比較する前に桁数 (4 桁以下) を検証して行う。
+桁数の多い値をそのまま算術比較すると、桁あふれにより上限の判定をすり抜け得る。
 
 **Rationale**: 不正な `commit-count` で後続の git 操作が誤った結果を返すことを防ぐ。
 
@@ -155,6 +157,7 @@ THEN the system SHALL "::error::" を出力し、非ゼロ終了コードで終�
 | AC ID  | Scenario                             |
 | ------ | ------------------------------------ |
 | AC-004 | 不正な commit-count でエラー終了する |
+| AC-020 | 上限値の commit-count を受け付ける   |
 
 ### REQ-F-003: 検証の先行実行 (fail-first)
 
@@ -182,9 +185,10 @@ THEN the system SHALL イベント種別の判定より先に commit-count を�
 
 **Acceptance Criteria**:
 
-| AC ID  | Scenario                             |
-| ------ | ------------------------------------ |
-| AC-004 | 不正な commit-count でエラー終了する |
+| AC ID  | Scenario                                   |
+| ------ | ------------------------------------------ |
+| AC-004 | 不正な commit-count でエラー終了する       |
+| AC-022 | 複数の不正が同時にある場合はエラー終了する |
 
 ### REQ-F-004: push における通常解決
 
@@ -346,11 +350,12 @@ THEN the system SHALL before-sha、after-sha、resolution を $GITHUB_OUTPUT に
 
 **Acceptance Criteria**:
 
-| AC ID  | Scenario                             |
-| ------ | ------------------------------------ |
-| AC-001 | push で before/after を解決する      |
-| AC-002 | pull_request で base/head を解決する |
-| AC-008 | resolution 出力値を設定する          |
+| AC ID  | Scenario                                                    |
+| ------ | ----------------------------------------------------------- |
+| AC-001 | push で before/after を解決する                             |
+| AC-002 | pull_request で base/head を解決する                        |
+| AC-008 | resolution 出力値を設定する                                 |
+| AC-021 | $GITHUB_OUTPUT が未設定・書き込み不能の場合はエラー終了する |
 
 ### REQ-F-011: 明示オーバーライド
 
@@ -714,6 +719,7 @@ Scenario Outline: 不正な commit-count でエラー終了する
     | workflow_dispatch | 01    |
     | push              | " 2"  |
     | push              | 1001  |
+    | push              | 18446744073709551617 |
 
 # AC-005: push の before が無効な場合に HEAD~N へフォールバックする
 # Requirement: REQ-F-005, REQ-F-006
@@ -888,14 +894,20 @@ Scenario Outline: GITHUB_EVENT_NAME が空の場合はエラー終了する
 
 # AC-018: partial clone の場合はエラー終了する
 # Requirement: REQ-F-019
-Scenario: partial clone の場合はエラー終了する
-  Given 作業リポジトリが promisor remote を持つ partial clone である
-  And   イベントが workflow_dispatch である
+Scenario Outline: partial clone の場合はエラー終了する
+  Given 作業リポジトリが <config> を持つ partial clone である
+  And   イベントが workflow_dispatch で、<override> である
   When  _ca-resolve-sha を実行する
   Then  "::error::" が出力される
   And   終了コードは非ゼロである
   And   git fetch の子プロセスは起動されない
   And   before-sha / after-sha / resolution は出力されない
+
+  Examples:
+    | config                                  | override                           |
+    | promisor remote                         | オーバーライドが指定されていない   |
+    | extensions.partialClone のみ            | オーバーライドが指定されていない   |
+    | promisor remote                         | オーバーライドが両方指定されている |
 
 # AC-019: ブランチの作成・更新以外の push はエラー終了する
 # Requirement: REQ-F-020
@@ -919,6 +931,42 @@ Scenario: オーバーライド指定時は push の ref 種別を検証しな�
   When  _ca-resolve-sha を実行する
   Then  before-sha / after-sha は指定値と一致する
   And   resolution は override である
+
+# AC-020: 上限値の commit-count を受け付ける
+# Requirement: REQ-F-002
+Scenario: commit-count が上限値 1000 の場合は解決する
+  Given イベントが workflow_dispatch で、commit-count が "1000" である
+  And   履歴が 2 コミットである
+  When  _ca-resolve-sha を実行する
+  Then  終了コードは 0 である
+  And   before-sha は 4b825dc642cb6eb9a060e54bf8d69288fbee4904 である
+  And   resolution は empty-tree である
+
+# AC-021: $GITHUB_OUTPUT が未設定・書き込み不能の場合はエラー終了する
+# Requirement: REQ-F-010
+Scenario Outline: 出力先が使えない場合はエラー終了する
+  Given イベントが workflow_dispatch で、HEAD~1 を解決できる
+  And   $GITHUB_OUTPUT が <state> である
+  When  _ca-resolve-sha を実行する
+  Then  "::error::" が出力される
+  And   終了コードは非ゼロである
+
+  Examples:
+    | state                      |
+    | 未設定                     |
+    | 書き込み権限のないファイル |
+
+# AC-022: 複数の不正が同時にある場合はエラー終了する
+# Requirement: REQ-F-003
+Scenario: 複数の不正が同時にある場合はエラー終了する
+  Given commit-count が "0" である
+  And   入力 before-sha のみが指定されている
+  And   GITHUB_EVENT_NAME が空である
+  When  _ca-resolve-sha を実行する
+  Then  "::error::" が出力される
+  And   終了コードは非ゼロである
+  And   before-sha / after-sha / resolution は出力されない
+  And   出力されるエラーは commit-count の検証によるものである
 ```
 
 ## 9. Open Questions
@@ -926,21 +974,22 @@ Scenario: オーバーライド指定時は push の ref 種別を検証しな�
 | Question                                                                                                        | Type      | Impact Area | Owner |
 | --------------------------------------------------------------------------------------------------------------- | --------- | ----------- | ----- |
 | REQ-F-002, REQ-F-013 から REQ-F-020: エラーメッセージの文言・形式 (spec で形式を決定済み、文言は spec が定める) | EARS/THEN | FR outcome  | spec  |
+| REQ-F-007: merge 履歴で第一親の系列だけが shallow 境界に達する場合の判定方法 (第一親の系列だけで判定する)       | Behavior  | FR outcome  | spec  |
 
 ## 10. Traceability
 
 | REQ ID     | AC IDs                                 | Type           |
 | ---------- | -------------------------------------- | -------------- |
 | REQ-F-001  | AC-003                                 | Functional     |
-| REQ-F-002  | AC-004                                 | Functional     |
-| REQ-F-003  | AC-004                                 | Functional     |
+| REQ-F-002  | AC-004, AC-020                         | Functional     |
+| REQ-F-003  | AC-004, AC-022                         | Functional     |
 | REQ-F-004  | AC-001, AC-008                         | Functional     |
 | REQ-F-005  | AC-005, AC-008                         | Functional     |
 | REQ-F-006  | AC-005, AC-008                         | Functional     |
 | REQ-F-007  | AC-006, AC-008, AC-011, AC-012, AC-014 | Functional     |
 | REQ-F-008  | AC-002, AC-008                         | Functional     |
 | REQ-F-009  | AC-003, AC-008, AC-014                 | Functional     |
-| REQ-F-010  | AC-001, AC-002, AC-008                 | Functional     |
+| REQ-F-010  | AC-001, AC-002, AC-008, AC-021         | Functional     |
 | REQ-F-011  | AC-007, AC-008                         | Functional     |
 | REQ-F-012  | AC-008                                 | Functional     |
 | REQ-F-013  | AC-009                                 | Functional     |
@@ -963,10 +1012,10 @@ Scenario: オーバーライド指定時は push の ref 種別を検証しな�
 
 ## 11. Change History
 
-| Date       | Version | Description                                                                                                                                              |
-| ---------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 2026-10-25 | 1.0.0   | Initial release                                                                                                                                          |
-| 2026-10-25 | 1.1.0   | Apply DR-07..DR-14: add REQ-F-011..016, REQ-C-008, AC-007..014; revise REQ-F-002/005/006/007/010/013/014, REQ-C-002/003/006                              |
-| 2026-10-25 | 1.2.0   | Apply DR-15..DR-22: add REQ-F-017/018, AC-015..017; revise REQ-F-003..007/009/010/012/013, REQ-NF-002, REQ-C-003/006                                     |
-| 2026-10-25 | 2.0.0   | Apply DR-23: withdraw REQ-F-017, AC-015, AC-017; add REQ-F-019, AC-018; simplify REQ-F-004/005/006/013, REQ-NF-002, REQ-C-003                            |
-| 2026-10-25 | 2.1.0   | Apply DR-24/25: reject empty tree override; add REQ-F-020, AC-019; revise REQ-F-003/011/013/019, REQ-C-003/006, AC-008/009; clarify empty-tree condition |
+| Date       | Version | Description                                                                                                                                                               |
+| ---------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-10-25 | 1.0.0   | Initial release                                                                                                                                                           |
+| 2026-10-25 | 1.1.0   | Apply DR-07..DR-14: add REQ-F-011..016, REQ-C-008, AC-007..014; revise REQ-F-002/005/006/007/010/013/014, REQ-C-002/003/006                                               |
+| 2026-10-25 | 1.2.0   | Apply DR-15..DR-22: add REQ-F-017/018, AC-015..017; revise REQ-F-003..007/009/010/012/013, REQ-NF-002, REQ-C-003/006                                                      |
+| 2026-10-25 | 2.0.0   | Apply DR-23: withdraw REQ-F-017, AC-015, AC-017; add REQ-F-019, AC-018; simplify REQ-F-004/005/006/013, REQ-NF-002, REQ-C-003                                             |
+| 2026-10-25 | 2.1.0   | Apply DR-24/25: reject empty tree override; add REQ-F-020, AC-019..022; revise REQ-F-002/003/011/013/019, REQ-C-003/006, AC-004/008/009/018; clarify empty-tree condition |
