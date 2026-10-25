@@ -1,8 +1,8 @@
 ---
 title: "Design Specification: _ca-resolve-sha (出力と resolution)"
-based-on: requirements.md v1.2.0
+based-on: requirements.md v2.0.0
 status: Draft
-version: 1.1.0
+version: 1.1.1
 created: "2026-10-25"
 ---
 
@@ -265,3 +265,4 @@ No reordering is permitted.
 | ---------- | ------- | --------------------------------------------------------------------------------------------- |
 | 2026-10-25 | 1.0.0   | Initial specification                                                                         |
 | 2026-10-25 | 1.1.0   | Apply requirements v1.2.0: partial write on I/O failure, empty-tree label, R-OUT- renumbering |
+| 2026-10-25 | 1.1.1   | Follow requirements v2.0.0 (based-on refresh only)                                            |

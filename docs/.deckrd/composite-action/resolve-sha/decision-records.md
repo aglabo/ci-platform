@@ -2,7 +2,7 @@
 title: "Decision Records: _ca-resolve-sha"
 module: "composite-action/resolve-sha"
 status: Draft
-version: 1.2.0
+version: 2.0.0
 created: "2026-10-25"
 ---
 
@@ -185,34 +185,6 @@ created: "2026-10-25"
 - Trade-offs: 短縮 SHA を渡していた呼び出し元は修正が必要になる。履歴終端・shallow 境界の判定のために git 呼び出しが増える。
 - Related: REQ-F-002 / REQ-F-007 / REQ-F-010 / REQ-F-013 / REQ-F-014 / REQ-F-016 / REQ-C-003
 
-## DR-15: イベント由来の SHA にも完全長 OID の形式検証を適用する
-
-- Status: Accepted
-- Context: spec explore review (G-01) で、イベント由来の値 (push の before と github.sha、pull_request の base と head) に形式検証がないと指摘された。`git cat-file -e <v>^{commit}` は `main` や `HEAD~1` も受理する。このため、イベント経路で固定 SHA ではない値を `resolution=event` として出力し得る。
-- Decision:
-  - イベント由来の値にも `^[0-9a-f]{40}$` を適用する。
-  - push の before が形式に一致しない場合は、無効な before として HEAD~N にフォールバックする (DR-02 と同じ扱い)。
-  - push の after (github.sha)、pull_request の base と head が形式に一致しない場合は、`::error::` で終了する。
-  - 形式検証は、コミット実在検証より先に行う。
-- Alternatives:
-  - `git rev-parse` で完全長 OID に正規化して出力する。出力値が入力値と異なり得るうえ、DR-14 でオーバーライドに採らなかった方式と食い違うため不採用。
-  - GitHub が完全長 SHA を渡すと前提し、記載だけにとどめる。テストや再利用の場面で固定 SHA の契約が破れるため不採用。
-- Rationale: 出力が常に固定 SHA であるという契約を、オーバーライド経路だけでなく全経路で保つ。
-- Trade-offs: 検証規則が増える。push の before だけ扱いが異なる (エラーではなくフォールバック) ことを、仕様で明示する必要がある。
-- Related: REQ-F-004 / REQ-F-005 / REQ-F-006 / REQ-F-008 / REQ-F-013 / REQ-F-016 / DR-02 / DR-14
-
-## DR-16: push の通常解決は after に github.sha を使い続ける
-
-- Status: Accepted
-- Context: spec explore review (A-02) で、push の after の基準が経路によって異なると指摘された。通常解決は github.sha を使い、フォールバックは checkout 済み HEAD を使う (DR-09)。checkout の `ref` が github.sha と異なる場合、同じ push でも経路によって after が別のコミットになる。
-- Decision: DR-09 を維持する。push の通常解決は (event.before, github.sha) とし、フォールバックとその他イベントは HEAD を基準とする。この差は許容するものとして仕様に明記する。github.sha のコミットを checkout することは、呼び出し元の責務とする。
-- Alternatives:
-  - 通常解決でも after に HEAD を使う。event.before が HEAD と別の履歴線上になり得るため不採用。
-  - github.sha と HEAD が異なる場合はエラーにする。正当な checkout 構成まで拒否するため不採用。
-- Rationale: イベントが示す二点の組を崩さず、既存の決定 (DR-09) を変えずに済む。
-- Trade-offs: checkout の `ref` を変えた呼び出しでは、経路ごとに after の意味が変わる。呼び出し元はこれを `resolution` で区別する。
-- Related: REQ-F-004 / REQ-F-005 / REQ-F-006 / REQ-C-003 / DR-09
-
 ## DR-17: GITHUB_EVENT_NAME はオーバーライドの有無に関わらず検証する
 
 - Status: Accepted
@@ -251,53 +223,23 @@ created: "2026-10-25"
 - Trade-offs: SHA-256 リポジトリやサブディレクトリへの checkout には、別途対応が必要になる。
 - Related: REQ-F-008 / REQ-F-009 / REQ-F-012 / DR-06 / DR-08 / DR-13
 
-## DR-20: push の before の検査障害は近似解決の例外とし、遅延取得を抑止する
+## DR-23: partial clone はエラーとし、対象外の環境を前提として扱う
 
 - Status: Accepted
-- Context: codex risk review (spec) で 2 点が指摘された。1 点目は R-104 である。push の before に対する `git cat-file -e` の失敗には、旧コミットの不在とオブジェクトの破損・読み取り障害の両方が含まれる。git はどちらも同じ終了コード (128) を返すため区別できない。2 点目は partial clone である。欠損オブジェクトの参照が promisor remote からの暗黙の取得を起動し、REQ-NF-002 (ネットワーク不使用) を破り得る。
+- Context: spec review と codex review の指摘を受け、DR-15、DR-16、DR-20、DR-21、DR-22 を追加した。しかし、2 つの SHA を履歴から得る内部 Action に対して、要件・仕様・テストが過剰になった。イベント値は GitHub のコンテキストが与える完全長 SHA であり、呼び出し元も内部 Action に限られる。partial clone、replace refs、graft、注釈付きタグの OID は、通常の `actions/checkout` では生じない。
 - Decision:
-  - push の before の検査失敗は、原因を問わず無効な before として HEAD~N にフォールバックする。旧コミット側の障害を検出できないことを、保証の例外として仕様に明記する。HEAD 側の障害は R-111 / R-113 / R-115 で従来どおり検出する。
-  - すべての git 操作に `GIT_NO_LAZY_FETCH=1` を適用し、遅延取得を抑止する。
-  - partial clone は許容する。各経路で必要なコミットは、呼び出し元が事前に取得しておく前提とする。遅延取得の抑止によるコミット不在は既存の規則で扱い、shallow 境界と同一視しない。
+  - DR-15、DR-16、DR-20、DR-21、DR-22 を削除する。DR-ID は再利用しない。
+  - partial clone のリポジトリ (`remote.<name>.promisor` または `extensions.partialClone` が設定されている) では、オブジェクトを参照する前に `::error::` で終了する。
+  - 判定は git の設定だけで行い、オブジェクトを参照しない。このため、遅延取得は起動しない。
+  - イベント由来の SHA には形式検証をしない。GitHub が完全長 SHA を渡すことを前提とする。
+  - replace refs、旧形式の graft ファイル、注釈付きタグの OID の入力は対象外とする。コミット検証は DR-10 のとおりとする。
+  - push の通常解決の after は github.sha とする (DR-09 の範囲)。checkout の `ref` が github.sha と異なる場合の差は許容する。
 - Alternatives:
-  - before の不在と障害を区別する検査を定義する。終了コードで区別できず、確実な判定方法がないため不採用。
-  - partial clone を前提から除外するだけにする。ランナーの git が `GIT_NO_LAZY_FETCH` に対応していれば、抑止で対応できるため不採用。前提の記載は併用する。
-  - `git --no-lazy-fetch` を使う。git 2.46.0 以降に限られ、テスト環境の git 2.39.5 で使えないため不採用。
-- Rationale: 区別できない失敗を区別できるように見せかけず、例外として明記する。環境変数は未対応の git では無視されるだけで副作用がない。
-- Trade-offs: `GIT_NO_LAZY_FETCH` に未対応の git (例: 2.43.0) では抑止が効かない。この場合の REQ-NF-002 は、呼び出し元の事前取得の前提で担保する。
-- Related: REQ-F-006 / REQ-F-013 / REQ-F-014 / REQ-NF-002 / DR-02 / DR-10 / DR-14
-
-## DR-21: コミット実在検証を OID 自体の型検査とし、replace refs を無効にする
-
-- Status: Accepted
-- Context: codex risk review (requirements v1.2.0) で、注釈付きタグの OID が検証を通過すると指摘された。タグの OID も `^[0-9a-f]{40}$` に一致する。`git cat-file -e <oid>^{commit}` はタグを剥がしてコミットへ解決するため、存在検査も成功する。値をそのまま出力するため、コミット OID の契約に反してタグ OID を返し得る。また replace refs が有効だと、置換後のオブジェクトの型を検査してしまう。
-- Decision:
-  - 「コミットとして存在する」の検査を、修飾なしの OID に対する `git cat-file -t <oid>` とする。終了コード 0 かつ出力 `commit` の場合のみ成功とする。push の before を含む全検証対象に適用する。
-  - 終了コードが 0 以外なら、値を問わず検査失敗とする。
-  - 注釈付きタグは、参照先がコミットでも拒否する。lightweight tag の参照先 OID はコミット OID であり受理する。
-  - すべての git 操作に `GIT_NO_REPLACE_OBJECTS=1` を適用し、型検査と HEAD~N の解決で置換の扱いをそろえる。
-  - 旧形式の graft ファイルは、この設定で無効にならないため、対象外とする。
-- Alternatives:
-  - `git rev-parse --verify -q <oid>^{commit}` の出力を元の OID と比較する。同じ結果を得られるが、契約 (OID 自体が commit 型) を直接表現できないため不採用。
-  - `git --no-replace-objects` を各呼び出しに付ける。環境変数なら全呼び出しに一括で適用でき、付け忘れが起きないため不採用。
-- Rationale: 存在検査と型検査を 1 回の git 呼び出しで行い、出力が常にコミット OID であることを保証する。`GIT_NO_REPLACE_OBJECTS` は git 1.6.6 で導入済みであり、テスト環境の git 2.39.5 でも使える。
-- Trade-offs: 注釈付きタグの OID を渡していた呼び出し元は、コミット OID に直す必要がある。replace refs を意図して使うリポジトリでは、置換前の履歴で解決する。
-- Related: REQ-F-005 / REQ-F-006 / REQ-F-013 / REQ-NF-002 / DR-10 / DR-15
-
-## DR-22: 遅延取得抑止に未対応の git での partial clone は対象外とし、AC-017 を全経路に広げる
-
-- Status: Accepted
-- Context: codex risk review (requirements v1.2.0) で、DR-20 の代替策が成立しないと指摘された。`GIT_NO_LAZY_FETCH` に未対応の git では、push の before の存在検査自体が遅延取得を起動し得る。HEAD 側の事前取得では防げない。また AC-017 は push の before しか検証せず、他の経路で抑止が漏れる実装を排除できない。
-- Decision:
-  - `GIT_NO_LAZY_FETCH` に未対応の git と partial clone の組み合わせは対象外とし、呼び出し元の責務とする。
-  - AC-017 は抑止に対応した git での実行を前提とし、push の before、pull_request の base、オーバーライド値、HEAD~N に至る祖先の欠損を検証する。
-  - 祖先の欠損は shallow 境界と区別し、`empty-tree` ではなくエラーとすることを AC-017 で確認する。
-- Alternatives:
-  - 抑止に対応した git を必須とし、バージョンで判定する。抑止機能は修正版へのバックポートで導入されており、バージョンの大小では判定できないため不採用。
-  - partial clone を一律に対象外とする。抑止に対応した git では安全に扱えるため不採用。
-- Rationale: 担保できない前提を要件から外し、担保できる範囲を全経路のテストで確認する。
-- Trade-offs: 古い git の self-hosted runner で partial clone を使う場合、ネットワーク不使用は保証されない。
-- Related: REQ-NF-002 / REQ-C-003 / DR-20
+  - 削除した DR を維持する。テスト用の fixture (promisor remote、replace ref、タグ) と仕様の分量が増え、現実に起きない失敗の検出にとどまるため不採用。
+  - partial clone を許容し、`GIT_NO_LAZY_FETCH` で遅延取得を抑止する。未対応の git では存在検査自体が取得を起動し得るため不採用。
+- Rationale: 責務を二点の SHA 解決に絞る。起こり得ない入力は前提として明記し、検出が簡単な partial clone はエラーで拒否する。
+- Trade-offs: partial clone で本 Action を使う呼び出し元は、通常の clone に切り替える必要がある。対象外の入力は検出しないため、前提が破れた場合の挙動は保証しない。
+- Related: REQ-F-005 / REQ-F-006 / REQ-F-013 / REQ-F-019 / REQ-NF-002 / DR-09 / DR-10 / DR-19
 
 ## Change History
 
@@ -306,3 +248,4 @@ created: "2026-10-25"
 | 2026-10-25 | 1.0.0   | Initial release                                                                         |
 | 2026-10-25 | 1.1.0   | Add DR-07..DR-14 (review harden / req revision / codex review); clarify DR-03 threshold |
 | 2026-10-25 | 1.2.0   | Add DR-15..DR-22 (spec review explore / harden / codex review, req revision)            |
+| 2026-10-25 | 2.0.0   | Remove DR-15/16/20/21/22 (over-scoped); add DR-23 (partial clone is an error)           |

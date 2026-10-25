@@ -1,8 +1,8 @@
 ---
 title: "Design Specification: _ca-resolve-sha (入力検証とオーバーライド)"
-based-on: requirements.md v1.2.0
+based-on: requirements.md v2.0.0
 status: Draft
-version: 1.1.0
+version: 1.1.1
 created: "2026-10-25"
 ---
 
@@ -56,7 +56,7 @@ created: "2026-10-25"
 | オーバーライド形式検証 | 両方指定された値が完全長の小文字 16 進 OID であることを検証する    | REQ-F-016            |
 
 <!-- impl-note: commit-count 正規化と検証は normalize_commit_count (NCC) が担当し、正整数検証は _libs の validate_positive_int (VPI) を使う。
-  オーバーライド判定と形式検証は validate_override (VOV) が担当し、形式判定は is_full_oid (IFO) を使う。VOV は none または override を返す。 -->
+  オーバーライド判定と形式検証は validate_override (VOV) が担当し、形式判定も VOV が行う。VOV は none または override を返す。 -->
 
 #### Unit Interaction Map
 
@@ -234,7 +234,6 @@ No reordering is permitted.
 | オーバーライド値が 7 桁の短縮 SHA          | エラー                    | REQ-F-016            | 完全長ではない                                              |
 | オーバーライド値が大文字を含む 40 桁       | エラー                    | REQ-F-016            | 小文字 16 進のみを許可する                                  |
 | オーバーライド値が空白のみ                 | 指定ありとして形式エラー  | REQ-F-015, REQ-F-016 | 空文字列ではないため、指定されたものとして扱う              |
-| オーバーライド値が注釈付きタグの OID       | 本書では `override`       | REQ-F-013            | 形式は一致する。型の検査は resolution 分割ファイルで行う    |
 
 ---
 
@@ -268,3 +267,4 @@ No reordering is permitted.
 | ---------- | ------- | ---------------------------------------------------------------------------------------- |
 | 2026-10-25 | 1.0.0   | Initial specification                                                                    |
 | 2026-10-25 | 1.1.0   | Apply requirements v1.2.0: R-IN-/DD-IN- IDs, error wording table, DR-17 evaluation order |
+| 2026-10-25 | 1.1.1   | Follow requirements v2.0.0: drop annotated tag edge case and IFO reference               |
