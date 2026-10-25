@@ -1,8 +1,8 @@
 ---
 title: "Design Specification: _ca-resolve-sha (出力と resolution)"
-based-on: requirements.md v2.0.0
+based-on: requirements.md v2.1.0
 status: Draft
-version: 1.1.1
+version: 1.2.0
 created: "2026-10-25"
 ---
 
@@ -114,6 +114,7 @@ created: "2026-10-25"
 | DR-13 | 本 Action は SHA 解決器とし、変更網羅は保証しない             | req    | ラベルが通知に徹し、呼び出し元の判断を縛らないこと       |
 | DR-14 | 入力形式・git 障害分類・checkout と出力の契約を厳格化する     | req    | 検証の失敗では書き出さず、出力先の異常をエラーとすること |
 | DR-18 | 書き出し中の I/O 失敗による部分出力は、呼び出し元の契約で扱う | review | 書き出し開始後の失敗の扱い                               |
+| DR-24 | オーバーライド値に空ツリー SHA を受け付けない                 | review | `override` と `empty-tree` の対応が重ならないこと        |
 
 ### 2.7 DD to DR Promotion Criteria
 
@@ -163,12 +164,12 @@ created: "2026-10-25"
 
 #### 3.2.1 resolution の値と解決経路の対応
 
-| resolution      | 解決経路                                                                     | REQ                             |
-| --------------- | ---------------------------------------------------------------------------- | ------------------------------- |
-| override        | 入力 before-sha と after-sha の両方指定 (before が空ツリー SHA の場合を含む) | REQ-F-011                       |
-| event           | push の通常解決、または pull_request                                         | REQ-F-004, REQ-F-008            |
-| fallback-head-n | HEAD~N を解決できた経路 (push のフォールバック、その他イベント)              | REQ-F-005, REQ-F-006, REQ-F-009 |
-| empty-tree      | HEAD~N を解決できず、空ツリー SHA へフォールバックした経路                   | REQ-F-007                       |
+| resolution      | 解決経路                                                                          | REQ                             |
+| --------------- | --------------------------------------------------------------------------------- | ------------------------------- |
+| override        | 入力 before-sha と after-sha の両方指定 (どちらも実在するコミット)                | REQ-F-011                       |
+| event           | push の通常解決、または pull_request                                              | REQ-F-004, REQ-F-008            |
+| fallback-head-n | HEAD~N を解決できた経路 (push のフォールバック、その他イベント)                   | REQ-F-005, REQ-F-006, REQ-F-009 |
+| empty-tree      | HEAD~N が履歴終端または shallow 境界を越え、空ツリー SHA へフォールバックした経路 | REQ-F-007                       |
 
 - 1 回の実行で設定する値は 1 つだけとする。どの経路も、上の表のちょうど 1 行に該当する。
 - 表にない値を `resolution` に設定してはならない。
@@ -180,16 +181,16 @@ created: "2026-10-25"
 
 Evaluation MUST follow this order:
 
-| Rule ID   | Step | Condition                                                | Outcome                                                        |
-| --------- | ---: | -------------------------------------------------------- | -------------------------------------------------------------- |
-| R-OUT-001 |    1 | 解決経路が確定した                                       | 3.2.1 の対応表に従い resolution を 1 つ決める                  |
-| R-OUT-002 |    2 | 入力検証、イベント名の検証、SHA 解決のいずれかが失敗した | 書き出しを開始せず、非ゼロで終了する                           |
-| R-OUT-003 |    3 | `GITHUB_OUTPUT` が未設定または空                         | エラー終了する。出力は書かない                                 |
-| R-OUT-004 |    4 | `GITHUB_OUTPUT` が書き込み不能                           | エラー終了する。出力は書かない                                 |
-| R-OUT-005 |    5 | 3 つの値のいずれかに改行が含まれる                       | エラー終了する。出力は書かない                                 |
-| R-OUT-006 |    6 | resolution が 4 値のいずれでもない                       | エラー終了する。出力は書かない                                 |
-| R-OUT-007 |    7 | R-OUT-003 から R-OUT-006 にいずれも当たらない            | 3 つの出力を書き出し、終了コード 0 で終了する                  |
-| R-OUT-008 |    8 | R-OUT-007 の書き出し中に、書き込みが失敗した             | エラー終了する。残りの出力は書かない。先に書いた出力は残り得る |
+| Rule ID   | Step | Condition                                                               | Outcome                                                        |
+| --------- | ---: | ----------------------------------------------------------------------- | -------------------------------------------------------------- |
+| R-OUT-001 |    1 | 解決経路が確定した                                                      | 3.2.1 の対応表に従い resolution を 1 つ決める                  |
+| R-OUT-002 |    2 | `specifications-index.md` §4 の Step 1 から Step 6 のいずれかが失敗した | 書き出しを開始せず、非ゼロで終了する                           |
+| R-OUT-003 |    3 | `GITHUB_OUTPUT` が未設定または空                                        | エラー終了する。出力は書かない                                 |
+| R-OUT-004 |    4 | `GITHUB_OUTPUT` が書き込み不能                                          | エラー終了する。出力は書かない                                 |
+| R-OUT-005 |    5 | 3 つの値のいずれかに改行が含まれる                                      | エラー終了する。出力は書かない                                 |
+| R-OUT-006 |    6 | resolution が 4 値のいずれでもない                                      | エラー終了する。出力は書かない                                 |
+| R-OUT-007 |    7 | R-OUT-003 から R-OUT-006 にいずれも当たらない                           | 3 つの出力を書き出し、終了コード 0 で終了する                  |
+| R-OUT-008 |    8 | R-OUT-007 の書き出し中に、書き込みが失敗した                            | エラー終了する。残りの出力は書かない。先に書いた出力は残り得る |
 
 No reordering is permitted.
 
@@ -229,7 +230,8 @@ No reordering is permitted.
 | 2 つ目の出力を書く途中で I/O 障害が起きる                         | 非ゼロ終了。1 つ目の出力が残り得る              | REQ-F-010            | 部分出力は許容し、呼び出し元の契約で扱う (DR-18)               |
 | 履歴が初回コミットのみで HEAD~N を解決できない                    | resolution は empty-tree。終了コード 0          | REQ-F-007, REQ-F-012 | 履歴不足は異常ではなく、空ツリーへのフォールバック経路         |
 | 入力 before-sha と after-sha の両方を指定                         | resolution は override                          | REQ-F-011, REQ-F-012 | オーバーライドはイベント別解決より優先する                     |
-| オーバーライドの before が空ツリー SHA                            | resolution は override                          | REQ-F-011, REQ-F-012 | empty-tree は HEAD~N のフォールバック経路に限る                |
+| オーバーライドの before が空ツリー SHA                            | エラー終了。出力なし                            | REQ-F-013            | オーバーライドは実在コミットのペアに限る (DR-24)               |
+| オーバーライドなしのタグの push、またはブランチ削除の push        | エラー終了。出力なし                            | REQ-F-020            | ブランチの作成・更新以外の push は解決しない (DR-25)           |
 | push で before と after が同一の SHA                              | resolution は event                             | REQ-F-004, REQ-F-012 | 値の同一性は経路の判定に影響しない                             |
 | pull_request_target                                               | resolution は fallback-head-n または empty-tree | REQ-F-009, REQ-F-012 | その他イベントとして扱う (DR-06)                               |
 
@@ -261,8 +263,9 @@ No reordering is permitted.
 
 <!-- SemVer: see .claude/rules/deckrd-rule-document-versioning.md -->
 
-| Date       | Version | Description                                                                                   |
-| ---------- | ------- | --------------------------------------------------------------------------------------------- |
-| 2026-10-25 | 1.0.0   | Initial specification                                                                         |
-| 2026-10-25 | 1.1.0   | Apply requirements v1.2.0: partial write on I/O failure, empty-tree label, R-OUT- renumbering |
-| 2026-10-25 | 1.1.1   | Follow requirements v2.0.0 (based-on refresh only)                                            |
+| Date       | Version | Description                                                                                        |
+| ---------- | ------- | -------------------------------------------------------------------------------------------------- |
+| 2026-10-25 | 1.0.0   | Initial specification                                                                              |
+| 2026-10-25 | 1.1.0   | Apply requirements v1.2.0: partial write on I/O failure, empty-tree label, R-OUT- renumbering      |
+| 2026-10-25 | 1.1.1   | Follow requirements v2.0.0 (based-on refresh only)                                                 |
+| 2026-10-25 | 1.2.0   | Apply requirements v2.1.0: override with empty tree before is an error, empty-tree route condition |

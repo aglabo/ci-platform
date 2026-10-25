@@ -712,14 +712,15 @@ Scenario Outline: 不正な commit-count でエラー終了する
   And   before-sha / after-sha / resolution は出力されない
 
   Examples:
-    | event             | value |
-    | push              | 0     |
-    | pull_request      | -1    |
-    | workflow_dispatch | abc   |
-    | workflow_dispatch | 01    |
-    | push              | " 2"  |
-    | push              | 1001  |
-    | push              | 18446744073709551617 |
+    | event             | value             |
+    | push              | 0                 |
+    | pull_request      | -1                |
+    | workflow_dispatch | abc               |
+    | workflow_dispatch | 01                |
+    | push              | " 2"              |
+    | push              | 1001              |
+    | push              | 10000             |
+    | push              | 20 桁の数字列     |
 
 # AC-005: push の before が無効な場合に HEAD~N へフォールバックする
 # Requirement: REQ-F-005, REQ-F-006

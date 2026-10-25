@@ -1,8 +1,8 @@
 ---
 title: "Design Specification: _ca-resolve-sha (Index)"
-based-on: requirements.md v2.0.0
+based-on: requirements.md v2.1.0
 status: Draft
-version: 2.0.0
+version: 2.1.0
 created: "2026-10-25"
 ---
 
@@ -24,11 +24,11 @@ FR ごとの詳細な振る舞いは、各分割ファイルで定義する。�
 
 ### 1.3 Split Files
 
-| File                                                           | Covered REQ                                                                                                  | Summary                                                                              |
-| -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------ |
-| [specifications-input.md](./specifications-input.md)           | REQ-F-001, REQ-F-002, REQ-F-003, REQ-F-011, REQ-F-015, REQ-F-016                                             | 入力の既定値・検証、オーバーライドの採用と拒否を定義する。                           |
-| [specifications-resolution.md](./specifications-resolution.md) | REQ-F-004, REQ-F-005, REQ-F-006, REQ-F-007, REQ-F-008, REQ-F-009, REQ-F-013, REQ-F-014, REQ-F-018, REQ-F-019 | イベント名と partial clone の検査、イベント別の SHA 解決、履歴不足の扱いを定義する。 |
-| [specifications-output.md](./specifications-output.md)         | REQ-F-010, REQ-F-012                                                                                         | resolution の対応付けと、出力の書き出しを定義する。                                  |
+| File                                                           | Covered REQ                                                                                                             | Summary                                                                                               |
+| -------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| [specifications-input.md](./specifications-input.md)           | REQ-F-001, REQ-F-002, REQ-F-003, REQ-F-011, REQ-F-015, REQ-F-016                                                        | 入力の既定値・検証、オーバーライドの採用と拒否を定義する。                                            |
+| [specifications-resolution.md](./specifications-resolution.md) | REQ-F-004, REQ-F-005, REQ-F-006, REQ-F-007, REQ-F-008, REQ-F-009, REQ-F-013, REQ-F-014, REQ-F-018, REQ-F-019, REQ-F-020 | イベント名、push の ref 種別、partial clone の検査、イベント別の SHA 解決、履歴不足の扱いを定義する。 |
+| [specifications-output.md](./specifications-output.md)         | REQ-F-010, REQ-F-012                                                                                                    | resolution の対応付けと、出力の書き出しを定義する。                                                   |
 
 ### 1.4 ID Conventions
 
@@ -79,14 +79,14 @@ ID は分割ファイルをまたいで一意とし、廃止した ID は再利�
 
 #### Feature Decomposition
 
-| Unit                | Responsibility                                                   | REQ Coverage                       |
-| ------------------- | ---------------------------------------------------------------- | ---------------------------------- |
-| input-validation    | commit-count とオーバーライド入力を、git 操作より先に検証する    | REQ-F-001, 002, 003, 015, 016      |
-| event-resolution    | イベント名と partial clone を検査し、経路を選んで SHA を解決する | REQ-F-004, 008, 009, 011, 018, 019 |
-| commit-verification | 出力しようとする SHA がコミットとして存在することを確認する      | REQ-F-013                          |
-| head-n-resolution   | HEAD を基準に、N 世代前の SHA または空ツリー SHA を求める        | REQ-F-005, 006, 007, 009, 014      |
-| resolution-labeling | 経路を `resolution` の 4 値のいずれかに対応付ける                | REQ-F-012                          |
-| output-emission     | すべての検証が成功した後に、結果を書き出す                       | REQ-F-010                          |
+| Unit                | Responsibility                                                                    | REQ Coverage                            |
+| ------------------- | --------------------------------------------------------------------------------- | --------------------------------------- |
+| input-validation    | commit-count とオーバーライド入力を、git 操作より先に検証する                     | REQ-F-001, 002, 003, 015, 016           |
+| event-resolution    | イベント名、push の ref 種別、partial clone を検査し、経路を選んで SHA を解決する | REQ-F-004, 008, 009, 011, 018, 019, 020 |
+| commit-verification | 出力しようとする SHA がコミットとして存在することを確認する                       | REQ-F-013                               |
+| head-n-resolution   | HEAD を基準に、N 世代前の SHA または空ツリー SHA を求める                         | REQ-F-005, 006, 007, 009, 014           |
+| resolution-labeling | 経路を `resolution` の 4 値のいずれかに対応付ける                                 | REQ-F-012                               |
+| output-emission     | すべての検証が成功した後に、結果を書き出す                                        | REQ-F-010                               |
 
 #### Unit Interaction Map
 
@@ -161,26 +161,28 @@ DD-IDX-01 は、後続の内部 Action (#136) も採用し得るため、昇格�
 > **Reference**: This section lists formal DRs that affect this specification.
 > DRs are maintained in `decision-records.md` and are authoritative.
 
-| DR-ID | Title                                                                | Phase  | Impact on This Spec                     |
-| ----- | -------------------------------------------------------------------- | ------ | --------------------------------------- |
-| DR-01 | SHA 解決ロジックを内部 Composite Action に切り出す                   | req    | モジュール全体の存在理由と分割の前提    |
-| DR-02 | push の before が無効な場合は HEAD~N に fall back する               | req    | push のフォールバック経路               |
-| DR-03 | 履歴不足時は空ツリー SHA を before-sha とする                        | req    | `empty-tree` の発生条件                 |
-| DR-04 | pull_request は base.sha をそのまま使う                              | req    | pull_request 経路と基準の限界           |
-| DR-05 | commit-count の検証は常に先頭で行う (fail-first)                     | req    | 全体の評価順序の第 1 段                 |
-| DR-06 | その他イベントは HEAD~N / HEAD で解決する                            | req    | その他イベントの扱い                    |
-| DR-07 | 明示オーバーライド入力 before-sha / after-sha を継承する             | req    | 共有インターフェースの入力              |
-| DR-08 | 解決経路を resolution 出力で通知する                                 | req    | 共有インターフェースの出力              |
-| DR-09 | フォールバックとその他イベントの基準は checkout 済み HEAD とする     | req    | HEAD を基準とする経路の共通前提         |
-| DR-10 | 出力 SHA のコミット実在検証と git エラーの区別                       | req    | エラーとフォールバックの境界            |
-| DR-11 | スコープとインターフェースの明確化                                   | req    | 権限の責務と環境変数契約                |
-| DR-12 | checkout の fetch-depth はイベントごとに N+1 / base を含む深さとする | req    | checkout 契約                           |
-| DR-13 | 本 Action は SHA 解決器とし、変更網羅は保証しない                    | req    | 分類の方針と Non-Goals                  |
-| DR-14 | 入力形式・git 障害分類・checkout と出力の契約を厳格化する            | req    | 上限値、形式検証、出力の契約            |
-| DR-17 | GITHUB_EVENT_NAME はオーバーライドの有無に関わらず検証する           | review | 全体の評価順序 (イベント名の検証の位置) |
-| DR-18 | 書き出し中の I/O 失敗による部分出力は、呼び出し元の契約で扱う        | review | 失敗時の出力の意味                      |
-| DR-19 | 前提と非保証を明記し、追加の入出力は設けない                         | review | 前提と Non-Goals                        |
-| DR-23 | partial clone はエラーとし、対象外の環境を前提として扱う             | review | partial clone の拒否と前提              |
+| DR-ID | Title                                                                | Phase  | Impact on This Spec                                    |
+| ----- | -------------------------------------------------------------------- | ------ | ------------------------------------------------------ |
+| DR-01 | SHA 解決ロジックを内部 Composite Action に切り出す                   | req    | モジュール全体の存在理由と分割の前提                   |
+| DR-02 | push の before が無効な場合は HEAD~N に fall back する               | req    | push のフォールバック経路                              |
+| DR-03 | 履歴不足時は空ツリー SHA を before-sha とする                        | req    | `empty-tree` の発生条件                                |
+| DR-04 | pull_request は base.sha をそのまま使う                              | req    | pull_request 経路と基準の限界                          |
+| DR-05 | commit-count の検証は常に先頭で行う (fail-first)                     | req    | 全体の評価順序の第 1 段                                |
+| DR-06 | その他イベントは HEAD~N / HEAD で解決する                            | req    | その他イベントの扱い                                   |
+| DR-07 | 明示オーバーライド入力 before-sha / after-sha を継承する             | req    | 共有インターフェースの入力                             |
+| DR-08 | 解決経路を resolution 出力で通知する                                 | req    | 共有インターフェースの出力                             |
+| DR-09 | フォールバックとその他イベントの基準は checkout 済み HEAD とする     | req    | HEAD を基準とする経路の共通前提                        |
+| DR-10 | 出力 SHA のコミット実在検証と git エラーの区別                       | req    | エラーとフォールバックの境界                           |
+| DR-11 | スコープとインターフェースの明確化                                   | req    | 権限の責務と環境変数契約                               |
+| DR-12 | checkout の fetch-depth はイベントごとに N+1 / base を含む深さとする | req    | checkout 契約                                          |
+| DR-13 | 本 Action は SHA 解決器とし、変更網羅は保証しない                    | req    | 分類の方針と Non-Goals                                 |
+| DR-14 | 入力形式・git 障害分類・checkout と出力の契約を厳格化する            | req    | 上限値、形式検証、出力の契約                           |
+| DR-17 | GITHUB_EVENT_NAME はオーバーライドの有無に関わらず検証する           | review | 全体の評価順序 (イベント名の検証の位置)                |
+| DR-18 | 書き出し中の I/O 失敗による部分出力は、呼び出し元の契約で扱う        | review | 失敗時の出力の意味                                     |
+| DR-19 | 前提と非保証を明記し、追加の入出力は設けない                         | review | 前提と Non-Goals                                       |
+| DR-23 | partial clone はエラーとし、対象外の環境を前提として扱う             | review | partial clone の拒否と前提                             |
+| DR-24 | オーバーライド値に空ツリー SHA を受け付けない                        | review | オーバーライドの契約と空ツリー SHA の発生経路          |
+| DR-25 | push はブランチの作成・更新に限り、それ以外はエラーとする            | review | 全体の評価順序 (push の ref 種別の検証) と環境変数契約 |
 
 ### 2.7 DD to DR Promotion Criteria
 
@@ -224,16 +226,18 @@ DD-IDX-01 は、後続の内部 Action (#136) も採用し得るため、昇格�
 
 **環境変数契約:**
 
-| Variable             | 由来                    | 備考                                                    |
-| -------------------- | ----------------------- | ------------------------------------------------------- |
-| `GITHUB_EVENT_NAME`  | イベント名              | 必須。検証規則は resolution 分割ファイルが定義する。    |
-| `GITHUB_BEFORE_SHA`  | `github.event.before`   | push の通常解決で使う。                                 |
-| `GITHUB_AFTER_SHA`   | `github.sha`            | push の通常解決で使う。本仕様では `github.sha` と呼ぶ。 |
-| `GITHUB_BASE_SHA`    | `pull_request.base.sha` | pull_request で使う。                                   |
-| `GITHUB_HEAD_SHA`    | `pull_request.head.sha` | pull_request で使う。                                   |
-| `INPUT_COMMIT_COUNT` | 入力 `commit-count`     | 検証規則は input 分割ファイルが定義する。               |
-| `INPUT_BEFORE_SHA`   | 入力 `before-sha`       | 同上                                                    |
-| `INPUT_AFTER_SHA`    | 入力 `after-sha`        | 同上                                                    |
+| Variable               | 由来                    | 備考                                                                                                |
+| ---------------------- | ----------------------- | --------------------------------------------------------------------------------------------------- |
+| `GITHUB_EVENT_NAME`    | イベント名              | 必須。検証規則は resolution 分割ファイルが定義する。                                                |
+| `GITHUB_REF`           | `github.ref`            | push の ref 種別の検証で使う。                                                                      |
+| `GITHUB_EVENT_DELETED` | `github.event.deleted`  | push の ref 種別の検証で使う。値が `true` の場合だけ削除とみなす。push 以外のイベントでは空となる。 |
+| `GITHUB_BEFORE_SHA`    | `github.event.before`   | push の通常解決で使う。                                                                             |
+| `GITHUB_AFTER_SHA`     | `github.sha`            | push の通常解決で使う。本仕様では `github.sha` と呼ぶ。                                             |
+| `GITHUB_BASE_SHA`      | `pull_request.base.sha` | pull_request で使う。                                                                               |
+| `GITHUB_HEAD_SHA`      | `pull_request.head.sha` | pull_request で使う。                                                                               |
+| `INPUT_COMMIT_COUNT`   | 入力 `commit-count`     | 検証規則は input 分割ファイルが定義する。                                                           |
+| `INPUT_BEFORE_SHA`     | 入力 `before-sha`       | 同上                                                                                                |
+| `INPUT_AFTER_SHA`      | 入力 `after-sha`        | 同上                                                                                                |
 
 - 値は環境変数経由でのみ受け取る (REQ-C-001)。
 - Composite Action は `INPUT_*` を自動設定しない。`action.yml` は、入力とイベントコンテキストの値を上表の環境変数へ明示的に対応付ける (REQ-C-006)。
@@ -254,7 +258,7 @@ DD-IDX-01 は、後続の内部 Action (#136) も採用し得るため、昇格�
 
 | Output       | 意味                                                                        |
 | ------------ | --------------------------------------------------------------------------- |
-| `before-sha` | 比較の基準側の SHA。空ツリー SHA となる場合がある。                         |
+| `before-sha` | 比較の基準側の SHA。`empty-tree` 経路でのみ空ツリー SHA となる。            |
 | `after-sha`  | 比較の対象側の SHA。常にコミットとして存在する。                            |
 | `resolution` | 解決経路。`override`、`event`、`fallback-head-n`、`empty-tree` のいずれか。 |
 
@@ -270,6 +274,8 @@ DD-IDX-01 は、後続の内部 Action (#136) も採用し得るため、昇格�
 - 対象は、入力名・環境変数名・コンポーネント名のいずれかとする。
 - 値が空の場合は、`::error::<対象>: value must not be empty` の形式とする。
 - エラーを出した後は、非ゼロの終了コードで終了する。
+- `<値>` は、GitHub のワークフローコマンドのエンコードに従い、`%` を `%25`、CR を `%0D`、LF を `%0A` に置き換えて埋め込む。
+  値に改行を含んでもエラーは 1 行に収まり、値の一部がワークフローコマンドとして解釈されることはない。
 
 各分割ファイルのエラー規則は、この形式に従う。分割ファイルでは形式を再定義しない。
 
@@ -279,9 +285,13 @@ DD-IDX-01 は、後続の内部 Action (#136) も採用し得るため、昇格�
 
 checkout の深さと取得対象は REQ-C-003 に従う。本仕様での帰結は次のとおりとする。
 
-- push とその他イベントで `fetch-depth` が N+1 未満の場合は、履歴不足として `empty-tree` を返す。
+- HEAD~N を使う経路で `fetch-depth` が N+1 未満の場合は、履歴不足として `empty-tree` を返す。
+  対象は、push のフォールバックとその他イベントに限る。
+- push の通常解決は HEAD~N を使わないため、深さに関わらず `event` を返す。
 - pull_request で base または head が取得されていない場合は、エラーとする。
 - partial clone (`filter` を指定した checkout) の場合は、エラーとする。
+- オーバーライドを指定しない push で、ブランチの削除またはタグの push の場合は、エラーとする。
+  呼び出し元は、`branches:` での絞り込みや `if: ${{ !github.event.deleted }}` で、これらの push を除外する。
 - push で checkout したコミットが `github.sha` と異なる場合、通常解決とフォールバックとで after が異なり得る。この差は許容する (DR-23)。
 
 ### 3.5 Function List
@@ -298,7 +308,7 @@ checkout の深さと取得対象は REQ-C-003 に従う。本仕様での帰結
   | IC   | is_commit <sha>                                                           | scripts/_libs/resolve-sha.lib.sh | resolution          |
   | VC   | verify_commit <sha> <field>                                               | scripts/_libs/resolve-sha.lib.sh | resolution          |
   | RHN  | resolve_head_n <n>                                                        | scripts/_libs/resolve-sha.lib.sh | resolution          |
-  | RSH  | resolve_sha <event> <n> <ov_before> <ov_after> <ev_before> <ev_after> <base> <head> | scripts/_libs/resolve-sha.lib.sh | resolution |
+  | RSH  | resolve_sha <event> <n> <ov_before> <ov_after> <ev_before> <ev_after> <base> <head> <ref> <deleted> | scripts/_libs/resolve-sha.lib.sh | resolution |
   | WO   | write_output <key> <value>                                                | _libs/output.lib.sh              | output              |
   | EO   | emit_outputs <before> <after> <resolution>                                | scripts/_libs/resolve-sha.lib.sh | output              |
   | MAIN | main (scripts/resolve-sha.sh)                                             | scripts/resolve-sha.sh           | output (functional) |
@@ -310,6 +320,10 @@ checkout の深さと取得対象は REQ-C-003 に従う。本仕様での帰結
     呼び出し側は `if ! out=$(...); then exit 1; fi` で失敗を検知し、`read -r` で分解する。
   - 環境変数を読むのは MAIN のみとし、他の関数は引数だけを入力とする。
   - v1.1.0 の RG (rs_git)、IFO (is_full_oid) は廃止した。オーバーライドの形式判定は VOV の内部で行う。
+  - VPI は、数値として比較する前に桁数を <max> の桁数以下に制限する。bash の算術比較は符号付き 64 bit で桁あふれするため。
+    テストの代表値: 18446744073709551617 (2^64+1。桁あふれで 1 となり、桁数の検査がないと上限をすり抜ける)、
+    9223372036854775808 (符号付き 64 bit の最大値 + 1。負の値に桁あふれする)。
+  - push の ref 種別の検証は RSH の内部で行う。専用の関数は設けない。
 -->
 
 ---
@@ -325,13 +339,15 @@ Evaluation MUST follow this order:
 |    1 | commit-count の検証                    | [specifications-input.md](./specifications-input.md)           |
 |    2 | オーバーライドの組み合わせと形式の検証 | [specifications-input.md](./specifications-input.md)           |
 |    3 | イベント名の検証                       | [specifications-resolution.md](./specifications-resolution.md) |
-|    4 | partial clone の検出                   | [specifications-resolution.md](./specifications-resolution.md) |
-|    5 | 経路の選択、コミット検証、SHA の解決   | [specifications-resolution.md](./specifications-resolution.md) |
-|    6 | resolution の対応付けと出力の書き出し  | [specifications-output.md](./specifications-output.md)         |
+|    4 | push の ref 種別の検証                 | [specifications-resolution.md](./specifications-resolution.md) |
+|    5 | partial clone の検出 (判定不能を含む)  | [specifications-resolution.md](./specifications-resolution.md) |
+|    6 | 経路の選択、コミット検証、SHA の解決   | [specifications-resolution.md](./specifications-resolution.md) |
+|    7 | resolution の対応付けと出力の書き出し  | [specifications-output.md](./specifications-output.md)         |
 
 No reordering is permitted.
 
 いずれかの段階が失敗した場合は、後続の段階を実行しない (DR-05, DR-17)。
+Step 4 は、オーバーライドを指定しない push にだけ適用する (DR-25)。
 
 ---
 
@@ -339,14 +355,17 @@ No reordering is permitted.
 
 分割ファイルにまたがる境界条件だけを記す。FR 固有の境界条件は各分割ファイルで扱う。
 
-| Input                                           | Classification                 | REQ                  | Rationale                                                  |
-| ----------------------------------------------- | ------------------------------ | -------------------- | ---------------------------------------------------------- |
-| 不正な commit-count と空の `GITHUB_EVENT_NAME`  | commit-count のエラーのみ      | REQ-F-003            | commit-count の検証が最初に完了する                        |
-| 有効なオーバーライドと空の `GITHUB_EVENT_NAME`  | イベント名のエラー             | REQ-F-018            | イベント名はオーバーライドの有無に関わらず検証する (DR-17) |
-| 有効なオーバーライドと partial clone            | partial clone のエラー         | REQ-F-019            | オーバーライドでもオブジェクトを参照するため               |
-| いずれかの検証が失敗した                        | 出力なし・非ゼロ終了           | REQ-F-003, REQ-F-010 | 検証の失敗では書き出しを開始しない                         |
-| 書き出しの途中で I/O 障害が起きた               | 非ゼロ終了。部分出力が残り得る | REQ-F-010            | 防げない失敗は呼び出し元の契約で扱う (DR-18)               |
-| `action.yml` が入力の環境変数への対応付けを欠く | 入力は空として扱われる         | REQ-C-006            | 静かに既定値で解決されるため、`action.yml` の契約で防ぐ    |
+| Input                                                                   | Classification                           | REQ                  | Rationale                                                  |
+| ----------------------------------------------------------------------- | ---------------------------------------- | -------------------- | ---------------------------------------------------------- |
+| 不正な commit-count と空の `GITHUB_EVENT_NAME`                          | commit-count のエラーのみ                | REQ-F-003            | commit-count の検証が最初に完了する                        |
+| 有効なオーバーライドと空の `GITHUB_EVENT_NAME`                          | イベント名のエラー                       | REQ-F-018            | イベント名はオーバーライドの有無に関わらず検証する (DR-17) |
+| 有効なオーバーライドと partial clone                                    | partial clone のエラー                   | REQ-F-019            | オーバーライドでもオブジェクトを参照するため               |
+| 有効なオーバーライドとタグの push                                       | `override` で解決する                    | REQ-F-020            | push の ref 種別の検証はオーバーライドに適用しない (DR-25) |
+| 不正な commit-count、片方のみのオーバーライド、空の `GITHUB_EVENT_NAME` | commit-count のエラーのみ                | REQ-F-003            | 最初に失敗した段階のエラーだけを出す                       |
+| いずれかの検証が失敗した                                                | 出力なし・非ゼロ終了                     | REQ-F-003, REQ-F-010 | 検証の失敗では書き出しを開始しない                         |
+| 不正な入力値が LF、CRLF、単独の CR を含む                               | 1 行のエラー。値はエンコードして埋め込む | REQ-F-002, REQ-F-016 | エラー行の分割とワークフローコマンドの注入を防ぐ (3.3)     |
+| 書き出しの途中で I/O 障害が起きた                                       | 非ゼロ終了。部分出力が残り得る           | REQ-F-010            | 防げない失敗は呼び出し元の契約で扱う (DR-18)               |
+| `action.yml` が入力の環境変数への対応付けを欠く                         | 入力は空として扱われる                   | REQ-C-006            | 静かに既定値で解決されるため、`action.yml` の契約で防ぐ    |
 
 ---
 
@@ -372,11 +391,12 @@ No reordering is permitted.
 | REQ-F-016      | Covered in: `specifications-input.md`      |                                      |
 | REQ-F-018      | Covered in: `specifications-resolution.md` | 評価順序は §4 に従う                 |
 | REQ-F-019      | Covered in: `specifications-resolution.md` | 評価順序は §4 に従う                 |
+| REQ-F-020      | Covered in: `specifications-resolution.md` | 評価順序は §4 に従う                 |
 | REQ-NF-001     | 3.5 (impl-note)                            | テスト ID の略称を定義する           |
 | REQ-NF-002     | 2.2, 3.4                                   | ローカルの git 操作と partial clone  |
 | REQ-C-001      | 3.1                                        | 値は環境変数経由でのみ受け取る       |
 | REQ-C-002      | 2.2                                        | 権限の責務は呼び出し元が負う         |
-| REQ-C-003      | 3.4                                        | checkout 契約の帰結を記す            |
+| REQ-C-003      | 3.4                                        | checkout と push 種別の契約の帰結    |
 | REQ-C-004      | —                                          | Action 名の規約。impl / tasks で扱う |
 | REQ-C-005      | —                                          | 静的解析の通過。impl / tasks で扱う  |
 | REQ-C-006      | 3.1, 3.2                                   | 入力・出力・環境変数の対応付け       |
@@ -396,12 +416,16 @@ No reordering is permitted.
 REQUIREMENTS の Open Question (エラーメッセージの形式) は、DD-IDX-01 で解消した。
 個別の文言は、各分割ファイルのエラー規則が定める。
 
+REQUIREMENTS の Open Question (merge 履歴で第一親の系列が shallow 境界に達する場合の判定) は、
+`specifications-resolution.md` 3.4 と §5 で解消した。
+
 ---
 
 ## 8. Change History
 
-| Date       | Version | Description                                                                                        |
-| ---------- | ------- | -------------------------------------------------------------------------------------------------- |
-| 2026-10-25 | 1.0.0   | Initial specification                                                                              |
-| 2026-10-25 | 1.1.0   | Apply requirements v1.2.0 and DR-15..DR-22: git environment contract, commit type check, ID scheme |
-| 2026-10-25 | 2.0.0   | Apply requirements v2.0.0 and DR-23: remove git environment contract, add partial clone rejection  |
+| Date       | Version | Description                                                                                                                                            |
+| ---------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 2026-10-25 | 1.0.0   | Initial specification                                                                                                                                  |
+| 2026-10-25 | 1.1.0   | Apply requirements v1.2.0 and DR-15..DR-22: git environment contract, commit type check, ID scheme                                                     |
+| 2026-10-25 | 2.0.0   | Apply requirements v2.0.0 and DR-23: remove git environment contract, add partial clone rejection                                                      |
+| 2026-10-25 | 2.1.0   | Apply requirements v2.1.0 and DR-24/25: push ref check in evaluation order, GITHUB_REF / GITHUB_EVENT_DELETED, error value encoding, fetch-depth scope |

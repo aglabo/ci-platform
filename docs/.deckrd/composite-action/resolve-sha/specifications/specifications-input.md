@@ -1,8 +1,8 @@
 ---
 title: "Design Specification: _ca-resolve-sha (入力検証とオーバーライド)"
-based-on: requirements.md v2.0.0
+based-on: requirements.md v2.1.0
 status: Draft
-version: 1.1.1
+version: 1.1.2
 created: "2026-10-25"
 ---
 
@@ -183,7 +183,7 @@ Evaluation MUST follow this order:
 | Rule ID  | Step | Condition                                                                          | Outcome                                                                  |
 | -------- | ---: | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
 | R-IN-001 |    1 | commit-count が未指定、または明示的な空文字列                                      | commit-count を "1" として扱い、R-IN-002 へ進む                          |
-| R-IN-002 |    2 | commit-count が ^[1-9][0-9]*$ に一致しない、または 1000 を超える                   | エラー終了する。以降の規則は評価しない                                   |
+| R-IN-002 |    2 | commit-count が ^[1-9][0-9]*$ に一致しない、5 桁以上である、または 1000 を超える   | エラー終了する。以降の規則は評価しない                                   |
 | R-IN-003 |    3 | commit-count が R-IN-002 を通過した                                                | commit-count を確定し、オーバーライドの判定へ進む                        |
 | R-IN-004 |    4 | before-sha と after-sha の一方のみが空でない                                       | エラー終了する                                                           |
 | R-IN-005 |    5 | before-sha と after-sha がどちらも空                                               | 判定結果を `none` とし、イベント名の検証へ進む                           |
@@ -192,6 +192,7 @@ Evaluation MUST follow this order:
 
 No reordering is permitted.
 
+- R-IN-002 の上限判定は、桁数の判定を数値の比較より先に行う。桁数の多い値を数値として比較すると、桁あふれで上限をすり抜け得るため。
 - R-IN-004、R-IN-006 のエラーは、エラーが見つかった入力名を対象とする。
 - R-IN-007 の後に行うイベント名の検証とコミット検査は、`specifications-resolution.md` が扱う。
 
@@ -218,6 +219,8 @@ No reordering is permitted.
 | commit-count が明示的な空文字列            | 既定値 1 として受理       | REQ-F-001            | DD-IN-02 により、未指定と同じ扱いとする                     |
 | commit-count が "1000"                     | 受理                      | REQ-F-002            | 上限の境界値であり、上限を超えない                          |
 | commit-count が "1001"                     | エラー                    | REQ-F-002            | 上限 1000 を超える                                          |
+| commit-count が "10000"                    | エラー                    | REQ-F-002            | 5 桁の最小値。桁数だけで上限超過とする                      |
+| commit-count が 20 桁の数字列              | エラー                    | REQ-F-002            | 桁数だけで上限超過とし、数値としては比較しない              |
 | commit-count が "0" または "-1"            | エラー                    | REQ-F-002            | 正整数ではない                                              |
 | commit-count が "01" または "abc"          | エラー                    | REQ-F-002            | 先頭ゼロまたは非数値は許容形式ではない                      |
 | commit-count が " 2" のように空白を含む    | エラー                    | REQ-F-002            | 前後の空白は取り除いて救済しない                            |
@@ -268,3 +271,4 @@ No reordering is permitted.
 | 2026-10-25 | 1.0.0   | Initial specification                                                                    |
 | 2026-10-25 | 1.1.0   | Apply requirements v1.2.0: R-IN-/DD-IN- IDs, error wording table, DR-17 evaluation order |
 | 2026-10-25 | 1.1.1   | Follow requirements v2.0.0: drop annotated tag edge case and IFO reference               |
+| 2026-10-25 | 1.1.2   | Follow requirements v2.1.0: digit-length upper bound check in R-IN-002                   |
