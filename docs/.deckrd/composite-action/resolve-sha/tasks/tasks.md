@@ -28,23 +28,23 @@ source: specifications-index.md v2.1.1, implementation.md v1.1.3
 
 ## Task Summary
 
-| Test Target                    | Scenarios | Cases | Status      |
-| ------------------------------ | --------- | ----- | ----------- |
-| T-01: VALIDATION_LIB_LOADED    | 3         | 4     | done        |
-| T-02: validate_positive_int    | 4         | 14    | done        |
-| T-03: write_output             | 4         | 9     | done        |
-| T-04: rs_error                 | 4         | 9     | done        |
-| T-05: normalize_commit_count   | 3         | 9     | done        |
-| T-06: validate_override        | 6         | 16    | done        |
-| T-07: is_partial_clone         | 5         | 10    | done        |
-| T-08: is_commit                | 4         | 7     | done        |
-| T-09: verify_commit            | 3         | 6     | done        |
-| T-10: resolve_head_n           | 5         | 17    | done        |
-| T-11: resolve_sha              | 6         | 34    | done        |
-| T-12: emit_outputs             | 4         | 14    | done        |
-| T-13: resolve-sha.sh (MAINF)   | 4         | 17    | done        |
-| T-14: action.yml (ACT)         | 3         | 7     | done        |
-| T-15: resolve-sha.lib.sh (RLG) | 3         | 4     | done        |
+| Test Target                    | Scenarios | Cases | Status |
+| ------------------------------ | --------- | ----- | ------ |
+| T-01: VALIDATION_LIB_LOADED    | 3         | 4     | done   |
+| T-02: validate_positive_int    | 4         | 14    | done   |
+| T-03: write_output             | 4         | 9     | done   |
+| T-04: rs_error                 | 4         | 9     | done   |
+| T-05: normalize_commit_count   | 3         | 9     | done   |
+| T-06: validate_override        | 6         | 16    | done   |
+| T-07: is_partial_clone         | 5         | 10    | done   |
+| T-08: is_commit                | 4         | 7     | done   |
+| T-09: verify_commit            | 3         | 6     | done   |
+| T-10: resolve_head_n           | 5         | 17    | done   |
+| T-11: resolve_sha              | 6         | 34    | done   |
+| T-12: emit_outputs             | 4         | 14    | done   |
+| T-13: resolve-sha.sh (MAINF)   | 4         | 17    | done   |
+| T-14: action.yml (ACT)         | 3         | 7     | done   |
+| T-15: resolve-sha.lib.sh (RLG) | 3         | 4     | done   |
 
 ---
 
@@ -160,7 +160,7 @@ source: specifications-index.md v2.1.1, implementation.md v1.1.3
 
 - [x] **T-02-03-02**: 不正な値でも stderr に何も出さない
   - Target: `validate_positive_int`
-  - Test ID: T-RS-VPI-10
+  - Test ID: T-RS-VPI-09 (T-RS-VPI-10 は T-RS-VPI-09 と重複のため廃止)
   - Scenario: Given value が `"1001"`, When `validate_positive_int "1001" 1000` を呼ぶ
   - Expected: Then stderr と stdout は空である (DR-26)
 
@@ -252,7 +252,7 @@ source: specifications-index.md v2.1.1, implementation.md v1.1.3
 
 - [x] **T-03-03-03**: 失敗時も stderr に何も出さない
   - Target: `write_output`
-  - Test ID: T-RS-WO-08
+  - Test ID: T-RS-WO-06 (T-RS-WO-08 は T-RS-WO-06 と重複のため廃止)
   - Scenario: Given file が既存のディレクトリのパス, When `write_output "$dir" key value` を呼ぶ
   - Expected: Then stderr は空である (DR-26)
 
