@@ -2,7 +2,7 @@
 title: "Requirements: _ca-resolve-sha"
 module: "composite-action/resolve-sha"
 status: Draft
-version: 2.1.0
+version: 2.1.1
 created: "2026-10-25"
 ---
 
@@ -521,7 +521,7 @@ THEN the system SHALL オーバーライドの有無に関わらず "::error::" 
 
 ```text
 GIVEN commit-count、オーバーライド、イベント名、push の ref 種別の検証に成功している
-  WHEN 作業ディレクトリのリポジトリが partial clone である (remote.<name>.promisor または extensions.partialClone が設定されている)
+  WHEN 作業ディレクトリのリポジトリが partial clone である (remote.<name>.promisor が true、remote.<name>.partialclonefilter が設定されている、またはリポジトリの設定に extensions.partialClone が設定されている)
 THEN the system SHALL オブジェクトを参照する前に "::error::" を出力し、非ゼロ終了コードで終了する.
 ```
 
@@ -1020,3 +1020,4 @@ Scenario: 複数の不正が同時にある場合はエラー終了する
 | 2026-10-25 | 1.2.0   | Apply DR-15..DR-22: add REQ-F-017/018, AC-015..017; revise REQ-F-003..007/009/010/012/013, REQ-NF-002, REQ-C-003/006                                                      |
 | 2026-10-25 | 2.0.0   | Apply DR-23: withdraw REQ-F-017, AC-015, AC-017; add REQ-F-019, AC-018; simplify REQ-F-004/005/006/013, REQ-NF-002, REQ-C-003                                             |
 | 2026-10-25 | 2.1.0   | Apply DR-24/25: reject empty tree override; add REQ-F-020, AC-019..022; revise REQ-F-002/003/011/013/019, REQ-C-003/006, AC-004/008/009/018; clarify empty-tree condition |
+| 2026-10-26 | 2.1.1   | Clarify REQ-F-019 partial clone detection by value (promisor true, partialclonefilter, local extensions.partialClone)                                                     |

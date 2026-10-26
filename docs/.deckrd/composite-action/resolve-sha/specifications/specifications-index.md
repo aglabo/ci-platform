@@ -2,7 +2,7 @@
 title: "Design Specification: _ca-resolve-sha (Index)"
 based-on: requirements.md v2.1.0
 status: Draft
-version: 2.1.1
+version: 2.1.2
 created: "2026-10-25"
 ---
 
@@ -68,7 +68,7 @@ ID は分割ファイルをまたいで一意とし、廃止した ID は再利�
 - replace refs、旧形式の graft ファイル、注釈付きタグの OID の入力は扱わない (DR-23)。
 - `GITHUB_EVENT_NAME` は、GitHub Actions ランナーが常に設定する。
 - git が作業ディレクトリを信頼している (`safe.directory` の制約を受けない) ものとする。
-  信頼されない場合は HEAD を解決できず、HEAD 解決不能のエラーとなる。
+  信頼されない場合は、リポジトリを開けないエラー (R-RES-026) となる。
 - 呼び出し元の workflow / job は、`contents: read` 以外の権限を付与しない (REQ-C-002)。
 
 前提が破れた場合の挙動は、本仕様で定義した範囲を除き保証しない。
@@ -438,3 +438,4 @@ REQUIREMENTS の Open Question (merge 履歴で第一親の系列が shallow 境
 | 2026-10-25 | 2.0.0   | Apply requirements v2.0.0 and DR-23: remove git environment contract, add partial clone rejection                                                                                  |
 | 2026-10-25 | 2.1.0   | Apply requirements v2.1.0 and DR-24/25: push ref check in evaluation order, GITHUB_REF / GITHUB_EVENT_DELETED, error value encoding, fetch-depth scope, after vs working tree note |
 | 2026-10-25 | 2.1.1   | Update impl-note function list: add VLG / RE / ACT, WO and EO take output file, VPI drops field (DR-26, DR-27)                                                                     |
+| 2026-10-26 | 2.1.2   | Untrusted working directory now fails with R-RES-026 (resolution v2.2.0)                                                                                                           |
