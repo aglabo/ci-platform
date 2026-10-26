@@ -29,6 +29,24 @@ _ACT_SCRIPT_RE='scripts/resolve-sha\.sh'
 # Expected before-sha / after-sha contracts, one per line; used by T-RS-ACT-07
 _ACT_SHA_INPUT_CONTRACTS='before-sha required=false default=""
 after-sha required=false default=""'
+# Expected `KEY: ${{ expr }}` env lines of the step running resolve-sha.sh,
+# sorted (LC_ALL=C); each env var reads exactly this expression. Used by
+# T-RS-ACT-08
+_ACT_ENV_MAP='GITHUB_AFTER_SHA: ${{ github.sha }}
+GITHUB_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+GITHUB_BEFORE_SHA: ${{ github.event.before }}
+GITHUB_EVENT_DELETED: ${{ github.event.deleted }}
+GITHUB_EVENT_NAME: ${{ github.event_name }}
+GITHUB_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+GITHUB_REF: ${{ github.ref }}
+INPUT_AFTER_SHA: ${{ inputs.after-sha }}
+INPUT_BEFORE_SHA: ${{ inputs.before-sha }}
+INPUT_COMMIT_COUNT: ${{ inputs.commit-count }}'
+# Expected `<output>: <value>` lines of the outputs section, sorted (LC_ALL=C);
+# each output reads exactly this step output. Used by T-RS-ACT-09
+_ACT_OUTPUT_MAP='after-sha: ${{ steps.resolve-sha.outputs.after_sha }}
+before-sha: ${{ steps.resolve-sha.outputs.before_sha }}
+resolution: ${{ steps.resolve-sha.outputs.resolution }}'
 
 # 関数
 ##
@@ -74,21 +92,35 @@ _act_step() {
 }
 
 ##
+# Print the `env:` mapping of the n-th step of the runs section as
+# `KEY: value` lines, one per direct child of `env:` (8-space indent), with
+# the indentation and trailing blanks removed and the value kept verbatim.
+# Requires: none (reads _ACT_YML).
+# @arg $1 n — step index, starting at 1
+# @stdout the env lines in file order
+# @return 0 on success, 1 when action.yml does not exist
+_act_step_env_map() {
+  [ -f "$_ACT_YML" ] || return 1
+  _act_step "$1" | awk '
+    /^(    - |      )env:[ ]*$/ { in_env = 1; next }
+    in_env && /^        [A-Za-z_][A-Za-z0-9_]*:/ {
+      sub(/^        /, ""); sub(/[ ]+$/, ""); print; next
+    }
+    in_env && /[^ ]/ { match($0, /^ */); if (RLENGTH < 8) in_env = 0 }
+  '
+}
+
+##
 # Print the keys of the `env:` mapping of the n-th step of the runs section,
-# one per line. Only direct children of `env:` (8-space indent) are printed.
+# one per line. Only direct children of `env:` (8-space indent) are printed
+# (the keys of _act_step_env_map).
 # Requires: none (reads _ACT_YML).
 # @arg $1 n — step index, starting at 1
 # @stdout the env var names
 # @return 0 on success, 1 when action.yml does not exist
 _act_step_env_keys() {
   [ -f "$_ACT_YML" ] || return 1
-  _act_step "$1" | awk '
-    /^(    - |      )env:[ ]*$/ { in_env = 1; next }
-    in_env && /^        [A-Za-z_][A-Za-z0-9_]*:/ {
-      sub(/^        /, ""); sub(/:.*/, ""); print; next
-    }
-    in_env && /[^ ]/ { match($0, /^ */); if (RLENGTH < 8) in_env = 0 }
-  '
+  _act_step_env_map "$1" | sed 's/:.*//'
 }
 
 ##
@@ -293,19 +325,59 @@ _act_sha_input_contracts() {
   _act_input_contract after-sha
 }
 
+##
+# Print the env mapping (_act_step_env_map) of the first step of the runs
+# section whose `run:` matches _ACT_SCRIPT_RE, sorted (LC_ALL=C); used by
+# T-RS-ACT-08.
+# Requires: none (reads _ACT_YML).
+# @stdout the sorted `KEY: value` env lines of that step
+# @return 0 on success, 1 when no step runs the entry script or action.yml
+#         does not exist
+_act_script_step_env_map() {
+  [ -f "$_ACT_YML" ] || return 1
+  local _count _i
+  _count=$(_act_step_count) || return 1
+  _i=1
+  while [ "$_i" -le "$_count" ]; do
+    if _act_step_run "$_i" | grep -q "$_ACT_SCRIPT_RE"; then
+      _act_step_env_map "$_i" | LC_ALL=C sort
+      return
+    fi
+    _i=$((_i + 1))
+  done
+  return 1
+}
+
+##
+# Print each output of the top-level outputs section as `<name>: <value>`,
+# the value read verbatim from the `    value:` line of that output's own
+# block, sorted (LC_ALL=C); used by T-RS-ACT-09.
+# Requires: none (reads _ACT_YML).
+# @stdout the sorted output mapping lines
+# @return 0 on success, 1 when action.yml does not exist
+_act_output_map() {
+  [ -f "$_ACT_YML" ] || return 1
+  _act_section outputs | awk '
+    /^  [^ #][^:]*:/ { name = $0; sub(/^  /, "", name); sub(/:.*/, "", name); next }
+    /^    value:/ { v = $0; sub(/^    value:[ ]*/, "", v); sub(/[ ]+$/, "", v); print name ": " v }
+  ' | LC_ALL=C sort
+}
+
 # --- テスト本体 ---
 ##
 # action.yml of the internal composite action _ca-resolve-sha.
 # Static checks on the YAML sections, extracted section by section (DR-27).
-# Test IDs: T-RS-ACT-01 .. T-RS-ACT-07
+# Test IDs: T-RS-ACT-01 .. T-RS-ACT-09
 Describe 'action.yml'
   ##
   # Mapping of inputs / outputs / step env vars.
   # Verifies the step env passes every variable resolve-sha.sh reads
   # (REQ-C-006) in the same step whose run executes resolve-sha.sh, and the
   # outputs section declares exactly the three kebab-case outputs, each
-  # referencing a step ID that exists in the runs section.
-  # Test IDs: T-RS-ACT-01 .. T-RS-ACT-04
+  # referencing a step ID that exists in the runs section; each env var of
+  # that step reads exactly its expected `${{ }}` expression and each output
+  # reads exactly its matching step output.
+  # Test IDs: T-RS-ACT-01 .. T-RS-ACT-04, T-RS-ACT-08 .. T-RS-ACT-09
   Describe '入出力と環境変数の対応付け'
     Context 'When: 正常系'
       It '[Normal] T-RS-ACT-01: REQ-C-006 の 10 個の環境変数がそろっている'
@@ -328,6 +400,18 @@ Describe 'action.yml'
       It '[Normal] T-RS-ACT-04: 環境変数は run を持つ同じ step にある'
         When call _act_env_step_runs_script
         The status should be success
+      End
+
+      It '[Normal] T-RS-ACT-08: resolve-sha.sh を実行する step の環境変数はそれぞれ対応する式を読む'
+        When call _act_script_step_env_map
+        The status should be success
+        The output should equal "$_ACT_ENV_MAP"
+      End
+
+      It '[Normal] T-RS-ACT-09: outputs はそれぞれ同名の step 出力を読む'
+        When call _act_output_map
+        The status should be success
+        The output should equal "$_ACT_OUTPUT_MAP"
       End
     End
   End

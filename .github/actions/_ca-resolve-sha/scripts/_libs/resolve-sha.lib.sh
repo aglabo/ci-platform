@@ -8,17 +8,34 @@
 # https://opensource.org/licenses/MIT
 # shellcheck shell=bash
 
+# Load guard: return early when this library has already been loaded. The
+# guard is set only at the end of the loading below, so a failed load leaves
+# it unset and the next source tries again.
 [ -n "${RESOLVE_SHA_LIB_LOADED:-}" ] && return 0
-RESOLVE_SHA_LIB_LOADED=1
 
-# Directory of this library; used to source shared libraries relative to it
-_RS_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Directory of the shared libraries (.github/actions/_libs)
+_RS_COMMON_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)/_libs"
 # shellcheck source=.github/actions/_libs/validation.lib.sh
 # shellcheck disable=SC1091
-. "${_RS_LIB_DIR}/../../../_libs/validation.lib.sh" || return 1
+. "${_RS_COMMON_LIB_DIR}/validation.lib.sh" || return 1
 # shellcheck source=.github/actions/_libs/output.lib.sh
 # shellcheck disable=SC1091
-. "${_RS_LIB_DIR}/../../../_libs/output.lib.sh" || return 1
+. "${_RS_COMMON_LIB_DIR}/output.lib.sh" || return 1
+
+# The shared libraries trust their own guard variables, so an inherited
+# VALIDATION_LIB_LOADED / OUTPUT_LIB_LOADED (e.g. exported via the job
+# environment) makes the sources above return 0 without defining anything.
+# Check the shared functions this library calls actually exist.
+for _rs_dep in validate_positive_int write_output; do
+  if ! declare -F "$_rs_dep" >/dev/null; then
+    printf 'resolve-sha.lib.sh: required function not defined: %s\n' "$_rs_dep" >&2
+    unset _rs_dep
+    return 1
+  fi
+done
+unset _rs_dep
+
+RESOLVE_SHA_LIB_LOADED=1
 
 # SHA of git's empty tree object; used as the base when no parent commit exists
 RS_EMPTY_TREE_SHA="4b825dc642cb6eb9a060e54bf8d69288fbee4904"
@@ -80,7 +97,8 @@ normalize_commit_count() {
 #              format check). Otherwise both must be full 40-character
 #              lowercase hex OIDs (before-sha is checked before after-sha);
 #              then the override is used. Only an exact "" counts as empty
-#              (no trimming).
+#              (no trimming). OID matching uses the C locale, so non-ASCII
+#              characters never fall inside the hex ranges.
 # @arg $1 before — raw before-sha input
 # @arg $2 after  — raw after-sha input
 # @stdout "none" when both inputs are empty, "override" when both are
@@ -90,6 +108,7 @@ normalize_commit_count() {
 #         is not a full 40-character lowercase hex OID
 validate_override() {
   local _before="$1" _after="$2"
+  local LC_ALL=C
   # R-IN-005: both empty -> no override (mutually exclusive with R-IN-004,
   # so checking it first keeps the spec's rule outcome)
   if [[ -z "$_before$_after" ]]; then
@@ -121,26 +140,58 @@ validate_override() {
 }
 
 ##
-# @description Decide whether the repository of the current working directory
-#              is a partial clone, from git config alone (no object access, so
-#              no lazy fetch is triggered). Matches extensions.partialclone or
-#              remote.<name>.promisor (git compares keys case-insensitively);
-#              the output of git config is discarded and rs_error is never
-#              called, so the caller reports any error.
-# @stdout (none)
+# @description Run one git config query with stderr discarded and classify its
+#              exit status (git config itself exits 0 on a match, 1 on no match,
+#              and another status when the config cannot be read or a value
+#              cannot be converted to the requested --type).
+# @arg $@ arguments passed to git config
+# @stdout the stdout of git config
 # @stderr (none)
-# @return 0 when the repository is a partial clone,
-#         1 when it is not (including a non-git directory),
-#         2 when git config cannot be read (e.g. a broken .git/config)
-is_partial_clone() {
-  local _rc
-  git config --get-regexp '^(extensions\.partialclone|remote\..*\.promisor)$' >/dev/null 2>&1
-  _rc=$?
-  case "$_rc" in
+# @return 0 on a match, 1 on no match, 2 on any other failure
+_rs_git_config() {
+  git config "$@" 2>/dev/null
+  case "$?" in
   0) return 0 ;;
   1) return 1 ;;
   *) return 2 ;;
   esac
+}
+
+##
+# @description Decide whether the repository of the current working directory
+#              is a partial clone, from git config alone (no object access, so
+#              no lazy fetch is triggered). Judged by value, as git does; the
+#              repository is a partial clone when any of these holds:
+#              - some remote.<name>.partialclonefilter is set;
+#              - some remote.<name>.promisor is true as a boolean
+#                (remote.<name>.promisor=false is not a partial clone);
+#              - extensions.partialclone is set in the repository (local)
+#                config (git ignores it in the global / system config).
+#              Keys are compared case-insensitively by git. The output of git
+#              is discarded and rs_error is never called, so the caller reports
+#              any error.
+# @stdout (none)
+# @stderr (none)
+# @return 0 when the repository is a partial clone,
+#         1 when it is not (including a non-git directory),
+#         2 when git config cannot be read (e.g. a broken .git/config) or a
+#           remote.<name>.promisor value is not a valid boolean
+is_partial_clone() {
+  local _promisors _rc
+
+  _rs_git_config --get-regexp '^remote\..*\.partialclonefilter$' >/dev/null
+  _rc=$?
+  [ "$_rc" -eq 1 ] || return "$_rc"
+
+  # --type=bool canonicalizes each value to "true" / "false" (one "<key> <value>" per line)
+  _promisors="$(_rs_git_config --type=bool --get-regexp '^remote\..*\.promisor$')"
+  [ "$?" -eq 2 ] && return 2
+  [[ "${_promisors}"$'\n' == *' true'$'\n'* ]] && return 0
+
+  # The config is readable, so a failure here means there is no repository
+  # (and hence no repository config): not a partial clone.
+  git rev-parse --git-dir >/dev/null 2>&1 || return 1
+  _rs_git_config --local --get extensions.partialclone >/dev/null
 }
 
 ##
@@ -262,8 +313,9 @@ resolve_head_n() {
 #              the override is not used (<ov-before> or <ov-after> is empty);
 #              otherwise it always succeeds. Checked in this order:
 #              a <deleted> of "true" (a ref deletion push) is an error with
-#              <deleted> as the value; then a <ref> outside "refs/heads/"
-#              (e.g. a tag push) is an error with <ref> as the value.
+#              <deleted> as the value; then an empty <ref> is an error in the
+#              empty form; then a <ref> outside "refs/heads/" (e.g. a tag
+#              push) is an error with <ref> as the value.
 # @arg $1 event     — GITHUB_EVENT_NAME
 # @arg $2 ov-before — before-sha override input
 # @arg $3 ov-after  — after-sha override input
@@ -271,7 +323,7 @@ resolve_head_n() {
 # @arg $5 deleted   — GITHUB_EVENT_DELETED ("true" / "false")
 # @stdout (none)
 # @stderr nothing on success; one ::error::GITHUB_EVENT_DELETED or
-#         ::error::GITHUB_REF line on error
+#         ::error::GITHUB_REF line on error (the empty form for an empty <ref>)
 # @return 0 when the check passes or does not apply, 1 on error
 _rs_check_push_event() {
   local _event="$1" _ov_before="$2" _ov_after="$3" _ref="$4" _deleted="$5"
@@ -279,6 +331,10 @@ _rs_check_push_event() {
   [[ -z "$_ov_before" || -z "$_ov_after" ]] || return 0
   if [[ "$_deleted" == true ]]; then
     rs_error GITHUB_EVENT_DELETED "a ref deletion push has no commit range" "$_deleted"
+    return 1
+  fi
+  if [[ -z "$_ref" ]]; then
+    rs_error GITHUB_REF
     return 1
   fi
   if [[ "$_ref" != refs/heads/* ]]; then
@@ -290,17 +346,26 @@ _rs_check_push_event() {
 
 ##
 # @description Check that the repository of the current working directory can
-#              be resolved, from git config alone (checked by is_partial_clone,
-#              so no object is accessed), in this order:
+#              be resolved, without accessing any object, in this order:
+#              R-RES-026: a working directory that git cannot open as a
+#              repository (git rev-parse --git-dir fails: not a git
+#              repository, or git refuses to trust it, e.g. "detected dubious
+#              ownership") is an error "cannot be opened as a git repository";
+#              then, from git config alone (checked by is_partial_clone):
 #              R-RES-010: git config that cannot be read (is_partial_clone
 #              returns 2, e.g. a broken .git/config) is an error;
 #              R-RES-008: a partial clone (is_partial_clone returns 0) is an
-#              error. Both use the working directory as the value; a
+#              error. All use the working directory as the value; a
 #              repository that is not a partial clone (return 1) passes.
 # @stdout (none)
 # @stderr nothing on success; one ::error::repository line on error
 # @return 0 when the check passes, 1 on error
 _rs_check_repository() {
+  # R-RES-026
+  if ! git rev-parse --git-dir >/dev/null 2>&1; then
+    rs_error repository "cannot be opened as a git repository" "$PWD"
+    return 1
+  fi
   is_partial_clone
   case "$?" in
   2)
@@ -341,10 +406,12 @@ _rs_resolve_override() {
 # @description Resolve the range of a push event without the override, in
 #              this order:
 #              R-RES-003: an empty or 40-digit zero (RS_ZERO_OID) <ev-before>
-#              is resolved by resolve_head_n <n> (fallback-head-n);
+#              is resolved by resolve_head_n <n> (fallback-head-n, or
+#              empty-tree when the history has <n> or fewer first-parent
+#              commits);
 #              R-RES-004: an <ev-before> that is not a commit (checked by
-#              is_commit) is also resolved by resolve_head_n <n>, without
-#              reporting an error;
+#              is_commit) is also resolved by resolve_head_n <n> (same
+#              resolutions), without reporting an error;
 #              R-RES-005: otherwise <ev-after> must name an existing commit
 #              (checked by verify_commit with "GITHUB_AFTER_SHA" as the
 #              target; an empty <ev-after> is the empty form, R-RES-021) and
@@ -398,10 +465,12 @@ _rs_resolve_pull_request() {
 #              R-RES-009: for a push without the override, a <deleted> of
 #              "true" is an error, then a <ref> outside "refs/heads/" is an
 #              error (both checked by _rs_check_push_event).
-#              R-RES-010: a working directory whose git config cannot be read
-#              is an error, then R-RES-008: a partial clone working directory
-#              is an error (both checked by _rs_check_repository), before any
-#              object access.
+#              R-RES-026: a working directory that git cannot open as a
+#              repository (not a git repository, or one git refuses to trust)
+#              is an error, then R-RES-010: a working directory whose git
+#              config cannot be read is an error, then R-RES-008: a partial
+#              clone working directory is an error (all checked by
+#              _rs_check_repository), before any object access.
 #              R-RES-002: when both <ov-before> and <ov-after> are non-empty,
 #              they are used as the range (override); <ov-before> and then
 #              <ov-after> must name existing commits (all checked by
@@ -431,15 +500,17 @@ _rs_resolve_pull_request() {
 #         (e.g. "::error::GITHUB_EVENT_NAME: value must not be empty")
 # @return 0 on success, 1 on error
 resolve_sha() {
-  local _event="$1" _ov_before="$3" _ov_after="$4"
+  local _event="$1" _n="$2" _ov_before="$3" _ov_after="$4" \
+    _ev_before="$5" _ev_after="$6" _base="$7" _head="$8" \
+    _ref="$9" _deleted="${10}"
   # R-RES-001
   if [[ -z "$_event" ]]; then
     rs_error GITHUB_EVENT_NAME
     return 1
   fi
   # R-RES-009
-  _rs_check_push_event "$_event" "$_ov_before" "$_ov_after" "$9" "${10}" || return 1
-  # R-RES-010 -> R-RES-008
+  _rs_check_push_event "$_event" "$_ov_before" "$_ov_after" "$_ref" "$_deleted" || return 1
+  # R-RES-026 -> R-RES-010 -> R-RES-008
   _rs_check_repository || return 1
   # R-RES-002
   if [[ -n "$_ov_before" && -n "$_ov_after" ]]; then
@@ -447,17 +518,20 @@ resolve_sha() {
     return
   fi
   case "$_event" in
-  push) _rs_resolve_push "$2" "$5" "$6" ;;            # R-RES-003 -> R-RES-005
-  pull_request) _rs_resolve_pull_request "$7" "$8" ;; # R-RES-006
-  *) resolve_head_n "$2" ;;                           # R-RES-007
+  push) _rs_resolve_push "$_n" "$_ev_before" "$_ev_after" ;;  # R-RES-003 -> R-RES-005
+  pull_request) _rs_resolve_pull_request "$_base" "$_head" ;; # R-RES-006
+  *) resolve_head_n "$_n" ;;                                  # R-RES-007
   esac
 }
 
 ##
 # @description Check the step output file path (GITHUB_OUTPUT) before
-#              anything is written. Checked in this order: an empty <file>
-#              is an error (R-OUT-003); then a <file> that is a directory
-#              is an error with <file> as the value (R-OUT-004).
+#              anything is written; nothing is created or modified. Checked
+#              in this order: an empty <file> is an error (R-OUT-003); then a
+#              <file> that cannot be written is an error with <file> as the
+#              value (R-OUT-004): a directory, an existing file that is not
+#              writable (e.g. read-only), or a missing file whose parent
+#              directory is missing or not writable.
 # @arg $1 file — output file path (GITHUB_OUTPUT)
 # @stdout (none)
 # @stderr nothing on success; one ::error::GITHUB_OUTPUT line on error
@@ -468,8 +542,12 @@ _rs_check_output_file() {
     rs_error GITHUB_OUTPUT
     return 1
   fi
-  # R-OUT-004
-  if [[ -d "$1" ]]; then
+  # R-OUT-004: probe the file itself, or its parent directory when the file
+  # does not exist yet ("<parent>/." is never writable unless <parent> is a
+  # writable directory)
+  local _rs_probe="$1"
+  [[ -e "$1" ]] || _rs_probe="$(dirname -- "$1")/."
+  if [[ -d "$1" || ! -w "$_rs_probe" ]]; then
     rs_error GITHUB_OUTPUT "is not a writable file" "$1"
     return 1
   fi
@@ -508,16 +586,22 @@ _rs_check_output_values() {
 }
 
 ##
-# @description Check the resolution value before anything is written: a
+# @description Check the resolution value before anything is written:
+#              an empty <resolution> is an error in the empty form; any other
 #              <resolution> that is not one of the known values (override,
 #              event, fallback-head-n, empty-tree) is an error with the
 #              output key "resolution" as the target (R-OUT-006).
 #              The comparison is case-sensitive.
 # @arg $1 resolution — value for resolution
 # @stdout (none)
-# @stderr nothing on success; one ::error::resolution line on error
+# @stderr nothing on success; one ::error::resolution line on error (the
+#         empty form for an empty <resolution>)
 # @return 0 when the check passes, 1 on error
 _rs_check_resolution() {
+  if [[ -z "$1" ]]; then
+    rs_error resolution
+    return 1
+  fi
   case "$1" in
   override | event | fallback-head-n | empty-tree) ;;
   *)
@@ -569,7 +653,7 @@ _rs_write_outputs() {
 #              _rs_check_output_file before anything is written (R-OUT-003,
 #              R-OUT-004); then <before>, <after> and <resolution> are checked
 #              in this order and a value containing CR or LF is rejected
-#              (R-OUT-005); then an unknown <resolution> is rejected by
+#              (R-OUT-005); then an empty or unknown <resolution> is rejected by
 #              _rs_check_resolution (R-OUT-006). The writes are done by
 #              _rs_write_outputs, which stops immediately at the first
 #              write_output failure with one ::error::<key> line (R-OUT-008).
@@ -578,9 +662,9 @@ _rs_write_outputs() {
 # @arg $3 after      — after commit
 # @arg $4 resolution — how the range was resolved (e.g. "event")
 # @stdout (none)
-# @stderr one ::error:: line when <file> is empty or is a directory, or when
-#         a value contains CR or LF, or when <resolution> is unknown, or when
-#         a write fails
+# @stderr one ::error:: line when <file> is empty or cannot be written, or when
+#         a value contains CR or LF, or when <resolution> is empty or unknown,
+#         or when a write fails
 # @return 0 on success, 1 when an argument is rejected or a write fails
 emit_outputs() {
   _rs_check_output_file "$1" || return 1

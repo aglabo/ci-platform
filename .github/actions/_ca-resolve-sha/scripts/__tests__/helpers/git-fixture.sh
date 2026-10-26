@@ -23,6 +23,12 @@
 # GIT_DEFAULT_HASH, ...) in the example's shell, so neither the fixture nor the
 # code under test can act on the host repository (e.g. when run from a git hook).
 # Repositories are always created with the sha1 object format (40-hex OIDs).
+#
+# Fixtures that take a repository path (gf_git, gf_commit, gf_partial_clone,
+# gf_remove_object) reject an empty path instead of running `git -C ""`, which
+# would act on the cwd -- the host repository under ShellSpec. Assign builder
+# results with a checked `var="$(gf_...)" || return 1` instead of nesting an
+# unchecked `$(gf_...)` in another fixture's arguments.
 
 [ -n "${GIT_FIXTURE_LOADED:-}" ] && return 0
 GIT_FIXTURE_LOADED=1
@@ -59,6 +65,20 @@ _gf_configure() {
 _gf_require_root() {
   if [[ -z "${GF_TMP_ROOT:-}" || ! -d "$GF_TMP_ROOT" ]]; then
     echo "git-fixture: gf_setup has not been called" >&2
+    return 1
+  fi
+}
+
+##
+# @description Fail unless a repository path argument is non-empty, so that a
+#              failed builder never turns `git -C "$repo"` into a git call on the cwd.
+# @arg $1 caller — name of the calling fixture (for the message)
+# @arg $2 path   — repository path to check
+# @stderr error message when the path is empty
+# @return 0 if the path is non-empty, 1 otherwise
+_gf_require_path() {
+  if [[ -z "$2" ]]; then
+    echo "git-fixture: $1: empty repository path" >&2
     return 1
   fi
 }
@@ -105,12 +125,15 @@ gf_cleanup() {
 ##
 # @description Run git inside a fixture repository with the host config ignored.
 #              Use it for ad-hoc setup such as `gf_git "$repo" config extensions.partialClone origin`.
-# @arg $1 repo — repository path
+#              An empty repo is rejected without running git.
+# @arg $1 repo — repository path (must be non-empty)
 # @arg $@ git arguments (after $1)
 # @stdout git stdout
-# @return git exit code
+# @stderr error message when repo is empty
+# @return git exit code, or 1 when repo is empty
 gf_git() {
   local repo="$1"
+  _gf_require_path gf_git "$repo" || return 1
   shift
   _gf_git -C "$repo" "$@"
 }
@@ -135,15 +158,17 @@ gf_init_repo() {
 ##
 # @description Add one commit on the current branch. Each commit adds its own file,
 #              so trees never repeat. Dates are fixed and increase per commit.
-# @arg $1 repo    — repository path
+# @arg $1 repo    — repository path (must be non-empty)
 # @arg $2 message — commit message (default: "commit")
 # @stdout the new commit OID
-# @return 0 on success, 1 on failure
+# @stderr error message when repo is empty
+# @return 0 on success, 1 on failure (including an empty repo)
 gf_commit() {
   local repo="$1"
   local message="${2:-commit}"
   local seq date
 
+  _gf_require_path gf_commit "$repo" || return 1
   seq="$(_gf_git -C "$repo" rev-list --all --count)" || return 1
   seq=$((seq + 1))
   date="@$((_GF_DATE_BASE + seq * 60)) +0000"
@@ -230,16 +255,19 @@ gf_shallow_clone() {
 ##
 # @description Create a partial clone (`--filter=blob:none`) of a fixture repository.
 #              Enables uploadpack.allowFilter on the origin so the filter is honoured.
-# @arg $1 origin — source repository path
+#              An empty origin is rejected before the origin's config is touched.
+# @arg $1 origin — source repository path (must be non-empty)
 # @arg $2 name   — directory name under GF_TMP_ROOT
 # @stdout the clone path
-# @return 0 on success, 1 on failure
+# @stderr error message when origin is empty
+# @return 0 on success, 1 on failure (including an empty origin)
 gf_partial_clone() {
   local origin="$1"
   local name="$2"
   local repo
 
   _gf_require_root || return 1
+  _gf_require_path gf_partial_clone "$origin" || return 1
   repo="${GF_TMP_ROOT}/${name}"
   _gf_git -C "$origin" config uploadpack.allowFilter true || return 1
   _gf_git clone -q --filter=blob:none "file://${origin}" "$repo" || return 1
@@ -251,15 +279,16 @@ gf_partial_clone() {
 # @description Delete one loose object file to simulate a corrupted repository.
 #              Fixture repositories never pack (gc.auto=0), so objects made by
 #              gf_commit are loose.
-# @arg $1 repo — repository path
+# @arg $1 repo — repository path (must be non-empty)
 # @arg $2 oid  — full object ID to delete
-# @stderr error message when the object is not a loose object
-# @return 0 on success, 1 on failure
+# @stderr error message when repo is empty or the object is not a loose object
+# @return 0 on success, 1 on failure (including an empty repo)
 gf_remove_object() {
   local repo="$1"
   local oid="$2"
   local objects path
 
+  _gf_require_path gf_remove_object "$repo" || return 1
   objects="$(_gf_git -C "$repo" rev-parse --git-path objects)" || return 1
   [[ "$objects" == /* ]] || objects="${repo}/${objects}"
   path="${objects}/${oid:0:2}/${oid:2}"

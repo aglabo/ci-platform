@@ -10,7 +10,10 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="${BASH_SOURCE[0]%/*}"
+# Directory of this script, resolved to an absolute path. dirname (not
+# ${BASH_SOURCE[0]%/*}) yields "." for a path without a slash, so running
+# `bash resolve-sha.sh` from this directory still finds _libs.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=.github/actions/_ca-resolve-sha/scripts/_libs/resolve-sha.lib.sh
 # shellcheck disable=SC1091
 . "${SCRIPT_DIR}/_libs/resolve-sha.lib.sh"
@@ -42,7 +45,12 @@ main() {
   emit_outputs "${GITHUB_OUTPUT:-}" "$_before" "$_after" "$_resolution" || return 1
 }
 
-if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+# Run main only when executed, not when sourced. `return` succeeds only while
+# a file is being sourced (or inside a function), so the subshell fails when
+# the script is executed. Unlike comparing ${BASH_SOURCE[0]} with $0, this does
+# not depend on how the path is spelled: when bash finds the script through
+# PATH, BASH_SOURCE[0] is the full path while $0 is the bare name.
+if ! (return 0 2>/dev/null); then
   main "$@"
   exit $?
 fi

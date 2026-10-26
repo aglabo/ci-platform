@@ -5,6 +5,7 @@
 # Test suite for resolve-sha.lib.sh
 # Module: composite-action/resolve-sha (test_scope RS)
 # Target: _ca-resolve-sha/scripts/_libs/resolve-sha.lib.sh
+# Also:   _ca-resolve-sha/scripts/__tests__/helpers/git-fixture.sh (empty path guard, T-RS-GF-*)
 
 # --- テスト基盤 ---
 # (ShellSpec DSL: Describe / Context / It / When / The)
@@ -38,6 +39,11 @@ _VOV_OID_39="0123456789abcdef0123456789abcdef0123456"
 _VOV_OID_41="0123456789abcdef0123456789abcdef012345678"
 # 40-character OID whose last character is non-hex 'g'; used by T-RS-VOV-15
 _VOV_OID_NONHEX="0123456789abcdef0123456789abcdef0123456g"
+# 40-character value: 39 'a' followed by non-ASCII 'á' (inside a-f under UTF-8 collation);
+# used by T-RS-VOV-17, T-RS-VOV-18
+_VOV_OID_NONASCII="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaá"
+# UTF-8 locale (other than C.UTF-8) whose collation puts 'á' inside a-f; used by T-RS-VOV-17, T-RS-VOV-18
+_VOV_UTF8_LOCALE="en_US.UTF-8"
 # Exit code of _ipc_run when the fixture builder fails; no T-RS-IPC case expects it
 _IPC_SETUP_FAILED=98
 # Exit code of _ic_run / _ic_run_head when the fixture builder fails; no T-RS-IC case expects it
@@ -64,40 +70,65 @@ _RHN_MOCK_UNEXPECTED_LOG="rhn-git-unexpected.log"
 _RHN_MOCK_MISUSED=97
 # Exit code of _rsh_run when the fixture setup fails; no T-RS-RSH case expects it
 _RSH_SETUP_FAILED=98
-# Valid-format 40-digit hex OID absent from the fixture repository; used by T-RS-RSH-04, T-RS-RSH-07, T-RS-RSH-17, T-RS-RSH-18, T-RS-RSH-22, T-RS-RSH-25, T-RS-RSH-26, T-RS-RSH-31, T-RS-RSH-32
+# Valid-format 40-digit hex OID absent from the fixture repository; used by T-RS-RSH-04, T-RS-RSH-07, T-RS-RSH-17, T-RS-RSH-18, T-RS-RSH-22, T-RS-RSH-25, T-RS-RSH-26, T-RS-RSH-31, T-RS-RSH-32, T-RS-RSH-37
 _RSH_OID_MISSING="0123456789abcdef0123456789abcdef01234567"
-# Second absent valid-format OID, different from _RSH_OID_MISSING; used by T-RS-RSH-04, T-RS-RSH-31, T-RS-RSH-32
+# Second absent valid-format OID, different from _RSH_OID_MISSING; used by T-RS-RSH-04, T-RS-RSH-31, T-RS-RSH-32, T-RS-RSH-37
 _RSH_OID_MISSING2="89abcdef0123456789abcdef0123456789abcdef"
 # 40-digit zero OID (a push that created the branch); used by T-RS-RSH-06, T-RS-RSH-34
 _RSH_OID_ZERO="0000000000000000000000000000000000000000"
-# Valid 40-digit lowercase hex OID used as the before value; used by T-RS-EO-01 .. T-RS-EO-04, T-RS-EO-06 .. T-RS-EO-10, T-RS-EO-12 .. T-RS-EO-14
+# Valid 40-digit lowercase hex OID used as the before value; used by T-RS-EO-01 .. T-RS-EO-04, T-RS-EO-06 .. T-RS-EO-10, T-RS-EO-12 .. T-RS-EO-16, T-RS-EO-18
 _EO_OID_BEFORE="0123456789abcdef0123456789abcdef01234567"
-# Valid 40-digit lowercase hex OID used as the after value; used by T-RS-EO-01 .. T-RS-EO-05, T-RS-EO-07 .. T-RS-EO-14
+# Valid 40-digit lowercase hex OID used as the after value; used by T-RS-EO-01 .. T-RS-EO-05, T-RS-EO-07 .. T-RS-EO-18
 _EO_OID_AFTER="89abcdef0123456789abcdef0123456789abcdef"
-# Pre-existing line placed in the output file before emit_outputs runs; used by T-RS-EO-02
+# Pre-existing line placed in the output file before emit_outputs runs; used by T-RS-EO-02, T-RS-EO-16
 _EO_EXISTING_LINE="existing=1"
-# Value containing an LF, rejected as an output value; used by T-RS-EO-05
+# Value containing an LF, rejected as an output value; used by T-RS-EO-05, T-RS-EO-17
 _EO_VALUE_LF=$'a\nb'
 # Value containing a lone CR, rejected as an output value; used by T-RS-EO-06
 _EO_VALUE_CR=$'a\rb'
 # Known resolution followed by a trailing LF, rejected before the first write; used by T-RS-EO-13
 _EO_RESOLUTION_LF=$'event\n'
-# Path of resolve-sha.lib.sh, sourced in a fresh bash process; used by T-RS-RLG-01 .. T-RS-RLG-04
+# Path of resolve-sha.lib.sh, sourced in a fresh bash process; used by T-RS-RLG-01 .. T-RS-RLG-07
 _RLG_LIB_PATH="${SHELLSPEC_PROJECT_ROOT}/.github/actions/_ca-resolve-sha/scripts/_libs/resolve-sha.lib.sh"
+# Directory name (under GF_TMP_ROOT) of the throwaway repository used as the cwd
+# when a fixture is called with an empty path; used by T-RS-GF-01 .. T-RS-GF-04
+# (T-RS-GF-05 occupies it with a regular file so _gfg_setup cannot build it)
+_GFG_HOST_NAME="host"
+# Printed by _gfg_host_allow_filter when uploadpack.allowFilter is not set; used by T-RS-GF-01, T-RS-GF-02
+_GFG_UNSET="<unset>"
+# Valid-format 40-digit hex OID passed to gf_remove_object; used by T-RS-GF-04
+_GFG_OID="0123456789abcdef0123456789abcdef01234567"
+# Name of the output file _eo_setup creates under GF_TMP_ROOT; the probe of
+# T-RS-EO-19 occupies it with a directory so the hook cannot create the file
+_EO_OUTPUT_NAME="github_output"
 
 # 関数
+##
+# Run validate_override with LC_ALL set to a UTF-8 locale (function-local, so it
+# never leaks between examples), to prove the OID check does not depend on the
+# caller's locale collation.
+# @arg $1 before — raw before-sha input
+# @arg $2 after  — raw after-sha input
+# @return validate_override's exit code
+_vov_run_utf8() {
+  local LC_ALL="$_VOV_UTF8_LOCALE"
+  validate_override "$@"
+}
+
 ##
 # Run is_partial_clone with <dir> as the working directory, in a subshell so the
 # cwd never leaks between examples. The host's global / system git config is
 # ignored (only inside the subshell) so the result does not depend on the host;
-# the host's GIT_* environment has already been cleared by gf_setup.
+# the host's GIT_* environment has already been cleared by gf_setup. When a
+# builder has set _ipc_global_config, that file is used as the global config
+# instead of /dev/null (T-RS-IPC-13).
 # Requires: the directory has been built by a git-fixture builder.
 # @arg $1 dir — directory to inspect
 # @return is_partial_clone's exit code, or 99 when cd into <dir> fails
 _ipc_in() {
   (
     cd "$1" || exit 99
-    GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 is_partial_clone
+    GIT_CONFIG_GLOBAL="${_ipc_global_config:-/dev/null}" GIT_CONFIG_NOSYSTEM=1 is_partial_clone
   )
 }
 
@@ -188,6 +219,50 @@ _ipc_build_upstream_promisor() {
 _ipc_build_near_miss_key() {
   _ipc_build_normal_clone || return 1
   gf_git "$_ipc_dir" config remote.origin.promisorx true || return 1
+}
+
+##
+# Build a normal clone whose only partial-clone key is a filter on origin
+# (remote.origin.partialclonefilter=blob:none, no promisor, no extension);
+# used by T-RS-IPC-11.
+# Sets: _ipc_dir — the clone path. Prints nothing on stdout.
+# @return 0 on success, 1 when any fixture step fails
+_ipc_build_filter_only() {
+  _ipc_build_normal_clone || return 1
+  gf_git "$_ipc_dir" config remote.origin.partialclonefilter blob:none || return 1
+}
+
+##
+# Build a normal clone with the promisor flag explicitly off
+# (remote.origin.promisor=false); used by T-RS-IPC-12.
+# Sets: _ipc_dir — the clone path. Prints nothing on stdout.
+# @return 0 on success, 1 when any fixture step fails
+_ipc_build_promisor_false() {
+  _ipc_build_normal_clone || return 1
+  gf_git "$_ipc_dir" config remote.origin.promisor false || return 1
+}
+
+##
+# Build a normal clone with a clean repository config, plus a global config file
+# under GF_TMP_ROOT that sets extensions.partialClone (git ignores that extension
+# outside the repository config); used by T-RS-IPC-13.
+# Sets: _ipc_dir — the clone path; _ipc_global_config — the global config file
+#       that _ipc_in passes as GIT_CONFIG_GLOBAL. Prints nothing on stdout.
+# @return 0 on success, 1 when any fixture step fails
+_ipc_build_global_extension_only() {
+  _ipc_build_normal_clone || return 1
+  _ipc_global_config="${GF_TMP_ROOT}/global.gitconfig"
+  printf '[extensions]\n\tpartialClone = origin\n' >"$_ipc_global_config" || return 1
+}
+
+##
+# Build a normal clone whose promisor flag is not a boolean
+# (remote.origin.promisor=maybe); used by T-RS-IPC-14.
+# Sets: _ipc_dir — the clone path. Prints nothing on stdout.
+# @return 0 on success, 1 when any fixture step fails
+_ipc_build_promisor_invalid_bool() {
+  _ipc_build_normal_clone || return 1
+  gf_git "$_ipc_dir" config remote.origin.promisor maybe || return 1
 }
 
 ##
@@ -669,6 +744,9 @@ _rhn_build_merge_shallow() {
 # so the cwd never leaks between examples. The host's global / system git config
 # is ignored (only inside the subshell) so the result does not depend on the
 # host; the host's GIT_* environment has already been cleared by gf_setup.
+# GIT_TEST_ASSUME_DIFFERENT_OWNER is passed to the resolve_sha call only: 1 when
+# _rsh_untrusted is set (by _rsh_run_untrusted), so git treats <dir> as owned by
+# another user ("detected dubious ownership"), otherwise 0 (git's default).
 # Requires: the directory has been built by an _rsh_build_* builder.
 # @arg $1 dir     — directory to run resolve_sha in
 # @arg $2.. args  — arguments passed to resolve_sha
@@ -677,14 +755,14 @@ _rsh_in() {
   (
     cd "$1" || exit 99
     shift
-    GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 resolve_sha "$@"
+    GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1       GIT_TEST_ASSUME_DIFFERENT_OWNER="${_rsh_untrusted:-0}" resolve_sha "$@"
   )
 }
 
 ##
 # Build the fixture with <builder> [builder-args...], then run resolve_sha with
 # the arguments after "--" in the directory it built (_rsh_dir); used by
-# T-RS-RSH-01 .. T-RS-RSH-34. Each argument of the form "@<rev>" is replaced by the commit OID
+# T-RS-RSH-01 .. T-RS-RSH-39. Each argument of the form "@<rev>" is replaced by the commit OID
 # of <rev> in _rsh_dir before the call. It is called by `When call` (no
 # subshell), so _rsh_dir is visible to the assertions that follow (_rsh_oid).
 # _rsh_dir is reset first so a half-run builder cannot leave a stale value.
@@ -719,7 +797,22 @@ _rsh_run() {
 }
 
 ##
-# Report a fixture setup failure for _rsh_run; used by T-RS-RSH-01 .. T-RS-RSH-34.
+# Same as _rsh_run, but resolve_sha runs with GIT_TEST_ASSUME_DIFFERENT_OWNER=1
+# (git refuses to trust the repository); used by T-RS-RSH-35, T-RS-RSH-36. The
+# builder and the "@<rev>" resolution run without the variable, since _rsh_in
+# passes it to the resolve_sha call only, so it never leaks into other
+# examples.
+# Requires: gf_setup has been called (BeforeEach).
+# Sets: _rsh_dir (through the builder).
+# @arg $@ — the same arguments as _rsh_run
+# @return the same as _rsh_run
+_rsh_run_untrusted() {
+  local _rsh_untrusted=1
+  _rsh_run "$@"
+}
+
+##
+# Report a fixture setup failure for _rsh_run; used by T-RS-RSH-01 .. T-RS-RSH-39.
 # @stderr "resolve_sha fixture setup failed"
 # @return _RSH_SETUP_FAILED (98)
 _rsh_setup_failed() {
@@ -740,7 +833,8 @@ _rsh_oid() {
 }
 
 ##
-# Build a <count>-commit linear repository; used by T-RS-RSH-01 .. T-RS-RSH-13, T-RS-RSH-17 .. T-RS-RSH-34.
+# Build a <count>-commit linear repository; used by T-RS-RSH-01 .. T-RS-RSH-13, T-RS-RSH-17 .. T-RS-RSH-36,
+# T-RS-RSH-38, T-RS-RSH-39.
 # Sets: _rsh_dir — the repository path. Prints nothing on stdout.
 # @arg $1 count — number of commits
 # @return 0 on success, 1 when the fixture step fails
@@ -763,26 +857,47 @@ _rsh_build_partial() {
 }
 
 ##
-# Build a <count>-commit linear repository whose .git/config is unparsable
-# (is_partial_clone returns 2); used by T-RS-RSH-16. No "@<rev>" argument can
-# be resolved in it.
+# Build a <count>-commit linear repository whose git config holds a promisor
+# flag that is not a boolean (remote.origin.promisor=maybe), so git can still
+# open the repository (R-RES-026 passes) but is_partial_clone returns 2
+# (R-RES-010); used by T-RS-RSH-16. An unparsable .git/config is not used here:
+# git then cannot open the repository at all, so R-RES-026 fires first.
 # Sets: _rsh_dir — the repository path. Prints nothing on stdout.
 # @arg $1 count — number of commits
 # @return 0 on success, 1 when any fixture step fails
 _rsh_build_broken() {
   _rsh_dir="$(gf_linear_repo rsh "$1")" || return 1
-  gf_break_config "$_rsh_dir" || return 1
+  gf_git "$_rsh_dir" config remote.origin.promisor maybe || return 1
+}
+
+##
+# Create a directory that is not inside any git repository; used by
+# T-RS-RSH-37. No "@<rev>" argument can be resolved in it.
+# Sets: _rsh_dir — the directory path. Prints nothing on stdout.
+# @return 0 on success, 1 when the fixture step fails
+_rsh_build_non_git() {
+  _rsh_dir="$(gf_non_git_dir rsh-plain)" || return 1
 }
 
 ##
 # Create a per-example GF_TMP_ROOT and an empty output file in it; used as the
-# BeforeEach of the emit_outputs group (T-RS-EO-01 .. T-RS-EO-14).
-# Sets: _eo_file — the empty output file path (${GF_TMP_ROOT}/github_output).
-# @return 0 on success, 1 when gf_setup fails
+# BeforeEach of the emit_outputs group (T-RS-EO-01 .. T-RS-EO-19).
+# Sets: _eo_file — the empty output file path (${GF_TMP_ROOT}/github_output);
+#       _eo_missing_dir — a directory path under GF_TMP_ROOT that is never
+#       created; _eo_missing_file — an output file path inside _eo_missing_dir
+#       (its parent directory does not exist); used by T-RS-EO-15, T-RS-EO-17.
+# ShellSpec skips every AfterEach (gf_cleanup) when a BeforeEach fails, so a
+# failure to create the output file removes the temporary root here (T-RS-EO-19).
+# @return 0 on success, 1 when gf_setup or creating the output file fails
 _eo_setup() {
   gf_setup || return 1
-  _eo_file="${GF_TMP_ROOT}/github_output"
-  : >"$_eo_file"
+  _eo_file="${GF_TMP_ROOT}/${_EO_OUTPUT_NAME}"
+  _eo_missing_dir="${GF_TMP_ROOT}/missing-dir"
+  _eo_missing_file="${_eo_missing_dir}/${_EO_OUTPUT_NAME}"
+  : >"$_eo_file" || {
+    gf_cleanup
+    return 1
+  }
 }
 
 ##
@@ -797,6 +912,42 @@ _eo_setup() {
 _eo_run_with_existing() {
   printf '%s\n' "$_EO_EXISTING_LINE" >"$1"
   emit_outputs "$@"
+}
+
+##
+# Pre-fill <file> with the single line _EO_EXISTING_LINE, make it read-only
+# (mode 444), then run emit_outputs with all the arguments; used by T-RS-EO-16.
+# Requires: _eo_setup has run (the directory of <file> exists).
+# @arg $1 file       — output file path
+# @arg $2 before     — before value
+# @arg $3 after      — after value
+# @arg $4 resolution — resolution value
+# @return emit_outputs's exit code, or 1 when the file cannot be prepared
+_eo_run_read_only() {
+  printf '%s
+' "$_EO_EXISTING_LINE" >"$1" || return 1
+  chmod 444 "$1" || return 1
+  emit_outputs "$@"
+}
+
+##
+# Decide whether a read-only file cannot be reproduced where the fixtures live;
+# used by T-RS-EO-16 (Skip if). A probe file is created under GF_TMP_ROOT, set
+# to mode 444 and checked for writability. It stays writable when permissions
+# are not enforced (e.g. as root). The probe is removed afterwards. ShellSpec
+# evaluates `Skip if` after BeforeEach, so GF_TMP_ROOT exists.
+# Requires: gf_setup has been called (BeforeEach).
+# @return 0 (skip) when the mode-444 probe is still writable,
+#         1 when permissions are enforced or the probe cannot be created
+#         (the example then runs and reports the fixture problem itself)
+_eo_cannot_enforce_read_only() {
+  local _eo_probe="${GF_TMP_ROOT}/eo-read-only-probe"
+  local _eo_writable=1
+
+  : >"$_eo_probe" || return 1
+  chmod 444 "$_eo_probe" && [ -w "$_eo_probe" ] && _eo_writable=0
+  rm -f "$_eo_probe"
+  return "$_eo_writable"
 }
 
 ##
@@ -870,6 +1021,22 @@ _rlg_resource_lib_in_fresh_shell() {
 }
 
 ##
+# Copy resolve-sha.lib.sh alone to ${GF_TMP_ROOT}/action/scripts/_libs/, where
+# its relative path ../../../_libs/ resolves to ${GF_TMP_ROOT}/_libs/, which
+# does not exist (so neither shared library can be found); used by
+# _rlg_source_isolated_copy and _rlg_resource_isolated_copy
+# (T-RS-RLG-03, T-RS-RLG-07).
+# Requires: gf_setup has been called (BeforeEach).
+# @stdout the path of the copy as one line
+# @return 0 on success, 1 when the directory cannot be created or the copy fails
+_rlg_copy_lib_alone() {
+  local _copy_dir="${GF_TMP_ROOT}/action/scripts/_libs"
+  mkdir -p "$_copy_dir" || return 1
+  cp "$_RLG_LIB_PATH" "${_copy_dir}/resolve-sha.lib.sh" || return 1
+  printf '%s\n' "${_copy_dir}/resolve-sha.lib.sh"
+}
+
+##
 # Copy resolve-sha.lib.sh alone into GF_TMP_ROOT and source the copy in a fresh
 # bash process; used by the load guard group (T-RS-RLG-03).
 # The copy lives at ${GF_TMP_ROOT}/action/scripts/_libs/, so its relative path
@@ -881,13 +1048,162 @@ _rlg_resource_lib_in_fresh_shell() {
 # @stderr whatever the source writes to stderr
 # @return exit status of the source of the copy
 _rlg_source_isolated_copy() {
-  local _copy_dir="${GF_TMP_ROOT}/action/scripts/_libs"
-  mkdir -p "$_copy_dir" || return 1
-  cp "$_RLG_LIB_PATH" "${_copy_dir}/resolve-sha.lib.sh" || return 1
+  local _copy
+  _copy="$(_rlg_copy_lib_alone)" || return 1
   bash -c '
     unset RESOLVE_SHA_LIB_LOADED VALIDATION_LIB_LOADED OUTPUT_LIB_LOADED
     . "$1"
-  ' _ "${_copy_dir}/resolve-sha.lib.sh"
+  ' _ "$_copy"
+}
+
+##
+# Copy resolve-sha.lib.sh alone into GF_TMP_ROOT (with _rlg_copy_lib_alone)
+# and source the copy twice in a fresh bash process, tolerating the
+# first failure with `|| true`; used by the load guard group (T-RS-RLG-07).
+# The stderr of the first source is discarded, so stderr only shows the second.
+# RESOLVE_SHA_LIB_LOADED, VALIDATION_LIB_LOADED and OUTPUT_LIB_LOADED are unset
+# before sourcing.
+# Requires: gf_setup has been called (BeforeEach).
+# @stdout whatever the second source writes to stdout
+# @stderr whatever the second source writes to stderr
+# @return exit status of the second source of the copy
+_rlg_resource_isolated_copy() {
+  local _copy
+  _copy="$(_rlg_copy_lib_alone)" || return 1
+  bash -c '
+    unset RESOLVE_SHA_LIB_LOADED VALIDATION_LIB_LOADED OUTPUT_LIB_LOADED
+    . "$1" 2>/dev/null || true
+    . "$1"
+  ' _ "$_copy"
+}
+
+##
+# Source resolve-sha.lib.sh in a fresh bash process where the load guard of one
+# shared library is already exported (as if inherited from the job
+# environment) although that library has not been loaded; used by the load
+# guard group (T-RS-RLG-05, T-RS-RLG-06). RESOLVE_SHA_LIB_LOADED,
+# VALIDATION_LIB_LOADED and OUTPUT_LIB_LOADED are unset first, then <guard> is
+# exported as 1.
+# @arg $1 guard — shared library guard variable to export
+#                 (VALIDATION_LIB_LOADED or OUTPUT_LIB_LOADED)
+# @stdout "loaded=<RESOLVE_SHA_LIB_LOADED>" as one line
+# @stderr whatever the source writes to stderr
+# @return exit status of the source
+_rlg_source_lib_with_inherited_guard() {
+  bash -c '
+    unset RESOLVE_SHA_LIB_LOADED VALIDATION_LIB_LOADED OUTPUT_LIB_LOADED
+    export "$2=1"
+    . "$1"
+    _source_status=$?
+    echo "loaded=${RESOLVE_SHA_LIB_LOADED:-}"
+    exit "$_source_status"
+  ' _ "$_RLG_LIB_PATH" "$1"
+}
+
+
+##
+# BeforeEach of the git-fixture group (T-RS-GF-01 .. T-RS-GF-05): create the
+# temporary root (gf_setup) and an empty throwaway repository that stands in for
+# the host repository as the cwd of the fixture under test.
+# Sets: _gfg_host — the throwaway repository path.
+# ShellSpec skips every AfterEach (gf_cleanup) when a BeforeEach fails, so a
+# failing repository build removes the temporary root here (T-RS-GF-05).
+# @return 0 on success, 1 when any fixture step fails
+_gfg_setup() {
+  gf_setup || return 1
+  _gfg_host="$(gf_init_repo "$_GFG_HOST_NAME")" || {
+    gf_cleanup
+    return 1
+  }
+}
+
+##
+# Run a command with the throwaway repository (_gfg_host) as the working
+# directory, in a subshell so the cwd never leaks between examples. A fixture
+# that falls back to the cwd therefore acts on _gfg_host, never on the real
+# ci-platform checkout.
+# Requires: _gfg_setup has been called (BeforeEach).
+# @arg $@ command and its arguments (e.g. gf_git "" config ...)
+# @stdout / @stderr the command's output
+# @return the command's exit code, or 99 when cd fails
+_gfg_in_host() {
+  (
+    cd "$_gfg_host" || exit 99
+    "$@"
+  )
+}
+
+##
+# Print uploadpack.allowFilter of the throwaway repository.
+# Requires: _gfg_setup has been called (BeforeEach).
+# @stdout the value, _GFG_UNSET when the key is not set,
+#         or "error:<code>" when git config fails otherwise
+# @return 0
+_gfg_host_allow_filter() {
+  local _value _rc
+
+  _value="$(gf_git "$_gfg_host" config --get uploadpack.allowFilter)"
+  _rc=$?
+  case "$_rc" in
+  0) printf '%s\n' "$_value" ;;
+  1) printf '%s\n' "$_GFG_UNSET" ;;
+  *) printf 'error:%s\n' "$_rc" ;;
+  esac
+}
+
+##
+# Print the number of commits reachable in the throwaway repository.
+# Requires: _gfg_setup has been called (BeforeEach).
+# @stdout the commit count
+# @return git rev-list's exit code
+_gfg_host_commit_count() {
+  gf_git "$_gfg_host" rev-list --all --count
+}
+
+##
+# Run a BeforeEach hook in a subshell with the fixture step after gf_setup
+# forced to fail, and report whether the temporary root the hook created
+# survives the failure. ShellSpec skips every AfterEach (gf_cleanup) when a
+# BeforeEach fails, so the hook must remove its own root. mktemp is stubbed to
+# record the root it creates (in the caller's GF_TMP_ROOT) and to occupy
+# <name> in it with a <kind> entry. A root that survives is removed here, so
+# the probe never leaks it either. Used by T-RS-EO-19, T-RS-GF-05.
+# Requires: gf_setup has been called (BeforeEach; the record file lives in that
+#           example's GF_TMP_ROOT).
+# @arg $1 hook — BeforeEach function to run (e.g. _eo_setup)
+# @arg $2 kind — "file" or "dir": the type of entry that blocks the fixture step
+# @arg $3 name — entry name under the new root that the fixture step needs
+# @stdout "rc=<hook status> leaked=<yes|no|unknown>" (unknown: no root recorded)
+# @return 0
+_hook_probe_setup_leak() {
+  local _probe_record="${GF_TMP_ROOT}/probe-root"
+  local _probe_kind="$2"
+  local _probe_name="$3"
+  (
+    mktemp() {
+      local _probe_root
+      _probe_root="$(command mktemp "$@")" || return 1
+      printf '%s\n' "$_probe_root" >"$_probe_record" || return 1
+      case "$_probe_kind" in
+      file) : >"${_probe_root}/${_probe_name}" || return 1 ;;
+      dir) mkdir "${_probe_root}/${_probe_name}" || return 1 ;;
+      *) return 1 ;;
+      esac
+      printf '%s\n' "$_probe_root"
+    }
+    "$1" 2>/dev/null
+    _probe_rc=$?
+    _probe_root="$(cat "$_probe_record" 2>/dev/null)"
+    if [[ -z "$_probe_root" ]]; then
+      _probe_leaked=unknown
+    elif [[ -e "$_probe_root" ]]; then
+      _probe_leaked=yes
+      rm -rf "$_probe_root"
+    else
+      _probe_leaked=no
+    fi
+    printf 'rc=%s leaked=%s\n' "$_probe_rc" "$_probe_leaked"
+  )
 }
 
 # --- テスト本体 ---
@@ -895,10 +1211,10 @@ _rlg_source_isolated_copy() {
 ##
 # resolve-sha.lib.sh: helper functions for the _ca-resolve-sha composite action.
 # Assigned test IDs: T-RS-RE-01 .. T-RS-RE-09, T-RS-NCC-01 .. T-RS-NCC-09,
-#                    T-RS-VOV-01 .. T-RS-VOV-16, T-RS-IPC-01 .. T-RS-IPC-10,
+#                    T-RS-VOV-01 .. T-RS-VOV-18, T-RS-IPC-01 .. T-RS-IPC-14,
 #                    T-RS-IC-01 .. T-RS-IC-07, T-RS-VC-01 .. T-RS-VC-06,
-#                    T-RS-RHN-01 .. T-RS-RHN-17, T-RS-RSH-01 .. T-RS-RSH-34,
-#                    T-RS-EO-01 .. T-RS-EO-14, T-RS-RLG-01 .. T-RS-RLG-04
+#                    T-RS-RHN-01 .. T-RS-RHN-17, T-RS-RSH-01 .. T-RS-RSH-39,
+#                    T-RS-EO-01 .. T-RS-EO-19, T-RS-RLG-01 .. T-RS-RLG-07
 Describe 'resolve-sha.lib.sh'
   ##
   # rs_error: emit one "::error::" annotation line to stderr, in the normal form
@@ -1068,7 +1384,8 @@ Describe 'resolve-sha.lib.sh'
   #            format error (one stderr line); a whitespace-only value counts as
   #            specified and fails the format check; 39 / 41 hex digits and a
   #            non-hex character are rejected; when both inputs are malformed only
-  #            before-sha is reported (one stderr line).
+  #            before-sha is reported (one stderr line); a non-ASCII character is
+  #            rejected even under a UTF-8 locale (C-locale matching).
   Describe 'validate_override'
     # 正常系: input pairs that are accepted
     Context 'When: 正常系'
@@ -1129,6 +1446,20 @@ Describe 'resolve-sha.lib.sh'
         The stdout should equal ''
         The status should be failure
         The stderr should start with '::error::before-sha:'
+      End
+
+      It '[Error] T-RS-VOV-17: UTF-8 ロケールでも非 ASCII 文字を含む before-sha を拒否する'
+        When call _vov_run_utf8 "$_VOV_OID_NONASCII" "$_VOV_OID_A"
+        The status should equal 1
+        The stdout should equal ''
+        The stderr should equal "::error::before-sha: must be a full 40-character lowercase hex commit SHA (got: '$_VOV_OID_NONASCII')"
+      End
+
+      It '[Error] T-RS-VOV-18: UTF-8 ロケールでも非 ASCII 文字を含む after-sha を拒否する'
+        When call _vov_run_utf8 "$_VOV_OID_A" "$_VOV_OID_NONASCII"
+        The status should equal 1
+        The stdout should equal ''
+        The stderr should equal "::error::after-sha: must be a full 40-character lowercase hex commit SHA (got: '$_VOV_OID_NONASCII')"
       End
     End
 
@@ -1204,11 +1535,14 @@ Describe 'resolve-sha.lib.sh'
   # is not (later validation reports the error); a promisor key on a remote
   # not named origin is a partial clone, and a different key that merely starts
   # with "promisor" (remote.origin.promisorx) is not (exact key match).
+  # The decision is by value: a partialclonefilter on a remote alone is a partial
+  # clone; remote.<name>.promisor=false and extensions.partialClone set only in
+  # the global config are not; a non-boolean promisor value is a read failure (2).
   Describe 'is_partial_clone'
     BeforeEach 'gf_setup'
     AfterEach 'gf_cleanup'
 
-    # 正常系: only clones with a promisor remote are partial clones
+    # 正常系: only clones with a promisor remote or a partial clone filter are partial clones
     Context 'When: 正常系'
       It '[Normal] T-RS-IPC-01: 通常の clone は該当なし'
         When call _ipc_run _ipc_build_normal_clone
@@ -1230,9 +1564,17 @@ Describe 'resolve-sha.lib.sh'
         The stdout should equal ''
         The stderr should equal ''
       End
+
+      It '[Normal] T-RS-IPC-11: partialclonefilter だけを持つ clone は該当あり'
+        When call _ipc_run _ipc_build_filter_only
+        The status should equal 0
+        The stdout should equal ''
+        The stderr should equal ''
+      End
     End
 
-    # 異常系: an unreadable git config is a read failure (2), reported silently
+    # 異常系: an unreadable git config or an invalid promisor boolean is a read
+    # failure (2), reported silently
     Context 'When: 異常系'
       It '[Error] T-RS-IPC-04: 設定ファイルが壊れていれば終了コード 2'
         When call _ipc_run _ipc_build_broken_config
@@ -1254,10 +1596,18 @@ Describe 'resolve-sha.lib.sh'
         The stdout should equal ''
         The stderr should equal ''
       End
+
+      It '[Error] T-RS-IPC-14: promisor の値が真偽値でなければ終了コード 2'
+        When call _ipc_run _ipc_build_promisor_invalid_bool
+        The status should equal 2
+        The stdout should equal ''
+        The stderr should equal ''
+      End
     End
 
     # エッジケース: the boundaries of the decision (extensions key alone, non-git dir,
-    # config key boundaries: any remote name, exact promisor key match)
+    # config key boundaries: any remote name, exact promisor key match;
+    # value and scope boundaries: promisor=false, extension only in global config)
     Context 'When: エッジケース'
       It '[Edge] T-RS-IPC-06: extensions.partialClone だけの設定も該当あり'
         When call _ipc_run _ipc_build_extensions_only
@@ -1282,6 +1632,20 @@ Describe 'resolve-sha.lib.sh'
 
       It '[Edge] T-RS-IPC-09: promisor に似た別のキーは該当なし'
         When call _ipc_run _ipc_build_near_miss_key
+        The status should equal 1
+        The stdout should equal ''
+        The stderr should equal ''
+      End
+
+      It '[Edge] T-RS-IPC-12: promisor が false の通常 clone は該当なし'
+        When call _ipc_run _ipc_build_promisor_false
+        The status should equal 1
+        The stdout should equal ''
+        The stderr should equal ''
+      End
+
+      It '[Edge] T-RS-IPC-13: global 設定だけにある extensions.partialClone は該当なし'
+        When call _ipc_run _ipc_build_global_extension_only
         The status should equal 1
         The stdout should equal ''
         The stderr should equal ''
@@ -1520,7 +1884,7 @@ Describe 'resolve-sha.lib.sh'
         When call _rhn_run 3 _rhn_build_missing_ancestor
         The status should not equal 0
         The stdout should equal ''
-        The stderr should start with '::error::HEAD~N:'
+        The stderr should equal "::error::HEAD~N: cannot count first-parent commits (got: '3')"
         The stderr should not include "$RS_EMPTY_TREE_SHA"
         The lines of stderr should equal 1
       End
@@ -1593,8 +1957,7 @@ Describe 'resolve-sha.lib.sh'
         When call _rhn_run_mocked 2 5
         The status should not equal 0
         The stdout should equal ''
-        The stderr should start with '::error::HEAD~N:'
-        The stderr should include "(got: '2')"
+        The stderr should equal "::error::HEAD~N: cannot be resolved although history exists (got: '2')"
         The lines of stderr should equal 1
       End
 
@@ -1602,8 +1965,7 @@ Describe 'resolve-sha.lib.sh'
         When call _rhn_run_mocked 2 abc
         The status should not equal 0
         The stdout should equal ''
-        The stderr should start with '::error::HEAD~N:'
-        The stderr should include "(got: '2')"
+        The stderr should equal "::error::HEAD~N: cannot count first-parent commits (got: '2')"
         The lines of stderr should equal 1
       End
     End
@@ -1612,7 +1974,7 @@ Describe 'resolve-sha.lib.sh'
   ##
   # resolve_sha: resolve the before / after commit range for the triggering
   # event and print "<before> <after> <resolution>" on stdout as one line.
-  # Assigned test IDs: T-RS-RSH-01 .. T-RS-RSH-34.
+  # Assigned test IDs: T-RS-RSH-01 .. T-RS-RSH-39.
   # Each example builds a real repository under its own GF_TMP_ROOT inside
   # `When call` via _rsh_run, so a fixture failure surfaces as status 98;
   # "@<rev>" arguments are resolved to commit OIDs in that repository, and the
@@ -1627,12 +1989,18 @@ Describe 'resolve-sha.lib.sh'
   # an empty event name is an error (empty form), even when both overrides
   # are set (the event check runs first);
   # a push without an override whose ref is outside refs/heads/ (a tag push)
-  # is a GITHUB_REF error;
+  # is a GITHUB_REF error, and one whose ref is empty is a GITHUB_REF error
+  # (empty form);
   # a deletion push (tag or branch) is a GITHUB_EVENT_DELETED error, while an
   # empty deleted flag is not a deletion (only the exact value true is);
+  # a deletion push with an empty ref reports only the GITHUB_EVENT_DELETED
+  # error (the deleted flag is checked before the ref);
   # a partial clone working directory is a repository error, even when both
   # overrides are set (the repository check runs before the override route);
   # a working directory whose git config cannot be read is a repository error;
+  # a working directory that git cannot open as a repository (one git refuses
+  # to trust, on the pull_request and the override routes, or a non-git
+  # directory) is a repository error before any commit is verified;
   # an override before that is not a commit is a before-sha error;
   # an override after that is not a commit is an after-sha error (the
   # before is verified first);
@@ -1760,7 +2128,7 @@ Describe 'resolve-sha.lib.sh'
         When call _rsh_run _rsh_build_partial 5 -- workflow_dispatch 1 "" "" "" "" "" "" refs/heads/main false
         The status should not equal 0
         The stdout should equal ''
-        The stderr should start with '::error::repository:'
+        The stderr should equal "::error::repository: partial clone is not supported (got: '$_rsh_dir')"
         The lines of stderr should equal 1
       End
 
@@ -1768,7 +2136,7 @@ Describe 'resolve-sha.lib.sh'
         When call _rsh_run _rsh_build_partial 5 -- push 1 @HEAD~1 @HEAD "" @HEAD "" "" refs/heads/main false
         The status should not equal 0
         The stdout should equal ''
-        The stderr should start with '::error::repository:'
+        The stderr should equal "::error::repository: partial clone is not supported (got: '$_rsh_dir')"
         The lines of stderr should equal 1
       End
 
@@ -1776,7 +2144,7 @@ Describe 'resolve-sha.lib.sh'
         When call _rsh_run _rsh_build_broken 5 -- workflow_dispatch 1 "" "" "" "" "" "" refs/heads/main false
         The status should not equal 0
         The stdout should equal ''
-        The stderr should start with '::error::repository:'
+        The stderr should equal "::error::repository: git config cannot be read (got: '$_rsh_dir')"
         The lines of stderr should equal 1
       End
 
@@ -1784,8 +2152,7 @@ Describe 'resolve-sha.lib.sh'
         When call _rsh_run _rsh_build_linear 5 -- push 1 "$_RSH_OID_MISSING" @HEAD "" @HEAD "" "" refs/heads/main false
         The status should not equal 0
         The stdout should equal ''
-        The stderr should start with '::error::before-sha:'
-        The stderr should include "(got: '$_RSH_OID_MISSING')"
+        The stderr should equal "::error::before-sha: commit not found (got: '$_RSH_OID_MISSING')"
         The lines of stderr should equal 1
       End
 
@@ -1793,8 +2160,7 @@ Describe 'resolve-sha.lib.sh'
         When call _rsh_run _rsh_build_linear 5 -- push 1 @HEAD "$_RSH_OID_MISSING" "" @HEAD "" "" refs/heads/main false
         The status should not equal 0
         The stdout should equal ''
-        The stderr should start with '::error::after-sha:'
-        The stderr should include "(got: '$_RSH_OID_MISSING')"
+        The stderr should equal "::error::after-sha: commit not found (got: '$_RSH_OID_MISSING')"
         The lines of stderr should equal 1
       End
 
@@ -1802,8 +2168,7 @@ Describe 'resolve-sha.lib.sh'
         When call _rsh_run _rsh_build_linear 5 -- push 1 "$RS_EMPTY_TREE_SHA" @HEAD "" @HEAD "" "" refs/heads/main false
         The status should not equal 0
         The stdout should equal ''
-        The stderr should start with '::error::before-sha:'
-        The stderr should include "(got: '${RS_EMPTY_TREE_SHA}')"
+        The stderr should equal "::error::before-sha: commit not found (got: '${RS_EMPTY_TREE_SHA}')"
         The lines of stderr should equal 1
       End
 
@@ -1811,8 +2176,7 @@ Describe 'resolve-sha.lib.sh'
         When call _rsh_run _rsh_build_linear 5 -- push 1 @HEAD "$RS_EMPTY_TREE_SHA" "" @HEAD "" "" refs/heads/main false
         The status should not equal 0
         The stdout should equal ''
-        The stderr should start with '::error::after-sha:'
-        The stderr should include "(got: '${RS_EMPTY_TREE_SHA}')"
+        The stderr should equal "::error::after-sha: commit not found (got: '${RS_EMPTY_TREE_SHA}')"
         The lines of stderr should equal 1
       End
 
@@ -1828,8 +2192,7 @@ Describe 'resolve-sha.lib.sh'
         When call _rsh_run _rsh_build_linear 5 -- push 1 "" "" @HEAD~1 "$_RSH_OID_MISSING" "" "" refs/heads/main false
         The status should not equal 0
         The stdout should equal ''
-        The stderr should start with '::error::GITHUB_AFTER_SHA:'
-        The stderr should include "(got: '$_RSH_OID_MISSING')"
+        The stderr should equal "::error::GITHUB_AFTER_SHA: commit not found (got: '$_RSH_OID_MISSING')"
         The lines of stderr should equal 1
       End
 
@@ -1853,8 +2216,7 @@ Describe 'resolve-sha.lib.sh'
         When call _rsh_run _rsh_build_linear 5 -- pull_request 1 "" "" "" "" "$_RSH_OID_MISSING" @HEAD refs/heads/main false
         The status should not equal 0
         The stdout should equal ''
-        The stderr should start with '::error::GITHUB_BASE_SHA:'
-        The stderr should include "(got: '$_RSH_OID_MISSING')"
+        The stderr should equal "::error::GITHUB_BASE_SHA: commit not found (got: '$_RSH_OID_MISSING')"
         The lines of stderr should equal 1
       End
 
@@ -1862,13 +2224,40 @@ Describe 'resolve-sha.lib.sh'
         When call _rsh_run _rsh_build_linear 5 -- pull_request 1 "" "" "" "" @HEAD~1 "$_RSH_OID_MISSING" refs/heads/main false
         The status should not equal 0
         The stdout should equal ''
-        The stderr should start with '::error::GITHUB_HEAD_SHA:'
-        The stderr should include "(got: '$_RSH_OID_MISSING')"
+        The stderr should equal "::error::GITHUB_HEAD_SHA: commit not found (got: '$_RSH_OID_MISSING')"
         The lines of stderr should equal 1
+      End
+
+      It '[Error] T-RS-RSH-35: git が信頼しないリポジトリでは pull_request もリポジトリのエラー'
+        When call _rsh_run_untrusted _rsh_build_linear 5 -- pull_request 1 "" "" "" "" @HEAD~1 @HEAD refs/heads/main false
+        The status should not equal 0
+        The stdout should equal ''
+        The stderr should equal "::error::repository: cannot be opened as a git repository (got: '$_rsh_dir')"
+      End
+
+      It '[Error] T-RS-RSH-36: git が信頼しないリポジトリではオーバーライドもリポジトリのエラー'
+        When call _rsh_run_untrusted _rsh_build_linear 5 -- push 1 @HEAD~1 @HEAD "" @HEAD "" "" refs/heads/main false
+        The status should not equal 0
+        The stdout should equal ''
+        The stderr should equal "::error::repository: cannot be opened as a git repository (got: '$_rsh_dir')"
+      End
+
+      It '[Error] T-RS-RSH-37: git リポジトリでない作業ディレクトリはリポジトリのエラー'
+        When call _rsh_run _rsh_build_non_git -- pull_request 1 "" "" "" "" "$_RSH_OID_MISSING" "$_RSH_OID_MISSING2" refs/heads/main false
+        The status should not equal 0
+        The stdout should equal ''
+        The stderr should equal "::error::repository: cannot be opened as a git repository (got: '$_rsh_dir')"
+      End
+
+      It '[Error] T-RS-RSH-38: オーバーライドなしの push で ref が空なら空の形式でエラー'
+        When call _rsh_run _rsh_build_linear 5 -- push 1 "" "" @HEAD~1 @HEAD "" "" "" false
+        The status should equal 1
+        The stdout should equal ''
+        The stderr should equal '::error::GITHUB_REF: value must not be empty'
       End
     End
 
-    # エッジケース: inputs at a rule boundary (the push ref check is skipped by an override or a non-push event; only deleted=true is a deletion; an identical before / after is not special-cased; the pull_request base is reported before the head; a history shorter than N falls back to the empty tree)
+    # エッジケース: inputs at a rule boundary (the push ref check is skipped by an override or a non-push event; only deleted=true is a deletion and it is reported before an empty ref; an identical before / after is not special-cased; the pull_request base is reported before the head; a history shorter than N falls back to the empty tree)
     Context 'When: エッジケース'
       It '[Edge] T-RS-RSH-27: オーバーライドがあればタグの push でも解決する'
         When call _rsh_run _rsh_build_linear 5 -- push 1 @HEAD~1 @HEAD "" @HEAD "" "" refs/tags/v1.0.0 false
@@ -1902,7 +2291,7 @@ Describe 'resolve-sha.lib.sh'
         When call _rsh_run _rsh_build_linear 5 -- pull_request 1 "" "" "" "" "$_RSH_OID_MISSING" "$_RSH_OID_MISSING2" refs/heads/main false
         The status should not equal 0
         The stdout should equal ''
-        The stderr should start with '::error::GITHUB_BASE_SHA:'
+        The stderr should equal "::error::GITHUB_BASE_SHA: commit not found (got: '$_RSH_OID_MISSING')"
         The lines of stderr should equal 1
       End
 
@@ -1910,7 +2299,7 @@ Describe 'resolve-sha.lib.sh'
         When call _rsh_run _rsh_build_linear 5 -- push 1 "$_RSH_OID_MISSING" "$_RSH_OID_MISSING2" "" @HEAD "" "" refs/heads/main false
         The status should not equal 0
         The stdout should equal ''
-        The stderr should start with '::error::before-sha:'
+        The stderr should equal "::error::before-sha: commit not found (got: '$_RSH_OID_MISSING')"
         The lines of stderr should equal 1
       End
 
@@ -1927,20 +2316,32 @@ Describe 'resolve-sha.lib.sh'
         The output should equal "$RS_EMPTY_TREE_SHA $(_rsh_oid HEAD) empty-tree"
         The stderr should equal ''
       End
+
+      It '[Edge] T-RS-RSH-39: 削除の push は ref が空でも削除のエラーだけを出す'
+        When call _rsh_run _rsh_build_linear 5 -- push 1 "" "" @HEAD~1 @HEAD "" "" "" true
+        The status should equal 1
+        The stdout should equal ''
+        The stderr should equal "::error::GITHUB_EVENT_DELETED: a ref deletion push has no commit range (got: 'true')"
+      End
     End
   End
 
   ##
   # emit_outputs: append before_sha / after_sha / resolution to the output file
   # (GITHUB_OUTPUT) in this order.
-  # Assigned test IDs: T-RS-EO-01 .. T-RS-EO-14.
+  # Assigned test IDs: T-RS-EO-01 .. T-RS-EO-19.
   # Scenarios: valid values are written as exactly 3 lines and succeed; existing
   # contents of the output file are kept and the 3 lines are appended after them;
   # an empty output file path and an output file path that is a directory are
-  # rejected with one ::error:: line; a before value containing an LF and an
+  # rejected with one ::error:: line; an output file path whose parent
+  # directory does not exist and a read-only output file are rejected with the
+  # same ::error::GITHUB_OUTPUT line, creating nothing and leaving the file
+  # unchanged; the output file check runs before the value checks, so a missing
+  # parent directory is reported even when before contains an LF; a before value containing an LF and an
   # after value containing a lone CR are rejected with one ::error:: line and
   # nothing is written; a resolution outside the 4 known values is rejected
-  # with one ::error:: line and nothing is written; a failing 2nd write stops
+  # with one ::error:: line and nothing is written, an empty resolution in the
+  # empty form; a failing 2nd write stops
   # immediately with one ::error:: line, keeping only the 1st written line; the
   # known resolution values override, fallback-head-n and empty-tree (with the
   # empty tree SHA as before) are written as is; the resolution match is
@@ -1987,7 +2388,7 @@ Describe 'resolve-sha.lib.sh'
         When call emit_outputs "$GF_TMP_ROOT" "$_EO_OID_BEFORE" "$_EO_OID_AFTER" event
         The status should not equal 0
         The stdout should equal ''
-        The stderr should start with '::error::GITHUB_OUTPUT:'
+        The stderr should equal "::error::GITHUB_OUTPUT: is not a writable file (got: '${GF_TMP_ROOT}')"
         The lines of stderr should equal 1
       End
 
@@ -1995,7 +2396,7 @@ Describe 'resolve-sha.lib.sh'
         When call emit_outputs "$_eo_file" "$_EO_VALUE_LF" "$_EO_OID_AFTER" event
         The status should not equal 0
         The stdout should equal ''
-        The stderr should start with '::error::before_sha:'
+        The stderr should equal "::error::before_sha: must not contain CR or LF (got: 'a%0Ab')"
         The lines of stderr should equal 1
         The file "$_eo_file" should be empty file
       End
@@ -2004,7 +2405,7 @@ Describe 'resolve-sha.lib.sh'
         When call emit_outputs "$_eo_file" "$_EO_OID_BEFORE" "$_EO_VALUE_CR" event
         The status should not equal 0
         The stdout should equal ''
-        The stderr should start with '::error::after_sha:'
+        The stderr should equal "::error::after_sha: must not contain CR or LF (got: 'a%0Db')"
         The lines of stderr should equal 1
         The file "$_eo_file" should be empty file
       End
@@ -2013,7 +2414,7 @@ Describe 'resolve-sha.lib.sh'
         When call emit_outputs "$_eo_file" "$_EO_OID_BEFORE" "$_EO_OID_AFTER" bogus
         The status should not equal 0
         The stdout should equal ''
-        The stderr should start with '::error::resolution:'
+        The stderr should equal "::error::resolution: is not a known resolution (got: 'bogus')"
         The lines of stderr should equal 1
         The file "$_eo_file" should be empty file
       End
@@ -2022,10 +2423,43 @@ Describe 'resolve-sha.lib.sh'
         When call _eo_run_failing_second_write "$_eo_file" "$_EO_OID_BEFORE" "$_EO_OID_AFTER" event
         The status should not equal 0
         The stdout should equal ''
-        The stderr should start with '::error::after_sha:'
+        The stderr should equal "::error::after_sha: failed to write (got: '${_EO_OID_AFTER}')"
         The lines of stderr should equal 1
         The lines of contents of file "$_eo_file" should equal 1
         The contents of file "$_eo_file" should equal "before_sha=${_EO_OID_BEFORE}"
+      End
+
+      It '[Error] T-RS-EO-15: 出力先の親ディレクトリが無ければエラーで、何も作らない'
+        When call emit_outputs "$_eo_missing_file" "$_EO_OID_BEFORE" "$_EO_OID_AFTER" event
+        The status should equal 1
+        The stdout should equal ''
+        The stderr should equal "::error::GITHUB_OUTPUT: is not a writable file (got: '${_eo_missing_file}')"
+        The path "$_eo_missing_dir" should not be exist
+      End
+
+      It '[Error] T-RS-EO-16: 出力先が読み取り専用ならエラーで、内容を変えない'
+        Skip if "file permissions are not enforced (chmod 444 file stays writable)" _eo_cannot_enforce_read_only
+        When call _eo_run_read_only "$_eo_file" "$_EO_OID_BEFORE" "$_EO_OID_AFTER" event
+        The status should equal 1
+        The stdout should equal ''
+        The stderr should equal "::error::GITHUB_OUTPUT: is not a writable file (got: '${_eo_file}')"
+        The contents of file "$_eo_file" should equal "$_EO_EXISTING_LINE"
+      End
+
+      It '[Error] T-RS-EO-17: 親ディレクトリが無く before が LF を含めば、出力先のエラーを先に出す'
+        When call emit_outputs "$_eo_missing_file" "$_EO_VALUE_LF" "$_EO_OID_AFTER" event
+        The status should equal 1
+        The stdout should equal ''
+        The stderr should equal "::error::GITHUB_OUTPUT: is not a writable file (got: '${_eo_missing_file}')"
+        The path "$_eo_missing_dir" should not be exist
+      End
+
+      It '[Error] T-RS-EO-18: resolution が空なら空の形式でエラーで、何も書かない'
+        When call emit_outputs "$_eo_file" "$_EO_OID_BEFORE" "$_EO_OID_AFTER" ""
+        The status should equal 1
+        The stdout should equal ''
+        The stderr should equal '::error::resolution: value must not be empty'
+        The file "$_eo_file" should be empty file
       End
     End
 
@@ -2054,7 +2488,7 @@ Describe 'resolve-sha.lib.sh'
         When call emit_outputs "$_eo_file" "$_EO_OID_BEFORE" "$_EO_OID_AFTER" EVENT
         The status should not equal 0
         The stdout should equal ''
-        The stderr should start with '::error::resolution:'
+        The stderr should equal "::error::resolution: is not a known resolution (got: 'EVENT')"
         The lines of stderr should equal 1
         The file "$_eo_file" should be empty file
       End
@@ -2063,7 +2497,7 @@ Describe 'resolve-sha.lib.sh'
         When call emit_outputs "$_eo_file" "$_EO_OID_BEFORE" "$_EO_OID_AFTER" "$_EO_RESOLUTION_LF"
         The status should not equal 0
         The stdout should equal ''
-        The stderr should start with '::error::resolution:'
+        The stderr should equal "::error::resolution: must not contain CR or LF (got: 'event%0A')"
         The lines of stderr should equal 1
         The file "$_eo_file" should be empty file
       End
@@ -2074,6 +2508,23 @@ Describe 'resolve-sha.lib.sh'
         The stderr should equal ''
       End
     End
+
+    ##
+    # _eo_setup: the BeforeEach of this group. ShellSpec skips every AfterEach
+    # (gf_cleanup) when a BeforeEach fails, so the hook removes the temporary
+    # root it created itself when creating the output file fails.
+    # Scenarios: an output file that cannot be created makes the hook fail and
+    #            leaves no temporary root behind.
+    Describe '_eo_setup'
+      # 異常系: creating the output file fails after gf_setup
+      Context 'When: 異常系'
+        It '[Error] T-RS-EO-19: 出力ファイルを作れないと、作った一時ルートを削除して失敗する'
+          When call _hook_probe_setup_leak _eo_setup dir "$_EO_OUTPUT_NAME"
+          The status should equal 0
+          The output should equal "rc=1 leaked=no"
+        End
+      End
+    End
   End
 
   ##
@@ -2082,13 +2533,17 @@ Describe 'resolve-sha.lib.sh'
   # validation.lib.sh and output.lib.sh. Every example sources the library in a
   # fresh bash process (via the _rlg_* helpers), because the spec shell has
   # already loaded it via Include.
-  # Assigned test IDs: T-RS-RLG-01 .. T-RS-RLG-04
+  # Assigned test IDs: T-RS-RLG-01 .. T-RS-RLG-07
   # Scenarios: the first source returns 0, sets the guard to 1 and defines the
   #            library's own functions (rs_error) and those of the shared
   #            libraries (validate_positive_int); a second source returns 0
   #            with empty stderr; a missing shared library (validation.lib.sh)
-  #            makes the source fail; a preset guard makes the source return 0
-  #            early without defining the library's functions.
+  #            makes the source fail, and a failed source leaves the guard
+  #            unset so a retry fails too; an inherited shared library guard
+  #            (OUTPUT_LIB_LOADED / VALIDATION_LIB_LOADED) that leaves a
+  #            required function undefined makes the source fail naming it;
+  #            a preset guard makes the source return 0 early without defining
+  #            the library's functions.
   Describe 'load guard'
     # 正常系: the first source in a fresh process sets the guard and defines the functions
     Context 'When: 正常系'
@@ -2108,13 +2563,33 @@ Describe 'resolve-sha.lib.sh'
       End
     End
 
-    # 異常系: a shared library is missing, so loading must fail instead of continuing
+    # 異常系: a shared library or function is missing, so loading must fail instead of continuing
     Context 'When: 異常系'
       BeforeEach 'gf_setup'
       AfterEach 'gf_cleanup'
 
       It '[Error] T-RS-RLG-03: validation.lib.sh が見つからなければ読み込みを失敗させる'
         When call _rlg_source_isolated_copy
+        The status should not equal 0
+        The stderr should include 'validation.lib.sh'
+      End
+
+      It '[Error] T-RS-RLG-05: OUTPUT_LIB_LOADED が継承されていれば write_output 未定義で読み込みを失敗させる'
+        When call _rlg_source_lib_with_inherited_guard OUTPUT_LIB_LOADED
+        The status should not equal 0
+        The output should equal 'loaded='
+        The stderr should include 'write_output'
+      End
+
+      It '[Error] T-RS-RLG-06: VALIDATION_LIB_LOADED が継承されていれば validate_positive_int 未定義で読み込みを失敗させる'
+        When call _rlg_source_lib_with_inherited_guard VALIDATION_LIB_LOADED
+        The status should not equal 0
+        The output should equal 'loaded='
+        The stderr should include 'validate_positive_int'
+      End
+
+      It '[Error] T-RS-RLG-07: 失敗した読み込みはガード変数を設定せず 2 回目の読み込みも失敗する'
+        When call _rlg_resource_isolated_copy
         The status should not equal 0
         The stderr should include 'validation.lib.sh'
       End
@@ -2127,6 +2602,76 @@ Describe 'resolve-sha.lib.sh'
         The status should equal 0
         The line 4 of output should equal 'normalize_commit_count=undefined'
         The line 5 of output should equal 'source_status=0'
+      End
+    End
+  End
+End
+
+##
+# git-fixture.sh: the shared real-repository fixtures (helpers/git-fixture.sh).
+# Fixtures that take a repository path must never fall back to the cwd, which is
+# the real ci-platform checkout under ShellSpec. Every example runs the fixture
+# with a throwaway repository as the cwd (_gfg_in_host), so a missing guard
+# acts on that repository only.
+# Assigned test IDs: T-RS-GF-01 .. T-RS-GF-05
+Describe 'git-fixture.sh'
+  BeforeEach '_gfg_setup'
+  AfterEach 'gf_cleanup'
+
+  ##
+  # Empty repository path guard: gf_partial_clone, gf_git, gf_commit and
+  # gf_remove_object reject an empty path with an error on stderr and a
+  # non-zero status, without running git in the cwd.
+  # Scenarios: gf_partial_clone with an empty origin leaves the cwd repository's
+  #            uploadpack.allowFilter unset; gf_git with an empty repository does
+  #            not write the cwd repository's config; gf_commit with an empty
+  #            repository adds no commit to the cwd repository; gf_remove_object
+  #            with an empty repository is rejected by the guard.
+  Describe 'empty repository path'
+    # 異常系: an empty path is rejected before git runs
+    Context 'When: 異常系'
+      It '[Error] T-RS-GF-01: gf_partial_clone は空の origin を拒否し、cwd の設定を変えない'
+        When call _gfg_in_host gf_partial_clone "" partial
+        The status should be failure
+        The stderr should include 'git-fixture: gf_partial_clone: empty repository path'
+        The result of function _gfg_host_allow_filter should equal "$_GFG_UNSET"
+      End
+
+      It '[Error] T-RS-GF-02: gf_git は空のリポジトリを拒否し、git を実行しない'
+        When call _gfg_in_host gf_git "" config uploadpack.allowFilter true
+        The status should be failure
+        The stderr should include 'git-fixture: gf_git: empty repository path'
+        The result of function _gfg_host_allow_filter should equal "$_GFG_UNSET"
+      End
+
+      It '[Error] T-RS-GF-03: gf_commit は空のリポジトリを拒否し、cwd にコミットしない'
+        When call _gfg_in_host gf_commit "" commit
+        The status should be failure
+        The stderr should include 'git-fixture: gf_commit: empty repository path'
+        The result of function _gfg_host_commit_count should equal 0
+      End
+
+      It '[Error] T-RS-GF-04: gf_remove_object は空のリポジトリを拒否する'
+        When call _gfg_in_host gf_remove_object "" "$_GFG_OID"
+        The status should be failure
+        The stderr should include 'git-fixture: gf_remove_object: empty repository path'
+      End
+    End
+  End
+
+  ##
+  # _gfg_setup: the BeforeEach of this group. ShellSpec skips every AfterEach
+  # (gf_cleanup) when a BeforeEach fails, so the hook removes the temporary root
+  # it created itself when building the throwaway repository fails.
+  # Scenarios: a failing repository build makes the hook fail and leaves no
+  #            temporary root behind.
+  Describe '_gfg_setup'
+    # 異常系: building the throwaway repository fails after gf_setup
+    Context 'When: 異常系'
+      It '[Error] T-RS-GF-05: リポジトリ作成に失敗すると、作った一時ルートを削除して失敗する'
+        When call _hook_probe_setup_leak _gfg_setup file "$_GFG_HOST_NAME"
+        The status should equal 0
+        The output should equal "rc=1 leaked=no"
       End
     End
   End
