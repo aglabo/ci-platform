@@ -43,7 +43,7 @@ _vpi_run_utf8() {
 
 ##
 # validation.lib.sh: shared validation helpers for composite actions.
-# Assigned test IDs: T-RS-VPI-01 .. T-RS-VPI-15
+# Assigned test IDs: T-RS-VPI-01 .. T-RS-VPI-09, T-RS-VPI-11 .. T-RS-VPI-15 (T-RS-VPI-10 retired: duplicate of T-RS-VPI-09)
 Describe 'validation.lib.sh'
   ##
   # validate_positive_int: accept a positive integer within 1..<max>, report by exit status only.
@@ -115,13 +115,6 @@ Describe 'validation.lib.sh'
       End
 
       It '[Error] T-RS-VPI-09: "1001" (max 1000) -> 終了コード 0 以外'
-        When call validate_positive_int "1001" "$_VPI_MAX"
-        The status should not equal 0
-        The stdout should equal ''
-        The stderr should equal ''
-      End
-
-      It '[Error] T-RS-VPI-10: "1001" (max 1000) -> stdout と stderr は空'
         When call validate_positive_int "1001" "$_VPI_MAX"
         The status should not equal 0
         The stdout should equal ''

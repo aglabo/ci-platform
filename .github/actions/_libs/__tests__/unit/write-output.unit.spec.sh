@@ -38,7 +38,7 @@ _wo_teardown() {
 
 ##
 # output.lib.sh: shared GITHUB_OUTPUT helpers for composite actions.
-# Assigned test IDs: T-RS-WO-01 .. T-RS-WO-09
+# Assigned test IDs: T-RS-WO-01 .. T-RS-WO-07, T-RS-WO-09 (T-RS-WO-08 retired: duplicate of T-RS-WO-06)
 Describe 'output.lib.sh'
   ##
   # write_output: append one "<key>=<value>" line to <file>.
@@ -112,13 +112,6 @@ Describe 'output.lib.sh'
         The status should equal 2
         The stdout should equal ''
         The stderr should equal ''
-      End
-
-      It '[Error] T-RS-WO-08: 書き込みに失敗しても stderr に何も出さない'
-        When call write_output "$_wo_tmpdir" key value
-        The status should equal 2
-        The stdout should equal ''
-        The stderr should be blank
       End
     End
 
