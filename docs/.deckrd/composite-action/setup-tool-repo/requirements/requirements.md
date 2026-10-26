@@ -2,7 +2,7 @@
 title: "Requirements: setup-tool-repo Composite Action"
 module: "composite-action/setup-tool-repo"
 status: Draft
-version: 1.0.5
+version: 1.1.0
 created: "2026-06-18"
 updated: "2026-06-18"
 ---
@@ -192,7 +192,8 @@ GIVEN setup-tool-repo アクションが開始した
   WHEN チェックアウトおよびインストールの前に環境セットアップフェーズが実行された
 THEN the system SHALL actions/setup-node で Node.js を、pnpm/action-setup で pnpm を
      セットアップする。入力パラメータ node-version および pnpm-version でバージョンを
-     指定できるものとし、未指定時はアクション側で定義したデフォルト値を使用する。
+     指定できるものとし、pnpm-version 未指定時はツールリポジトリの package.json の
+     packageManager に従う。
 ```
 
 **Rationale**: ランナーに pnpm がデフォルトでインストールされていない環境を想定し、
@@ -205,7 +206,8 @@ THEN the system SHALL actions/setup-node で Node.js を、pnpm/action-setup で
 | ------ | --------------------------------------------------------------------------------- |
 | AC-010 | アクション実行後、指定した pnpm バージョンのコマンドが利用可能になっている        |
 | AC-011 | アクション実行後、指定した Node.js バージョンが利用可能になっている               |
-| AC-012 | node-version・pnpm-version を省略した場合、アクション定義のデフォルト値が使われる |
+| AC-012 | node-version を省略した場合、アクション定義のデフォルト値が使われる               |
+| AC-017 | pnpm-version を省略した場合、ツールリポジトリの packageManager の pnpm が使われる |
 
 ## 5. Non-Functional Requirements
 
@@ -343,7 +345,7 @@ Scenario: path に ./ でも / でも始まらない値を指定した場合ア�
 | REQ-F-002  | AC-004, AC-005                 | Functional     |
 | REQ-F-003  | AC-006, AC-007, AC-013, AC-014 | Functional     |
 | REQ-F-004  | AC-008, AC-009                 | Functional     |
-| REQ-F-005  | AC-010, AC-011, AC-012         | Functional     |
+| REQ-F-005  | AC-010, AC-011, AC-012, AC-017 | Functional     |
 | REQ-NF-001 | N/A                            | Non-Functional |
 | REQ-NF-002 | N/A                            | Non-Functional |
 | REQ-NF-003 | N/A                            | Non-Functional |
@@ -365,3 +367,4 @@ Scenario: path に ./ でも / でも始まらない値を指定した場合ア�
 | 2026-06-18 | 1.0.3   | review explore 反映: Section 1.2・図・US-004 を pnpm 固定設計に整合                        |
 | 2026-06-18 | 1.0.4   | REQ-C-005 追加: repo は owner/repo 形式必須、REQ-C-006 追加: path は ./ または絶対パス必須 |
 | 2026-06-18 | 1.0.5   | review explore 反映: AC-001/002 の path 修正、REQ-F-004 GIVEN 更新、AC-015/016 追加        |
+| 2026-10-27 | 1.1.0   | REQ-F-005 変更: pnpm-version 未指定時はツールリポジトリの packageManager に従う (AC-017)   |
