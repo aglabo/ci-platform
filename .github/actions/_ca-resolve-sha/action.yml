@@ -1,0 +1,62 @@
+# src: ./.github/actions/_ca-resolve-sha/action.yml
+# @(#) : Composite (internal): resolve before/after SHA range for git diff
+#
+# Copyright (c) 2026- aglabo <https://github.com/aglabo>
+#
+# This software is released under the MIT License.
+# https://opensource.org/licenses/MIT
+
+name: "_ca-resolve-sha"
+description: |
+  Internal action: resolve the before/after commit SHA range used by git diff.
+  IMPORTANT: The caller's actions/checkout step must fetch enough history:
+  fetch-depth: 0, or at least commit-count + 1 commits for the HEAD~N range;
+  for pull_request, both the base and the head commit must be fetched.
+  Partial clones are rejected.
+  push uses the event's before/after (HEAD~N when before is missing),
+  pull_request uses the base/head SHAs, and any other event uses HEAD~N.
+  before-sha/after-sha, when both are set, override every event.
+
+inputs:
+  commit-count:
+    description: "Positive integer N (1-1000) for the HEAD~N range, used for push without a usable before SHA and for events other than push / pull_request."
+    required: false
+    default: "1"
+  before-sha:
+    description: "Base commit SHA override (full 40-digit lowercase hex). Set together with after-sha; leave both empty to resolve from the event."
+    required: false
+    default: ""
+  after-sha:
+    description: "Head commit SHA override (full 40-digit lowercase hex). Set together with before-sha; leave both empty to resolve from the event."
+    required: false
+    default: ""
+
+outputs:
+  before-sha:
+    description: "Resolved base: a commit SHA, or the empty tree SHA (4b825dc642cb6eb9a060e54bf8d69288fbee4904) when resolution is empty-tree. Use the two-argument form git diff <before> <after>."
+    value: ${{ steps.resolve-sha.outputs.before_sha }}
+  after-sha:
+    description: "Resolved head commit SHA"
+    value: ${{ steps.resolve-sha.outputs.after_sha }}
+  resolution:
+    description: "How the range was resolved: override, event, fallback-head-n, or empty-tree"
+    value: ${{ steps.resolve-sha.outputs.resolution }}
+
+runs:
+  using: composite
+  steps:
+    - name: Resolve SHA range
+      id: resolve-sha
+      shell: bash
+      env:
+        GITHUB_EVENT_NAME: ${{ github.event_name }}
+        GITHUB_REF: ${{ github.ref }}
+        GITHUB_EVENT_DELETED: ${{ github.event.deleted }}
+        GITHUB_BEFORE_SHA: ${{ github.event.before }}
+        GITHUB_AFTER_SHA: ${{ github.sha }}
+        GITHUB_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        GITHUB_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        INPUT_COMMIT_COUNT: ${{ inputs.commit-count }}
+        INPUT_BEFORE_SHA: ${{ inputs.before-sha }}
+        INPUT_AFTER_SHA: ${{ inputs.after-sha }}
+      run: bash "${GITHUB_ACTION_PATH}/scripts/resolve-sha.sh"
