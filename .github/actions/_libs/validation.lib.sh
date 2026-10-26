@@ -6,6 +6,7 @@
 #
 # This software is released under the MIT License.
 # https://opensource.org/licenses/MIT
+
 # shellcheck shell=bash
 
 [ -n "${VALIDATION_LIB_LOADED:-}" ] && return 0
@@ -96,6 +97,7 @@ validate_positive_int() {
   local max="$2"
   local LC_ALL=C
 
+  [[ "$max" =~ ^[1-9][0-9]{0,17}$ ]] || return 2
   [[ "$value" =~ ^[1-9][0-9]*$ ]] || return 1
   ((${#value} <= ${#max})) || return 1
   ((value <= max))

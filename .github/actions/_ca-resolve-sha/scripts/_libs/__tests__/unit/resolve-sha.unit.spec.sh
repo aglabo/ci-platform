@@ -1,6 +1,15 @@
-#!/bin/bash
+#!/usr/bin/env bash
+# src: .github/actions/_libs/validation.lib.sh
+# @(#) : validation utility functions for composite actions
+#
+# Copyright (c) 2026- atsushifx <https://github.com/atsushifx>
+#
+# This software is released under the MIT License.
+# https://opensource.org/licenses/MIT
+
 # shellcheck shell=bash
 # shellcheck disable=SC2034,SC2154
+# cspell:words aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaá gfprobe drvfs promisorx unsets
 
 # Test suite for resolve-sha.lib.sh
 # Module: composite-action/resolve-sha (test_scope RS)
@@ -480,6 +489,7 @@ _rhn_run_mocked() {
     cd "$GF_TMP_ROOT" || exit 99
     _rhn_mock_n="$1"
     _rhn_mock_count="$2"
+    # shellcheck disable=SC2329 # invoked indirectly by resolve_head_n
     git() { _rhn_git_mock "$@"; }
     resolve_head_n "$1"
   )
@@ -787,6 +797,7 @@ _eo_run_read_only() {
 # @return emit_outputs's exit code
 _eo_run_failing_second_write() {
   _eo_wo_calls=0
+  # shellcheck disable=SC2329 # invoked indirectly by emit_outputs
   write_output() {
     _eo_wo_calls=$((_eo_wo_calls + 1))
     [[ "$_eo_wo_calls" -eq 2 ]] && return 2

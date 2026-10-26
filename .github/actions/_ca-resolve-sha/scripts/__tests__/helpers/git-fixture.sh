@@ -6,7 +6,9 @@
 #
 # This software is released under the MIT License.
 # https://opensource.org/licenses/MIT
+
 # shellcheck shell=bash
+# cspell:words unsets
 
 # Usage (ShellSpec):
 #   Include "${SHELLSPEC_PROJECT_ROOT}/.github/actions/_ca-resolve-sha/scripts/__tests__/helpers/git-fixture.sh"
@@ -197,6 +199,7 @@ gf_probe_setup_leak() {
   local _gf_kind="$2"
   local _gf_name="$3"
   (
+    # shellcheck disable=SC2329 # invoked indirectly by the hook ("$1")
     mktemp() {
       local _gf_root
       _gf_root="$(command mktemp "$@")" || return 1
