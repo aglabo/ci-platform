@@ -47,15 +47,23 @@ _gf_git() {
 
 ##
 # @description Apply the local config every fixture repository needs.
+#              Appends the sections to <repo>/.git/config directly instead of
+#              running `git config` once per key (fixture repositories are always
+#              non-bare with a .git directory), saving four git processes per repo.
 # @arg $1 repo — repository path
-# @return 0 on success, non-zero on git failure
+# @return 0 on success, non-zero when .git/config cannot be written
 _gf_configure() {
   local repo="$1"
 
-  _gf_git -C "$repo" config user.name "git-fixture" &&
-    _gf_git -C "$repo" config user.email "git-fixture@example.invalid" &&
-    _gf_git -C "$repo" config commit.gpgsign false &&
-    _gf_git -C "$repo" config gc.auto 0
+  [[ -f "${repo}/.git/config" ]] || return 1
+  printf '%s\n' \
+    '[user]' \
+    '	name = git-fixture' \
+    '	email = git-fixture@example.invalid' \
+    '[commit]' \
+    '	gpgsign = false' \
+    '[gc]' \
+    '	auto = 0' >>"${repo}/.git/config"
 }
 
 ##
@@ -139,6 +147,83 @@ gf_git() {
 }
 
 ##
+# @description Run a command with <dir> as the working directory, in a subshell
+#              (the cwd never leaks to the caller), with the host's global / system
+#              git config ignored. Use it to run the code under test in a fixture.
+#              GIT_CONFIG_GLOBAL=/dev/null and GIT_CONFIG_NOSYSTEM=1 are exported
+#              inside the subshell, so they reach shell functions, scripts run with
+#              bash and sourced files alike, and override a GIT_CONFIG_GLOBAL the
+#              caller exported. A variable assigned on the call
+#              (`GIT_TRACE=... gf_run_in ...`) also reaches the command.
+#              gf_setup unsets exported GIT_* variables, so the isolation cannot be
+#              exported once in BeforeEach; it must be applied at each run.
+#              An empty dir is rejected without running the command (`cd ""` would
+#              leave it in the cwd -- the host repository under ShellSpec).
+# @arg $1 dir — working directory (must be non-empty)
+# @arg $@ command and its arguments (after $1)
+# @stdout the command's stdout
+# @stderr the command's stderr, or an error message when dir is empty
+# @return the command's exit code, 1 when dir is empty, or 99 when cd fails
+gf_run_in() {
+  local dir="$1"
+
+  _gf_require_path gf_run_in "$dir" || return 1
+  shift
+  (
+    cd "$dir" || exit 99
+    export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1
+    "$@"
+  )
+}
+
+##
+# @description Run a BeforeEach hook in a subshell with the fixture step after
+#              gf_setup forced to fail, and report whether the temporary root the
+#              hook created survives the failure. ShellSpec skips every AfterEach
+#              (gf_cleanup) when a BeforeEach fails, so a hook must remove its own
+#              root. mktemp is stubbed to record the root it creates (in
+#              ${GF_TMP_ROOT}/gf-probe-root, the caller's root) and to occupy <name>
+#              in it with a <kind> entry. A root that survives is removed here, so
+#              the probe never leaks it either. The hook's stderr is discarded.
+#              Requires: gf_setup has been called (the record file lives in the
+#              caller's GF_TMP_ROOT).
+# @arg $1 hook — BeforeEach function to run (e.g. a spec's *_setup)
+# @arg $2 kind — "file" or "dir": the type of entry that blocks the fixture step
+# @arg $3 name — entry name under the new root that the fixture step needs
+# @stdout "rc=<hook status> leaked=<yes|no|unknown>" (unknown: no root recorded)
+# @return 0
+gf_probe_setup_leak() {
+  local _gf_record="${GF_TMP_ROOT}/gf-probe-root"
+  local _gf_kind="$2"
+  local _gf_name="$3"
+  (
+    mktemp() {
+      local _gf_root
+      _gf_root="$(command mktemp "$@")" || return 1
+      printf '%s\n' "$_gf_root" >"$_gf_record" || return 1
+      case "$_gf_kind" in
+      file) : >"${_gf_root}/${_gf_name}" || return 1 ;;
+      dir) mkdir "${_gf_root}/${_gf_name}" || return 1 ;;
+      *) return 1 ;;
+      esac
+      printf '%s\n' "$_gf_root"
+    }
+    "$1" 2>/dev/null
+    _gf_rc=$?
+    _gf_root="$(cat "$_gf_record" 2>/dev/null)"
+    if [[ -z "$_gf_root" ]]; then
+      _gf_leaked=unknown
+    elif [[ -e "$_gf_root" ]]; then
+      _gf_leaked=yes
+      rm -rf "$_gf_root"
+    else
+      _gf_leaked=no
+    fi
+    printf 'rc=%s leaked=%s\n' "$_gf_rc" "$_gf_leaked"
+  )
+}
+
+##
 # @description Create an empty repository (`git init`, no commits) on branch main,
 #              with the sha1 object format pinned (clones inherit it from origin).
 # @arg $1 name — directory name under GF_TMP_ROOT
@@ -166,17 +251,34 @@ gf_init_repo() {
 gf_commit() {
   local repo="$1"
   local message="${2:-commit}"
-  local seq date
+  local seq
 
   _gf_require_path gf_commit "$repo" || return 1
   seq="$(_gf_git -C "$repo" rev-list --all --count)" || return 1
-  seq=$((seq + 1))
-  date="@$((_GF_DATE_BASE + seq * 60)) +0000"
+  _gf_commit_seq "$repo" "$message" "$((seq + 1))" || return 1
+  _gf_git -C "$repo" rev-parse HEAD
+}
+
+##
+# @description Add commit number <seq> on the current branch, as gf_commit does,
+#              without counting the history or printing the OID. Builders that
+#              already know the sequence number use it to skip those git calls.
+#              <seq> must equal the number of commits reachable from any ref plus
+#              one, so file names and dates match what gf_commit would produce.
+# @arg $1 repo    — repository path (non-empty; checked by the caller)
+# @arg $2 message — commit message
+# @arg $3 seq     — sequence number of the new commit (>= 1)
+# @return 0 on success, 1 on failure
+_gf_commit_seq() {
+  local repo="$1"
+  local message="$2"
+  local seq="$3"
+  local date="@$((_GF_DATE_BASE + seq * 60)) +0000"
+
   printf '%s\n' "$message" >"${repo}/file-${seq}.txt" || return 1
   _gf_git -C "$repo" add "file-${seq}.txt" || return 1
   GIT_AUTHOR_DATE="$date" GIT_COMMITTER_DATE="$date" \
     _gf_git -C "$repo" commit -q -m "$message" || return 1
-  _gf_git -C "$repo" rev-parse HEAD
 }
 
 ##
@@ -192,7 +294,7 @@ gf_linear_repo() {
 
   repo="$(gf_init_repo "$name")" || return 1
   for ((i = 1; i <= count; i++)); do
-    gf_commit "$repo" "commit-${i}" >/dev/null || return 1
+    _gf_commit_seq "$repo" "commit-${i}" "$i" || return 1
   done
   printf '%s\n' "$repo"
 }
@@ -213,16 +315,17 @@ gf_merge_repo() {
   local name="$1"
   local main_count="$2"
   local side_count="$3"
-  local repo root i
+  local repo i
 
   repo="$(gf_init_repo "$name")" || return 1
-  root="$(gf_commit "$repo" "root")" || return 1
+  _gf_commit_seq "$repo" "root" 1 || return 1
   for ((i = 2; i <= main_count; i++)); do
-    gf_commit "$repo" "main-${i}" >/dev/null || return 1
+    _gf_commit_seq "$repo" "main-${i}" "$i" || return 1
   done
-  _gf_git -C "$repo" checkout -q -b side "$root" || return 1
+  # main~(main_count - 1) is the root commit
+  _gf_git -C "$repo" checkout -q -b side "main~$((main_count - 1))" || return 1
   for ((i = 1; i <= side_count; i++)); do
-    gf_commit "$repo" "side-${i}" >/dev/null || return 1
+    _gf_commit_seq "$repo" "side-${i}" "$((main_count + i))" || return 1
   done
   _gf_git -C "$repo" checkout -q main || return 1
   GIT_AUTHOR_DATE="@$((_GF_DATE_BASE + 86400)) +0000" \

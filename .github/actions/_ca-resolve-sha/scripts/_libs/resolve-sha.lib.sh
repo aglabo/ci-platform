@@ -39,8 +39,13 @@ RESOLVE_SHA_LIB_LOADED=1
 
 # SHA of git's empty tree object; used as the base when no parent commit exists
 RS_EMPTY_TREE_SHA="4b825dc642cb6eb9a060e54bf8d69288fbee4904"
-# 40-digit zero OID; the push event before of a newly created branch
-RS_ZERO_OID="0000000000000000000000000000000000000000"
+
+# Upper bound of commit-count (REQ-F-002, DR-14)
+_RS_MAX_COMMIT_COUNT=1000
+
+# Step output keys in check order (R-OUT-005) and write order (R-OUT-007);
+# emit_outputs pairs them with its <before>, <after>, <resolution> arguments
+_RS_OUTPUT_KEYS=(before_sha after_sha resolution)
 
 ##
 # @description Emit a GitHub Actions error annotation. The form is chosen by
@@ -75,16 +80,17 @@ rs_error() {
 # @description Confirm the commit-count input. An explicit empty string uses
 #              the default value 1; any other value, including whitespace,
 #              is used as is without trimming. The value must be a positive
-#              integer not greater than 1000 (checked by validate_positive_int,
-#              which checks the digit count before the numeric compare).
+#              integer not greater than _RS_MAX_COMMIT_COUNT (checked by
+#              validate_positive_int, which checks the digit count before the
+#              numeric compare).
 # @arg $1 value — raw commit-count input
 # @stdout the confirmed commit count as one line; nothing on error
 # @stderr one ::error::commit-count line on error
 # @return 0 on success, 1 on an invalid value
 normalize_commit_count() {
   local _value="${1:-1}"
-  if ! validate_positive_int "$_value" 1000; then
-    rs_error commit-count "must be a positive integer not greater than 1000" "$_value"
+  if ! validate_positive_int "$_value" "$_RS_MAX_COMMIT_COUNT"; then
+    rs_error commit-count "must be a positive integer not greater than ${_RS_MAX_COMMIT_COUNT}" "$_value"
     return 1
   fi
   printf '%s\n' "$_value"
@@ -310,25 +316,26 @@ resolve_head_n() {
 ##
 # @description Check that a push event without an override can be resolved
 #              (R-RES-009). The check applies only when <event> is "push" and
-#              the override is not used (<ov-before> or <ov-after> is empty);
-#              otherwise it always succeeds. Checked in this order:
-#              a <deleted> of "true" (a ref deletion push) is an error with
-#              <deleted> as the value; then an empty <ref> is an error in the
-#              empty form; then a <ref> outside "refs/heads/" (e.g. a tag
-#              push) is an error with <ref> as the value.
-# @arg $1 event     — GITHUB_EVENT_NAME
-# @arg $2 ov-before — before-sha override input
-# @arg $3 ov-after  — after-sha override input
-# @arg $4 ref       — GITHUB_REF
-# @arg $5 deleted   — GITHUB_EVENT_DELETED ("true" / "false")
+#              <override> is not "override"; otherwise it always succeeds.
+#              The override decision is made by the caller (resolve_sha), so
+#              this function never looks at the override inputs. Checked in
+#              this order: a <deleted> of "true" (a ref deletion push) is an
+#              error with <deleted> as the value; then an empty <ref> is an
+#              error in the empty form; then a <ref> outside "refs/heads/"
+#              (e.g. a tag push) is an error with <ref> as the value.
+# @arg $1 event    — GITHUB_EVENT_NAME
+# @arg $2 override — override decision: "override" when the override is used,
+#                    "none" otherwise
+# @arg $3 ref      — GITHUB_REF
+# @arg $4 deleted  — GITHUB_EVENT_DELETED ("true" / "false")
 # @stdout (none)
 # @stderr nothing on success; one ::error::GITHUB_EVENT_DELETED or
 #         ::error::GITHUB_REF line on error (the empty form for an empty <ref>)
 # @return 0 when the check passes or does not apply, 1 on error
 _rs_check_push_event() {
-  local _event="$1" _ov_before="$2" _ov_after="$3" _ref="$4" _deleted="$5"
+  local _event="$1" _override="$2" _ref="$3" _deleted="$4"
   [[ "$_event" == push ]] || return 0
-  [[ -z "$_ov_before" || -z "$_ov_after" ]] || return 0
+  [[ "$_override" != override ]] || return 0
   if [[ "$_deleted" == true ]]; then
     rs_error GITHUB_EVENT_DELETED "a ref deletion push has no commit range" "$_deleted"
     return 1
@@ -405,13 +412,13 @@ _rs_resolve_override() {
 ##
 # @description Resolve the range of a push event without the override, in
 #              this order:
-#              R-RES-003: an empty or 40-digit zero (RS_ZERO_OID) <ev-before>
-#              is resolved by resolve_head_n <n> (fallback-head-n, or
-#              empty-tree when the history has <n> or fewer first-parent
-#              commits);
-#              R-RES-004: an <ev-before> that is not a commit (checked by
-#              is_commit) is also resolved by resolve_head_n <n> (same
-#              resolutions), without reporting an error;
+#              R-RES-003 / R-RES-004: an <ev-before> that is not a commit
+#              (checked by is_commit) is resolved by resolve_head_n <n>
+#              (fallback-head-n, or empty-tree when the history has <n> or
+#              fewer first-parent commits), without reporting an error. This
+#              single check covers both rules: is_commit fails for an empty
+#              value and for the 40-digit zero OID of a newly created branch
+#              (R-RES-003) as well as for any other non-commit (R-RES-004);
 #              R-RES-005: otherwise <ev-after> must name an existing commit
 #              (checked by verify_commit with "GITHUB_AFTER_SHA" as the
 #              target; an empty <ev-after> is the empty form, R-RES-021) and
@@ -427,8 +434,9 @@ _rs_resolve_override() {
 # @return 0 on success, 1 on error
 _rs_resolve_push() {
   local _n="$1" _ev_before="$2" _ev_after="$3"
-  # R-RES-003 -> R-RES-004
-  if [[ -z "$_ev_before" || "$_ev_before" == "$RS_ZERO_OID" ]] || ! is_commit "$_ev_before"; then
+  # R-RES-003 (empty / zero OID) and R-RES-004 (not a commit): is_commit
+  # fails for all of them
+  if ! is_commit "$_ev_before"; then
     resolve_head_n "$_n"
     return
   fi
@@ -462,6 +470,9 @@ _rs_resolve_pull_request() {
 #              event in the repository of the current working directory.
 #              R-RES-001: an empty <event> is an error (empty form), checked
 #              before any other rule.
+#              The override decision ("override" when both <ov-before> and
+#              <ov-after> are non-empty, otherwise "none") is made once, right
+#              after R-RES-001, and shared by R-RES-009 and R-RES-002.
 #              R-RES-009: for a push without the override, a <deleted> of
 #              "true" is an error, then a <ref> outside "refs/heads/" is an
 #              error (both checked by _rs_check_push_event).
@@ -508,12 +519,16 @@ resolve_sha() {
     rs_error GITHUB_EVENT_NAME
     return 1
   fi
+  # Override decision, made once here and shared by R-RES-009 and R-RES-002
+  # so the two cannot drift apart: "override" when both inputs are non-empty
+  local _override=none
+  [[ -n "$_ov_before" && -n "$_ov_after" ]] && _override=override
   # R-RES-009
-  _rs_check_push_event "$_event" "$_ov_before" "$_ov_after" "$_ref" "$_deleted" || return 1
+  _rs_check_push_event "$_event" "$_override" "$_ref" "$_deleted" || return 1
   # R-RES-026 -> R-RES-010 -> R-RES-008
   _rs_check_repository || return 1
   # R-RES-002
-  if [[ -n "$_ov_before" && -n "$_ov_after" ]]; then
+  if [[ "$_override" == override ]]; then
     _rs_resolve_override "$_ov_before" "$_ov_after"
     return
   fi
@@ -570,22 +585,6 @@ _rs_check_output_value() {
 }
 
 ##
-# @description Check every step output value before anything is written, in
-#              the order before_sha -> after_sha -> resolution (R-OUT-005);
-#              stops at the first value containing CR or LF.
-# @arg $1 before     — value for before_sha
-# @arg $2 after      — value for after_sha
-# @arg $3 resolution — value for resolution
-# @stdout (none)
-# @stderr nothing on success; one ::error::<key> line for the first rejected value
-# @return 0 when every value passes, 1 on error
-_rs_check_output_values() {
-  _rs_check_output_value before_sha "$1" &&
-    _rs_check_output_value after_sha "$2" &&
-    _rs_check_output_value resolution "$3"
-}
-
-##
 # @description Check the resolution value before anything is written:
 #              an empty <resolution> is an error in the empty form; any other
 #              <resolution> that is not one of the known values (override,
@@ -628,35 +627,19 @@ _rs_write_output() {
 }
 
 ##
-# @description Append every step output to <file> in the order before_sha ->
-#              after_sha -> resolution (R-OUT-007); stops immediately at the
-#              first failing write, leaving the lines already written
-#              (R-OUT-008).
-# @arg $1 file       — output file path (GITHUB_OUTPUT)
-# @arg $2 before     — value for before_sha
-# @arg $3 after      — value for after_sha
-# @arg $4 resolution — value for resolution
-# @stdout (none)
-# @stderr nothing on success; one ::error::<key> line for the first failed write
-# @return 0 when every write succeeds, 1 on error
-_rs_write_outputs() {
-  _rs_write_output "$1" before_sha "$2" &&
-    _rs_write_output "$1" after_sha "$3" &&
-    _rs_write_output "$1" resolution "$4"
-}
-
-##
 # @description Append the resolved range to the step output file (GITHUB_OUTPUT)
 #              as "before_sha=<before>", "after_sha=<after>" and
-#              "resolution=<resolution>", in this order (R-OUT-007), each
-#              written by write_output. <file> is checked by
-#              _rs_check_output_file before anything is written (R-OUT-003,
-#              R-OUT-004); then <before>, <after> and <resolution> are checked
-#              in this order and a value containing CR or LF is rejected
-#              (R-OUT-005); then an empty or unknown <resolution> is rejected by
+#              "resolution=<resolution>", each written by write_output.
+#              <file> is checked by _rs_check_output_file before anything is
+#              written (R-OUT-003, R-OUT-004); then the values are checked by
+#              _rs_check_output_value in the _RS_OUTPUT_KEYS order and the
+#              first value containing CR or LF is rejected (R-OUT-005); then an
+#              empty or unknown <resolution> is rejected by
 #              _rs_check_resolution (R-OUT-006). The writes are done by
-#              _rs_write_outputs, which stops immediately at the first
-#              write_output failure with one ::error::<key> line (R-OUT-008).
+#              _rs_write_output in the same _RS_OUTPUT_KEYS order (R-OUT-007)
+#              and stop immediately at the first write_output failure with one
+#              ::error::<key> line, leaving the lines already written
+#              (R-OUT-008).
 # @arg $1 file       — output file path (GITHUB_OUTPUT)
 # @arg $2 before     — before commit (or RS_EMPTY_TREE_SHA)
 # @arg $3 after      — after commit
@@ -668,10 +651,16 @@ _rs_write_outputs() {
 # @return 0 on success, 1 when an argument is rejected or a write fails
 emit_outputs() {
   _rs_check_output_file "$1" || return 1
+  local -a _rs_values=("$2" "$3" "$4")
+  local _rs_i
   # R-OUT-005
-  _rs_check_output_values "$2" "$3" "$4" || return 1
+  for _rs_i in "${!_RS_OUTPUT_KEYS[@]}"; do
+    _rs_check_output_value "${_RS_OUTPUT_KEYS[_rs_i]}" "${_rs_values[_rs_i]}" || return 1
+  done
   # R-OUT-006
   _rs_check_resolution "$4" || return 1
   # R-OUT-007, R-OUT-008
-  _rs_write_outputs "$1" "$2" "$3" "$4" || return 1
+  for _rs_i in "${!_RS_OUTPUT_KEYS[@]}"; do
+    _rs_write_output "$1" "${_RS_OUTPUT_KEYS[_rs_i]}" "${_rs_values[_rs_i]}" || return 1
+  done
 }

@@ -37,7 +37,8 @@ _MAINF_SETUP_FAILED=98
 _MAINF_POLLUTED_GITCONFIG=$'[remote "upstream"]\n\tpromisor = true\n'
 
 # Regular file placed at the fixture repository path (main) inside the temporary
-# root _mainf_setup creates, so its fixture build fails; used in T-RS-MAINF-24
+# root _mainf_setup creates (by gf_probe_setup_leak), so its fixture build fails;
+# used in T-RS-MAINF-24
 _MAINF_BLOCKER="main"
 
 # 関数
@@ -81,20 +82,15 @@ _mainf_rev() {
 }
 
 ##
-# Run resolve-sha.sh with the fixture repository as the working directory.
-# The script runs with GIT_CONFIG_GLOBAL=/dev/null and GIT_CONFIG_NOSYSTEM=1
-# (same isolation as the unit wrappers), so the host's global / system git
-# config (e.g. a remote with promisor = true) never changes its git queries.
-# The prefix must be at this call site: gf_setup unsets exported GIT_*
-# variables, so isolation cannot be exported once in BeforeEach.
+# Run resolve-sha.sh with the fixture repository as the working directory
+# (gf_run_in), so the host's global / system git config (e.g. a remote with
+# promisor = true) never changes its git queries. A variable assigned on the
+# call (e.g. GIT_TRACE in _mainf_run_traced) reaches the script.
 # Requires: _mainf_setup has been called (BeforeEach).
 # @stdout / @stderr the script's output
-# @return the script's exit code, 1 when cd fails
+# @return the script's exit code, 99 when cd fails
 _mainf_run() {
-  (
-    cd "$_MAINF_REPO" || exit 1
-    GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 bash "$_MAINF_SCRIPT"
-  )
+  gf_run_in "$_MAINF_REPO" bash "$_MAINF_SCRIPT"
 }
 
 ##
@@ -203,88 +199,42 @@ _mainf_install_action_copy() {
 # Run resolve-sha.sh as `bash resolve-sha.sh` (a path without a slash) with the
 # copied scripts directory (_mainf_install_action_copy) as the working
 # directory, which is inside the fixture repository. Same git config isolation
-# as _mainf_run. Used in T-RS-MAINF-21.
+# as _mainf_run (gf_run_in). Used in T-RS-MAINF-21.
 # Requires: _mainf_install_action_copy has been called.
 # @stdout / @stderr the script's output
-# @return the script's exit code, 1 when cd fails
+# @return the script's exit code, 99 when cd fails
 _mainf_run_no_slash() {
-  (
-    cd "$_MAINF_COPY_DIR" || exit 1
-    GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 bash resolve-sha.sh
-  )
+  gf_run_in "$_MAINF_COPY_DIR" bash resolve-sha.sh
 }
 
 ##
 # Run resolve-sha.sh as `bash resolve-sha.sh` with the fixture repository as the
 # working directory, so bash finds the script through PATH (the scripts
-# directory is prepended). Same git config isolation as _mainf_run.
+# directory is prepended). Same git config isolation as _mainf_run (gf_run_in).
 # Used in T-RS-MAINF-22.
 # Requires: _mainf_setup has been called (BeforeEach).
 # @stdout / @stderr the script's output
-# @return the script's exit code, 1 when cd fails
+# @return the script's exit code, 1 when dirname fails, 99 when cd fails
 _mainf_run_via_path() {
   local _mainf_scripts_dir
 
   _mainf_scripts_dir="$(dirname "$_MAINF_SCRIPT")" || return 1
-  (
-    cd "$_MAINF_REPO" || exit 1
-    PATH="${_mainf_scripts_dir}:${PATH}" GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 bash resolve-sha.sh
-  )
+  PATH="${_mainf_scripts_dir}:${PATH}" gf_run_in "$_MAINF_REPO" bash resolve-sha.sh
 }
 
 ##
 # Source resolve-sha.sh in a subshell whose working directory is the fixture
 # repository, then return; main must not run, so nothing is written to the
-# output file. Same git config isolation as _mainf_run. Used in T-RS-MAINF-23.
+# output file. Same git config isolation as _mainf_run (gf_run_in, whose
+# subshell also keeps the sourced definitions out of the spec shell).
+# Used in T-RS-MAINF-23.
 # Requires: _mainf_setup has been called (BeforeEach).
 # @stdout / @stderr anything printed while sourcing
 # @return 0 when sourcing succeeds, non-zero otherwise
 _mainf_source() {
-  (
-    cd "$_MAINF_REPO" || exit 1
-    export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1
-    # shellcheck source=.github/actions/_ca-resolve-sha/scripts/resolve-sha.sh
-    # shellcheck disable=SC1091
-    . "$_MAINF_SCRIPT"
-  )
+  gf_run_in "$_MAINF_REPO" . "$_MAINF_SCRIPT"
 }
 
-##
-# Run _mainf_setup in a subshell with its fixture build forced to fail, and
-# report whether the temporary root it created survives the failure. ShellSpec
-# skips every AfterEach when a BeforeEach fails, so the hook must clean up its
-# own root. mktemp is stubbed to record the root it creates (in the caller's
-# GF_TMP_ROOT) and to place a regular file at _MAINF_BLOCKER in it, so
-# gf_linear_repo cannot create the repository. A root that survives is removed
-# here, so the probe never leaks it either. Used in T-RS-MAINF-24.
-# Requires: _mainf_setup has been called (BeforeEach; the record file lives in
-#           that example's GF_TMP_ROOT).
-# @stdout "rc=<hook status> leaked=<yes|no|unknown>" (unknown: no root recorded)
-# @return 0
-_mainf_probe_setup_leak() {
-  local _probe_record="${GF_TMP_ROOT}/probe-root"
-  (
-    mktemp() {
-      local _probe_root
-      _probe_root="$(command mktemp "$@")" || return 1
-      printf '%s\n' "$_probe_root" >"$_probe_record" || return 1
-      : >"${_probe_root}/${_MAINF_BLOCKER}" || return 1
-      printf '%s\n' "$_probe_root"
-    }
-    _mainf_setup 2>/dev/null
-    _probe_rc=$?
-    _probe_root="$(cat "$_probe_record" 2>/dev/null)"
-    if [[ -z "$_probe_root" ]]; then
-      _probe_leaked=unknown
-    elif [[ -e "$_probe_root" ]]; then
-      _probe_leaked=yes
-      rm -rf "$_probe_root"
-    else
-      _probe_leaked=no
-    fi
-    printf 'rc=%s leaked=%s\n' "$_probe_rc" "$_probe_leaked"
-  )
-}
 
 # --- テスト本体 ---
 
@@ -579,7 +529,7 @@ Describe 'resolve-sha.sh'
     # 異常系: the fixture build fails after gf_setup
     Context 'When: 異常系'
       It '[Error] T-RS-MAINF-24: フィクスチャ作成に失敗すると、作った一時ルートを削除して失敗する'
-        When call _mainf_probe_setup_leak
+        When call gf_probe_setup_leak _mainf_setup file "$_MAINF_BLOCKER"
         The status should equal 0
         The output should equal "rc=1 leaked=no"
       End

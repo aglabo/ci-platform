@@ -5,7 +5,8 @@
 # Test suite for resolve-sha.lib.sh
 # Module: composite-action/resolve-sha (test_scope RS)
 # Target: _ca-resolve-sha/scripts/_libs/resolve-sha.lib.sh
-# Also:   _ca-resolve-sha/scripts/__tests__/helpers/git-fixture.sh (empty path guard, T-RS-GF-*)
+# Also:   _ca-resolve-sha/scripts/__tests__/helpers/git-fixture.sh (empty path guard,
+#         gf_run_in, gf_probe_setup_leak; T-RS-GF-*)
 
 # --- テスト基盤 ---
 # (ShellSpec DSL: Describe / Context / It / When / The)
@@ -19,6 +20,18 @@ Include "${SHELLSPEC_PROJECT_ROOT}/.github/actions/_ca-resolve-sha/scripts/__tes
 
 # --- 内部ヘルパー ---
 # 定数
+# Valid-format 40-digit hex OID absent from every fixture repository; used by
+# T-RS-IC-02, T-RS-IC-07, T-RS-VC-03, T-RS-VC-06, T-RS-RSH-04, T-RS-RSH-07,
+# T-RS-RSH-17, T-RS-RSH-18, T-RS-RSH-22, T-RS-RSH-25, T-RS-RSH-26, T-RS-RSH-31,
+# T-RS-RSH-32, T-RS-RSH-37
+_ABSENT_OID="0123456789abcdef0123456789abcdef01234567"
+# Second absent valid-format OID, different from _ABSENT_OID (for cases where both
+# sides of a pair must be absent and distinguishable); used by T-RS-RSH-04,
+# T-RS-RSH-31, T-RS-RSH-32, T-RS-RSH-37
+_ABSENT_OID_2="89abcdef0123456789abcdef0123456789abcdef"
+# 40-digit zero OID (never a real object; a push that created the branch); used by
+# T-RS-IC-05, T-RS-RSH-06, T-RS-RSH-34
+_ZERO_OID="0000000000000000000000000000000000000000"
 # Value carrying an LF followed by a workflow command; used by T-RS-RE-05
 _RE_INJECTED_VALUE=$'x\n::add-mask::secret'
 # Value with a CR between two characters; used by T-RS-RE-07
@@ -44,20 +57,10 @@ _VOV_OID_NONHEX="0123456789abcdef0123456789abcdef0123456g"
 _VOV_OID_NONASCII="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaá"
 # UTF-8 locale (other than C.UTF-8) whose collation puts 'á' inside a-f; used by T-RS-VOV-17, T-RS-VOV-18
 _VOV_UTF8_LOCALE="en_US.UTF-8"
-# Exit code of _ipc_run when the fixture builder fails; no T-RS-IPC case expects it
-_IPC_SETUP_FAILED=98
-# Exit code of _ic_run / _ic_run_head when the fixture builder fails; no T-RS-IC case expects it
-_IC_SETUP_FAILED=98
-# Valid-format 40-digit hex OID absent from the fixture repository; used by T-RS-IC-02, T-RS-IC-07
-_IC_OID_MISSING="0123456789abcdef0123456789abcdef01234567"
-# 40-digit zero OID (never a real object); used by T-RS-IC-05
-_IC_OID_ZERO="0000000000000000000000000000000000000000"
-# Exit code of _vc_run / _vc_run_head when the fixture builder fails; no T-RS-VC case expects it
-_VC_SETUP_FAILED=98
-# Valid-format 40-digit hex OID absent from the fixture repository; used by T-RS-VC-03, T-RS-VC-06
-_VC_OID_MISSING="0123456789abcdef0123456789abcdef01234567"
-# Exit code of _rhn_run when the fixture builder fails; no T-RS-RHN case expects it
-_RHN_SETUP_FAILED=98
+# Exit code of the fixture runners (_ipc_run, _ipc_run_visibility, _commit_run,
+# _ic_run_non_git, _rhn_run, _rsh_run) when the fixture setup fails (_setup_failed); no
+# T-RS-IPC / IC / VC / RHN / RSH case expects it
+_SETUP_FAILED=98
 # ShellSpec `match pattern` for a full 40-digit lowercase hex OID; used by T-RS-RHN-04
 _RHN_OID40_PATTERN="$(printf '[0-9a-f]%.0s' {1..40})"
 # HEAD commit OID returned by the git mock (_rhn_git_mock); used by T-RS-RHN-15, T-RS-RHN-16
@@ -68,14 +71,6 @@ _RHN_MOCK_CALL_LOG="rhn-git-calls.log"
 _RHN_MOCK_UNEXPECTED_LOG="rhn-git-unexpected.log"
 # Exit code of _rhn_run_mocked when the git mock was misused; no T-RS-RHN case expects it
 _RHN_MOCK_MISUSED=97
-# Exit code of _rsh_run when the fixture setup fails; no T-RS-RSH case expects it
-_RSH_SETUP_FAILED=98
-# Valid-format 40-digit hex OID absent from the fixture repository; used by T-RS-RSH-04, T-RS-RSH-07, T-RS-RSH-17, T-RS-RSH-18, T-RS-RSH-22, T-RS-RSH-25, T-RS-RSH-26, T-RS-RSH-31, T-RS-RSH-32, T-RS-RSH-37
-_RSH_OID_MISSING="0123456789abcdef0123456789abcdef01234567"
-# Second absent valid-format OID, different from _RSH_OID_MISSING; used by T-RS-RSH-04, T-RS-RSH-31, T-RS-RSH-32, T-RS-RSH-37
-_RSH_OID_MISSING2="89abcdef0123456789abcdef0123456789abcdef"
-# 40-digit zero OID (a push that created the branch); used by T-RS-RSH-06, T-RS-RSH-34
-_RSH_OID_ZERO="0000000000000000000000000000000000000000"
 # Valid 40-digit lowercase hex OID used as the before value; used by T-RS-EO-01 .. T-RS-EO-04, T-RS-EO-06 .. T-RS-EO-10, T-RS-EO-12 .. T-RS-EO-16, T-RS-EO-18
 _EO_OID_BEFORE="0123456789abcdef0123456789abcdef01234567"
 # Valid 40-digit lowercase hex OID used as the after value; used by T-RS-EO-01 .. T-RS-EO-05, T-RS-EO-07 .. T-RS-EO-18
@@ -98,6 +93,9 @@ _GFG_HOST_NAME="host"
 _GFG_UNSET="<unset>"
 # Valid-format 40-digit hex OID passed to gf_remove_object; used by T-RS-GF-04
 _GFG_OID="0123456789abcdef0123456789abcdef01234567"
+# Config key set only by the host-like config file of _gfg_export_host_config;
+# used by T-RS-GF-07, T-RS-GF-08
+_GFG_HOST_KEY="gfprobe.key"
 # Name of the output file _eo_setup creates under GF_TMP_ROOT; the probe of
 # T-RS-EO-19 occupies it with a directory so the hook cannot create the file
 _EO_OUTPUT_NAME="github_output"
@@ -116,34 +114,102 @@ _vov_run_utf8() {
 }
 
 ##
-# Run is_partial_clone with <dir> as the working directory, in a subshell so the
-# cwd never leaks between examples. The host's global / system git config is
-# ignored (only inside the subshell) so the result does not depend on the host;
-# the host's GIT_* environment has already been cleared by gf_setup. When a
-# builder has set _ipc_global_config, that file is used as the global config
-# instead of /dev/null (T-RS-IPC-13).
-# Requires: the directory has been built by a git-fixture builder.
-# @arg $1 dir — directory to inspect
-# @return is_partial_clone's exit code, or 99 when cd into <dir> fails
-_ipc_in() {
-  (
-    cd "$1" || exit 99
-    GIT_CONFIG_GLOBAL="${_ipc_global_config:-/dev/null}" GIT_CONFIG_NOSYSTEM=1 is_partial_clone
-  )
+# Report a fixture setup failure for the fixture runners (_ipc_run, _ipc_run_visibility,
+# _commit_run, _ic_run_non_git, _rhn_run, _rsh_run). Some error cases only expect a non-zero
+# status, so the stderr message (which their stderr check rejects) is what
+# keeps a fixture failure from passing them.
+# @arg $1 target — name of the function under test (for the message)
+# @stderr "<target> fixture setup failed"
+# @return _SETUP_FAILED (98)
+_setup_failed() {
+  echo "$1 fixture setup failed" >&2
+  return "$_SETUP_FAILED"
+}
+
+##
+# Mark the fixture runner <runner> as untrusted: _rhn_run / _rsh_run pass
+# GIT_TEST_ASSUME_DIFFERENT_OWNER=1 to the call of the function under test only
+# (git then reports "detected dubious ownership"), while the builder and the
+# "@<rev>" resolution run trusted. _untrusted is local here, so it never leaks
+# into other examples. Used by T-RS-RHN-17, T-RS-RSH-35, T-RS-RSH-36.
+# @arg $1 runner  — _rhn_run or _rsh_run
+# @arg $2.. args  — arguments passed to <runner>
+# @return the runner's exit code
+_run_untrusted() {
+  local _untrusted=1
+  "$@"
+}
+
+##
+# Decide whether a file mode cannot be reproduced where the fixtures live; used
+# by `Skip if` in T-RS-IPC-10 (000, -r: unreadable) and T-RS-EO-16 (444, -w:
+# read-only). A probe file is created under GF_TMP_ROOT (the filesystem the
+# fixtures use), set to <mode> and tested with <op>. The test still passes when
+# permissions are not enforced: as root, on NTFS under Git Bash, or on drvfs
+# mounted without metadata. The probe is removed afterwards. ShellSpec evaluates
+# `Skip if` after BeforeEach, so GF_TMP_ROOT exists.
+# Requires: gf_setup has been called (BeforeEach).
+# @arg $1 mode — chmod mode that should deny the access (e.g. 000)
+# @arg $2 op   — test operator for the denied access (-r or -w)
+# @return 0 (skip) when the probe still allows the access,
+#         1 when permissions are enforced or the probe cannot be created
+#         (the example then runs and reports the fixture problem itself)
+_perm_not_enforced() {
+  local _perm_probe="${GF_TMP_ROOT}/perm-probe"
+  local _perm_ignored=1
+
+  : >"$_perm_probe" || return 1
+  chmod "$1" "$_perm_probe" && test "$2" "$_perm_probe" && _perm_ignored=0
+  rm -f "$_perm_probe"
+  return "$_perm_ignored"
 }
 
 ##
 # Build the fixture with <builder>, then run is_partial_clone in the directory it
-# built (_ipc_dir). A builder failure returns _IPC_SETUP_FAILED instead of running
-# is_partial_clone, so a half-built fixture makes the example fail rather than
-# pass by accident (e.g. a missing clone that also yields "not partial", 1).
+# built (_ipc_dir) with gf_run_in. A builder failure returns _SETUP_FAILED instead
+# of running is_partial_clone, so a half-built fixture makes the example fail
+# rather than pass by accident (e.g. a missing clone that also yields "not
+# partial", 1).
 # Requires: gf_setup has been called (BeforeEach).
 # @arg $1 builder — one of the _ipc_build_* functions
+# @stderr a setup-failure message when the builder fails
 # @return is_partial_clone's exit code, 99 when cd fails,
-#         or _IPC_SETUP_FAILED (98) when the builder fails
+#         or _SETUP_FAILED (98) when the builder fails
 _ipc_run() {
-  "$1" || return "$_IPC_SETUP_FAILED"
-  _ipc_in "$_ipc_dir"
+  "$1" || _setup_failed is_partial_clone || return
+  gf_run_in "$_ipc_dir" is_partial_clone
+}
+
+##
+# Report, under one global config, both what git sees for extensions.partialclone
+# (any scope) and what is_partial_clone decides, so T-RS-IPC-13 proves its premise:
+# the global value is visible to git, yet is_partial_clone ignores it. The global
+# config is the file a builder set in _ipc_global_config, or /dev/null as gf_run_in
+# already exports. Used by _ipc_run_visibility, inside gf_run_in.
+# @stdout one line: "visible=<git config --get value> rc=<is_partial_clone status>"
+# @return 0
+_ipc_report_visibility() {
+  local _ipc_visible _ipc_rc
+
+  export GIT_CONFIG_GLOBAL="${_ipc_global_config:-/dev/null}"
+  _ipc_visible="$(git config --get extensions.partialclone)"
+  is_partial_clone
+  _ipc_rc=$?
+  printf 'visible=%s rc=%s\n' "$_ipc_visible" "$_ipc_rc"
+}
+
+##
+# Build the fixture with <builder>, then run _ipc_report_visibility in the
+# directory it built (_ipc_dir) with gf_run_in. A builder failure returns
+# _SETUP_FAILED, as in _ipc_run. Used by T-RS-IPC-13.
+# Requires: gf_setup has been called (BeforeEach).
+# @arg $1 builder — one of the _ipc_build_* functions
+# @stdout the line printed by _ipc_report_visibility
+# @stderr a setup-failure message when the builder fails
+# @return 0, 99 when cd fails, or _SETUP_FAILED (98) when the builder fails
+_ipc_run_visibility() {
+  "$1" || _setup_failed is_partial_clone || return
+  gf_run_in "$_ipc_dir" _ipc_report_visibility
 }
 
 ##
@@ -247,7 +313,7 @@ _ipc_build_promisor_false() {
 # under GF_TMP_ROOT that sets extensions.partialClone (git ignores that extension
 # outside the repository config); used by T-RS-IPC-13.
 # Sets: _ipc_dir — the clone path; _ipc_global_config — the global config file
-#       that _ipc_in passes as GIT_CONFIG_GLOBAL. Prints nothing on stdout.
+#       that _ipc_report_visibility exports as GIT_CONFIG_GLOBAL. Prints nothing on stdout.
 # @return 0 on success, 1 when any fixture step fails
 _ipc_build_global_extension_only() {
   _ipc_build_normal_clone || return 1
@@ -285,208 +351,59 @@ _ipc_build_unreadable_config() {
 }
 
 ##
-# Decide whether an unreadable file cannot be reproduced where the fixtures live;
-# used by T-RS-IPC-10 (Skip if). A probe file is created under GF_TMP_ROOT (the
-# filesystem _ipc_build_unreadable_config uses), set to mode 000 and checked for
-# readability. It stays readable when permissions are not enforced: as root, on
-# NTFS under Git Bash, or on drvfs mounted without metadata. The probe is removed
-# afterwards. ShellSpec evaluates `Skip if` after BeforeEach, so GF_TMP_ROOT exists.
+# Build a 2-commit linear repository, then run <fn> <sha> [args...] in it with
+# gf_run_in; used by T-RS-IC-01 .. T-RS-IC-06 (is_commit) and T-RS-VC-01 ..
+# T-RS-VC-06 (verify_commit). A <sha> of the form "@<rev>" is replaced by the
+# OID of <rev> in the repository (e.g. @HEAD, '@HEAD^{tree}'), which is only
+# known after the build, so it is resolved inside `When`. Any other <sha>
+# (including an empty one) is passed as is. A build or "@<rev>" resolution
+# failure returns _SETUP_FAILED instead of running <fn>.
 # Requires: gf_setup has been called (BeforeEach).
-# @return 0 (skip) when the mode-000 probe is still readable,
-#         1 when permissions are enforced or the probe cannot be created
-#         (the example then runs and reports the fixture problem itself)
-_ipc_cannot_enforce_unreadable() {
-  local _ipc_probe="${GF_TMP_ROOT}/ipc-unreadable-probe"
-  local _ipc_readable=1
+# @arg $1 fn      — function under test (is_commit or verify_commit)
+# @arg $2 sha     — value passed to <fn> ("@<rev>" resolved)
+# @arg $3.. args  — further arguments passed to <fn> (e.g. the verify_commit field)
+# @stderr <fn>'s stderr, or a setup-failure message when the setup fails
+# @return <fn>'s exit code, 99 when cd fails,
+#         or _SETUP_FAILED (98) when the setup fails
+_commit_run() {
+  local _commit_fn="$1" _commit_sha="$2" _commit_dir
+  shift 2
 
-  : >"$_ipc_probe" || return 1
-  chmod 000 "$_ipc_probe" && [ -r "$_ipc_probe" ] && _ipc_readable=0
-  rm -f "$_ipc_probe"
-  return "$_ipc_readable"
-}
-
-##
-# Run is_commit <sha> with <dir> as the working directory, in a subshell so the
-# cwd never leaks between examples. The host's global / system git config is
-# ignored (only inside the subshell) so the result does not depend on the host;
-# the host's GIT_* environment has already been cleared by gf_setup.
-# Requires: the directory has been built by _ic_build_repo or gf_non_git_dir.
-# @arg $1 dir — directory to inspect (a repository, or a non-git directory)
-# @arg $2 sha — value passed to is_commit
-# @return is_commit's exit code, or 99 when cd into <dir> fails
-_ic_in() {
-  (
-    cd "$1" || exit 99
-    GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 is_commit "$2"
-  )
-}
-
-##
-# Build a 2-commit linear repository; used by T-RS-IC-01 .. T-RS-IC-06.
-# Sets: _ic_dir — the repository path, _ic_head — its HEAD commit OID.
-# Prints nothing on stdout.
-# @return 0 on success, 1 when any fixture step fails
-_ic_build_repo() {
-  _ic_dir="$(gf_linear_repo ic 2)" || return 1
-  _ic_head="$(gf_git "$_ic_dir" rev-parse HEAD)" || return 1
-}
-
-##
-# Build the repository with _ic_build_repo, then run is_commit on its HEAD OID
-# (only known after the build, so it is resolved inside `When`). A builder
-# failure returns _IC_SETUP_FAILED instead of running is_commit.
-# Requires: gf_setup has been called (BeforeEach).
-# @stderr a setup-failure message when the builder fails (every IC case expects empty stderr)
-# @return is_commit's exit code, 99 when cd fails,
-#         or _IC_SETUP_FAILED (98) when the builder fails
-_ic_run_head() {
-  _ic_build_repo || _ic_setup_failed || return
-  _ic_in "$_ic_dir" "$_ic_head"
-}
-
-##
-# Build the repository with _ic_build_repo, then run is_commit <sha> in it.
-# A builder failure returns _IC_SETUP_FAILED instead of running is_commit and
-# writes a message to stderr. IC error cases only expect a non-zero status, so
-# the stderr message is what keeps a fixture failure from passing them.
-# Requires: gf_setup has been called (BeforeEach).
-# @arg $1 sha — value passed to is_commit (may be empty)
-# @stderr a setup-failure message when the builder fails (every IC case expects empty stderr)
-# @return is_commit's exit code, 99 when cd fails,
-#         or _IC_SETUP_FAILED (98) when the builder fails
-_ic_run() {
-  _ic_build_repo || _ic_setup_failed || return
-  _ic_in "$_ic_dir" "$1"
-}
-
-##
-# Build the repository with _ic_build_repo, then run is_commit on its HEAD tree
-# OID (HEAD^{tree}, only known after the build, so it is resolved inside `When`).
-# A builder or rev-parse failure returns _IC_SETUP_FAILED instead of running
-# is_commit. Used by T-RS-IC-06.
-# Requires: gf_setup has been called (BeforeEach).
-# Sets: _ic_tree — the HEAD tree OID.
-# @stderr a setup-failure message when the setup fails (every IC case expects empty stderr)
-# @return is_commit's exit code, 99 when cd fails,
-#         or _IC_SETUP_FAILED (98) when the setup fails
-_ic_run_tree() {
-  _ic_build_repo || _ic_setup_failed || return
-  _ic_tree="$(gf_git "$_ic_dir" rev-parse 'HEAD^{tree}')" || _ic_setup_failed || return
-  _ic_in "$_ic_dir" "$_ic_tree"
+  _commit_dir="$(gf_linear_repo commit 2)" || _setup_failed "$_commit_fn" || return
+  if [[ "$_commit_sha" == @* ]]; then
+    _commit_sha="$(gf_git "$_commit_dir" rev-parse --verify "${_commit_sha#@}")" ||
+      _setup_failed "$_commit_fn" || return
+  fi
+  gf_run_in "$_commit_dir" "$_commit_fn" "$_commit_sha" "$@"
 }
 
 ##
 # Create a non-git directory with gf_non_git_dir, then run is_commit <sha> with
-# it as the working directory. A fixture failure returns _IC_SETUP_FAILED
-# instead of running is_commit. Used by T-RS-IC-07.
+# it as the working directory (gf_run_in). A fixture failure returns
+# _SETUP_FAILED instead of running is_commit. Used by T-RS-IC-07.
 # Requires: gf_setup has been called (BeforeEach).
-# Sets: _ic_dir — the non-git directory path.
 # @arg $1 sha — value passed to is_commit
 # @stderr a setup-failure message when the setup fails (every IC case expects empty stderr)
 # @return is_commit's exit code, 99 when cd fails,
-#         or _IC_SETUP_FAILED (98) when the setup fails
+#         or _SETUP_FAILED (98) when the setup fails
 _ic_run_non_git() {
-  _ic_dir="$(gf_non_git_dir ic-plain)" || _ic_setup_failed || return
-  _ic_in "$_ic_dir" "$1"
-}
+  local _ic_dir
 
-##
-# Report a fixture setup failure for the IC wrappers.
-# @stderr "is_commit fixture setup failed"
-# @return _IC_SETUP_FAILED (98)
-_ic_setup_failed() {
-  echo "is_commit fixture setup failed" >&2
-  return "$_IC_SETUP_FAILED"
-}
-
-##
-# Run verify_commit <sha> <field> with <dir> as the working directory, in a
-# subshell so the cwd never leaks between examples. The host's global / system
-# git config is ignored (only inside the subshell) so the result does not depend
-# on the host; the host's GIT_* environment has already been cleared by gf_setup.
-# Requires: the directory has been built by _vc_build_repo.
-# @arg $1 dir   — repository directory to inspect
-# @arg $2 sha   — value passed to verify_commit
-# @arg $3 field — error target name passed to verify_commit
-# @return verify_commit's exit code, or 99 when cd into <dir> fails
-_vc_in() {
-  (
-    cd "$1" || exit 99
-    GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 verify_commit "$2" "$3"
-  )
-}
-
-##
-# Build a 2-commit linear repository; used by T-RS-VC-01 .. T-RS-VC-06.
-# Sets: _vc_dir — the repository path, _vc_head — its HEAD commit OID.
-# Prints nothing on stdout.
-# @return 0 on success, 1 when any fixture step fails
-_vc_build_repo() {
-  _vc_dir="$(gf_linear_repo vc 2)" || return 1
-  _vc_head="$(gf_git "$_vc_dir" rev-parse HEAD)" || return 1
-}
-
-##
-# Build the repository with _vc_build_repo, then run verify_commit <sha> <field>
-# inside it; used by T-RS-VC-02 .. T-RS-VC-06. A builder failure returns
-# _VC_SETUP_FAILED instead of running verify_commit.
-# Requires: gf_setup has been called (BeforeEach).
-# @arg $1 sha   — value passed to verify_commit
-# @arg $2 field — error target name passed to verify_commit
-# @stderr a setup-failure message when the builder fails
-# @return verify_commit's exit code, 99 when cd fails,
-#         or _VC_SETUP_FAILED (98) when the builder fails
-_vc_run() {
-  _vc_build_repo || _vc_setup_failed || return
-  _vc_in "$_vc_dir" "$1" "$2"
-}
-
-##
-# Build the repository with _vc_build_repo, then run verify_commit on its HEAD
-# OID (only known after the build, so it is resolved inside `When`). A builder
-# failure returns _VC_SETUP_FAILED instead of running verify_commit.
-# Requires: gf_setup has been called (BeforeEach).
-# @arg $1 field — error target name passed to verify_commit
-# @stderr a setup-failure message when the builder fails
-# @return verify_commit's exit code, 99 when cd fails,
-#         or _VC_SETUP_FAILED (98) when the builder fails
-_vc_run_head() {
-  _vc_build_repo || _vc_setup_failed || return
-  _vc_in "$_vc_dir" "$_vc_head" "$1"
-}
-
-##
-# Report a fixture setup failure for _vc_run / _vc_run_head; used by T-RS-VC-01 .. T-RS-VC-06.
-# @stderr "verify_commit fixture setup failed"
-# @return _VC_SETUP_FAILED (98)
-_vc_setup_failed() {
-  echo "verify_commit fixture setup failed" >&2
-  return "$_VC_SETUP_FAILED"
-}
-
-##
-# Run resolve_head_n <n> with <dir> as the working directory, in a subshell so
-# the cwd never leaks between examples. The host's global / system git config is
-# ignored (only inside the subshell) so the result does not depend on the host;
-# the host's GIT_* environment has already been cleared by gf_setup.
-# Requires: the directory has been built by an _rhn_build_* builder.
-# @arg $1 dir — directory to run resolve_head_n in
-# @arg $2 n   — commit count passed to resolve_head_n
-# @return resolve_head_n's exit code, or 99 when cd into <dir> fails
-_rhn_in() {
-  (
-    cd "$1" || exit 99
-    GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 resolve_head_n "$2"
-  )
+  _ic_dir="$(gf_non_git_dir ic-plain)" || _setup_failed is_commit || return
+  gf_run_in "$_ic_dir" is_commit "$1"
 }
 
 ##
 # Build the fixture with <builder> [args...], then run resolve_head_n <n> in the
-# directory it built (_rhn_dir); used by T-RS-RHN-01 .. T-RS-RHN-14. It is called
-# by `When call` (no subshell), so the expected OIDs the builder sets
-# (_rhn_head / _rhn_before) are visible to the assertions that follow. The
-# variables are reset first so a half-run builder cannot leave stale values.
-# A builder failure returns _RHN_SETUP_FAILED instead of running resolve_head_n.
+# directory it built (_rhn_dir) with gf_run_in; used by T-RS-RHN-01 ..
+# T-RS-RHN-14, and by T-RS-RHN-17 through _run_untrusted. It is called by `When
+# call` (no subshell), so the expected OIDs the builder sets (_rhn_head /
+# _rhn_before) are visible to the assertions that follow. The variables are
+# reset first so a half-run builder cannot leave stale values.
+# GIT_TEST_ASSUME_DIFFERENT_OWNER is passed to the resolve_head_n call only: 1
+# under _run_untrusted, otherwise 0 (git's default); the builder's own git calls
+# are never affected.
+# A builder failure returns _SETUP_FAILED instead of running resolve_head_n.
 # Requires: gf_setup has been called (BeforeEach).
 # Sets: _rhn_dir, _rhn_head, _rhn_before (through the builder).
 # @arg $1 n       — commit count passed to resolve_head_n
@@ -494,45 +411,11 @@ _rhn_in() {
 # @arg $3.. args  — arguments passed to <builder>
 # @stderr a setup-failure message when the builder fails
 # @return resolve_head_n's exit code, 99 when cd fails,
-#         or _RHN_SETUP_FAILED (98) when the builder fails
+#         or _SETUP_FAILED (98) when the builder fails
 _rhn_run() {
   _rhn_dir='' _rhn_head='' _rhn_before=''
-  "$2" "${@:3}" || _rhn_setup_failed || return
-  _rhn_in "$_rhn_dir" "$1"
-}
-
-##
-# Report a fixture setup failure for _rhn_run / _rhn_run_untrusted; used by
-# T-RS-RHN-01 .. T-RS-RHN-14, T-RS-RHN-17.
-# @stderr "resolve_head_n fixture setup failed"
-# @return _RHN_SETUP_FAILED (98)
-_rhn_setup_failed() {
-  echo "resolve_head_n fixture setup failed" >&2
-  return "$_RHN_SETUP_FAILED"
-}
-
-##
-# Same as _rhn_run, but resolve_head_n runs with GIT_TEST_ASSUME_DIFFERENT_OWNER=1
-# so git treats the work directory as owned by another user ("detected dubious
-# ownership"); used by T-RS-RHN-17. The variable is exported only inside a
-# subshell around the resolve_head_n call (after the builder ran, since gf_setup
-# clears GIT_* and the builder's own git calls must not be affected), so it
-# never leaks into other examples.
-# Requires: gf_setup has been called (BeforeEach).
-# Sets: _rhn_dir, _rhn_head, _rhn_before (through the builder).
-# @arg $1 n       — commit count passed to resolve_head_n
-# @arg $2 builder — one of the _rhn_build_* functions
-# @arg $3.. args  — arguments passed to <builder>
-# @stderr a setup-failure message when the builder fails
-# @return resolve_head_n's exit code, 99 when cd fails,
-#         or _RHN_SETUP_FAILED (98) when the builder fails
-_rhn_run_untrusted() {
-  _rhn_dir='' _rhn_head='' _rhn_before=''
-  "$2" "${@:3}" || _rhn_setup_failed || return
-  (
-    export GIT_TEST_ASSUME_DIFFERENT_OWNER=1
-    _rhn_in "$_rhn_dir" "$1"
-  )
+  "$2" "${@:3}" || _setup_failed resolve_head_n || return
+  GIT_TEST_ASSUME_DIFFERENT_OWNER="${_untrusted:-0}" gf_run_in "$_rhn_dir" resolve_head_n "$1"
 }
 
 ##
@@ -740,33 +623,18 @@ _rhn_build_merge_shallow() {
 }
 
 ##
-# Run resolve_sha [args...] with <dir> as the working directory, in a subshell
-# so the cwd never leaks between examples. The host's global / system git config
-# is ignored (only inside the subshell) so the result does not depend on the
-# host; the host's GIT_* environment has already been cleared by gf_setup.
-# GIT_TEST_ASSUME_DIFFERENT_OWNER is passed to the resolve_sha call only: 1 when
-# _rsh_untrusted is set (by _rsh_run_untrusted), so git treats <dir> as owned by
-# another user ("detected dubious ownership"), otherwise 0 (git's default).
-# Requires: the directory has been built by an _rsh_build_* builder.
-# @arg $1 dir     — directory to run resolve_sha in
-# @arg $2.. args  — arguments passed to resolve_sha
-# @return resolve_sha's exit code, or 99 when cd into <dir> fails
-_rsh_in() {
-  (
-    cd "$1" || exit 99
-    shift
-    GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1       GIT_TEST_ASSUME_DIFFERENT_OWNER="${_rsh_untrusted:-0}" resolve_sha "$@"
-  )
-}
-
-##
 # Build the fixture with <builder> [builder-args...], then run resolve_sha with
-# the arguments after "--" in the directory it built (_rsh_dir); used by
-# T-RS-RSH-01 .. T-RS-RSH-39. Each argument of the form "@<rev>" is replaced by the commit OID
-# of <rev> in _rsh_dir before the call. It is called by `When call` (no
+# the arguments after "--" in the directory it built (_rsh_dir) with gf_run_in;
+# used by T-RS-RSH-01 .. T-RS-RSH-39 (T-RS-RSH-35, T-RS-RSH-36 through
+# _run_untrusted). Each argument of the form "@<rev>" is replaced by the commit
+# OID of <rev> in _rsh_dir before the call. It is called by `When call` (no
 # subshell), so _rsh_dir is visible to the assertions that follow (_rsh_oid).
 # _rsh_dir is reset first so a half-run builder cannot leave a stale value.
-# A builder or "@<rev>" resolution failure returns _RSH_SETUP_FAILED instead of
+# GIT_TEST_ASSUME_DIFFERENT_OWNER is passed to the resolve_sha call only: 1
+# under _run_untrusted (git treats _rsh_dir as owned by another user, "detected
+# dubious ownership"), otherwise 0 (git's default); the builder and the
+# "@<rev>" resolution are never affected.
+# A builder or "@<rev>" resolution failure returns _SETUP_FAILED instead of
 # running resolve_sha.
 # Requires: gf_setup has been called (BeforeEach).
 # Sets: _rsh_dir (through the builder).
@@ -775,7 +643,7 @@ _rsh_in() {
 # @arg ... args          — arguments passed to resolve_sha ("@<rev>" resolved)
 # @stderr a setup-failure message when the fixture setup fails
 # @return resolve_sha's exit code, 99 when cd fails,
-#         or _RSH_SETUP_FAILED (98) when the fixture setup fails
+#         or _SETUP_FAILED (98) when the fixture setup fails
 _rsh_run() {
   local _rsh_builder="$1" _rsh_arg
   local -a _rsh_builder_args=() _rsh_args=()
@@ -786,38 +654,14 @@ _rsh_run() {
   done
   shift
   _rsh_dir=''
-  "$_rsh_builder" "${_rsh_builder_args[@]}" || _rsh_setup_failed || return
+  "$_rsh_builder" "${_rsh_builder_args[@]}" || _setup_failed resolve_sha || return
   for _rsh_arg in "$@"; do
     if [[ "$_rsh_arg" == @* ]]; then
-      _rsh_arg="$(_rsh_oid "${_rsh_arg#@}")" || _rsh_setup_failed || return
+      _rsh_arg="$(_rsh_oid "${_rsh_arg#@}")" || _setup_failed resolve_sha || return
     fi
     _rsh_args+=("$_rsh_arg")
   done
-  _rsh_in "$_rsh_dir" "${_rsh_args[@]}"
-}
-
-##
-# Same as _rsh_run, but resolve_sha runs with GIT_TEST_ASSUME_DIFFERENT_OWNER=1
-# (git refuses to trust the repository); used by T-RS-RSH-35, T-RS-RSH-36. The
-# builder and the "@<rev>" resolution run without the variable, since _rsh_in
-# passes it to the resolve_sha call only, so it never leaks into other
-# examples.
-# Requires: gf_setup has been called (BeforeEach).
-# Sets: _rsh_dir (through the builder).
-# @arg $@ — the same arguments as _rsh_run
-# @return the same as _rsh_run
-_rsh_run_untrusted() {
-  local _rsh_untrusted=1
-  _rsh_run "$@"
-}
-
-##
-# Report a fixture setup failure for _rsh_run; used by T-RS-RSH-01 .. T-RS-RSH-39.
-# @stderr "resolve_sha fixture setup failed"
-# @return _RSH_SETUP_FAILED (98)
-_rsh_setup_failed() {
-  echo "resolve_sha fixture setup failed" >&2
-  return "$_RSH_SETUP_FAILED"
+  GIT_TEST_ASSUME_DIFFERENT_OWNER="${_untrusted:-0}" gf_run_in "$_rsh_dir" resolve_sha "${_rsh_args[@]}"
 }
 
 ##
@@ -924,30 +768,9 @@ _eo_run_with_existing() {
 # @arg $4 resolution — resolution value
 # @return emit_outputs's exit code, or 1 when the file cannot be prepared
 _eo_run_read_only() {
-  printf '%s
-' "$_EO_EXISTING_LINE" >"$1" || return 1
+  printf '%s\n' "$_EO_EXISTING_LINE" >"$1" || return 1
   chmod 444 "$1" || return 1
   emit_outputs "$@"
-}
-
-##
-# Decide whether a read-only file cannot be reproduced where the fixtures live;
-# used by T-RS-EO-16 (Skip if). A probe file is created under GF_TMP_ROOT, set
-# to mode 444 and checked for writability. It stays writable when permissions
-# are not enforced (e.g. as root). The probe is removed afterwards. ShellSpec
-# evaluates `Skip if` after BeforeEach, so GF_TMP_ROOT exists.
-# Requires: gf_setup has been called (BeforeEach).
-# @return 0 (skip) when the mode-444 probe is still writable,
-#         1 when permissions are enforced or the probe cannot be created
-#         (the example then runs and reports the fixture problem itself)
-_eo_cannot_enforce_read_only() {
-  local _eo_probe="${GF_TMP_ROOT}/eo-read-only-probe"
-  local _eo_writable=1
-
-  : >"$_eo_probe" || return 1
-  chmod 444 "$_eo_probe" && [ -w "$_eo_probe" ] && _eo_writable=0
-  rm -f "$_eo_probe"
-  return "$_eo_writable"
 }
 
 ##
@@ -1119,18 +942,15 @@ _gfg_setup() {
 
 ##
 # Run a command with the throwaway repository (_gfg_host) as the working
-# directory, in a subshell so the cwd never leaks between examples. A fixture
-# that falls back to the cwd therefore acts on _gfg_host, never on the real
-# ci-platform checkout.
+# directory (gf_run_in), so a fixture that falls back to the cwd acts on
+# _gfg_host, never on the real ci-platform checkout. Used by T-RS-GF-01 ..
+# T-RS-GF-04, T-RS-GF-09.
 # Requires: _gfg_setup has been called (BeforeEach).
 # @arg $@ command and its arguments (e.g. gf_git "" config ...)
 # @stdout / @stderr the command's output
 # @return the command's exit code, or 99 when cd fails
 _gfg_in_host() {
-  (
-    cd "$_gfg_host" || exit 99
-    "$@"
-  )
+  gf_run_in "$_gfg_host" "$@"
 }
 
 ##
@@ -1161,49 +981,28 @@ _gfg_host_commit_count() {
 }
 
 ##
-# Run a BeforeEach hook in a subshell with the fixture step after gf_setup
-# forced to fail, and report whether the temporary root the hook created
-# survives the failure. ShellSpec skips every AfterEach (gf_cleanup) when a
-# BeforeEach fails, so the hook must remove its own root. mktemp is stubbed to
-# record the root it creates (in the caller's GF_TMP_ROOT) and to occupy
-# <name> in it with a <kind> entry. A root that survives is removed here, so
-# the probe never leaks it either. Used by T-RS-EO-19, T-RS-GF-05.
-# Requires: gf_setup has been called (BeforeEach; the record file lives in that
-#           example's GF_TMP_ROOT).
-# @arg $1 hook — BeforeEach function to run (e.g. _eo_setup)
-# @arg $2 kind — "file" or "dir": the type of entry that blocks the fixture step
-# @arg $3 name — entry name under the new root that the fixture step needs
-# @stdout "rc=<hook status> leaked=<yes|no|unknown>" (unknown: no root recorded)
-# @return 0
-_hook_probe_setup_leak() {
-  local _probe_record="${GF_TMP_ROOT}/probe-root"
-  local _probe_kind="$2"
-  local _probe_name="$3"
-  (
-    mktemp() {
-      local _probe_root
-      _probe_root="$(command mktemp "$@")" || return 1
-      printf '%s\n' "$_probe_root" >"$_probe_record" || return 1
-      case "$_probe_kind" in
-      file) : >"${_probe_root}/${_probe_name}" || return 1 ;;
-      dir) mkdir "${_probe_root}/${_probe_name}" || return 1 ;;
-      *) return 1 ;;
-      esac
-      printf '%s\n' "$_probe_root"
-    }
-    "$1" 2>/dev/null
-    _probe_rc=$?
-    _probe_root="$(cat "$_probe_record" 2>/dev/null)"
-    if [[ -z "$_probe_root" ]]; then
-      _probe_leaked=unknown
-    elif [[ -e "$_probe_root" ]]; then
-      _probe_leaked=yes
-      rm -rf "$_probe_root"
-    else
-      _probe_leaked=no
-    fi
-    printf 'rc=%s leaked=%s\n' "$_probe_rc" "$_probe_leaked"
-  )
+# Simulate a host git config file without touching the real one: write a config
+# that sets _GFG_HOST_KEY to a file under GF_TMP_ROOT and export <var> pointing
+# at it. Must run after gf_setup (BeforeEach), which unsets exported GIT_*
+# variables. Used by T-RS-GF-07, T-RS-GF-08.
+# Requires: _gfg_setup has been called (BeforeEach).
+# @arg $1 var — GIT_CONFIG_GLOBAL or GIT_CONFIG_SYSTEM
+# @return 0 on success, 1 when the file cannot be written
+_gfg_export_host_config() {
+  local _gfg_config="${GF_TMP_ROOT}/host-${1}.gitconfig"
+
+  printf '[%s]\n\t%s = host\n' "${_GFG_HOST_KEY%%.*}" "${_GFG_HOST_KEY#*.}" >"$_gfg_config" || return 1
+  export "$1=$_gfg_config"
+}
+
+##
+# A BeforeEach-like hook that leaks its temporary root: it builds the throwaway
+# repository after gf_setup but, unlike _gfg_setup, does not call gf_cleanup
+# when the build fails. Used by T-RS-GF-10 (through gf_probe_setup_leak).
+# @return 0 on success, 1 when gf_setup or the repository build fails
+_gfg_leaky_setup() {
+  gf_setup || return 1
+  _gfg_host="$(gf_init_repo "$_GFG_HOST_NAME")"
 }
 
 # --- テスト本体 ---
@@ -1590,7 +1389,7 @@ Describe 'resolve-sha.lib.sh'
       End
 
       It '[Error] T-RS-IPC-10: 設定ファイルを読み取れなければ終了コード 2'
-        Skip if "file permissions are not enforced (chmod 000 file stays readable)" _ipc_cannot_enforce_unreadable
+        Skip if "file permissions are not enforced (chmod 000 file stays readable)" _perm_not_enforced 000 -r
         When call _ipc_run _ipc_build_unreadable_config
         The status should equal 2
         The stdout should equal ''
@@ -1645,9 +1444,9 @@ Describe 'resolve-sha.lib.sh'
       End
 
       It '[Edge] T-RS-IPC-13: global 設定だけにある extensions.partialClone は該当なし'
-        When call _ipc_run _ipc_build_global_extension_only
-        The status should equal 1
-        The stdout should equal ''
+        When call _ipc_run_visibility _ipc_build_global_extension_only
+        The status should equal 0
+        The stdout should equal 'visible=origin rc=1'
         The stderr should equal ''
       End
     End
@@ -1658,7 +1457,7 @@ Describe 'resolve-sha.lib.sh'
   # repository of the current working directory (git cat-file -e "<sha>^{commit}";
   # exit 0 / non-zero, prints nothing, never calls rs_error).
   # Each example builds a real repository under its own GF_TMP_ROOT, inside
-  # `When` via the _ic_run* wrappers, so a fixture failure surfaces as status 98.
+  # `When` via _commit_run / _ic_run_non_git, so a fixture failure surfaces as status 98.
   # Scenarios: an existing commit (the HEAD OID) is a commit (0);
   # a valid-format OID absent from the repository and an empty string are
   # rejected (non-zero) with nothing on stderr;
@@ -1672,7 +1471,7 @@ Describe 'resolve-sha.lib.sh'
     # 正常系: an OID that names an existing commit
     Context 'When: 正常系'
       It '[Normal] T-RS-IC-01: 存在するコミットは 0'
-        When call _ic_run_head
+        When call _commit_run is_commit @HEAD
         The status should equal 0
         The stdout should equal ''
         The stderr should equal ''
@@ -1682,14 +1481,14 @@ Describe 'resolve-sha.lib.sh'
     # 異常系: values that name no object at all are rejected silently
     Context 'When: 異常系'
       It '[Error] T-RS-IC-02: 存在しない OID は 0 以外'
-        When call _ic_run "$_IC_OID_MISSING"
+        When call _commit_run is_commit "$_ABSENT_OID"
         The status should not equal 0
         The stdout should equal ''
         The stderr should equal ''
       End
 
       It '[Error] T-RS-IC-03: 空文字列は 0 以外'
-        When call _ic_run ""
+        When call _commit_run is_commit ""
         The status should not equal 0
         The stdout should equal ''
         The stderr should equal ''
@@ -1699,28 +1498,28 @@ Describe 'resolve-sha.lib.sh'
     # エッジケース: values that look like objects but do not name a commit
     Context 'When: エッジケース'
       It '[Edge] T-RS-IC-04: 空ツリー SHA は 0 以外'
-        When call _ic_run "$RS_EMPTY_TREE_SHA"
+        When call _commit_run is_commit "$RS_EMPTY_TREE_SHA"
         The status should not equal 0
         The stdout should equal ''
         The stderr should equal ''
       End
 
       It '[Edge] T-RS-IC-05: 40 桁の 0 は 0 以外'
-        When call _ic_run "$_IC_OID_ZERO"
+        When call _commit_run is_commit "$_ZERO_OID"
         The status should not equal 0
         The stdout should equal ''
         The stderr should equal ''
       End
 
       It '[Edge] T-RS-IC-06: 実在するツリーの OID は 0 以外'
-        When call _ic_run_tree
+        When call _commit_run is_commit '@HEAD^{tree}'
         The status should not equal 0
         The stdout should equal ''
         The stderr should equal ''
       End
 
       It '[Edge] T-RS-IC-07: git リポジトリでないディレクトリでは 0 以外'
-        When call _ic_run_non_git "$_IC_OID_MISSING"
+        When call _ic_run_non_git "$_ABSENT_OID"
         The status should not equal 0
         The stdout should equal ''
         The stderr should equal ''
@@ -1733,7 +1532,7 @@ Describe 'resolve-sha.lib.sh'
   # repository of the current working directory, reporting any failure as one
   # "::error::<field>:" line (built on is_commit and rs_error).
   # Each example builds a real repository under its own GF_TMP_ROOT, inside
-  # `When` via the _vc_run* wrappers, so a fixture failure surfaces as status 98.
+  # `When` via _commit_run, so a fixture failure surfaces as status 98.
   # Scenarios: an existing commit (the HEAD OID) succeeds with nothing on
   # stdout or stderr; an empty value is reported in the empty form and a
   # valid-format OID absent from the repository as "commit not found" with
@@ -1746,7 +1545,7 @@ Describe 'resolve-sha.lib.sh'
     # 正常系: an OID that names an existing commit
     Context 'When: 正常系'
       It '[Normal] T-RS-VC-01: 存在するコミットは成功し、何も出さない'
-        When call _vc_run_head GITHUB_BASE_SHA
+        When call _commit_run verify_commit @HEAD GITHUB_BASE_SHA
         The status should equal 0
         The stdout should equal ''
         The stderr should equal ''
@@ -1756,25 +1555,25 @@ Describe 'resolve-sha.lib.sh'
     # 異常系: an empty value or an OID that names no commit is reported as an error
     Context 'When: 異常系'
       It '[Error] T-RS-VC-02: 空の値は空の形式でエラー'
-        When call _vc_run "" GITHUB_HEAD_SHA
+        When call _commit_run verify_commit "" GITHUB_HEAD_SHA
         The status should not equal 0
         The stdout should equal ''
         The stderr should equal '::error::GITHUB_HEAD_SHA: value must not be empty'
       End
 
       It '[Error] T-RS-VC-03: 存在しない OID は field を対象にエラー'
-        When call _vc_run "$_VC_OID_MISSING" before-sha
+        When call _commit_run verify_commit "$_ABSENT_OID" before-sha
         The status should not equal 0
         The stdout should equal ''
         The stderr should start with '::error::before-sha:'
-        The stderr should include "(got: '$_VC_OID_MISSING')"
+        The stderr should include "(got: '$_ABSENT_OID')"
       End
     End
 
     # エッジケース: the empty tree SHA is not exempt, and errors keep stdout empty
     Context 'When: エッジケース'
       It '[Edge] T-RS-VC-04: before 側の空ツリー SHA もエラー'
-        When call _vc_run "$RS_EMPTY_TREE_SHA" before-sha
+        When call _commit_run verify_commit "$RS_EMPTY_TREE_SHA" before-sha
         The status should not equal 0
         The stdout should equal ''
         The stderr should start with '::error::before-sha:'
@@ -1782,7 +1581,7 @@ Describe 'resolve-sha.lib.sh'
       End
 
       It '[Edge] T-RS-VC-05: after 側の空ツリー SHA もエラー'
-        When call _vc_run "$RS_EMPTY_TREE_SHA" after-sha
+        When call _commit_run verify_commit "$RS_EMPTY_TREE_SHA" after-sha
         The status should not equal 0
         The stdout should equal ''
         The stderr should start with '::error::after-sha:'
@@ -1790,7 +1589,7 @@ Describe 'resolve-sha.lib.sh'
       End
 
       It '[Edge] T-RS-VC-06: エラー時は stdout に何も出さない'
-        When call _vc_run "$_VC_OID_MISSING" before-sha
+        When call _commit_run verify_commit "$_ABSENT_OID" before-sha
         The status should not equal 0
         The stdout should equal ''
         The stderr should start with '::error::before-sha:'
@@ -1804,7 +1603,7 @@ Describe 'resolve-sha.lib.sh'
   # line (after is the HEAD OID resolved once; only the first-parent chain counts).
   # Assigned test IDs: T-RS-RHN-01 .. T-RS-RHN-17.
   # Each fixture example builds a real repository under its own GF_TMP_ROOT,
-  # inside `When call` via _rhn_run (or _rhn_run_untrusted), so a fixture failure
+  # inside `When call` via _rhn_run (or _run_untrusted _rhn_run), so a fixture failure
   # surfaces as status 98. `When call` runs without a subshell, so the expected
   # OIDs the builder sets (_rhn_head / _rhn_before) reach the assertions that
   # follow. States a real repository cannot produce use _rhn_run_mocked, which
@@ -1821,8 +1620,9 @@ Describe 'resolve-sha.lib.sh'
   # shallow clone whose first-parent chain hits the boundary), the result is the
   # empty tree (empty-tree); a shallow boundary on the second-parent chain only
   # does not matter, and a shallow clone deep enough still resolves HEAD~N.
-  # With git mocked: a first-parent count greater than N while HEAD~N does not
-  # resolve, and a non-numeric count, are both reported as HEAD~N errors.
+  # With git mocked (異常系 cases T-RS-RHN-15 / T-RS-RHN-16): a first-parent
+  # count greater than N while HEAD~N does not resolve, and a non-numeric count,
+  # are both reported as HEAD~N errors.
   Describe 'resolve_head_n'
     BeforeEach 'gf_setup'
     AfterEach 'gf_cleanup'
@@ -1890,11 +1690,29 @@ Describe 'resolve-sha.lib.sh'
       End
 
       It '[Error] T-RS-RHN-17: git が信頼しない作業ディレクトリはエラー'
-        When call _rhn_run_untrusted 1 _rhn_build_linear 1
+        When call _run_untrusted _rhn_run 1 _rhn_build_linear 1
         The status should not equal 0
         The stdout should equal ''
         The stderr should start with '::error::HEAD:'
         The stderr should include "(got: 'HEAD')"
+        The lines of stderr should equal 1
+      End
+
+      # git is mocked (_rhn_run_mocked) in T-RS-RHN-15 / T-RS-RHN-16: states a real
+      # repository cannot produce, reported as one ::error::HEAD~N: line
+      It '[Error] T-RS-RHN-15: 世代数が N を超えるのに HEAD~N を解決できない場合はエラー'
+        When call _rhn_run_mocked 2 5
+        The status should not equal 0
+        The stdout should equal ''
+        The stderr should equal "::error::HEAD~N: cannot be resolved although history exists (got: '2')"
+        The lines of stderr should equal 1
+      End
+
+      It '[Error] T-RS-RHN-16: 世代数が数値でなければエラー'
+        When call _rhn_run_mocked 2 abc
+        The status should not equal 0
+        The stdout should equal ''
+        The stderr should equal "::error::HEAD~N: cannot count first-parent commits (got: '2')"
         The lines of stderr should equal 1
       End
     End
@@ -1948,25 +1766,6 @@ Describe 'resolve-sha.lib.sh'
         The status should equal 0
         The output should equal "$_rhn_before $_rhn_head fallback-head-n"
         The stderr should equal ''
-      End
-    End
-
-    # 異常系 (git をモック): states a real repository cannot produce, reported as one ::error::HEAD~N: line
-    Context 'When: 異常系 (git をモック)'
-      It '[Error] T-RS-RHN-15: 世代数が N を超えるのに HEAD~N を解決できない場合はエラー'
-        When call _rhn_run_mocked 2 5
-        The status should not equal 0
-        The stdout should equal ''
-        The stderr should equal "::error::HEAD~N: cannot be resolved although history exists (got: '2')"
-        The lines of stderr should equal 1
-      End
-
-      It '[Error] T-RS-RHN-16: 世代数が数値でなければエラー'
-        When call _rhn_run_mocked 2 abc
-        The status should not equal 0
-        The stdout should equal ''
-        The stderr should equal "::error::HEAD~N: cannot count first-parent commits (got: '2')"
-        The lines of stderr should equal 1
       End
     End
   End
@@ -2046,7 +1845,7 @@ Describe 'resolve-sha.lib.sh'
       End
 
       It '[Normal] T-RS-RSH-04: pull_request_target はその他のイベントとして HEAD~N で解決する'
-        When call _rsh_run _rsh_build_linear 5 -- pull_request_target 1 "" "" "" "" "$_RSH_OID_MISSING" "$_RSH_OID_MISSING2" refs/heads/main false
+        When call _rsh_run _rsh_build_linear 5 -- pull_request_target 1 "" "" "" "" "$_ABSENT_OID" "$_ABSENT_OID_2" refs/heads/main false
         The status should equal 0
         The output should equal "$(_rsh_oid HEAD~1) $(_rsh_oid HEAD) fallback-head-n"
         The stderr should equal ''
@@ -2060,14 +1859,14 @@ Describe 'resolve-sha.lib.sh'
       End
 
       It '[Normal] T-RS-RSH-06: push で before が 40 桁の 0 なら HEAD~N で解決する'
-        When call _rsh_run _rsh_build_linear 5 -- push 2 "" "" "$_RSH_OID_ZERO" @HEAD "" "" refs/heads/main false
+        When call _rsh_run _rsh_build_linear 5 -- push 2 "" "" "$_ZERO_OID" @HEAD "" "" refs/heads/main false
         The status should equal 0
         The output should equal "$(_rsh_oid HEAD~2) $(_rsh_oid HEAD) fallback-head-n"
         The stderr should equal ''
       End
 
       It '[Normal] T-RS-RSH-07: push で before が存在しないなら HEAD~N で解決する'
-        When call _rsh_run _rsh_build_linear 5 -- push 2 "" "" "$_RSH_OID_MISSING" @HEAD "" "" refs/heads/main false
+        When call _rsh_run _rsh_build_linear 5 -- push 2 "" "" "$_ABSENT_OID" @HEAD "" "" refs/heads/main false
         The status should equal 0
         The output should equal "$(_rsh_oid HEAD~2) $(_rsh_oid HEAD) fallback-head-n"
         The stderr should equal ''
@@ -2149,18 +1948,18 @@ Describe 'resolve-sha.lib.sh'
       End
 
       It '[Error] T-RS-RSH-17: オーバーライドの before が存在しなければエラー'
-        When call _rsh_run _rsh_build_linear 5 -- push 1 "$_RSH_OID_MISSING" @HEAD "" @HEAD "" "" refs/heads/main false
+        When call _rsh_run _rsh_build_linear 5 -- push 1 "$_ABSENT_OID" @HEAD "" @HEAD "" "" refs/heads/main false
         The status should not equal 0
         The stdout should equal ''
-        The stderr should equal "::error::before-sha: commit not found (got: '$_RSH_OID_MISSING')"
+        The stderr should equal "::error::before-sha: commit not found (got: '$_ABSENT_OID')"
         The lines of stderr should equal 1
       End
 
       It '[Error] T-RS-RSH-18: オーバーライドの after が存在しなければエラー'
-        When call _rsh_run _rsh_build_linear 5 -- push 1 @HEAD "$_RSH_OID_MISSING" "" @HEAD "" "" refs/heads/main false
+        When call _rsh_run _rsh_build_linear 5 -- push 1 @HEAD "$_ABSENT_OID" "" @HEAD "" "" refs/heads/main false
         The status should not equal 0
         The stdout should equal ''
-        The stderr should equal "::error::after-sha: commit not found (got: '$_RSH_OID_MISSING')"
+        The stderr should equal "::error::after-sha: commit not found (got: '$_ABSENT_OID')"
         The lines of stderr should equal 1
       End
 
@@ -2189,10 +1988,10 @@ Describe 'resolve-sha.lib.sh'
       End
 
       It '[Error] T-RS-RSH-22: push で after が存在しないコミットならエラー'
-        When call _rsh_run _rsh_build_linear 5 -- push 1 "" "" @HEAD~1 "$_RSH_OID_MISSING" "" "" refs/heads/main false
+        When call _rsh_run _rsh_build_linear 5 -- push 1 "" "" @HEAD~1 "$_ABSENT_OID" "" "" refs/heads/main false
         The status should not equal 0
         The stdout should equal ''
-        The stderr should equal "::error::GITHUB_AFTER_SHA: commit not found (got: '$_RSH_OID_MISSING')"
+        The stderr should equal "::error::GITHUB_AFTER_SHA: commit not found (got: '$_ABSENT_OID')"
         The lines of stderr should equal 1
       End
 
@@ -2213,37 +2012,37 @@ Describe 'resolve-sha.lib.sh'
       End
 
       It '[Error] T-RS-RSH-25: pull_request で base が存在しなければエラー'
-        When call _rsh_run _rsh_build_linear 5 -- pull_request 1 "" "" "" "" "$_RSH_OID_MISSING" @HEAD refs/heads/main false
+        When call _rsh_run _rsh_build_linear 5 -- pull_request 1 "" "" "" "" "$_ABSENT_OID" @HEAD refs/heads/main false
         The status should not equal 0
         The stdout should equal ''
-        The stderr should equal "::error::GITHUB_BASE_SHA: commit not found (got: '$_RSH_OID_MISSING')"
+        The stderr should equal "::error::GITHUB_BASE_SHA: commit not found (got: '$_ABSENT_OID')"
         The lines of stderr should equal 1
       End
 
       It '[Error] T-RS-RSH-26: pull_request で head が存在しなければエラー'
-        When call _rsh_run _rsh_build_linear 5 -- pull_request 1 "" "" "" "" @HEAD~1 "$_RSH_OID_MISSING" refs/heads/main false
+        When call _rsh_run _rsh_build_linear 5 -- pull_request 1 "" "" "" "" @HEAD~1 "$_ABSENT_OID" refs/heads/main false
         The status should not equal 0
         The stdout should equal ''
-        The stderr should equal "::error::GITHUB_HEAD_SHA: commit not found (got: '$_RSH_OID_MISSING')"
+        The stderr should equal "::error::GITHUB_HEAD_SHA: commit not found (got: '$_ABSENT_OID')"
         The lines of stderr should equal 1
       End
 
       It '[Error] T-RS-RSH-35: git が信頼しないリポジトリでは pull_request もリポジトリのエラー'
-        When call _rsh_run_untrusted _rsh_build_linear 5 -- pull_request 1 "" "" "" "" @HEAD~1 @HEAD refs/heads/main false
+        When call _run_untrusted _rsh_run _rsh_build_linear 5 -- pull_request 1 "" "" "" "" @HEAD~1 @HEAD refs/heads/main false
         The status should not equal 0
         The stdout should equal ''
         The stderr should equal "::error::repository: cannot be opened as a git repository (got: '$_rsh_dir')"
       End
 
       It '[Error] T-RS-RSH-36: git が信頼しないリポジトリではオーバーライドもリポジトリのエラー'
-        When call _rsh_run_untrusted _rsh_build_linear 5 -- push 1 @HEAD~1 @HEAD "" @HEAD "" "" refs/heads/main false
+        When call _run_untrusted _rsh_run _rsh_build_linear 5 -- push 1 @HEAD~1 @HEAD "" @HEAD "" "" refs/heads/main false
         The status should not equal 0
         The stdout should equal ''
         The stderr should equal "::error::repository: cannot be opened as a git repository (got: '$_rsh_dir')"
       End
 
       It '[Error] T-RS-RSH-37: git リポジトリでない作業ディレクトリはリポジトリのエラー'
-        When call _rsh_run _rsh_build_non_git -- pull_request 1 "" "" "" "" "$_RSH_OID_MISSING" "$_RSH_OID_MISSING2" refs/heads/main false
+        When call _rsh_run _rsh_build_non_git -- pull_request 1 "" "" "" "" "$_ABSENT_OID" "$_ABSENT_OID_2" refs/heads/main false
         The status should not equal 0
         The stdout should equal ''
         The stderr should equal "::error::repository: cannot be opened as a git repository (got: '$_rsh_dir')"
@@ -2288,18 +2087,18 @@ Describe 'resolve-sha.lib.sh'
       End
 
       It '[Edge] T-RS-RSH-31: pull_request で base と head が両方不在なら base のエラーだけを出す'
-        When call _rsh_run _rsh_build_linear 5 -- pull_request 1 "" "" "" "" "$_RSH_OID_MISSING" "$_RSH_OID_MISSING2" refs/heads/main false
+        When call _rsh_run _rsh_build_linear 5 -- pull_request 1 "" "" "" "" "$_ABSENT_OID" "$_ABSENT_OID_2" refs/heads/main false
         The status should not equal 0
         The stdout should equal ''
-        The stderr should equal "::error::GITHUB_BASE_SHA: commit not found (got: '$_RSH_OID_MISSING')"
+        The stderr should equal "::error::GITHUB_BASE_SHA: commit not found (got: '$_ABSENT_OID')"
         The lines of stderr should equal 1
       End
 
       It '[Edge] T-RS-RSH-32: オーバーライドの両方が不在なら before のエラーだけを出す'
-        When call _rsh_run _rsh_build_linear 5 -- push 1 "$_RSH_OID_MISSING" "$_RSH_OID_MISSING2" "" @HEAD "" "" refs/heads/main false
+        When call _rsh_run _rsh_build_linear 5 -- push 1 "$_ABSENT_OID" "$_ABSENT_OID_2" "" @HEAD "" "" refs/heads/main false
         The status should not equal 0
         The stdout should equal ''
-        The stderr should equal "::error::before-sha: commit not found (got: '$_RSH_OID_MISSING')"
+        The stderr should equal "::error::before-sha: commit not found (got: '$_ABSENT_OID')"
         The lines of stderr should equal 1
       End
 
@@ -2311,7 +2110,7 @@ Describe 'resolve-sha.lib.sh'
       End
 
       It '[Edge] T-RS-RSH-34: push で before が無効かつ履歴が N に満たなければ empty-tree で解決する'
-        When call _rsh_run _rsh_build_linear 1 -- push 3 "" "" "$_RSH_OID_ZERO" @HEAD "" "" refs/heads/main false
+        When call _rsh_run _rsh_build_linear 1 -- push 3 "" "" "$_ZERO_OID" @HEAD "" "" refs/heads/main false
         The status should equal 0
         The output should equal "$RS_EMPTY_TREE_SHA $(_rsh_oid HEAD) empty-tree"
         The stderr should equal ''
@@ -2438,7 +2237,7 @@ Describe 'resolve-sha.lib.sh'
       End
 
       It '[Error] T-RS-EO-16: 出力先が読み取り専用ならエラーで、内容を変えない'
-        Skip if "file permissions are not enforced (chmod 444 file stays writable)" _eo_cannot_enforce_read_only
+        Skip if "file permissions are not enforced (chmod 444 file stays writable)" _perm_not_enforced 444 -w
         When call _eo_run_read_only "$_eo_file" "$_EO_OID_BEFORE" "$_EO_OID_AFTER" event
         The status should equal 1
         The stdout should equal ''
@@ -2519,7 +2318,7 @@ Describe 'resolve-sha.lib.sh'
       # 異常系: creating the output file fails after gf_setup
       Context 'When: 異常系'
         It '[Error] T-RS-EO-19: 出力ファイルを作れないと、作った一時ルートを削除して失敗する'
-          When call _hook_probe_setup_leak _eo_setup dir "$_EO_OUTPUT_NAME"
+          When call gf_probe_setup_leak _eo_setup dir "$_EO_OUTPUT_NAME"
           The status should equal 0
           The output should equal "rc=1 leaked=no"
         End
@@ -2613,7 +2412,7 @@ End
 # the real ci-platform checkout under ShellSpec. Every example runs the fixture
 # with a throwaway repository as the cwd (_gfg_in_host), so a missing guard
 # acts on that repository only.
-# Assigned test IDs: T-RS-GF-01 .. T-RS-GF-05
+# Assigned test IDs: T-RS-GF-01 .. T-RS-GF-11
 Describe 'git-fixture.sh'
   BeforeEach '_gfg_setup'
   AfterEach 'gf_cleanup'
@@ -2669,9 +2468,78 @@ Describe 'git-fixture.sh'
     # 異常系: building the throwaway repository fails after gf_setup
     Context 'When: 異常系'
       It '[Error] T-RS-GF-05: リポジトリ作成に失敗すると、作った一時ルートを削除して失敗する'
-        When call _hook_probe_setup_leak _gfg_setup file "$_GFG_HOST_NAME"
+        When call gf_probe_setup_leak _gfg_setup file "$_GFG_HOST_NAME"
         The status should equal 0
         The output should equal "rc=1 leaked=no"
+      End
+    End
+  End
+
+  ##
+  # gf_run_in: run a command in a directory, in a subshell, with the host's
+  # global / system git config ignored. Shared by the unit and functional specs
+  # as the single "run the code under test in a fixture" wrapper.
+  # Scenarios: the command runs with <dir> as the working directory; a key set
+  # only in the host's global config or only in the system config is not seen;
+  # an empty <dir> is rejected without running the command in the cwd.
+  Describe 'gf_run_in'
+    # 正常系: the command runs in <dir> with the host git config ignored
+    Context 'When: 正常系'
+      It '[Normal] T-RS-GF-06: 指定したディレクトリを cwd としてコマンドを実行する'
+        When call gf_run_in "$_gfg_host" pwd
+        The status should equal 0
+        The output should equal "$_gfg_host"
+      End
+
+      It '[Normal] T-RS-GF-07: ホストのグローバル git 設定を読まない'
+        _gfg_export_host_config GIT_CONFIG_GLOBAL || return 1
+        When call gf_run_in "$_gfg_host" git config --get "$_GFG_HOST_KEY"
+        The status should equal 1
+        The output should equal ""
+      End
+
+      It '[Normal] T-RS-GF-08: ホストのシステム git 設定を読まない'
+        _gfg_export_host_config GIT_CONFIG_SYSTEM || return 1
+        When call gf_run_in "$_gfg_host" git config --get "$_GFG_HOST_KEY"
+        The status should equal 1
+        The output should equal ""
+      End
+    End
+
+    # 異常系: an empty directory is rejected before the command runs
+    Context 'When: 異常系'
+      It '[Error] T-RS-GF-09: 空のディレクトリを拒否し、cwd でコマンドを実行しない'
+        When call _gfg_in_host gf_run_in "" git config uploadpack.allowFilter true
+        The status should be failure
+        The stderr should include 'git-fixture: gf_run_in: empty repository path'
+        The result of function _gfg_host_allow_filter should equal "$_GFG_UNSET"
+      End
+    End
+  End
+
+  ##
+  # gf_probe_setup_leak: run a BeforeEach hook with its fixture step after
+  # gf_setup forced to fail, and report whether the hook leaves its temporary
+  # root behind. (A hook that cleans up is covered by T-RS-GF-05, T-RS-EO-19
+  # and T-RS-MAINF-24.)
+  # Scenarios: a hook that does not clean up is reported as leaked; a hook
+  # that never creates a root is reported as unknown.
+  Describe 'gf_probe_setup_leak'
+    # 異常系: the hook under probe leaks its root
+    Context 'When: 異常系'
+      It '[Error] T-RS-GF-10: 一時ルートを削除しないフックは leaked=yes と報告する'
+        When call gf_probe_setup_leak _gfg_leaky_setup file "$_GFG_HOST_NAME"
+        The status should equal 0
+        The output should equal "rc=1 leaked=yes"
+      End
+    End
+
+    # エッジケース: the hook under probe never calls mktemp
+    Context 'When: エッジケース'
+      It '[Edge] T-RS-GF-11: 一時ルートを作らないフックは leaked=unknown と報告する'
+        When call gf_probe_setup_leak false file "$_GFG_HOST_NAME"
+        The status should equal 0
+        The output should equal "rc=1 leaked=unknown"
       End
     End
   End

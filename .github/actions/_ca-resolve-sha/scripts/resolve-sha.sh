@@ -25,6 +25,12 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 #              failure: normalize_commit_count -> validate_override ->
 #              resolve_sha -> emit_outputs. Error lines on stderr come from
 #              the library; main prints nothing itself.
+#              validate_override is called for validation only and its
+#              decision ("none" / "override") is discarded on purpose:
+#              resolve_sha makes the override decision itself, once, from the
+#              same two inputs. A passed validate_override guarantees they are
+#              either both empty ("none") or both valid OIDs ("override"), so
+#              resolve_sha's "both non-empty" decision always matches it.
 # @env INPUT_COMMIT_COUNT, INPUT_BEFORE_SHA, INPUT_AFTER_SHA — action inputs
 # @env GITHUB_EVENT_NAME, GITHUB_REF, GITHUB_EVENT_DELETED — event context
 # @env GITHUB_BEFORE_SHA, GITHUB_AFTER_SHA — push event payload range
@@ -35,6 +41,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 main() {
   local _n _range _before _after _resolution
   _n=$(normalize_commit_count "${INPUT_COMMIT_COUNT:-}") || return 1
+  # Validation only: the "none" / "override" decision is made by resolve_sha
   validate_override "${INPUT_BEFORE_SHA:-}" "${INPUT_AFTER_SHA:-}" >/dev/null || return 1
   _range=$(resolve_sha "${GITHUB_EVENT_NAME:-}" "$_n" \
     "${INPUT_BEFORE_SHA:-}" "${INPUT_AFTER_SHA:-}" \
