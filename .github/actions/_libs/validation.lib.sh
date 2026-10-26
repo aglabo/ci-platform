@@ -85,6 +85,7 @@ validate_version() {
 #              The digit-count check rejects values longer than max before the
 #              arithmetic comparison, so 64-bit overflow cannot wrap them into range.
 #              Reports the result by exit status only; error messages are the caller's job.
+#              Format matching uses the C locale, so non-ASCII digits are rejected.
 # @arg $1 value — the value to validate
 # @arg $2 max   — upper bound (trusted internal argument; not validated)
 # @stdout (none)
@@ -93,6 +94,7 @@ validate_version() {
 validate_positive_int() {
   local value="$1"
   local max="$2"
+  local LC_ALL=C
 
   [[ "$value" =~ ^[1-9][0-9]*$ ]] || return 1
   ((${#value} <= ${#max})) || return 1

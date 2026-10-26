@@ -19,16 +19,37 @@ Include "${SHELLSPEC_PROJECT_ROOT}/.github/actions/_libs/validation.lib.sh"
 ## Upper bound passed as <max> in every case (tasks.md T-02 premise).
 _VPI_MAX=1000
 
+## Value "1" followed by non-ASCII superscript two; used by T-RS-VPI-15.
+_VPI_SUPERSCRIPT_VALUE="1²"
+
+## UTF-8 locale (other than C.UTF-8) whose collation puts '²' inside 0-9; used by T-RS-VPI-15.
+_VPI_UTF8_LOCALE="en_US.UTF-8"
+
+# 関数
+
+##
+# Run validate_positive_int with LC_ALL set to a UTF-8 locale (function-local, so
+# it never leaks between examples), to prove the format check does not depend on
+# the caller's locale collation.
+# @arg $1 value — the value to validate
+# @arg $2 max   — upper bound
+# @return validate_positive_int's exit code
+_vpi_run_utf8() {
+  local LC_ALL="$_VPI_UTF8_LOCALE"
+  validate_positive_int "$@"
+}
+
 # --- テスト本体 ---
 
 ##
 # validation.lib.sh: shared validation helpers for composite actions.
-# Assigned test IDs: T-RS-VPI-01 .. T-RS-VPI-14
+# Assigned test IDs: T-RS-VPI-01 .. T-RS-VPI-15
 Describe 'validation.lib.sh'
   ##
   # validate_positive_int: accept a positive integer within 1..<max>, report by exit status only.
   # Scenarios: positive integers within the allowed range are accepted;
-  #            values whose format is not a positive integer are rejected;
+  #            values whose format is not a positive integer are rejected,
+  #            including non-ASCII digits under a UTF-8 locale (C-locale matching);
   #            values above <max> are rejected without any output;
   #            values with more digits than <max> are rejected before 64-bit overflow can occur.
   Describe 'validate_positive_int'
@@ -102,6 +123,13 @@ Describe 'validation.lib.sh'
 
       It '[Error] T-RS-VPI-10: "1001" (max 1000) -> stdout と stderr は空'
         When call validate_positive_int "1001" "$_VPI_MAX"
+        The status should not equal 0
+        The stdout should equal ''
+        The stderr should equal ''
+      End
+
+      It '[Error] T-RS-VPI-15: "1²" (max 1000, UTF-8 ロケール) -> 終了コード 0 以外、stderr は空'
+        When call _vpi_run_utf8 "$_VPI_SUPERSCRIPT_VALUE" "$_VPI_MAX"
         The status should not equal 0
         The stdout should equal ''
         The stderr should equal ''
