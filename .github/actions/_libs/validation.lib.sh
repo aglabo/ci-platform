@@ -8,6 +8,9 @@
 # https://opensource.org/licenses/MIT
 # shellcheck shell=bash
 
+[ -n "${VALIDATION_LIB_LOADED:-}" ] && return 0
+VALIDATION_LIB_LOADED=1
+
 ##
 # @description Validate a value against a whitelist ERE regex pattern.
 #              The pattern is automatically anchored (^ / $) if not already present.
@@ -74,4 +77,26 @@ validate_version() {
 
   validate_symbol "$version" "$field_name" \
     '^[vV]?[0-9]+\.[0-9]+(\.[0-9]+)?$' 0
+}
+
+##
+# @description Validate that a value is a positive integer not greater than max.
+#              Checks run in order: format, digit count, numeric comparison.
+#              The digit-count check rejects values longer than max before the
+#              arithmetic comparison, so 64-bit overflow cannot wrap them into range.
+#              Reports the result by exit status only; error messages are the caller's job.
+#              Format matching uses the C locale, so non-ASCII digits are rejected.
+# @arg $1 value — the value to validate
+# @arg $2 max   — upper bound (trusted internal argument; not validated)
+# @stdout (none)
+# @stderr (none)
+# @return 0 if valid, non-zero otherwise
+validate_positive_int() {
+  local value="$1"
+  local max="$2"
+  local LC_ALL=C
+
+  [[ "$value" =~ ^[1-9][0-9]*$ ]] || return 1
+  ((${#value} <= ${#max})) || return 1
+  ((value <= max))
 }
