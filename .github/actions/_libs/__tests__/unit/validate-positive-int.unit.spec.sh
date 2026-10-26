@@ -1,4 +1,12 @@
-#!/bin/bash
+#!/usr/bin/env bash
+# src: .github/actions/_libs/validation.lib.sh
+# @(#) : validation utility functions for composite actions
+#
+# Copyright (c) 2026- atsushifx <https://github.com/atsushifx>
+#
+# This software is released under the MIT License.
+# https://opensource.org/licenses/MIT
+
 # shellcheck shell=bash
 # shellcheck disable=SC2034,SC2154
 
@@ -70,7 +78,7 @@ Describe 'validation.lib.sh'
       End
     End
 
-    # 異常系: values whose format is not a positive integer, or above <max>
+    # 異常系: values whose format is not a positive integer, values above <max>, or an invalid <max> (exit 2)
     Context 'When: 異常系'
       It '[Error] T-RS-VPI-03: "0" (max 1000) -> 終了コード 0 以外'
         When call validate_positive_int "0" "$_VPI_MAX"
@@ -127,6 +135,34 @@ Describe 'validation.lib.sh'
         The stdout should equal ''
         The stderr should equal ''
       End
+
+      It '[Error] T-RS-VPI-16: "1" (max "9223372036854775807", 19 桁) -> 終了コード 2'
+        When call validate_positive_int "1" "9223372036854775807"
+        The status should equal 2
+        The stdout should equal ''
+        The stderr should equal ''
+      End
+
+      It '[Error] T-RS-VPI-17: "1" (max "0") -> 終了コード 2'
+        When call validate_positive_int "1" "0"
+        The status should equal 2
+        The stdout should equal ''
+        The stderr should equal ''
+      End
+
+      It '[Error] T-RS-VPI-18: "1" (max "") -> 終了コード 2'
+        When call validate_positive_int "1" ""
+        The status should equal 2
+        The stdout should equal ''
+        The stderr should equal ''
+      End
+
+      It '[Error] T-RS-VPI-19: "1" (max "01") -> 終了コード 2'
+        When call validate_positive_int "1" "01"
+        The status should equal 2
+        The stdout should equal ''
+        The stderr should equal ''
+      End
     End
 
     # エッジケース: values with more digits than <max>, including 64-bit overflow inputs
@@ -155,6 +191,13 @@ Describe 'validation.lib.sh'
       It '[Edge] T-RS-VPI-14: "9223372036854775808" (max 1000) -> 終了コード 0 以外'
         When call validate_positive_int "9223372036854775808" "$_VPI_MAX"
         The status should not equal 0
+        The stdout should equal ''
+        The stderr should equal ''
+      End
+
+      It '[Edge] T-RS-VPI-20: "999999999999999999" (max "999999999999999999", 18 桁) -> 終了コード 0'
+        When call validate_positive_int "999999999999999999" "999999999999999999"
+        The status should equal 0
         The stdout should equal ''
         The stderr should equal ''
       End

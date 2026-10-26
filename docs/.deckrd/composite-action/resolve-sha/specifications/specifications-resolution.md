@@ -1,8 +1,8 @@
 ---
 title: "Design Specification: _ca-resolve-sha (Resolution)"
-based-on: requirements.md v2.1.0
+based-on: requirements.md v2.1.1
 status: Draft
-version: 2.1.0
+version: 2.2.3
 created: "2026-10-25"
 ---
 
@@ -187,20 +187,26 @@ head-n-resolution と commit-verification は、互いに呼び出さない。
 
 解決処理が使う git 操作は、次の 4 種類に限る (REQ-NF-002)。
 
-| 操作                         | 用途                                                   |
-| ---------------------------- | ------------------------------------------------------ |
-| 設定の参照                   | partial clone であるかを判定する                       |
-| リビジョンの解決             | HEAD と HEAD~N を、コミットとして完全長 OID へ解決する |
-| コミット存在の確認           | 指定 SHA がコミットとして存在するかを確認する          |
-| 第一親をたどった世代数の取得 | HEAD から第一親をたどって到達できるコミットを数える    |
+| 操作                         | 用途                                                    |
+| ---------------------------- | ------------------------------------------------------- |
+| リポジトリの確認             | 作業ディレクトリを git リポジトリとして開けるか確認する |
+| 設定の参照                   | partial clone であるかを判定する                        |
+| リビジョンの解決             | HEAD と HEAD~N を、コミットとして完全長 OID へ解決する  |
+| コミット存在の確認           | 指定 SHA がコミットとして存在するかを確認する           |
+| 第一親をたどった世代数の取得 | HEAD から第一親をたどって到達できるコミットを数える     |
 
 - HEAD~N の「~N」は、第一親を N 世代たどることを指す。merge コミットでは、第二親以降をたどらない。
 - 履歴の取得と GitHub API の呼び出しは行わない。
 - 設定の参照はオブジェクトを読まないため、partial clone でも遅延取得を起動しない。
 
 <!-- impl-note: git コマンド
-  - 設定の参照: git config --get-regexp '^(extensions\.partialclone|remote\..*\.promisor)$'
-    終了コード 0 = 該当あり (R-RES-008)、1 = 該当なし、それ以外 = 参照の失敗 (R-RES-010)。
+  - リポジトリの確認: git rev-parse --git-dir (終了コード 0 以外 = R-RES-026。safe.directory の拒否は 128)
+  - 設定の参照: 次のいずれかに当たれば該当あり (R-RES-008)。値で判定し、キーの有無だけでは判定しない。
+    - git config --local --get extensions.partialclone (リポジトリの設定だけを見る。git はグローバル等の値を無視する)
+    - git config --type=bool --get-regexp '^remote\..*\.promisor$' の値に true がある
+    - git config --get-regexp '^remote\..*\.partialclonefilter$' が該当する (promisor が無くても遅延取得を起動し得る)
+    各呼び出しの終了コード 0 / 1 以外 (bool として不正な値等) は参照の失敗 (R-RES-010)。
+    構文として壊れた .git/config は git rev-parse --git-dir も失敗させるため、R-RES-026 が先に当たる。
   - リビジョンの解決: git rev-parse --verify -q "<rev>^{commit}"
   - コミット存在の確認: git cat-file -e "<sha>^{commit}"
   - 世代数の取得: git rev-list --first-parent --count <head-oid>
@@ -239,14 +245,15 @@ Evaluation MUST follow this order:
 | --------- | ---: | -------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
 | R-RES-001 |    1 | `GITHUB_EVENT_NAME` が空または未設定                                                                                 | エラー終了する。オーバーライドの有無は問わない                                |
 | R-RES-009 |    2 | オーバーライドの判定結果が `none` でイベントが push であり、ref が `refs/heads/` で始まらないか、削除フラグが `true` | エラー終了する                                                                |
-| R-RES-010 |    3 | partial clone を判定するための設定の参照に失敗した                                                                   | エラー終了する。partial clone ではないとして進まない                          |
-| R-RES-008 |    4 | 作業ディレクトリのリポジトリが partial clone                                                                         | エラー終了する。オブジェクトは参照しない                                      |
-| R-RES-002 |    5 | オーバーライドの判定結果が `override`                                                                                | before、after の順に 4.3 で検証し、成功なら (指定値, 指定値, override) を返す |
-| R-RES-003 |    6 | イベントが push で、before が空または 40 桁の 0                                                                      | 4.2 の HEAD~N 解決を行う                                                      |
-| R-RES-004 |    7 | イベントが push で、before がコミットとして存在しない                                                                | 4.2 の HEAD~N 解決を行う                                                      |
-| R-RES-005 |    8 | イベントが push で、before がコミットとして存在する                                                                  | github.sha を 4.3 で検証し、成功なら (before, github.sha, event) を返す       |
-| R-RES-006 |    9 | イベントが pull_request                                                                                              | base、head の順に 4.3 で検証し、成功なら (base, head, event) を返す           |
-| R-RES-007 |   10 | 上記以外のイベント (workflow_dispatch、pull_request_target、pull_request_review、merge_group 等)                     | 4.2 の HEAD~N 解決を行う                                                      |
+| R-RES-026 |    3 | 作業ディレクトリを git リポジトリとして開けない (git リポジトリでない、git が作業ディレクトリを信頼しない等)         | エラー終了する。オブジェクトと設定は参照しない                                |
+| R-RES-010 |    4 | partial clone を判定するための設定の参照に失敗した                                                                   | エラー終了する。partial clone ではないとして進まない                          |
+| R-RES-008 |    5 | 作業ディレクトリのリポジトリが partial clone                                                                         | エラー終了する。オブジェクトは参照しない                                      |
+| R-RES-002 |    6 | オーバーライドの判定結果が `override`                                                                                | before、after の順に 4.3 で検証し、成功なら (指定値, 指定値, override) を返す |
+| R-RES-003 |    7 | イベントが push で、before が空または 40 桁の 0                                                                      | 4.2 の HEAD~N 解決を行う                                                      |
+| R-RES-004 |    8 | イベントが push で、before がコミットとして存在しない                                                                | 4.2 の HEAD~N 解決を行う                                                      |
+| R-RES-005 |    9 | イベントが push で、before がコミットとして存在する                                                                  | github.sha を 4.3 で検証し、成功なら (before, github.sha, event) を返す       |
+| R-RES-006 |   10 | イベントが pull_request                                                                                              | base、head の順に 4.3 で検証し、成功なら (base, head, event) を返す           |
+| R-RES-007 |   11 | 上記以外のイベント (workflow_dispatch、pull_request_target、pull_request_review、merge_group 等)                     | 4.2 の HEAD~N 解決を行う                                                      |
 
 No reordering is permitted.
 
@@ -255,10 +262,12 @@ No reordering is permitted.
 - R-RES-009 は削除フラグを先に判定する。タグの削除のように両方の条件に当たる場合は、削除のエラーだけを出す。
 - R-RES-009 は、オーバーライド指定時と push 以外のイベントには適用しない。ref がタグの workflow_dispatch 等は R-RES-007 で解決する。
 - R-RES-003 から R-RES-005 は、R-RES-009 を通過した push にだけ適用される。
+- R-RES-026 は、R-RES-010 と R-RES-008 の前に判定する。git が作業ディレクトリを信頼しない場合、設定の参照は該当なしとなり、
+  コミット検証 (4.3) は実在するコミットを「見つからない」と誤って報告するため。
 - R-RES-010 と R-RES-008 は、git の設定だけで判定する。設定の参照は「該当あり」「該当なし」「参照の失敗」の 3 つを区別する。
-  - 該当ありは R-RES-008、参照の失敗 (設定ファイルの破損、読み取り権限の不足等) は R-RES-010 でエラーとする。
+  - 該当ありは R-RES-008、参照の失敗 (bool として不正な値、読み取り権限の不足等) は R-RES-010 でエラーとする。
+  - リポジトリの設定ファイルが構文として壊れている場合は、git がリポジトリを開けないため R-RES-026 で先にエラーとなる。
   - 該当なしの場合だけ、partial clone ではないとして次の規則へ進む。
-  - git リポジトリでない作業ディレクトリでは、該当なしとなり得る。この場合は、後続のコミット検証 (4.3) または HEAD の解決 (R-RES-011) でエラーとなる。
 - R-RES-002 が成立した場合、イベント種別は参照しない。
 - R-RES-004 の確認では、エラーを出さない。確認の失敗は、原因 (不在、破損) を区別せずフォールバックの条件とする。
 - R-RES-005 で github.sha の検証に失敗した場合は、HEAD~N へフォールバックせずエラーにする。R-RES-006 も同様とする。
@@ -278,7 +287,8 @@ Evaluation MUST follow this order:
 
 No reordering is permitted.
 
-- R-RES-011 の対象には、git リポジトリでない場合、コミットが 1 件もない場合、git が作業ディレクトリを信頼しない場合を含む。
+- R-RES-011 の対象には、コミットが 1 件もない場合を含む。git リポジトリでない場合と git が作業ディレクトリを信頼しない場合は、
+  イベント解決では R-RES-026 で先にエラーとなる。
 - R-RES-012 から R-RES-015 では、after に常に R-RES-011 で解決した HEAD の OID を使う。
 
 ### 4.3 Commit Verification
@@ -304,8 +314,10 @@ No reordering is permitted.
 | Rule ID   | 対象                                    | 問題                         |
 | --------- | --------------------------------------- | ---------------------------- |
 | R-RES-001 | `GITHUB_EVENT_NAME`                     | 値が空 (空の形式を使う)      |
+| R-RES-009 | `GITHUB_REF` (ref が空の場合)           | 値が空 (空の形式を使う)      |
 | R-RES-009 | `GITHUB_REF` (ref がブランチでない場合) | ブランチの ref ではない      |
 | R-RES-009 | `GITHUB_EVENT_DELETED` (削除の場合)     | ref の削除には対応しない     |
+| R-RES-026 | `repository`                            | git リポジトリとして開けない |
 | R-RES-010 | `repository`                            | 設定を参照できない           |
 | R-RES-008 | `repository`                            | partial clone には対応しない |
 | R-RES-011 | `HEAD`                                  | コミットとして解決できない   |
@@ -329,12 +341,21 @@ No reordering is permitted.
 | push でタグを削除 (オーバーライドなし)                            | エラー (R-RES-009)                              | REQ-F-020 | 削除フラグが `true`                                         |
 | push でブランチを削除 (オーバーライドなし)                        | エラー (R-RES-009)                              | REQ-F-020 | ref はデフォルトブランチに戻るが、削除フラグで検出する      |
 | push で削除フラグが `false` または空、ref が `refs/heads/*`       | R-RES-009 を通過                                | REQ-F-020 | `true` 以外は削除とみなさない                               |
+| push で ref が空 (オーバーライドなし、削除フラグが `true` 以外)   | エラー (R-RES-009、空の形式)                    | REQ-F-020 | 空の値は index 3.3 の空の形式で報告する                     |
+| push で削除フラグが `true`、ref が空 (オーバーライドなし)         | エラー (R-RES-009、削除のエラーだけ)            | REQ-F-020 | 削除フラグを先に判定する                                    |
 | push でタグの ref、オーバーライドあり                             | override (R-RES-002)                            | REQ-F-020 | R-RES-009 はオーバーライドに適用しない (DR-25)              |
 | workflow_dispatch で ref がタグ                                   | その他イベント (R-RES-007)                      | REQ-F-009 | R-RES-009 は push にだけ適用する                            |
 | partial clone (`--filter=blob:none` 等) のリポジトリ              | エラー (R-RES-008)。取得は起動しない            | REQ-F-019 | 設定だけで判定し、オブジェクトを参照しない                  |
 | `extensions.partialClone` だけが設定されたリポジトリ              | エラー (R-RES-008)                              | REQ-F-019 | promisor remote が無くても partial clone として扱う         |
+| `remote.<name>.partialclonefilter` だけが設定されたリポジトリ     | エラー (R-RES-008)                              | REQ-F-019 | promisor が無くても、その remote から遅延取得し得る         |
+| `remote.<name>.promisor` が `false`                               | partial clone ではない (R-RES-008 に当たらない) | REQ-F-019 | git は promisor remote として扱わない                       |
+| `extensions.partialClone` がグローバル等の設定だけにある          | partial clone ではない (R-RES-008 に当たらない) | REQ-F-019 | git はリポジトリ以外の設定のこの値を無視する                |
+| `remote.<name>.promisor` が bool として不正な値                   | エラー (R-RES-010)                              | REQ-F-019 | 判定できないまま partial clone ではないとして進まない       |
 | shallow clone のリポジトリ                                        | partial clone ではない (R-RES-008 に当たらない) | REQ-F-019 | shallow clone は promisor remote を持たない                 |
-| 設定ファイルが破損している、または読み取れない                    | エラー (R-RES-010)                              | REQ-F-019 | 判定できないまま partial clone ではないとして進まない       |
+| リポジトリの設定ファイルが構文として壊れている                    | エラー (R-RES-026)                              | REQ-F-014 | git がリポジトリを開けない                                  |
+| リポジトリを開けた後に設定を参照できない                          | エラー (R-RES-010)                              | REQ-F-019 | 判定できないまま partial clone ではないとして進まない       |
+| 作業ディレクトリが git リポジトリでない                           | エラー (R-RES-026)                              | REQ-F-014 | 設定とコミットの判定が意味を持たない                        |
+| git が作業ディレクトリを信頼しない (`safe.directory`)             | エラー (R-RES-026)                              | REQ-F-014 | 実在するコミットを「見つからない」と誤報告しない            |
 | push で before が 40 桁の 0 (新規ブランチ)                        | HEAD~N 解決 (R-RES-003)                         | REQ-F-005 | 旧 SHA が無い                                               |
 | push で before が空文字列                                         | HEAD~N 解決 (R-RES-003)                         | REQ-F-005 | 旧 SHA が無い                                               |
 | push で before がコミットとして存在しない                         | HEAD~N 解決 (R-RES-004)                         | REQ-F-006 | force push で旧 SHA が失われている                          |
@@ -372,7 +393,7 @@ No reordering is permitted.
 | REQ-F-008      | R-RES-006                                                        | pull_request の base と head をそのまま採用し、検証だけを行う |
 | REQ-F-009      | R-RES-007, R-RES-012                                             | その他イベント                                                |
 | REQ-F-013      | R-RES-002, R-RES-005, R-RES-006, R-RES-021, R-RES-024, R-RES-025 | コミットの実在検証。空ツリー SHA は免除しない                 |
-| REQ-F-014      | R-RES-011, R-RES-013, R-RES-015                                  | HEAD 解決不能と git 障害のエラー                              |
+| REQ-F-014      | R-RES-011, R-RES-013, R-RES-015, R-RES-026                       | HEAD 解決不能と git 障害のエラー                              |
 | REQ-F-018      | R-RES-001                                                        | イベント名の必須検証                                          |
 | REQ-F-019      | R-RES-008, R-RES-010                                             | partial clone の拒否。判定不能も拒否する                      |
 | REQ-F-020      | R-RES-009, §5                                                    | push の ref 種別の検証。オーバーライド指定時は適用しない      |
@@ -401,3 +422,7 @@ No reordering is permitted.
 | 2026-10-25 | 1.1.0   | Apply requirements v1.2.0: event name first, event SHA format check, commit type check, R-RES- IDs                                                              |
 | 2026-10-25 | 2.0.0   | Apply requirements v2.0.0: remove format/type checks (R-RES-023), add partial clone rule R-RES-008                                                              |
 | 2026-10-25 | 2.1.0   | Apply requirements v2.1.0: add R-RES-009 (push ref check), R-RES-010 (config read failure), retire R-RES-022 (empty tree exemption), first-parent shallow cases |
+| 2026-10-26 | 2.2.0   | Add R-RES-026 (repository cannot be opened, incl. safe.directory) before R-RES-010                                                                              |
+| 2026-10-26 | 2.2.1   | Detect partial clone by value (requirements v2.1.1): promisor true, partialclonefilter, local extensions.partialClone; add edge cases                           |
+| 2026-10-26 | 2.2.2   | Clarify that a syntactically broken .git/config fails at R-RES-026, not R-RES-010                                                                               |
+| 2026-10-26 | 2.2.3   | Empty GITHUB_REF on push uses the empty error form (R-RES-009); add edge cases                                                                                  |

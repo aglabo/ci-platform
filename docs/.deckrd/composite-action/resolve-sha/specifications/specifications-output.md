@@ -2,7 +2,7 @@
 title: "Design Specification: _ca-resolve-sha (出力と resolution)"
 based-on: requirements.md v2.1.0
 status: Draft
-version: 1.2.0
+version: 1.2.1
 created: "2026-10-25"
 ---
 
@@ -205,6 +205,7 @@ No reordering is permitted.
 | R-OUT-003 | `GITHUB_OUTPUT`          | 値が空 (空の形式を使う)        |
 | R-OUT-004 | `GITHUB_OUTPUT`          | 書き込みできない               |
 | R-OUT-005 | 改行を含む出力名         | 値が改行 (CR または LF) を含む |
+| R-OUT-006 | `resolution` (値が空)    | 値が空 (空の形式を使う)        |
 | R-OUT-006 | `resolution`             | 4 値のいずれでもない           |
 | R-OUT-008 | 書き込みに失敗した出力名 | 書き込みに失敗した             |
 
@@ -269,3 +270,4 @@ No reordering is permitted.
 | 2026-10-25 | 1.1.0   | Apply requirements v1.2.0: partial write on I/O failure, empty-tree label, R-OUT- renumbering                           |
 | 2026-10-25 | 1.1.1   | Follow requirements v2.0.0 (based-on refresh only)                                                                      |
 | 2026-10-25 | 1.2.0   | Apply requirements v2.1.0: override with empty tree before is an error, empty-tree route condition, CR in newline check |
+| 2026-10-26 | 1.2.1   | Empty resolution uses the empty error form (R-OUT-006)                                                                  |
