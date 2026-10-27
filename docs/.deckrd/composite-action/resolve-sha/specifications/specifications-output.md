@@ -262,7 +262,7 @@ No reordering is permitted.
 
 ## 8. Change History
 
-<!-- SemVer: see .claude/rules/deckrd-rule-document-versioning.md -->
+<!-- SemVer: see docs/.deckrd/rules/deckrd-rule-document-versioning.md -->
 
 | Date       | Version | Description                                                                                                             |
 | ---------- | ------- | ----------------------------------------------------------------------------------------------------------------------- |

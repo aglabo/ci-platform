@@ -232,9 +232,9 @@ specifications-index.md §3.5 の impl-note を補う。tasks.md はこの記述
 
 ## 3. Change History
 
-<!-- SemVer: MAJOR = approach discarded, MINOR = decision criterion added,
-     PATCH = clarification only. Keep frontmatter `version` equal to the newest row.
-     `based-on` must cite a three-part version that exists in specifications.md.
+<!-- SemVer: MAJOR = approach discarded, MINOR = interface, contract, premise or design policy changed,
+     PATCH = additions within the existing policy or clarification. Keep frontmatter `version` equal to the newest row.
+     `based-on` must cite a three-part version that exists in specifications-index.md.
      See docs/.deckrd/rules/deckrd-rule-document-versioning.md -->
 
 | Date       | Version | Description                                                                                                                            |
