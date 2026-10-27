@@ -22,7 +22,7 @@ spec と impl はこの一覧を参照し、関数名・シグネチャ・所在
 | テストの略語 | 関数                                          | 所在                                                 | 担当仕様                      |
 | ------------ | --------------------------------------------- | ---------------------------------------------------- | ----------------------------- |
 | VOF          | `validate_output_file <file>`                 | `.github/actions/_libs/output.lib.sh`                | specifications-output.md      |
-| WMO          | `write_multiline_output <file> <key> <value>` | `.github/actions/_libs/output.lib.sh`                | specifications-output.md      |
+| WMO          | `write_multiline_output <file> <key> [<line>...]` | `.github/actions/_libs/output.lib.sh`                | specifications-output.md      |
 | FE           | `ff_error <target> <problem> [<value>]`       | `_ca-filter-files/scripts/_libs/filter-files.lib.sh` | specifications-index.md §3.3  |
 | CBL          | `check_byte_limit <target> <text> <max>`      | 同上                                                 | specifications-input.md       |
 | CLE          | `check_line_endings <target> <text>`          | 同上                                                 | specifications-input.md       |
@@ -44,6 +44,6 @@ spec と impl はこの一覧を参照し、関数名・シグネチャ・所在
 
 ## テスト対象の略語
 
-| 略語 | 対象 |
-| ---- | ---- |
-|      |      |
+| 略語 | 対象                                         |
+| ---- | -------------------------------------------- |
+| WMO  | write_multiline_output (_libs/output.lib.sh) |
