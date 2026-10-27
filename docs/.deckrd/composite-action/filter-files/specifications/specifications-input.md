@@ -1,8 +1,8 @@
 ---
 title: "Design Specification: _ca-filter-files (Input)"
-based-on: requirements.md v1.0.7
+based-on: requirements.md v1.0.8
 status: Draft
-version: 1.1.1
+version: 1.1.2
 created: "2026-10-27"
 ---
 
@@ -110,10 +110,11 @@ See `specifications-index.md` 2.7.
 - Output Meaning: 正規化済みのファイル行の並びと、包含パターン・除外パターンの並び
 - Possible Outcomes:
   - 正規化済みの行 (0 行以上) と、分類済みのパターン (0 件以上)
-  - 不正なパターンのエラー
+  - 不正な入力のエラー (UTF-8 として不正な行、不正なパターン)
 
 <!-- impl-note: parse_lines <text> は正規化済みの行を LF 区切りで標準出力へ返す。
-  classify_patterns <lines> は包含・除外を分けて返す (受け渡し方式は impl で決める)。不正なパターンでは ff_error を出して 1 を返す。 -->
+  classify_patterns <lines> は包含・除外を分けて返す (受け渡し方式は impl で決める)。不正なパターンでは ff_error を出して 1 を返す。
+  UTF-8 の検査 (R-IN-010) を担う関数は impl で決める。 -->
 
 ---
 
@@ -203,3 +204,4 @@ None identified - all requirements are unambiguous.
 | 2026-10-27 | 1.0.0   | Initial specification                                                                                 |
 | 2026-10-27 | 1.1.0   | Apply spec explore review: error on whitespace-led exclude and invalid UTF-8, report first error only |
 | 2026-10-27 | 1.1.1   | Apply spec harden review: promote DD-IN-03 to DD-IN-06 to DR-14, clarify check order                  |
+| 2026-10-27 | 1.1.2   | Apply spec fix review: UTF-8 error in outcomes, refresh based-on                                      |

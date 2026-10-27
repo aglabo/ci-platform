@@ -1,8 +1,8 @@
 ---
 title: "Design Specification: _ca-filter-files (Index)"
-based-on: requirements.md v1.0.7
+based-on: requirements.md v1.0.8
 status: Draft
-version: 1.0.2
+version: 1.0.3
 created: "2026-10-27"
 ---
 
@@ -253,13 +253,13 @@ GitHub Actions は Composite Action の `required: true` を強制しない。`f
 
 評価は次の順で行う (DD-IDX-02)。
 
-| Step | 処理                                             | 定義                       |
-| ---: | ------------------------------------------------ | -------------------------- |
-|    1 | `files` と `patterns` を行に分割し、正規化する   | specifications-input.md    |
-|    2 | パターンを分類し、不正なパターンを検出する       | specifications-input.md    |
-|    3 | 各パターンを照合規則に変換し、ファイルを絞り込む | specifications-matching.md |
-|    4 | 出力先を検証する                                 | specifications-output.md   |
-|    5 | `files`、`count` の順に書き出す                  | specifications-output.md   |
+| Step | 処理                                                                         | 定義                       |
+| ---: | ---------------------------------------------------------------------------- | -------------------------- |
+|    1 | `files` と `patterns` を行に分割し、UTF-8 として正しいかを検査し、正規化する | specifications-input.md    |
+|    2 | パターンを分類し、不正なパターンを検出する                                   | specifications-input.md    |
+|    3 | 各パターンを照合規則に変換し、ファイルを絞り込む                             | specifications-matching.md |
+|    4 | 出力先を検証する                                                             | specifications-output.md   |
+|    5 | `files`、`count` の順に書き出す                                              | specifications-output.md   |
 
 No reordering is permitted. 各 Step でエラーが起きた場合は、後続の Step を実行しない。
 
@@ -358,3 +358,4 @@ spec で決める項目は、すべて各分割ファイルで決定した。imp
 | 2026-10-27 | 1.0.0   | Initial specification                                                     |
 | 2026-10-27 | 1.0.1   | Apply spec explore review: assumptions, failure outcomes and locale note  |
 | 2026-10-27 | 1.0.2   | Apply spec harden review: promote DD-IDX-01 to DR-15, list DR-13 to DR-15 |
+| 2026-10-27 | 1.0.3   | Apply spec fix review: UTF-8 check in evaluation step 1, refresh based-on |

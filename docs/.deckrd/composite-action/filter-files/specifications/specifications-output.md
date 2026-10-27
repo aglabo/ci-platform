@@ -1,8 +1,8 @@
 ---
 title: "Design Specification: _ca-filter-files (Output)"
-based-on: requirements.md v1.0.7
+based-on: requirements.md v1.0.8
 status: Draft
-version: 1.1.1
+version: 1.1.2
 created: "2026-10-27"
 ---
 
@@ -103,7 +103,7 @@ See `specifications-index.md` 2.7.
 
 ### 3.1 Input Domain
 
-- Input Type: 保持されたファイル行 (0 行以上) と、`$GITHUB_OUTPUT` のパス
+- Input Type: 保持行 (0 行以上) と、`$GITHUB_OUTPUT` のパス
 - Assumptions: specifications-matching.md の規則で保持行が決まっている。入力の検証は成功している (DD-IDX-02)。
 
 ### 3.2 Output Semantics
@@ -220,3 +220,4 @@ None identified - all requirements are unambiguous.
 | 2026-10-27 | 1.0.0   | Initial specification                                                                               |
 | 2026-10-27 | 1.1.0   | Apply spec explore review: line-based multiline output, output key format, missing parent directory |
 | 2026-10-27 | 1.1.1   | Apply spec harden review: promote shared output DDs to DR-13, candidate search terminates           |
+| 2026-10-27 | 1.1.2   | Apply spec fix review: unify term 保持行, refresh based-on                                          |

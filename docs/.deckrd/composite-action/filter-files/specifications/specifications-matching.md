@@ -1,8 +1,8 @@
 ---
 title: "Design Specification: _ca-filter-files (Matching)"
-based-on: requirements.md v1.0.7
+based-on: requirements.md v1.0.8
 status: Draft
-version: 1.0.1
+version: 1.0.2
 created: "2026-10-27"
 ---
 
@@ -105,9 +105,9 @@ See `specifications-index.md` 2.7.
 
 ### 3.2 Output Semantics
 
-- Output Meaning: 保持条件を満たしたファイル行の並び
+- Output Meaning: 保持行 (保持条件を満たしたファイル行) の並び
 - Possible Outcomes:
-  - 保持されたファイル行 (0 行以上、入力順、重複を含む)
+  - 保持行 (0 行以上、入力順、重複を含む)
   - 本書の範囲ではエラーは発生しない
 
 <!-- impl-note: glob_to_regex <glob> はアンカー付きの ERE を標準出力へ返す。変換例:
@@ -147,7 +147,7 @@ See `specifications-index.md` 2.7.
 | R-MAT-012 |    3 | いずれかの包含パターンに一致する、または R-MAT-010 | 残す                                   |
 | R-MAT-013 |    4 | 上記以外                                           | 捨てる                                 |
 
-- 保持されたパスは、入力の順序を保ち、重複を除かない。
+- 保持行は、入力の順序を保ち、重複を除かない。
 - 判定はパスの文字列だけで行い、git とファイルシステムは参照しない (REQ-F-012)。
 
 No reordering is permitted.
@@ -219,3 +219,4 @@ spec の範囲では無い。照合方式とループ方式は impl で決める
 | ---------- | ------- | ----------------------------------------------------------------------------------------- |
 | 2026-10-27 | 1.0.0   | Initial specification                                                                     |
 | 2026-10-27 | 1.0.1   | Apply spec explore review: add a**/b edge case, state conversion never fails, locale note |
+| 2026-10-27 | 1.0.2   | Apply spec fix review: unify term 保持行, refresh based-on                                |
