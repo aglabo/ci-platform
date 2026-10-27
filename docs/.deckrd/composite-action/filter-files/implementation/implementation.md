@@ -2,7 +2,7 @@
 title: "Implementation Plan: _ca-filter-files"
 based-on: specifications-index.md v1.3.2
 status: approved
-version: 1.2.3
+version: 1.3.1
 created: "2026-10-27"
 ---
 
@@ -96,6 +96,24 @@ PR は 2 つに分ける。
     種別は最初のタブより前 (`${_line%%$'\t'*}`)、パターンは最初のタブより後 (`${_line#*$'\t'}`) とし、パターン内のタブやバックスラッシュを変えない。
   - CP の出力は MAIN が 1 行ずつ種別とパターンに分け、包含と除外の 2 つの LF 区切り文字列にして FF に渡す。FF のシグネチャ (module.md の「関数一覧」) は変えない (impl harden review GF-01)。
   - FF は、各パターンの ERE を照合ループの前に 1 回だけ生成して配列に持ち、ループ内では Bash の組み込み機能 (`[[ =~ ]]`) だけを使う。
+  - データの形の流れ (入口から出力まで):
+
+    | 段階                                      | 形                                                                                        |
+    | ----------------------------------------- | ----------------------------------------------------------------------------------------- |
+    | `with:` の `files` / `patterns`           | 文字列。YAML のシーケンス (`- item`) は書けず、ブロックスカラー (`\|`) で 1 行 1 件       |
+    | `action.yml` → スクリプト                 | `env:` 経由の環境変数。LF 区切りの 1 つの文字列 (末尾に LF が付き得る)                    |
+    | MAIN → PFL / PPT                          | LF 区切りの文字列。PFL / PPT が行に分け、空行を捨てる (DR-08)                             |
+    | MAIN → FF (`<files> <include> <exclude>`) | LF 区切りの文字列 3 つ (末尾に LF なし、0 件は空文字列)                                   |
+    | FF の中                                   | 入口で `mapfile -t` によって配列にし、1 件ずつ照合する                                    |
+    | FF → 呼び出し側                           | stdout に `printf '%s\n'` で 1 行ずつ出し、コマンド置換で LF 区切りの文字列として受け取る |
+    | EO → WMO                                  | 保持行を空でなければ `mapfile -t` で配列にし、`"${lines[@]}"` (1 引数 = 1 行) で渡す      |
+    | `$GITHUB_OUTPUT`                          | `files<<<区切り>` / 各行 / `<区切り>`                                                     |
+    | 後続ステップの `steps.<id>.outputs.files` | LF 区切りの文字列 (末尾に LF なし)                                                        |
+
+  - 表せないデータ: パス中の LF は行の区切りと区別できないため、渡さないことを呼び出し元の義務とする (REQ-C-009)。既定の `git diff --name-only` は LF を含むパスをクオートして出す。CR は CLE が拒否する。NUL は Bash の文字列・環境変数に入らない。
+  - 行の扱い: 変数は常にダブルクオートで囲み、単語分割とパス名展開を起こさない。データの出力は `echo` ではなく `printf '%s\n'` を使う (`-n` などのパスを壊さない)。`mapfile -t` はバックスラッシュと両端の空白を変えない。
+  - サイズ: 関数の呼び出しは `execve` を通らないため `ARG_MAX` の制約を受けない。`env:` の値は 1 つあたり `MAX_ARG_STRLEN` (131072 バイト) を超えられないが、入力の上限 (DR-16) はそれより小さい。
+  - テストで複数行の値を書くときは、ヒアドキュメントをコマンド置換で包む (`"$(cat <<'EOF' ... EOF)"`) か、ShellSpec の `%text` を使う。関数の引数は文字列のままとする。
 - glob の変換順 (impl second opinion): GTR は 1 つの glob を先頭から書かれた順に読み、各位置で次の順に判定する (R-MAT-002〜R-MAT-008)。
   境界の期待値は specifications-matching.md §5 のエッジケース表を網羅する。
   変換先は specifications-matching.md §3.2 の impl-note に従い、全体を `^...$` で囲む。
@@ -165,7 +183,8 @@ PR は 2 つに分ける。
   - `_rs_check_output_file` が拒否するのは、ディレクトリと書き込めないパスだけである。VOF は、既存のパスが通常ファイル (`-f`) でなければ 2 を返す判定を追加する (R-OUT-022。書き込み可能な FIFO などを拒否する)。
   - `_ca-resolve-sha` の `_rs_check_output_file` 自体は変更しない。
 - VOF と WMO は stdout / stderr に何も出さない (DR-13)。エラーは呼び出し側の EO が FE で出す。
-- WMO の区切り文字は、`EOF`、`EOF_1`、`EOF_2` … のうち、値のどの行とも衝突しない最初の候補とする (R-OUT-010〜R-OUT-014)。引数不正は 1、書き込み失敗は 2 を返す。
+- WMO は `write_multiline_output <file> <key> [<line>...]` とし、1 引数 = 1 行で受け取る。CR または LF を含む引数は引数不正とする (DR-13)。
+  区切り文字は、`EOF`、`EOF_1`、`EOF_2` … のうち、行の引数のどれとも衝突しない最初の候補とする (R-OUT-010〜R-OUT-014)。引数不正は 1、書き込み失敗は 2 を返す。
 - 共有関数のテストは、`_libs/__tests__/unit/` に新規ファイルとして置く (`write-output.unit.spec.sh` が手本)。
   ファイル名は `validate-output-file.unit.spec.sh`・`write-multiline-output.unit.spec.sh` の 2 つとする。
 - UTF-8 の検査方式 (`iconv` か、`C.UTF-8` での `grep -ax '.*'` か) は、PFL のタスクで決め、PPT も同じ方式を使う。選ぶ方式は次をすべて満たす (impl harden review W-01)。
@@ -196,7 +215,8 @@ PR は 2 つに分ける。
   - `globstar` / `extglob` / `nocaseglob` はパス名展開にだけ効く。変数は常にクオートし、パス名展開を起こさない。
 - EO: 出力先を検証してから、files、count の順に書く。0 件の files は空で書く (R-OUT-004)。
   - VOF の戻り値が 1 なら R-OUT-001、2 なら R-OUT-002 のエラーを FE で出し、何も書かずに 1 を返す。
-  - `files` は WMO で書き、`count` は既存の `write_output <file> <key> <value>` で書く。`write_output` は値に CR / LF があると 1、書き込みに失敗すると 2 を返す。`count` は数字だけなので 1 にはならない。
+  - `files` は WMO で書く。保持行 (DR-18 の LF 区切りの文字列) は、空でなければ `mapfile -t` (ヒアストリング) で配列に読み込み、`"${lines[@]}"` として WMO に渡す。0 件なら行の引数を渡さない (R-OUT-012)。
+  - `count` は既存の `write_output <file> <key> <value>` で書く。`write_output` は値に CR / LF があると 1、書き込みに失敗すると 2 を返す。`count` は数字だけなので 1 にはならない。
   - WMO または `write_output` が 0 以外を返したら、R-OUT-006 のエラーを FE で出し、以降を書かずに 1 を返す。files が残り得る (DR-09)。
 
 ---
@@ -217,11 +237,11 @@ Phase 1 の開始前、全テストを 1 回実行して結果をベースライ
 
 #### Commit 2: feat(libs): add write_multiline_output to output.lib.sh
 
-- WMO を追加する (R-OUT-010〜R-OUT-014)。キー形式、CR の拒否、区切り文字の候補 (`EOF` / `EOF_n`)、空値、末尾 LF を扱う
+- WMO を追加する (R-OUT-010〜R-OUT-014)。キー形式、行の引数の CR / LF の拒否、区切り文字の候補 (`EOF` / `EOF_n`)、行の引数が無い場合を扱う
 - `_libs/__tests__/unit/write-multiline-output.unit.spec.sh` (T-FF-WMO-*)
 - 既存の `_libs` と利用元のテストを全件実行し、ベースラインで PASS していたテストがすべて PASS することを確認する
 - PR-A のマージ前に、テスト ID の機械検査 A / C を実行する (impl explore review A-05)
-- 旧 `write_multiline_output` (`ca-get-changed-files/scripts/_libs/filter.lib.sh`、引数 2 つ) は新 WMO (引数 3 つ) と同じ名前である。
+- 旧 `write_multiline_output` (`ca-get-changed-files/scripts/_libs/filter.lib.sh`、引数 2 つ) は新 WMO (引数 2 つ以上の可変長) と同じ名前である。
   現在、両方を読み込むスクリプトは無い。
   #134 で `ca-get-changed-files` に組み込むときは、`output.lib.sh` を読み込む前に旧関数を新 WMO に置き換える。
   読み込み順で一方が他方を上書きしないことをテストする (DR-06、DR-07、impl second opinion)
@@ -365,3 +385,5 @@ Phase 1 の開始前、全テストを 1 回実行して結果をベースライ
 | 2026-10-27 | 1.2.1   | Add regular file check to VOF (R-OUT-022): reject existing non-regular paths such as FIFOs, which _rs_check_output_file accepts                                                                                                                                                                                                                                                                            |
 | 2026-10-27 | 1.2.2   | Approve                                                                                                                                                                                                                                                                                                                                                                                                    |
 | 2026-10-27 | 1.2.3   | Fix working branch name                                                                                                                                                                                                                                                                                                                                                                                    |
+| 2026-10-27 | 1.3.0   | Change WMO to one line per argument (DR-13), EO passes kept lines as an array via mapfile                                                                                                                                                                                                                                                                                                                  |
+| 2026-10-27 | 1.3.1   | Document the data shape flow from action inputs to outputs, unrepresentable data, line handling, size limits, multi-line test literals                                                                                                                                                                                                                                                                     |
