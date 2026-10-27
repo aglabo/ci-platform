@@ -2,7 +2,7 @@
 title: "Design Specification: _ca-filter-files (Index)"
 based-on: requirements.md v1.3.0
 status: approved
-version: 1.3.1
+version: 1.3.2
 created: "2026-10-27"
 ---
 
@@ -269,30 +269,18 @@ No reordering is permitted. 各 Step でエラーが起きた場合は、後続�
 ### 3.5 Function List
 
 <!-- impl-note: public function list and test ID abbreviations
-  テスト ID は T-FF-<略称>-NN とする。略称はレイヤサフィックスを除いたベース略称とする。
+  関数の一覧 (テストの略語・シグネチャ・所在・担当分割ファイル) は、
+  workspaces/module/module.md の「関数一覧」を正とし、本書では再掲しない。
+  テスト ID は T-FF-<略語>-NN とし、略語は綴り全体で 1 個とする (main の functional テストは MAINF)。
 
-  | 略称 | 関数                                        | 所在                                | 担当分割ファイル    |
-  | ---- | ------------------------------------------- | ----------------------------------- | ------------------- |
-  | VOF  | validate_output_file <file>                 | _libs/output.lib.sh                 | output              |
-  | WMO  | write_multiline_output <file> <key> <value> | _libs/output.lib.sh                 | output              |
-  | FE   | ff_error <target> <problem> [<value>]       | scripts/_libs/filter-files.lib.sh   | index 3.3           |
-  | CBL  | check_byte_limit <target> <text> <max>      | scripts/_libs/filter-files.lib.sh   | input               |
-  | CLE  | check_line_endings <target> <text>          | scripts/_libs/filter-files.lib.sh   | input               |
-  | PL   | parse_lines <text>                          | scripts/_libs/filter-files.lib.sh   | input               |
-  | CLL  | check_line_limit <target> <lines> <max>     | scripts/_libs/filter-files.lib.sh   | input               |
-  | CP   | classify_patterns <lines>                   | scripts/_libs/filter-files.lib.sh   | input               |
-  | GTR  | glob_to_regex <glob>                        | scripts/_libs/filter-files.lib.sh   | matching            |
-  | FF   | filter_files <files> <include> <exclude>    | scripts/_libs/filter-files.lib.sh   | matching            |
-  | EO   | emit_outputs <file> <kept>                  | scripts/_libs/filter-files.lib.sh   | output              |
-  | MAIN | main (scripts/filter-files.sh)              | scripts/filter-files.sh             | output (functional) |
-  | ACT  | action.yml の静的検査                       | action.yml                          | index 3.1           |
-
-  - write_output は既存の共有関数 (resolve-sha が所有) を使う。テスト ID は割り当てない。
+  - files と patterns は検査と正規化が異なる (R-IN-002, R-IN-003, R-IN-012) ため、行の分割と正規化を PFL と PPT に分ける。
   - 共有ライブラリへの追加は VOF と WMO の 2 点のみとする (REQ-C-007)。
   - VOF と WMO はエラーを出さず、終了コードだけを返す。エラーは呼び出し側が FE で 3.3 の形式で出す。
   - 環境変数を読むのは MAIN のみとし、他の関数は引数だけを入力とする。
+    ライブラリのロードガード変数 (`*_LIB_LOADED`) は例外とし、`declare -F` で依存関数の定義を確認する (REQ-C-006)。
   - 関数間の複数行データは LF 区切りの文字列 1 つとし、コマンド置換で受け渡す (DR-18)。
     CP は 1 行ごとに `I<TAB>pattern` / `E<TAB>pattern` を出し、MAIN が包含と除外に分けて FF に渡す。
+  - write_output は既存の共有関数 (resolve-sha が所有) を使う。テスト ID は割り当てない。
   - module.md の owns に `_libs/__tests__/unit/` の VOF / WMO のテストファイルを明示する (テスト ID 検査 A)。
 -->
 
@@ -363,15 +351,16 @@ spec で決める項目は、すべて各分割ファイルで決定した。imp
 
 ## 8. Change History
 
-| Date       | Version | Description                                                                                                  |
-| ---------- | ------- | ------------------------------------------------------------------------------------------------------------ |
-| 2026-10-27 | 0.1.0   | Initial draft                                                                                                |
-| 2026-10-27 | 0.1.1   | Apply spec explore review: assumptions, failure outcomes and locale note                                     |
-| 2026-10-27 | 0.1.2   | Apply spec harden review: promote DD-IDX-01 to DR-15, list DR-13 to DR-15                                    |
-| 2026-10-27 | 0.1.3   | Apply spec fix review: UTF-8 check in evaluation step 1, refresh based-on                                    |
-| 2026-10-27 | 1.0.0   | Initial release                                                                                              |
-| 2026-10-27 | 1.1.0   | Follow requirements v1.1.0: files lines unchanged, lone CR and quoted files line errors (REQ-F-017), approve |
-| 2026-10-27 | 1.1.1   | Clarify evaluation order step 1: check lone CR before splitting (R-IN-011)                                   |
-| 2026-10-27 | 1.2.0   | Follow requirements v1.2.0: line count limit check in step 1, list DR-16 (REQ-F-018)                         |
-| 2026-10-27 | 1.3.0   | Follow requirements v1.3.0: byte size limit check first in step 1 (REQ-F-018)                                |
-| 2026-10-27 | 1.3.1   | Apply impl harden review: add CBL, CLE, CLL to 3.5, mark open questions resolved, list DR-17 and DR-18       |
+| Date       | Version | Description                                                                                                        |
+| ---------- | ------- | ------------------------------------------------------------------------------------------------------------------ |
+| 2026-10-27 | 0.1.0   | Initial draft                                                                                                      |
+| 2026-10-27 | 0.1.1   | Apply spec explore review: assumptions, failure outcomes and locale note                                           |
+| 2026-10-27 | 0.1.2   | Apply spec harden review: promote DD-IDX-01 to DR-15, list DR-13 to DR-15                                          |
+| 2026-10-27 | 0.1.3   | Apply spec fix review: UTF-8 check in evaluation step 1, refresh based-on                                          |
+| 2026-10-27 | 1.0.0   | Initial release                                                                                                    |
+| 2026-10-27 | 1.1.0   | Follow requirements v1.1.0: files lines unchanged, lone CR and quoted files line errors (REQ-F-017), approve       |
+| 2026-10-27 | 1.1.1   | Clarify evaluation order step 1: check lone CR before splitting (R-IN-011)                                         |
+| 2026-10-27 | 1.2.0   | Follow requirements v1.2.0: line count limit check in step 1, list DR-16 (REQ-F-018)                               |
+| 2026-10-27 | 1.3.0   | Follow requirements v1.3.0: byte size limit check first in step 1 (REQ-F-018)                                      |
+| 2026-10-27 | 1.3.1   | Apply impl harden review: add CBL, CLE, CLL to 3.5, mark open questions resolved, list DR-17 and DR-18             |
+| 2026-10-27 | 1.3.2   | Apply impl second opinion: split PL into PFL and PPT, load guard exception, move function list to module.md in 3.5 |

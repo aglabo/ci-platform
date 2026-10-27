@@ -2,7 +2,7 @@
 title: "Design Specification: _ca-filter-files (Input)"
 based-on: requirements.md v1.3.0
 status: approved
-version: 1.3.0
+version: 1.3.1
 created: "2026-10-27"
 ---
 
@@ -119,7 +119,9 @@ See `specifications-index.md` 2.7.
   - ファイル行 (0 行以上) と、分類済みのパターン (0 件以上)
   - 不正な入力のエラー (LF を伴わない CR、UTF-8 として不正な行、ダブルクオートを含むファイル行、不正なパターン)
 
-<!-- impl-note: parse_lines <text> は正規化済みの行を LF 区切りで標準出力へ返す。
+<!-- impl-note: parse_filelist <text> と parse_patterns <text> は、それぞれ files・patterns の正規化済みの行を
+  LF 区切りで標準出力へ返す。不正な行では ff_error を出して 1 を返す。
+  parse_filelist は 1 行ずつ UTF-8、ダブルクオートの順に判定した結果と同じ最初の 1 件を報告する (DR-14)。
   classify_patterns <lines> は包含・除外を分けて返す (受け渡し方式は impl で決める)。不正なパターンでは ff_error を出して 1 を返す。
   UTF-8 の検査 (R-IN-010) を担う関数は impl で決める。 -->
 
@@ -244,3 +246,4 @@ None identified - all requirements are unambiguous.
 | 2026-10-27 | 1.1.0   | Follow requirements v1.1.0: keep files lines unchanged, trim patterns only, convert CRLF, reject lone CR and quoted files lines, approve |
 | 2026-10-27 | 1.2.0   | Follow requirements v1.2.0: add line count limits (R-IN-014, R-IN-015, DD-IN-10)                                                         |
 | 2026-10-27 | 1.3.0   | Follow requirements v1.3.0: add byte size limits before other checks (R-IN-016, R-IN-017, DD-IN-11)                                      |
+| 2026-10-27 | 1.3.1   | Apply impl second opinion: split parse_lines into parse_filelist and parse_patterns in impl-note                                         |
