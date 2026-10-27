@@ -2,7 +2,7 @@
 title: "Implementation Plan: _ca-filter-files"
 based-on: specifications-index.md v1.3.2
 status: approved
-version: 1.2.2
+version: 1.2.3
 created: "2026-10-27"
 ---
 
@@ -33,7 +33,7 @@ PR は 2 つに分ける。
 - PR-A: Phase 1 (共有ライブラリ)
 - PR-B: Phase 2〜6 (`_ca-filter-files` 本体と CI)。PR-A のマージ後に main から作る。
 
-本 impl / tasks 文書は、現ブランチ (`docs-136/filter-files/add-spec-docs`) で作成する。
+本 impl / tasks 文書は、現ブランチ (`docs-136/filter-files/add-implementation`) で作成する。
 
 **実装品質基準 (全コミット共通):**
 
@@ -364,3 +364,4 @@ Phase 1 の開始前、全テストを 1 回実行して結果をベースライ
 | 2026-10-27 | 1.2.0   | Apply impl second opinion: split PL into PFL and PPT, DR-14 order test, set -e independent failures, WMO name clash note, measure timing to tune pattern limit, nocasematch in FF, EO error mapping and write_output, MAIN call order, error message table keyed by rule ID, GTR ERE table, CP details, REQ-F-012 and cross-cutting tests, move function list to module.md, drop Phase 0, refresh based-on |
 | 2026-10-27 | 1.2.1   | Add regular file check to VOF (R-OUT-022): reject existing non-regular paths such as FIFOs, which _rs_check_output_file accepts                                                                                                                                                                                                                                                                            |
 | 2026-10-27 | 1.2.2   | Approve                                                                                                                                                                                                                                                                                                                                                                                                    |
+| 2026-10-27 | 1.2.3   | Fix working branch name                                                                                                                                                                                                                                                                                                                                                                                    |
