@@ -1,8 +1,8 @@
 ---
 title: "Implementation Plan: _ca-filter-files"
 based-on: specifications-index.md v1.3.2
-status: Draft
-version: 1.2.1
+status: approved
+version: 1.2.2
 created: "2026-10-27"
 ---
 
@@ -363,3 +363,4 @@ Phase 1 の開始前、全テストを 1 回実行して結果をベースライ
 | 2026-10-27 | 1.1.2   | Apply impl fix review: terminology, enumerate existing callers, full-form ID ranges, unit table order, cite DR-08, DR-09, DR-12, refresh DR version and history comment                                                                                                                                                                                                                                    |
 | 2026-10-27 | 1.2.0   | Apply impl second opinion: split PL into PFL and PPT, DR-14 order test, set -e independent failures, WMO name clash note, measure timing to tune pattern limit, nocasematch in FF, EO error mapping and write_output, MAIN call order, error message table keyed by rule ID, GTR ERE table, CP details, REQ-F-012 and cross-cutting tests, move function list to module.md, drop Phase 0, refresh based-on |
 | 2026-10-27 | 1.2.1   | Add regular file check to VOF (R-OUT-022): reject existing non-regular paths such as FIFOs, which _rs_check_output_file accepts                                                                                                                                                                                                                                                                            |
+| 2026-10-27 | 1.2.2   | Approve                                                                                                                                                                                                                                                                                                                                                                                                    |
