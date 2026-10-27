@@ -1,8 +1,8 @@
 ---
 title: "Implementation Plan: setup-tool-repo Composite Action"
-based-on: specifications.md v1.0.2
+based-on: specifications.md v1.1.0
 status: Draft
-version: 1.0.5
+version: 1.1.0
 created: "2026-06-18"
 ---
 
@@ -67,7 +67,7 @@ created: "2026-06-18"
 #### Commit 1: feat(setup-tool-repo): add action.yml skeleton with inputs
 
 - `.github/actions/setup-tool-repo/action.yml` を新規作成
-- `inputs:` に `repo`（required）/`path`（required）/`ref`（required）/`node-version`（default: `"22"`）/`pnpm-version`（default: `"11.22.0"`）を定義
+- `inputs:` に `repo`（required）/`path`（required）/`ref`（required）/`node-version`（default: `"24"`）/`pnpm-version`（default: `"12.15.0"`）を定義
 - `permissions:` は **宣言しない**（コンポジットアクションでは宣言不可。呼び出し元 job で `contents: read` を設定する旨をコメントで明記）
 - `runs.using: composite`、ステップは空（後続フェーズで追加）
 
@@ -309,3 +309,4 @@ verify-and-add-path.sh
 | 2026-06-18 | 1.0.3   | review harden 反映: HARDEN-01〜04 を SHALL として昇格（:? 検証必須、SHA ピン留め必須、set -euo pipefail 全ライブラリ必須、.repo 原子的書き込み必須）        |
 | 2026-06-18 | 1.0.4   | 楽観的ロック設計追加: check-existing.sh で mkdir によるロック取得、GITHUB_ENV 経由で verify-and-add-path.sh にロック解放を委譲                              |
 | 2026-06-18 | 1.0.5   | review fix: Commit タイトルのファイル名を .lib.sh に統一、HARDEN-01 対象に GITHUB_ENV 追加、Commit 5/Technical Notes の BeforeEach に GITHUB_ENV モック追加 |
+| 2026-10-27 | 1.1.0   | 既定値を node-version `"24"`・pnpm-version `"12.15.0"` に更新                                                                                               |

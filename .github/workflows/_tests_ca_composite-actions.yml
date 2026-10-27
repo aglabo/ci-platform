@@ -18,6 +18,12 @@ defaults:
     shell: bash
 
 on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/_tests_ca_composite-actions.yml
+      - .github/actions/**
   workflow_call:
   workflow_dispatch:
 
@@ -227,6 +233,169 @@ jobs:
         if: steps.prepare-diff.outcome == 'success'
         run: git reset --hard HEAD~1
 
+  test-resolve-sha:
+    name: Test _ca-resolve-sha
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs:
+      - setup-foundation
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        id: checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Prepare test history (add temporary commit)
+        id: prepare-history
+        if: steps.checkout.outcome == 'success'
+        run: |
+          git config user.email "ci-test@example.com"
+          git config user.name "CI Test"
+          git commit --allow-empty -m "ci-test: temporary commit for _ca-resolve-sha test"
+          {
+            echo "head=$(git rev-parse HEAD)"
+            echo "head-1=$(git rev-parse HEAD~1)"
+            echo "head-2=$(git rev-parse HEAD~2)"
+            echo "history-count=$(git rev-list --first-parent --count HEAD)"
+          } >> "${GITHUB_OUTPUT}"
+
+      # override: both SHA inputs set -> returned as is for every event
+      - name: Test _ca-resolve-sha (override)
+        id: test-override
+        if: steps.prepare-history.outcome == 'success'
+        uses: ./.github/actions/_ca-resolve-sha
+        with:
+          before-sha: ${{ steps.prepare-history.outputs.head-2 }}
+          after-sha: ${{ steps.prepare-history.outputs.head }}
+
+      # HEAD~N cases apply only to events other than push / pull_request
+      - name: Test _ca-resolve-sha (default commit-count)
+        id: test-head-n-default
+        if: >-
+          steps.prepare-history.outcome == 'success'
+          && github.event_name != 'push'
+          && github.event_name != 'pull_request'
+        uses: ./.github/actions/_ca-resolve-sha
+
+      - name: Test _ca-resolve-sha (commit-count=2)
+        id: test-head-n-2
+        if: >-
+          steps.prepare-history.outcome == 'success'
+          && github.event_name != 'push'
+          && github.event_name != 'pull_request'
+        uses: ./.github/actions/_ca-resolve-sha
+        with:
+          commit-count: "2"
+
+      # history has commit-count or fewer commits -> empty tree base
+      - name: Test _ca-resolve-sha (history shorter than commit-count)
+        id: test-empty-tree
+        if: >-
+          steps.prepare-history.outcome == 'success'
+          && github.event_name != 'push'
+          && github.event_name != 'pull_request'
+          && fromJSON(steps.prepare-history.outputs.history-count) <= 1000
+        uses: ./.github/actions/_ca-resolve-sha
+        with:
+          commit-count: ${{ steps.prepare-history.outputs.history-count }}
+
+      # invalid commit-count -> the action must fail
+      - name: Test _ca-resolve-sha (commit-count=0)
+        id: test-invalid-zero
+        if: steps.prepare-history.outcome == 'success'
+        continue-on-error: true
+        uses: ./.github/actions/_ca-resolve-sha
+        with:
+          commit-count: "0"
+
+      - name: Test _ca-resolve-sha (commit-count=abc)
+        id: test-invalid-nan
+        if: steps.prepare-history.outcome == 'success'
+        continue-on-error: true
+        uses: ./.github/actions/_ca-resolve-sha
+        with:
+          commit-count: "abc"
+
+      - name: Verify outputs
+        id: verify
+        if: steps.prepare-history.outcome == 'success'
+        env:
+          EMPTY_TREE_SHA: "4b825dc642cb6eb9a060e54bf8d69288fbee4904"
+          EXPECTED_HEAD: ${{ steps.prepare-history.outputs.head }}
+          EXPECTED_HEAD_1: ${{ steps.prepare-history.outputs.head-1 }}
+          EXPECTED_HEAD_2: ${{ steps.prepare-history.outputs.head-2 }}
+          OUTCOME_OVERRIDE: ${{ steps.test-override.outcome }}
+          BEFORE_OVERRIDE: ${{ steps.test-override.outputs.before-sha }}
+          AFTER_OVERRIDE: ${{ steps.test-override.outputs.after-sha }}
+          RESOLUTION_OVERRIDE: ${{ steps.test-override.outputs.resolution }}
+          OUTCOME_DEFAULT: ${{ steps.test-head-n-default.outcome }}
+          BEFORE_DEFAULT: ${{ steps.test-head-n-default.outputs.before-sha }}
+          AFTER_DEFAULT: ${{ steps.test-head-n-default.outputs.after-sha }}
+          RESOLUTION_DEFAULT: ${{ steps.test-head-n-default.outputs.resolution }}
+          OUTCOME_N2: ${{ steps.test-head-n-2.outcome }}
+          BEFORE_N2: ${{ steps.test-head-n-2.outputs.before-sha }}
+          AFTER_N2: ${{ steps.test-head-n-2.outputs.after-sha }}
+          RESOLUTION_N2: ${{ steps.test-head-n-2.outputs.resolution }}
+          OUTCOME_EMPTY: ${{ steps.test-empty-tree.outcome }}
+          BEFORE_EMPTY: ${{ steps.test-empty-tree.outputs.before-sha }}
+          AFTER_EMPTY: ${{ steps.test-empty-tree.outputs.after-sha }}
+          RESOLUTION_EMPTY: ${{ steps.test-empty-tree.outputs.resolution }}
+          OUTCOME_ZERO: ${{ steps.test-invalid-zero.outcome }}
+          OUTCOME_NAN: ${{ steps.test-invalid-nan.outcome }}
+        run: |
+          _failed=0
+
+          # @arg $1 case label, $2 actual, $3 expected
+          _expect() {
+            if [ "$2" = "$3" ]; then
+              echo "[$1] OK: $2"
+            else
+              echo "::error::[$1] Expected '$3', got: '$2'"
+              _failed=1
+            fi
+          }
+
+          _expect "override/outcome" "${OUTCOME_OVERRIDE}" "success"
+          _expect "override/before-sha" "${BEFORE_OVERRIDE}" "${EXPECTED_HEAD_2}"
+          _expect "override/after-sha" "${AFTER_OVERRIDE}" "${EXPECTED_HEAD}"
+          _expect "override/resolution" "${RESOLUTION_OVERRIDE}" "override"
+
+          if [ "${OUTCOME_DEFAULT}" = "skipped" ]; then
+            echo "[head-n] skipped on push / pull_request event"
+          else
+            _expect "default/outcome" "${OUTCOME_DEFAULT}" "success"
+            _expect "default/before-sha" "${BEFORE_DEFAULT}" "${EXPECTED_HEAD_1}"
+            _expect "default/after-sha" "${AFTER_DEFAULT}" "${EXPECTED_HEAD}"
+            _expect "default/resolution" "${RESOLUTION_DEFAULT}" "fallback-head-n"
+
+            _expect "n2/outcome" "${OUTCOME_N2}" "success"
+            _expect "n2/before-sha" "${BEFORE_N2}" "${EXPECTED_HEAD_2}"
+            _expect "n2/after-sha" "${AFTER_N2}" "${EXPECTED_HEAD}"
+            _expect "n2/resolution" "${RESOLUTION_N2}" "fallback-head-n"
+          fi
+
+          if [ "${OUTCOME_EMPTY}" = "skipped" ]; then
+            echo "[empty-tree] skipped (push / pull_request event or history over 1000 commits)"
+          else
+            _expect "empty-tree/outcome" "${OUTCOME_EMPTY}" "success"
+            _expect "empty-tree/before-sha" "${BEFORE_EMPTY}" "${EMPTY_TREE_SHA}"
+            _expect "empty-tree/after-sha" "${AFTER_EMPTY}" "${EXPECTED_HEAD}"
+            _expect "empty-tree/resolution" "${RESOLUTION_EMPTY}" "empty-tree"
+          fi
+
+          _expect "commit-count=0/outcome" "${OUTCOME_ZERO}" "failure"
+          _expect "commit-count=abc/outcome" "${OUTCOME_NAN}" "failure"
+
+          exit "${_failed}"
+
+      - name: Cleanup test history (reset temporary commit)
+        if: steps.prepare-history.outcome == 'success'
+        run: git reset --hard HEAD~1
+
   summary:
     name: Test Summary
     runs-on: ubuntu-latest
@@ -237,6 +406,7 @@ jobs:
       - test-setup-tool
       - test-setup-repo
       - test-get-changed-files
+      - test-resolve-sha
     permissions:
       contents: read
     steps:
@@ -246,6 +416,7 @@ jobs:
           RESULT_SETUP_TOOL: ${{ needs.test-setup-tool.result }}
           RESULT_SETUP_REPO: ${{ needs.test-setup-repo.result }}
           RESULT_GET_CHANGED_FILES: ${{ needs.test-get-changed-files.result }}
+          RESULT_RESOLVE_SHA: ${{ needs.test-resolve-sha.result }}
         run: |
           _failed=0
 
@@ -262,11 +433,13 @@ jobs:
             echo "| test-setup-tool         | $(_status "${RESULT_SETUP_TOOL}") |"
             echo "| test-setup-repo         | $(_status "${RESULT_SETUP_REPO}") |"
             echo "| test-get-changed-files  | $(_status "${RESULT_GET_CHANGED_FILES}") |"
+            echo "| test-resolve-sha        | $(_status "${RESULT_RESOLVE_SHA}") |"
           } >> "${GITHUB_STEP_SUMMARY}"
 
           [ "${RESULT_FOUNDATION}" = "success" ] || _failed=1
           [ "${RESULT_SETUP_TOOL}" = "success" ] || _failed=1
           [ "${RESULT_SETUP_REPO}" = "success" ] || _failed=1
           [ "${RESULT_GET_CHANGED_FILES}" = "success" ] || _failed=1
+          [ "${RESULT_RESOLVE_SHA}" = "success" ] || _failed=1
 
           exit "${_failed}"
