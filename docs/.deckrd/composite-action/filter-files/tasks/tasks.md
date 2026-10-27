@@ -9,7 +9,7 @@ source: specifications-index.md v1.3.2, implementation.md v1.2.1
 <!-- textlint-disable ja-technical-writing/sentence-length -->
 <!-- textlint-disable ja-technical-writing/max-comma -->
 <!-- markdownlint-disable no-duplicate-heading line-length -->
-<!-- cspell:words dirx axxb -- >
+<!-- cspell:words dirx axxb -->
 
 > This document contains implementation tasks derived from specifications.
 > Each task corresponds to a single unit test case (`It` block).
