@@ -2,7 +2,7 @@
 title: "Design Specification: _ca-filter-files (Index)"
 based-on: requirements.md v1.0.7
 status: Draft
-version: 1.0.1
+version: 1.0.2
 created: "2026-10-27"
 ---
 
@@ -133,10 +133,10 @@ git とファイルシステムは参照せず、入力の文字列と照合規�
 
 ### 2.5 Behavioral Design Decisions
 
-| ID        | Decision                                                       | Rationale                                                    | Affected Rules             | Status |
-| --------- | -------------------------------------------------------------- | ------------------------------------------------------------ | -------------------------- | ------ |
-| DD-IDX-01 | エラー形式を `_ca-resolve-sha` と同じ 3.3 の形式にする         | 内部 Action 間でエラーの読み方をそろえる (spec Phase 6)      | 全分割ファイルのエラー規則 | Active |
-| DD-IDX-02 | 入力の検証をすべて終えてから、出力先を検証し、書き出しを始める | 出力の一部だけが書かれた状態を、検証の失敗で残さない (DR-09) | 4. Evaluation Order        | Active |
+| ID        | Decision                                                       | Rationale                                                    | Affected Rules             | Status           |
+| --------- | -------------------------------------------------------------- | ------------------------------------------------------------ | -------------------------- | ---------------- |
+| DD-IDX-01 | エラー形式を `_ca-resolve-sha` と同じ 3.3 の形式にする         | 内部 Action 間でエラーの読み方をそろえる (spec Phase 6)      | 全分割ファイルのエラー規則 | Promoted → DR-15 |
+| DD-IDX-02 | 入力の検証をすべて終えてから、出力先を検証し、書き出しを始める | 出力の一部だけが書かれた状態を、検証の失敗で残さない (DR-09) | 4. Evaluation Order        | Active           |
 
 > **Note**: DD-IDX-01 と DD-IDX-02 は、REQUIREMENTS の記述ではなく、確定した外部設計に由来する。
 > 正式な Decision Record へ昇格する場合は `/deckrd dr --add` を使う。
@@ -165,6 +165,9 @@ git とファイルシステムは参照せず、入力の文字列と照合規�
 | DR-10 | 入力の前提を呼び出し元の義務として定める                                 | review | 前提                     |
 | DR-11 | ダブルクオートの解釈は GitHub Actions (YAML) に任せ、Action では外さない | req    | 入力の正規化             |
 | DR-12 | 出力先の検証関数を `_libs/output.lib.sh` に追加する                      | spec   | 出力先の検証             |
+| DR-13 | 共有出力関数の契約を定める                                               | review | 共有関数の契約           |
+| DR-14 | 不正な入力を定義し、最初の 1 件で終了する                                | review | 不正な入力と報告の件数   |
+| DR-15 | エラー形式を内部 Action 共通の形式にそろえる                             | review | エラー形式               |
 
 ### 2.7 DD to DR Promotion Criteria
 
@@ -350,7 +353,8 @@ spec で決める項目は、すべて各分割ファイルで決定した。imp
 
 ## 8. Change History
 
-| Date       | Version | Description                                                              |
-| ---------- | ------- | ------------------------------------------------------------------------ |
-| 2026-10-27 | 1.0.0   | Initial specification                                                    |
-| 2026-10-27 | 1.0.1   | Apply spec explore review: assumptions, failure outcomes and locale note |
+| Date       | Version | Description                                                               |
+| ---------- | ------- | ------------------------------------------------------------------------- |
+| 2026-10-27 | 1.0.0   | Initial specification                                                     |
+| 2026-10-27 | 1.0.1   | Apply spec explore review: assumptions, failure outcomes and locale note  |
+| 2026-10-27 | 1.0.2   | Apply spec harden review: promote DD-IDX-01 to DR-15, list DR-13 to DR-15 |

@@ -2,7 +2,7 @@
 title: "Design Specification: _ca-filter-files (Input)"
 based-on: requirements.md v1.0.7
 status: Draft
-version: 1.1.0
+version: 1.1.1
 created: "2026-10-27"
 ---
 
@@ -67,14 +67,14 @@ created: "2026-10-27"
 
 ### 2.5 Behavioral Design Decisions
 
-| ID       | Decision                                                        | Rationale                                                                                                               | Affected Rules     | Status |
-| -------- | --------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- | ------------------ | ------ |
-| DD-IN-01 | 両端から除去する文字に CR を含める                              | CRLF の入力でも行末の CR がパスに残らない (REQ Open Question の解消)                                                    | R-IN-002           | Active |
-| DD-IN-02 | `!` の後の文字列は、そのまま除外パターンとする (再度の除去なし) | REQ-F-002 は「`!` の後のテキストがパターン」とする。正規化は R-IN-002 に限る                                            | R-IN-004           | Active |
-| DD-IN-03 | `!` だけの行は不正なパターンとしてエラーにする                  | 空の除外パターンは意図が読み取れない。DR-09 の「spec で不正と決めた入力」                                               | R-IN-005           | Active |
-| DD-IN-04 | 空白 (スペース・タブ) で始まる除外パターンはエラーにする        | ファイル行は trim 済みで、そのようなパターンは何にも一致しない。書き間違いを黙って無視しない (spec explore review Q-06) | R-IN-009           | Active |
-| DD-IN-05 | 不正なパターンは先頭から検査し、最初の 1 件を報告して終了する   | fail-first。報告するエラーは常に 1 行とする (spec explore review G-03)                                                  | R-IN-005, R-IN-009 | Active |
-| DD-IN-06 | UTF-8 として不正なバイト列を含む行はエラーにする                | `?` の 1 文字 (DD-MAT-05) を定められない入力を、照合の前に拒否する (spec explore review Q-04)                           | R-IN-010           | Active |
+| ID       | Decision                                                        | Rationale                                                                                                               | Affected Rules     | Status           |
+| -------- | --------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- | ------------------ | ---------------- |
+| DD-IN-01 | 両端から除去する文字に CR を含める                              | CRLF の入力でも行末の CR がパスに残らない (REQ Open Question の解消)                                                    | R-IN-002           | Active           |
+| DD-IN-02 | `!` の後の文字列は、そのまま除外パターンとする (再度の除去なし) | REQ-F-002 は「`!` の後のテキストがパターン」とする。正規化は R-IN-002 に限る                                            | R-IN-004           | Active           |
+| DD-IN-03 | `!` だけの行は不正なパターンとしてエラーにする                  | 空の除外パターンは意図が読み取れない。DR-09 の「spec で不正と決めた入力」                                               | R-IN-005           | Promoted → DR-14 |
+| DD-IN-04 | 空白 (スペース・タブ) で始まる除外パターンはエラーにする        | ファイル行は trim 済みで、そのようなパターンは何にも一致しない。書き間違いを黙って無視しない (spec explore review Q-06) | R-IN-009           | Promoted → DR-14 |
+| DD-IN-05 | 不正なパターンは先頭から検査し、最初の 1 件を報告して終了する   | fail-first。報告するエラーは常に 1 行とする (spec explore review G-03)                                                  | R-IN-005, R-IN-009 | Promoted → DR-14 |
+| DD-IN-06 | UTF-8 として不正なバイト列を含む行はエラーにする                | `?` の 1 文字 (DD-MAT-05) を定められない入力を、照合の前に拒否する (spec explore review Q-04)                           | R-IN-010           | Promoted → DR-14 |
 
 **Status Values:**
 
@@ -83,13 +83,14 @@ created: "2026-10-27"
 
 ### 2.6 Related Decision Records
 
-| DR-ID | Title                                                                    | Phase  | Impact on This Spec |
-| ----- | ------------------------------------------------------------------------ | ------ | ------------------- |
-| DR-04 | 包含パターンが 0 件の場合は全ファイルを通す                              | req    | R-IN-007            |
-| DR-08 | 入力行の両端の空白を除去し、空になった行を無視する                       | review | R-IN-002, R-IN-003  |
-| DR-09 | 非ゼロで終了するのは出力不能時と、spec で不正と決めた入力に限る          | review | R-IN-005            |
-| DR-10 | 入力の前提を呼び出し元の義務として定める                                 | review | 2.2                 |
-| DR-11 | ダブルクオートの解釈は GitHub Actions (YAML) に任せ、Action では外さない | req    | R-IN-008            |
+| DR-ID | Title                                                                    | Phase  | Impact on This Spec    |
+| ----- | ------------------------------------------------------------------------ | ------ | ---------------------- |
+| DR-04 | 包含パターンが 0 件の場合は全ファイルを通す                              | req    | R-IN-007               |
+| DR-08 | 入力行の両端の空白を除去し、空になった行を無視する                       | review | R-IN-002, R-IN-003     |
+| DR-09 | 非ゼロで終了するのは出力不能時と、spec で不正と決めた入力に限る          | review | R-IN-005               |
+| DR-10 | 入力の前提を呼び出し元の義務として定める                                 | review | 2.2                    |
+| DR-11 | ダブルクオートの解釈は GitHub Actions (YAML) に任せ、Action では外さない | req    | R-IN-008               |
+| DR-14 | 不正な入力を定義し、最初の 1 件で終了する                                | review | 不正な入力と報告の件数 |
 
 ### 2.7 DD to DR Promotion Criteria
 
@@ -134,6 +135,10 @@ Evaluation MUST follow this order:
 | R-IN-008 |    — | 行にダブルクオート (`"`) が含まれる (全 Step に共通) | 除去も解釈もせず、文字として扱う (REQ-F-016)                                 |
 
 No reordering is permitted.
+
+- R-IN-010 は `files` の行を先に、`patterns` の行を後に検査する。各入力の中では先頭の行から検査する。
+- R-IN-005 と R-IN-009 は、パターン行を先頭から 1 行ずつ評価する。各行では R-IN-005、R-IN-009 の順で判定する。
+- 報告するのは、最初に規則へ当たった 1 行だけとする。報告する行は、規則の順ではなく行の順で決まる (DR-14)。
 
 **エラーの文言:**
 
@@ -197,3 +202,4 @@ None identified - all requirements are unambiguous.
 | ---------- | ------- | ----------------------------------------------------------------------------------------------------- |
 | 2026-10-27 | 1.0.0   | Initial specification                                                                                 |
 | 2026-10-27 | 1.1.0   | Apply spec explore review: error on whitespace-led exclude and invalid UTF-8, report first error only |
+| 2026-10-27 | 1.1.1   | Apply spec harden review: promote DD-IN-03 to DD-IN-06 to DR-14, clarify check order                  |
