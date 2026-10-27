@@ -2,7 +2,7 @@
 title: "Implementation Plan: _ca-filter-files"
 based-on: specifications-index.md v1.3.2
 status: Draft
-version: 1.2.0
+version: 1.2.1
 created: "2026-10-27"
 ---
 
@@ -162,6 +162,8 @@ PR は 2 つに分ける。
   - 値の `%` / CR / LF は `%25` / `%0D` / `%0A` にエンコードする
 - VOF は `_ca-resolve-sha` の `_rs_check_output_file` のロジックを共有化する (DR-12、R-OUT-020〜R-OUT-022)。
   終了コードは、書き込めれば 0、出力先が空なら 1、書き込めなければ 2 とし、ファイルは作らない。
+  - `_rs_check_output_file` が拒否するのは、ディレクトリと書き込めないパスだけである。VOF は、既存のパスが通常ファイル (`-f`) でなければ 2 を返す判定を追加する (R-OUT-022。書き込み可能な FIFO などを拒否する)。
+  - `_ca-resolve-sha` の `_rs_check_output_file` 自体は変更しない。
 - VOF と WMO は stdout / stderr に何も出さない (DR-13)。エラーは呼び出し側の EO が FE で出す。
 - WMO の区切り文字は、`EOF`、`EOF_1`、`EOF_2` … のうち、値のどの行とも衝突しない最初の候補とする (R-OUT-010〜R-OUT-014)。引数不正は 1、書き込み失敗は 2 を返す。
 - 共有関数のテストは、`_libs/__tests__/unit/` に新規ファイルとして置く (`write-output.unit.spec.sh` が手本)。
@@ -360,3 +362,4 @@ Phase 1 の開始前、全テストを 1 回実行して結果をベースライ
 | 2026-10-27 | 1.1.1   | Apply impl harden review: UTF-8 check criteria, timing run is record-only, MAIN splits CP output, cite DR-17 and DR-18, refresh based-on                                                                                                                                                                                                                                                                   |
 | 2026-10-27 | 1.1.2   | Apply impl fix review: terminology, enumerate existing callers, full-form ID ranges, unit table order, cite DR-08, DR-09, DR-12, refresh DR version and history comment                                                                                                                                                                                                                                    |
 | 2026-10-27 | 1.2.0   | Apply impl second opinion: split PL into PFL and PPT, DR-14 order test, set -e independent failures, WMO name clash note, measure timing to tune pattern limit, nocasematch in FF, EO error mapping and write_output, MAIN call order, error message table keyed by rule ID, GTR ERE table, CP details, REQ-F-012 and cross-cutting tests, move function list to module.md, drop Phase 0, refresh based-on |
+| 2026-10-27 | 1.2.1   | Add regular file check to VOF (R-OUT-022): reject existing non-regular paths such as FIFOs, which _rs_check_output_file accepts                                                                                                                                                                                                                                                                            |
