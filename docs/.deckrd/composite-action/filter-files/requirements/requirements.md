@@ -2,7 +2,7 @@
 title: "Requirements: _ca-filter-files"
 module: "composite-action/filter-files"
 status: approved
-version: 1.3.0
+version: 1.3.1
 created: "2026-10-27"
 ---
 
@@ -548,7 +548,8 @@ Action 名は `_` プレフィックス (`_ca-filter-files`) とし、内部専�
 - `set -euo pipefail` を宣言する。
 - ライブラリのロードガードを持つ。
 - 直接実行されたときだけ main を実行する。source との判別は `_ca-resolve-sha` に合わせ `(return 0 2>/dev/null)` で行う。
-- 環境変数を読むのは main のみとする。
+- 環境変数を読むのは main のみとする。ただし、ライブラリが自身で設定するロードガード変数 (`*_LIB_LOADED`) は除く。
+  ロードガードにより読み込みが省かれた場合に備え、依存する関数が定義されていることを `declare -F` で確認する。
 - エラーは `::error::` を stderr に出力して非ゼロで終了する。
 - 出力先の検証と出力の書き出しは、共有ライブラリ `.github/actions/_libs/output.lib.sh` の関数 (出力先の検証関数、`write_output`、`write_multiline_output`) で行う。
 
@@ -836,3 +837,4 @@ Owner が spec の項目は、spec で解決した。各行の括弧内に解決
 | 2026-10-27 | 1.1.0   | Apply req second opinion: limit no-output guarantee to verification failure (F-015), convert CRLF to LF, keep files lines unchanged and trim patterns only (F-001, C-009, AC-012, AC-014), reject lone CR and quoted files lines (F-016, F-017, AC-013, AC-015, AC-016), approve |
 | 2026-10-27 | 1.2.0   | Apply impl second opinion: add line count limits for files (3000) and patterns (1000) (REQ-F-018, AC-017, DR-16)                                                                                                                                                                 |
 | 2026-10-27 | 1.3.0   | Add byte size limits (120000 bytes) for files and patterns to REQ-F-018, add AC-018 (DR-16)                                                                                                                                                                                      |
+| 2026-10-27 | 1.3.1   | Clarify REQ-C-006: library load guard variables are excepted from the main-only environment variable rule                                                                                                                                                                        |
