@@ -2,7 +2,7 @@
 title: "Decision Records: _ca-filter-files"
 module: "composite-action/filter-files"
 status: Draft
-version: 1.0.6
+version: 1.0.0
 created: "2026-10-27"
 ---
 
@@ -213,10 +213,11 @@ created: "2026-10-27"
 
 | Date       | Version | Description                                                                      |
 | ---------- | ------- | -------------------------------------------------------------------------------- |
+| 2026-10-27 | 0.1.0   | Initial draft                                                                    |
+| 2026-10-27 | 0.1.1   | Add alternatives from explore review (DR-02, DR-05)                              |
+| 2026-10-27 | 0.1.2   | Add DR-08 to DR-10 from harden review                                            |
+| 2026-10-27 | 0.1.3   | Add DR-11 (double quote interpretation)                                          |
+| 2026-10-27 | 0.1.4   | Clarify DR-07: get-changed-files switches to shared write_multiline_output later |
+| 2026-10-27 | 0.1.5   | Add DR-12 (shared output destination check)                                      |
+| 2026-10-27 | 0.1.6   | Add DR-13 to DR-15 from spec harden review                                       |
 | 2026-10-27 | 1.0.0   | Initial release                                                                  |
-| 2026-10-27 | 1.0.1   | Add alternatives from explore review (DR-02, DR-05)                              |
-| 2026-10-27 | 1.0.2   | Add DR-08 to DR-10 from harden review                                            |
-| 2026-10-27 | 1.0.3   | Add DR-11 (double quote interpretation)                                          |
-| 2026-10-27 | 1.0.4   | Clarify DR-07: get-changed-files switches to shared write_multiline_output later |
-| 2026-10-27 | 1.0.5   | Add DR-12 (shared output destination check)                                      |
-| 2026-10-27 | 1.0.6   | Add DR-13 to DR-15 from spec harden review                                       |

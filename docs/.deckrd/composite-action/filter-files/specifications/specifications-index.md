@@ -1,8 +1,8 @@
 ---
 title: "Design Specification: _ca-filter-files (Index)"
-based-on: requirements.md v1.0.8
+based-on: requirements.md v1.0.0
 status: Draft
-version: 1.0.3
+version: 1.0.0
 created: "2026-10-27"
 ---
 
@@ -355,7 +355,8 @@ spec で決める項目は、すべて各分割ファイルで決定した。imp
 
 | Date       | Version | Description                                                               |
 | ---------- | ------- | ------------------------------------------------------------------------- |
-| 2026-10-27 | 1.0.0   | Initial specification                                                     |
-| 2026-10-27 | 1.0.1   | Apply spec explore review: assumptions, failure outcomes and locale note  |
-| 2026-10-27 | 1.0.2   | Apply spec harden review: promote DD-IDX-01 to DR-15, list DR-13 to DR-15 |
-| 2026-10-27 | 1.0.3   | Apply spec fix review: UTF-8 check in evaluation step 1, refresh based-on |
+| 2026-10-27 | 0.1.0   | Initial draft                                                             |
+| 2026-10-27 | 0.1.1   | Apply spec explore review: assumptions, failure outcomes and locale note  |
+| 2026-10-27 | 0.1.2   | Apply spec harden review: promote DD-IDX-01 to DR-15, list DR-13 to DR-15 |
+| 2026-10-27 | 0.1.3   | Apply spec fix review: UTF-8 check in evaluation step 1, refresh based-on |
+| 2026-10-27 | 1.0.0   | Initial release                                                           |

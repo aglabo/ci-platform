@@ -2,7 +2,7 @@
 title: "Requirements: _ca-filter-files"
 module: "composite-action/filter-files"
 status: Draft
-version: 1.0.8
+version: 1.0.0
 created: "2026-10-27"
 ---
 
@@ -688,12 +688,13 @@ Owner が spec の項目は、spec で解決した。各行の括弧内に解決
 
 | Date       | Version | Description                                                                                                               |
 | ---------- | ------- | ------------------------------------------------------------------------------------------------------------------------- |
+| 2026-10-27 | 0.1.0   | Initial draft                                                                                                             |
+| 2026-10-27 | 0.1.1   | Apply explore review: add REQ-F-015 and whitespace trimming, clarify REQ-F-014, assumptions, follow-up and open questions |
+| 2026-10-27 | 0.1.2   | Apply harden review: add REQ-C-009 (caller input contract), clarify REQ-F-010, F-011, F-014, link DR-08 to DR-10          |
+| 2026-10-27 | 0.1.3   | Add REQ-F-016: leave double quote interpretation to GitHub Actions (YAML)                                                 |
+| 2026-10-27 | 0.1.4   | Apply fix review: terminology, AC-009 wording, AC-012 traceability, open question and REQ-C-009 LF scope                  |
+| 2026-10-27 | 0.1.5   | Add follow-up: switch get-changed-files to shared write_multiline_output                                                  |
+| 2026-10-27 | 0.1.6   | Add shared output destination check function to _libs (REQ-C-006, REQ-C-007, DR-12)                                       |
+| 2026-10-27 | 0.1.7   | Apply spec second opinion: forbid CR in paths (REQ-C-009), rewrite AC-010 without candidate injection                     |
+| 2026-10-27 | 0.1.8   | Apply spec fix review: mark spec-owned open questions resolved, point REQ-F-015 to DR-14                                  |
 | 2026-10-27 | 1.0.0   | Initial release                                                                                                           |
-| 2026-10-27 | 1.0.1   | Apply explore review: add REQ-F-015 and whitespace trimming, clarify REQ-F-014, assumptions, follow-up and open questions |
-| 2026-10-27 | 1.0.2   | Apply harden review: add REQ-C-009 (caller input contract), clarify REQ-F-010, F-011, F-014, link DR-08 to DR-10          |
-| 2026-10-27 | 1.0.3   | Add REQ-F-016: leave double quote interpretation to GitHub Actions (YAML)                                                 |
-| 2026-10-27 | 1.0.4   | Apply fix review: terminology, AC-009 wording, AC-012 traceability, open question and REQ-C-009 LF scope                  |
-| 2026-10-27 | 1.0.5   | Add follow-up: switch get-changed-files to shared write_multiline_output                                                  |
-| 2026-10-27 | 1.0.6   | Add shared output destination check function to _libs (REQ-C-006, REQ-C-007, DR-12)                                       |
-| 2026-10-27 | 1.0.7   | Apply spec second opinion: forbid CR in paths (REQ-C-009), rewrite AC-010 without candidate injection                     |
-| 2026-10-27 | 1.0.8   | Apply spec fix review: mark spec-owned open questions resolved, point REQ-F-015 to DR-14                                  |
