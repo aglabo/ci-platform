@@ -2,7 +2,7 @@
 title: "Design Specification: _ca-filter-files (Matching)"
 based-on: requirements.md v1.0.7
 status: Draft
-version: 1.0.0
+version: 1.0.1
 created: "2026-10-27"
 ---
 
@@ -113,7 +113,7 @@ See `specifications-index.md` 2.7.
 <!-- impl-note: glob_to_regex <glob> はアンカー付きの ERE を標準出力へ返す。変換例:
   `**/` (先頭または `/` の直後) → `(.*/)?`、末尾の `/**` → `/.+`、パターン全体が `**` → `.*`、
   その他の `**` と `*` → `[^/]*`、`?` → `[^/]`、その他の文字はエスケープする。
-  filter_files <files> <include> <exclude> は保持行を LF 区切りで標準出力へ返す。照合は LC_ALL=C.UTF-8 で行う。
+  filter_files <files> <include> <exclude> は保持行を LF 区切りで標準出力へ返す。照合する関数の中で `local LC_ALL=C.UTF-8` を指定して行う。
   照合方式 (正規表現への変換か、セグメント単位か) とループ方式は impl で決める (index Open Questions)。 -->
 
 ---
@@ -135,6 +135,7 @@ See `specifications-index.md` 2.7.
 | R-MAT-009 |    — | すべての照合 (全 Step に共通)                    | 大文字・小文字を区別する。シェルのオプションの状態に依存しない |
 
 パターンは先頭から読み、`**` を `*` より先に判定する (最長一致)。
+照合規則への変換は失敗しない。すべての文字が R-MAT-002〜008 のいずれかに当たるため、本書の範囲でエラーは起きない。
 `**/` として消費した後に残る `**` は、R-MAT-002〜004 の条件を改めて判定する。末尾の `/**` に当たらなければ R-MAT-005 とする。
 
 **保持条件 (1 つのパス):**
@@ -155,30 +156,31 @@ No reordering is permitted.
 
 ## 5. Edge Cases
 
-| Pattern                           | Path                           | Result          | REQ       | Rationale                          |
-| --------------------------------- | ------------------------------ | --------------- | --------- | ---------------------------------- |
-| `*.sh`                            | `a.sh` / `dir/a.sh`            | 一致 / 不一致   | REQ-F-006 | R-MAT-006                          |
-| `**`                              | `a.sh` / `dir/sub/a.sh`        | 一致 / 一致     | REQ-F-005 | R-MAT-002                          |
-| `**/a.sh`                         | `a.sh` / `x/a.sh` / `x/y/a.sh` | すべて一致      | REQ-F-005 | R-MAT-003, DD-MAT-01               |
-| `dir/**`                          | `dir/a.sh` / `dir/sub/a.sh`    | 一致 / 一致     | REQ-F-005 | R-MAT-004                          |
-| `dir/**`                          | `dir` / `dirx/a.sh`            | 不一致 / 不一致 | REQ-F-005 | `/` の後に 1 文字以上が必要        |
-| `a/**/b.sh`                       | `a/b.sh` / `a/x/y/b.sh`        | 一致 / 一致     | REQ-F-005 | R-MAT-003                          |
-| `**/**`                           | `a.sh` / `x/y/a.sh`            | 一致 / 一致     | REQ-F-005 | `**/` の後に残る `**` は R-MAT-005 |
-| `a/**/**/b`                       | `a/b` / `a/x/y/b`              | 一致 / 一致     | REQ-F-005 | `**/` の連続はそれぞれ 0 階層以上  |
-| `a\` (末尾が `\`)                 | `a\` / `a`                     | 一致 / 不一致   | REQ-F-009 | `\` は文字そのもの (R-MAT-008)     |
-| `a**b`                            | `axxb` / `ax/xb`               | 一致 / 不一致   | REQ-F-005 | R-MAT-005, DD-MAT-02               |
-| `***.sh`                          | `a.sh` / `d/a.sh`              | 一致 / 不一致   | REQ-F-005 | `**` (R-MAT-005) と `*` の連続     |
-| `dir/?.sh`                        | `dir/a.sh` / `dir/ab.sh`       | 一致 / 不一致   | REQ-F-007 | R-MAT-007                          |
-| `?.sh`                            | `あ.sh`                        | 一致            | REQ-F-007 | DD-MAT-05                          |
-| `*`                               | `.env` / `dir/.env`            | 一致 / 不一致   | REQ-F-006 | DD-MAT-04                          |
-| `a.sh`                            | `aXsh`                         | 不一致          | REQ-F-009 | `.` は文字そのもの (R-MAT-008)     |
-| `[ab].sh`                         | `a.sh` / `[ab].sh`             | 不一致 / 一致   | REQ-F-009 | DD-MAT-03                          |
-| `a+(b).sh`                        | `a+(b).sh`                     | 一致            | REQ-F-009 | R-MAT-008                          |
-| `*.SH`                            | `a.sh`                         | 不一致          | REQ-F-006 | DD-MAT-06                          |
-| `src`                             | `src/a.sh`                     | 不一致          | REQ-F-008 | パス全体への一致 (R-MAT-001)       |
-| `"b.sh"`                          | `"b.sh"` / `b.sh`              | 一致 / 不一致   | REQ-F-016 | クオートは文字そのもの             |
-| 包含なし、除外 `!*.md`            | `a.sh` / `a.md`                | 残す / 捨てる   | REQ-F-003 | R-MAT-010, R-MAT-011               |
-| 包含 `src/**`、除外 `!src/gen/**` | `src/gen/b.sh`                 | 捨てる          | REQ-F-003 | R-MAT-011 (DR-05)                  |
+| Pattern                           | Path                           | Result          | REQ       | Rationale                                                |
+| --------------------------------- | ------------------------------ | --------------- | --------- | -------------------------------------------------------- |
+| `*.sh`                            | `a.sh` / `dir/a.sh`            | 一致 / 不一致   | REQ-F-006 | R-MAT-006                                                |
+| `**`                              | `a.sh` / `dir/sub/a.sh`        | 一致 / 一致     | REQ-F-005 | R-MAT-002                                                |
+| `**/a.sh`                         | `a.sh` / `x/a.sh` / `x/y/a.sh` | すべて一致      | REQ-F-005 | R-MAT-003, DD-MAT-01                                     |
+| `dir/**`                          | `dir/a.sh` / `dir/sub/a.sh`    | 一致 / 一致     | REQ-F-005 | R-MAT-004                                                |
+| `dir/**`                          | `dir` / `dirx/a.sh`            | 不一致 / 不一致 | REQ-F-005 | `/` の後に 1 文字以上が必要                              |
+| `a/**/b.sh`                       | `a/b.sh` / `a/x/y/b.sh`        | 一致 / 一致     | REQ-F-005 | R-MAT-003                                                |
+| `**/**`                           | `a.sh` / `x/y/a.sh`            | 一致 / 一致     | REQ-F-005 | `**/` の後に残る `**` は R-MAT-005                       |
+| `a/**/**/b`                       | `a/b` / `a/x/y/b`              | 一致 / 一致     | REQ-F-005 | `**/` の連続はそれぞれ 0 階層以上                        |
+| `a\` (末尾が `\`)                 | `a\` / `a`                     | 一致 / 不一致   | REQ-F-009 | `\` は文字そのもの (R-MAT-008)                           |
+| `a**/b`                           | `ax/b` / `a/x/b`               | 一致 / 不一致   | REQ-F-005 | `/` の直後ではない `**/` は R-MAT-005 の `**` と文字 `/` |
+| `a**b`                            | `axxb` / `ax/xb`               | 一致 / 不一致   | REQ-F-005 | R-MAT-005, DD-MAT-02                                     |
+| `***.sh`                          | `a.sh` / `d/a.sh`              | 一致 / 不一致   | REQ-F-005 | `**` (R-MAT-005) と `*` の連続                           |
+| `dir/?.sh`                        | `dir/a.sh` / `dir/ab.sh`       | 一致 / 不一致   | REQ-F-007 | R-MAT-007                                                |
+| `?.sh`                            | `あ.sh`                        | 一致            | REQ-F-007 | DD-MAT-05                                                |
+| `*`                               | `.env` / `dir/.env`            | 一致 / 不一致   | REQ-F-006 | DD-MAT-04                                                |
+| `a.sh`                            | `aXsh`                         | 不一致          | REQ-F-009 | `.` は文字そのもの (R-MAT-008)                           |
+| `[ab].sh`                         | `a.sh` / `[ab].sh`             | 不一致 / 一致   | REQ-F-009 | DD-MAT-03                                                |
+| `a+(b).sh`                        | `a+(b).sh`                     | 一致            | REQ-F-009 | R-MAT-008                                                |
+| `*.SH`                            | `a.sh`                         | 不一致          | REQ-F-006 | DD-MAT-06                                                |
+| `src`                             | `src/a.sh`                     | 不一致          | REQ-F-008 | パス全体への一致 (R-MAT-001)                             |
+| `"b.sh"`                          | `"b.sh"` / `b.sh`              | 一致 / 不一致   | REQ-F-016 | クオートは文字そのもの                                   |
+| 包含なし、除外 `!*.md`            | `a.sh` / `a.md`                | 残す / 捨てる   | REQ-F-003 | R-MAT-010, R-MAT-011                                     |
+| 包含 `src/**`、除外 `!src/gen/**` | `src/gen/b.sh`                 | 捨てる          | REQ-F-003 | R-MAT-011 (DR-05)                                        |
 
 <!-- impl-note: テストでの検証方法 (fix review TS-02 / TS-03)
   - REQ-F-012: git リポジトリ外の作業ディレクトリで実行し、実在しないが一致するパスと、実在するが一致しないパスを混ぜて結果を確認する。
@@ -213,6 +215,7 @@ spec の範囲では無い。照合方式とループ方式は impl で決める
 
 ## 8. Change History
 
-| Date       | Version | Description           |
-| ---------- | ------- | --------------------- |
-| 2026-10-27 | 1.0.0   | Initial specification |
+| Date       | Version | Description                                                                               |
+| ---------- | ------- | ----------------------------------------------------------------------------------------- |
+| 2026-10-27 | 1.0.0   | Initial specification                                                                     |
+| 2026-10-27 | 1.0.1   | Apply spec explore review: add a**/b edge case, state conversion never fails, locale note |

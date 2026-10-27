@@ -2,7 +2,7 @@
 title: "Design Specification: _ca-filter-files (Index)"
 based-on: requirements.md v1.0.7
 status: Draft
-version: 1.0.0
+version: 1.0.1
 created: "2026-10-27"
 ---
 
@@ -64,9 +64,11 @@ git とファイルシステムは参照せず、入力の文字列と照合規�
 - 入力のダブルクオートは、GitHub Actions が YAML として解釈した後の値で届く (DR-11)。
 - 実行環境は GitHub Actions の ubuntu runner の Bash とし、UTF-8 ロケールを利用できる。
 
-<!-- impl-note: original said "UTF-8 ロケール (`C.UTF-8`) を利用できる"。照合は LC_ALL=C.UTF-8 で行う。 -->
+<!-- impl-note: original said "UTF-8 ロケール (`C.UTF-8`) を利用できる"。照合は LC_ALL=C.UTF-8 で行う。
+  ロケールの有無は検査しない。ubuntu runner (glibc 2.35 以降) では C.UTF-8 が組み込みで必ず使える。 -->
 
 - 本 Action は、`contents: read` 以外の権限を必要としない (REQ-C-002)。
+- UTF-8 として不正なバイト列を含む入力は、エラーとする (specifications-input.md R-IN-010)。
 - 両端に空白を持つファイル名は、正規化で別の名前になるため保証しない (DR-08)。
 - パスは CR・LF を含まない (REQ-C-009)。
 
@@ -219,9 +221,9 @@ GitHub Actions は Composite Action の `required: true` を強制しない。`f
 - Output Meaning: 保持されたファイルパスと、その件数
 - Possible Outcomes:
   - 成功: `files` と `count` が設定され、終了コードは 0 となる。一致 0 件でも成功とする。
-  - 入力の検証の失敗 (不正なパターン): 出力を 1 つも書き出さず、エラーを出して非ゼロで終了する。
+  - 入力の検証の失敗 (不正なパターン・UTF-8 として不正な行): 出力を 1 つも書き出さず、最初のエラーを 1 件出して非ゼロで終了する。
   - 出力先の検証の失敗: 出力を 1 つも書き出さず、エラーを出して非ゼロで終了する。
-  - 書き出し開始後の書き込み失敗: エラーを出して非ゼロで終了する。先に書いた出力が残り得る (DR-09)。
+  - 書き出し開始後の書き込み失敗: エラーを出して非ゼロで終了する。`files` だけが書かれた状態が残り得る (DR-09)。
 
 **Action 出力:**
 
@@ -306,30 +308,30 @@ No reordering is permitted. 各 Step でエラーが起きた場合は、後続�
 
 ## 6. Requirements Traceability
 
-| Requirement ID | Spec Rule                 | Notes                                    |
-| -------------- | ------------------------- | ---------------------------------------- |
-| REQ-F-001      | R-IN-001〜R-IN-003        | Covered in: `specifications-input.md`    |
-| REQ-F-002      | R-IN-004〜R-IN-006        | Covered in: `specifications-input.md`    |
-| REQ-F-003      | R-MAT-010〜R-MAT-013      | Covered in: `specifications-matching.md` |
-| REQ-F-004      | R-IN-007, R-MAT-010       | input / matching                         |
-| REQ-F-005      | R-MAT-002〜R-MAT-005      | Covered in: `specifications-matching.md` |
-| REQ-F-006      | R-MAT-006                 | Covered in: `specifications-matching.md` |
-| REQ-F-007      | R-MAT-007                 | Covered in: `specifications-matching.md` |
-| REQ-F-008      | R-MAT-001                 | Covered in: `specifications-matching.md` |
-| REQ-F-009      | R-MAT-008                 | Covered in: `specifications-matching.md` |
-| REQ-F-010      | R-OUT-003                 | Covered in: `specifications-output.md`   |
-| REQ-F-011      | R-OUT-005                 | Covered in: `specifications-output.md`   |
-| REQ-F-012      | 2.1, R-MAT-013 の注記     | Covered in: `specifications-matching.md` |
-| REQ-F-013      | R-OUT-010〜R-OUT-014      | Covered in: `specifications-output.md`   |
-| REQ-F-014      | R-OUT-004                 | Covered in: `specifications-output.md`   |
-| REQ-F-015      | R-OUT-001, R-OUT-002, 3.4 | Covered in: `specifications-output.md`   |
-| REQ-F-016      | R-IN-008                  | Covered in: `specifications-input.md`    |
-| REQ-NF-002     | 2.1, R-MAT-009            | Covered in: `specifications-matching.md` |
-| REQ-C-001      | 3.1                       | 環境変数契約                             |
-| REQ-C-005      | 3.1, 3.2                  | Action 入出力                            |
-| REQ-C-006      | 3.3, 3.5                  | エラー形式と関数構成                     |
-| REQ-C-007      | 3.5                       | 共有ライブラリへの追加                   |
-| REQ-C-009      | 2.2                       | 前提                                     |
+| Requirement ID | Spec Rule                    | Notes                                    |
+| -------------- | ---------------------------- | ---------------------------------------- |
+| REQ-F-001      | R-IN-001〜R-IN-003, R-IN-010 | Covered in: `specifications-input.md`    |
+| REQ-F-002      | R-IN-004〜R-IN-006, R-IN-009 | Covered in: `specifications-input.md`    |
+| REQ-F-003      | R-MAT-010〜R-MAT-013         | Covered in: `specifications-matching.md` |
+| REQ-F-004      | R-IN-007, R-MAT-010          | input / matching                         |
+| REQ-F-005      | R-MAT-002〜R-MAT-005         | Covered in: `specifications-matching.md` |
+| REQ-F-006      | R-MAT-006                    | Covered in: `specifications-matching.md` |
+| REQ-F-007      | R-MAT-007                    | Covered in: `specifications-matching.md` |
+| REQ-F-008      | R-MAT-001                    | Covered in: `specifications-matching.md` |
+| REQ-F-009      | R-MAT-008                    | Covered in: `specifications-matching.md` |
+| REQ-F-010      | R-OUT-003                    | Covered in: `specifications-output.md`   |
+| REQ-F-011      | R-OUT-005                    | Covered in: `specifications-output.md`   |
+| REQ-F-012      | 2.1, R-MAT-013 の注記        | Covered in: `specifications-matching.md` |
+| REQ-F-013      | R-OUT-010〜R-OUT-014         | Covered in: `specifications-output.md`   |
+| REQ-F-014      | R-OUT-004                    | Covered in: `specifications-output.md`   |
+| REQ-F-015      | R-OUT-001, R-OUT-002, 3.4    | Covered in: `specifications-output.md`   |
+| REQ-F-016      | R-IN-008                     | Covered in: `specifications-input.md`    |
+| REQ-NF-002     | 2.1, R-MAT-009               | Covered in: `specifications-matching.md` |
+| REQ-C-001      | 3.1                          | 環境変数契約                             |
+| REQ-C-005      | 3.1, 3.2                     | Action 入出力                            |
+| REQ-C-006      | 3.3, 3.5                     | エラー形式と関数構成                     |
+| REQ-C-007      | 3.5                          | 共有ライブラリへの追加                   |
+| REQ-C-009      | 2.2                          | 前提                                     |
 
 ---
 
@@ -348,6 +350,7 @@ spec で決める項目は、すべて各分割ファイルで決定した。imp
 
 ## 8. Change History
 
-| Date       | Version | Description           |
-| ---------- | ------- | --------------------- |
-| 2026-10-27 | 1.0.0   | Initial specification |
+| Date       | Version | Description                                                              |
+| ---------- | ------- | ------------------------------------------------------------------------ |
+| 2026-10-27 | 1.0.0   | Initial specification                                                    |
+| 2026-10-27 | 1.0.1   | Apply spec explore review: assumptions, failure outcomes and locale note |
