@@ -40,7 +40,7 @@ source: specifications-index.md v1.3.2, implementation.md v1.2.1
 | Test Target                        | Scenarios | Cases | Status      |
 | ---------------------------------- | --------- | ----- | ----------- |
 | T-01: validate_output_file (VOF)   | 4         | 9     | not started |
-| T-02: write_multiline_output (WMO) | 6         | 21    | not started |
+| T-02: write_multiline_output (WMO) | 6         | 25    | done        |
 | T-03: ff_error (FE)                | 7         | 13    | not started |
 | T-04: check_line_endings (CLE)     | 3         | 9     | not started |
 | T-05: parse_filelist (PFL)         | 5         | 19    | not started |
@@ -132,31 +132,31 @@ source: specifications-index.md v1.3.2, implementation.md v1.2.1
 
 ## T-02: write_multiline_output
 
-対象: `write_multiline_output <file> <key> <value>` (WMO)。R-OUT-010〜R-OUT-014、DD-OUT-01〜DD-OUT-06、DR-07、DR-13。テストファイルは `_libs/__tests__/unit/write-multiline-output.unit.spec.sh`。implementation.md Phase 1 Commit 2。特記の無い限り、出力先は空の一時ファイル、キーは `files` とする。
+対象: `write_multiline_output <file> <key> [<line>...]` (WMO)。R-OUT-010〜R-OUT-014、DD-OUT-01〜DD-OUT-06、DR-07、DR-13。テストファイルは `_libs/__tests__/unit/write-multiline-output.unit.spec.sh`。implementation.md Phase 1 Commit 2。特記の無い限り、出力先は空の一時ファイル、キーは `files` とする。行は 1 引数 = 1 行で渡す。
 
 ### [正常] Normal Cases
 
 #### T-02-01: 複数行出力を書く
 
-- [ ] **T-02-01-01**: 1 行の値を区切り文字で囲んで書く
+- [x] **T-02-01-01**: 1 行の値を区切り文字で囲んで書く
   - Target: `write_multiline_output`
   - Test ID: T-FF-WMO-01
   - Scenario: Given 値が `a.sh`, When `write_multiline_output "$file" files "a.sh"` を呼ぶ
   - Expected: Then 出力先の内容は `files<<EOF`、`a.sh`、`EOF` の 3 行である (R-OUT-013)
 
-- [ ] **T-02-01-02**: 複数行の値を 1 行ずつ書く
+- [x] **T-02-01-02**: 複数行の値を 1 行ずつ書く
   - Target: `write_multiline_output`
   - Test ID: T-FF-WMO-02
-  - Scenario: Given 値が `$'a.sh\nb.sh'`, When `write_multiline_output` を呼ぶ
+  - Scenario: Given 行の引数が `a.sh` と `b.sh`, When `write_multiline_output "$file" files a.sh b.sh` を呼ぶ
   - Expected: Then 出力先の内容は `files<<EOF`、`a.sh`、`b.sh`、`EOF` の 4 行である (R-OUT-013)
 
-- [ ] **T-02-01-03**: 既存の内容を残して追記する
+- [x] **T-02-01-03**: 既存の内容を残して追記する
   - Target: `write_multiline_output`
   - Test ID: T-FF-WMO-03
   - Scenario: Given 出力先が `existing=1` の 1 行を持つ, When 値 `a.sh` で `write_multiline_output` を呼ぶ
   - Expected: Then 出力先の 1 行目は `existing=1` のままで、2 行目が `files<<EOF` である
 
-- [ ] **T-02-01-04**: 成功時は 0 を返し、何も出力しない
+- [x] **T-02-01-04**: 成功時は 0 を返し、何も出力しない
   - Target: `write_multiline_output`
   - Test ID: T-FF-WMO-04
   - Scenario: Given 値が `a.sh`, When `write_multiline_output` を呼ぶ
@@ -164,13 +164,13 @@ source: specifications-index.md v1.3.2, implementation.md v1.2.1
 
 #### T-02-02: 受け付けるキーの形式
 
-- [ ] **T-02-02-01**: `-` を含むキーを受け付ける
+- [x] **T-02-02-01**: `-` を含むキーを受け付ける
   - Target: `write_multiline_output`
   - Test ID: T-FF-WMO-05
   - Scenario: Given キーが `my-key`, When `write_multiline_output "$file" my-key "a.sh"` を呼ぶ
   - Expected: Then 終了コードは 0 で、出力先の 1 行目は `my-key<<EOF` である (DD-OUT-06)
 
-- [ ] **T-02-02-02**: `_` で始まるキーを受け付ける
+- [x] **T-02-02-02**: `_` で始まるキーを受け付ける
   - Target: `write_multiline_output`
   - Test ID: T-FF-WMO-06
   - Scenario: Given キーが `_k1`, When `write_multiline_output "$file" _k1 "a.sh"` を呼ぶ
@@ -180,103 +180,127 @@ source: specifications-index.md v1.3.2, implementation.md v1.2.1
 
 #### T-02-03: 引数不正 (1 を返し、何も書かない)
 
-- [ ] **T-02-03-01**: 出力先が空
+- [x] **T-02-03-01**: 出力先が空
   - Target: `write_multiline_output`
   - Test ID: T-FF-WMO-07
   - Scenario: Given 出力先が `""`, When `write_multiline_output "" files "a.sh"` を呼ぶ
   - Expected: Then 終了コードは 1 で、stdout・stderr は空である (R-OUT-010)
 
-- [ ] **T-02-03-02**: キーに `=` を含む
+- [x] **T-02-03-02**: キーに `=` を含む
   - Target: `write_multiline_output`
   - Test ID: T-FF-WMO-08
   - Scenario: Given キーが `a=b`, When `write_multiline_output "$file" "a=b" "a.sh"` を呼ぶ
   - Expected: Then 終了コードは 1 で、出力先は空のままである (R-OUT-010、DD-OUT-06)
 
-- [ ] **T-02-03-03**: キーに `<<` を含む
+- [x] **T-02-03-03**: キーに `<<` を含む
   - Target: `write_multiline_output`
   - Test ID: T-FF-WMO-09
   - Scenario: Given キーが `a<<b`, When `write_multiline_output "$file" "a<<b" "a.sh"` を呼ぶ
   - Expected: Then 終了コードは 1 で、出力先は空のままである (R-OUT-010)
 
-- [ ] **T-02-03-04**: キーが数字で始まる
+- [x] **T-02-03-04**: キーが数字で始まる
   - Target: `write_multiline_output`
   - Test ID: T-FF-WMO-10
   - Scenario: Given キーが `1abc`, When `write_multiline_output "$file" 1abc "a.sh"` を呼ぶ
   - Expected: Then 終了コードは 1 で、出力先は空のままである (R-OUT-010)
 
-- [ ] **T-02-03-05**: キーが空
+- [x] **T-02-03-05**: キーが空
   - Target: `write_multiline_output`
   - Test ID: T-FF-WMO-11
   - Scenario: Given キーが `""`, When `write_multiline_output "$file" "" "a.sh"` を呼ぶ
   - Expected: Then 終了コードは 1 で、出力先は空のままである (R-OUT-010)
 
-- [ ] **T-02-03-06**: 値に CR を含む
+- [x] **T-02-03-06**: 行の引数に CR を含む
   - Target: `write_multiline_output`
   - Test ID: T-FF-WMO-12
-  - Scenario: Given 値が `$'a\rb.sh'`, When `write_multiline_output "$file" files "$value"` を呼ぶ
+  - Scenario: Given 行の引数が `$'a\rb.sh'`, When `write_multiline_output "$file" files "$value"` を呼ぶ
   - Expected: Then 終了コードは 1 で、出力先は空のままである (R-OUT-010)
+
+- [x] **T-02-03-07**: 2 番目の行の引数に CR を含む
+  - Target: `write_multiline_output`
+  - Test ID: T-FF-WMO-23
+  - Scenario: Given 出力先が `existing=1` の 1 行を持ち、行の引数が `a.sh` と `$'b\rc.sh'`, When `write_multiline_output "$file" files a.sh "$value"` を呼ぶ
+  - Expected: Then 終了コードは 1 で、stdout・stderr は空、出力先は `existing=1` の 1 行のままである (R-OUT-010。途中まで書かない)
+
+- [x] **T-02-03-08**: 2 番目の行の引数に LF を含む
+  - Target: `write_multiline_output`
+  - Test ID: T-FF-WMO-24
+  - Scenario: Given 出力先が `existing=1` の 1 行を持ち、行の引数が `a.sh` と `$'b\nc.sh'`, When `write_multiline_output "$file" files a.sh "$value"` を呼ぶ
+  - Expected: Then 終了コードは 1 で、stdout・stderr は空、出力先は `existing=1` の 1 行のままである (R-OUT-010、DD-OUT-05)
 
 #### T-02-04: 書き込みの失敗
 
-- [ ] **T-02-04-01**: 出力先がディレクトリなら 2 を返す
+- [x] **T-02-04-01**: 出力先がディレクトリなら 2 を返す
   - Target: `write_multiline_output`
   - Test ID: T-FF-WMO-13
   - Scenario: Given 出力先が既存のディレクトリ, When `write_multiline_output "$dir" files "a.sh"` を呼ぶ
   - Expected: Then 終了コードは 2 で、stdout・stderr は空である (R-OUT-014)
 
+- [x] **T-02-04-02**: 親ディレクトリが無ければ 2 を返す
+  - Target: `write_multiline_output`
+  - Test ID: T-FF-WMO-25
+  - Scenario: Given `$tmp/no-such-dir/out` (親ディレクトリが存在しない), When `write_multiline_output "$tmp/no-such-dir/out" files "a.sh"` を呼ぶ
+  - Expected: Then 終了コードは 2 で、stdout・stderr は空、親ディレクトリも作られていない (R-OUT-014)
+
 ### [エッジケース] Edge Cases
 
 #### T-02-05: 区切り文字の選択
 
-- [ ] **T-02-05-01**: 値に `EOF` の行があれば `EOF_1` を使う
+- [x] **T-02-05-01**: 行の引数に `EOF` があれば `EOF_1` を使う
   - Target: `write_multiline_output`
   - Test ID: T-FF-WMO-14
-  - Scenario: Given 値が `$'EOF\na.sh'`, When `write_multiline_output` を呼ぶ
+  - Scenario: Given 行の引数が `EOF` と `a.sh`, When `write_multiline_output "$file" files EOF a.sh` を呼ぶ
   - Expected: Then 出力先の 1 行目は `files<<EOF_1`、最終行は `EOF_1` である (R-OUT-011、AC-010)
 
-- [ ] **T-02-05-02**: `EOF` と `EOF_1` の行があれば `EOF_2` を使う
+- [x] **T-02-05-02**: 行の引数に `EOF` と `EOF_1` があれば `EOF_2` を使う
   - Target: `write_multiline_output`
   - Test ID: T-FF-WMO-15
-  - Scenario: Given 値が `$'EOF\nEOF_1'`, When `write_multiline_output` を呼ぶ
+  - Scenario: Given 行の引数が `EOF` と `EOF_1`, When `write_multiline_output "$file" files EOF EOF_1` を呼ぶ
   - Expected: Then 出力先の 1 行目は `files<<EOF_2` である (R-OUT-011)
 
-- [ ] **T-02-05-03**: `EOF_1` の行だけなら `EOF` を使う
+- [x] **T-02-05-03**: `EOF_1` の行だけなら `EOF` を使う
   - Target: `write_multiline_output`
   - Test ID: T-FF-WMO-16
   - Scenario: Given 値が `EOF_1`, When `write_multiline_output` を呼ぶ
   - Expected: Then 出力先の 1 行目は `files<<EOF` である (DD-OUT-01)
 
-- [ ] **T-02-05-04**: 行の一部に `EOF` を含むだけなら `EOF` を使う
+- [x] **T-02-05-04**: 行の一部に `EOF` を含むだけなら `EOF` を使う
   - Target: `write_multiline_output`
   - Test ID: T-FF-WMO-17
   - Scenario: Given 値が `xEOF`, When `write_multiline_output` を呼ぶ
   - Expected: Then 出力先の 1 行目は `files<<EOF` である (行全体の一致だけを衝突とする)
 
-- [ ] **T-02-05-05**: 末尾に空白の付いた `EOF` は衝突にしない
+- [x] **T-02-05-05**: 末尾に空白の付いた `EOF` は衝突にしない
   - Target: `write_multiline_output`
   - Test ID: T-FF-WMO-18
   - Scenario: Given 値が `'EOF '` (末尾にスペース), When `write_multiline_output` を呼ぶ
   - Expected: Then 出力先の 1 行目は `files<<EOF` で、2 行目は `EOF ` のまま書かれる
 
-#### T-02-06: 値の形
+#### T-02-06: 行の引数の形
 
-- [ ] **T-02-06-01**: 空の値は内容の行を書かない
+- [x] **T-02-06-01**: 行の引数が無ければ内容の行を書かない
   - Target: `write_multiline_output`
   - Test ID: T-FF-WMO-19
-  - Scenario: Given 値が `""`, When `write_multiline_output "$file" files ""` を呼ぶ
+  - Scenario: Given 行の引数が無い, When `write_multiline_output "$file" files` を呼ぶ
   - Expected: Then 終了コードは 0 で、出力先の内容は `files<<EOF`、`EOF` の 2 行だけである (R-OUT-012、DD-OUT-02)
 
-- [ ] **T-02-06-02**: 値の末尾の LF は空行を作らない
+- [x] **T-02-06-02**: LF を含む引数は 1 を返す
   - Target: `write_multiline_output`
   - Test ID: T-FF-WMO-20
-  - Scenario: Given 値が `$'a\nb\n'`, When `write_multiline_output` を呼ぶ
-  - Expected: Then 出力先の内容は、値 `$'a\nb'` で書いた場合と同じ 4 行である (R-OUT-013、DD-OUT-05)
+  - Scenario: Given 行の引数が `$'a\nb'`, When `write_multiline_output "$file" files "$value"` を呼ぶ
+  - Expected: Then 終了コードは 1 で、出力先は空のままである (R-OUT-010、DD-OUT-05)
 
-- [ ] **T-02-06-03**: `<<` を含む行をそのまま書く
+- [x] **T-02-06-03**: `<<` を含む行をそのまま書く
   - Target: `write_multiline_output`
   - Test ID: T-FF-WMO-21
   - Scenario: Given 値が `a<<b.sh`, When `write_multiline_output` を呼ぶ
   - Expected: Then 出力先の 2 行目は `a<<b.sh` で、区切り文字は `EOF` である
+
+- [x] **T-02-06-04**: 空文字列の引数は空行 1 行として書く
+  - Target: `write_multiline_output`
+  - Test ID: T-FF-WMO-22
+  - Scenario: Given 行の引数が `a`、`""`、`b`, When `write_multiline_output "$file" files a "" b` を呼ぶ
+  - Expected: Then 終了コードは 0 で、出力先の内容は `files<<EOF`、`a`、空行、`b`、`EOF` の 5 行である (R-OUT-013)
 
 ---
 
@@ -1700,15 +1724,15 @@ source: specifications-index.md v1.3.2, implementation.md v1.2.1
 | R-OUT-004                              | T-12-02-01, T-13-01-11                                                                 |
 | R-OUT-005                              | T-12-01-01, T-12-04-02                                                                 |
 | R-OUT-006 / DR-09                      | T-12-03-04, T-12-03-05                                                                 |
-| R-OUT-010 / DD-OUT-06                  | T-02-02-01, T-02-02-02, T-02-03-01..06                                                 |
+| R-OUT-010 / DD-OUT-06                  | T-02-02-01, T-02-02-02, T-02-03-01..08, T-02-06-02                                     |
 | R-OUT-011 / DD-OUT-01                  | T-02-05-01..05, T-12-04-01                                                             |
 | R-OUT-012 / DD-OUT-02                  | T-02-06-01                                                                             |
-| R-OUT-013 / DD-OUT-05                  | T-02-01-01..03, T-02-06-02, T-02-06-03                                                 |
-| R-OUT-014                              | T-02-04-01                                                                             |
+| R-OUT-013 / DD-OUT-05                  | T-02-01-01..03, T-02-06-03, T-02-06-04                                                 |
+| R-OUT-014                              | T-02-04-01..02                                                                         |
 | R-OUT-020                              | T-01-02-01                                                                             |
 | R-OUT-021 / DD-OUT-04                  | T-01-01-02, T-01-03-02, T-01-03-04, T-12-04-04                                         |
 | R-OUT-022                              | T-01-01-01, T-01-03-01, T-01-03-03, T-01-04-01                                         |
-| DR-13 (共有関数は何も出力しない)       | T-01-04-02, T-02-01-04, T-02-03-01, T-02-04-01                                         |
+| DR-13 (共有関数は何も出力しない)       | T-01-04-02, T-02-01-04, T-02-03-01, T-02-03-07..08, T-02-04-01..02                     |
 | index §3.3 / DR-15 (エラー形式)        | T-03-01-01..03, T-03-02-01, T-03-06-01..04                                             |
 | index §3.3 (注入防止)                  | T-03-04-01                                                                             |
 | index §3.4 / DD-IDX-02 (評価順序)      | T-13-03-01, T-13-03-05, T-13-03-06                                                     |
@@ -1739,7 +1763,7 @@ source: specifications-index.md v1.3.2, implementation.md v1.2.1
 | Test Target | Normal | Error | Edge | Status |
 | ----------- | ------ | ----- | ---- | ------ |
 | T-01        | 2      | 5     | 2    | [OK]   |
-| T-02        | 6      | 7     | 8    | [OK]   |
+| T-02        | 6      | 10    | 9    | [OK]   |
 | T-03        | 6      | 2     | 5    | [OK]   |
 | T-04        | 3      | 3     | 3    | [OK]   |
 | T-05        | 10     | 6     | 3    | [OK]   |

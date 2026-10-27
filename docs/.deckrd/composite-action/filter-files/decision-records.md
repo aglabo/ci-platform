@@ -3,7 +3,7 @@ title: "Decision Records: _ca-filter-files"
 based-on: requirements.md v1.3.0
 module: "composite-action/filter-files"
 status: approved
-version: 1.3.2
+version: 1.4.1
 created: "2026-10-27"
 ---
 
@@ -494,9 +494,10 @@ REQ-F-015 は、最初の書き込みの前に `$GITHUB_OUTPUT` の出力先を�
 
 - `validate_output_file <file>`: 書き込める通常ファイルなら 0 を返す。ファイルが無い場合は、親ディレクトリに書き込めれば 0 とする。
   パスが空なら 1、それ以外は 2 を返し、ファイルは作らない。
-- `write_multiline_output <file> <key> <value>`: キーは英字または `_` で始まり、英数字・`_`・`-` だけからなる。
-  値は LF で行に分け、1 行ごとに LF を付けて書く。値が空なら内容の行を書かない。
-  区切り文字は `EOF`、`EOF_1`… のうち、値のどの行とも一致しない最初の候補とする。
+- `write_multiline_output <file> <key> [<line>...]`: キーは英字または `_` で始まり、英数字・`_`・`-` だけからなる。
+  値は 1 引数 = 1 行で受け取り、1 行ごとに LF を付けて書く。行の引数が無ければ内容の行を書かない。
+  CR または LF を含む引数は引数不正とし、関数の中で LF による分割をしない。
+  区切り文字は `EOF`、`EOF_1`… のうち、行の引数のどれとも一致しない最初の候補とする。
   引数不正なら 1、書き込み失敗なら 2 を返す。
 - どちらも標準出力・標準エラー出力に何も出さない。`::error::` は呼び出し側が出す。
 
@@ -724,9 +725,13 @@ specifications-index.md §3.5 は、CP の包含・除外の受け渡し方式�
 - パイプラインとプロセス置換では受け渡さない。配列への読み込みは `mapfile -t` (ヒアストリング) だけで行う
 - データを stdout に出すのはコマンド置換の中だけとし、ログへ直接出さない
 - パターンの分類結果は、1 行ごとに `I<TAB>pattern` (包含) または `E<TAB>pattern` (除外) とする
+- 共有出力関数 `write_multiline_output` (DR-13) だけは、1 引数 = 1 行で受け取る。呼び出し側 (EO) は、LF 区切りの文字列を空でなければ `mapfile -t` で配列にし、`"${lines[@]}"` として渡す。0 件なら行の引数を渡さない
+- 関数の中で 1 件ずつ処理するときは、入口で `mapfile -t` によって配列にしてからループする。関数の間では配列を受け渡さない
 
 ### Alternatives Considered
 
+- ファイルを 1 引数 1 件で FF に渡す (`filter_files <include> <exclude> [<file>...]`)。FF はサブシェルで動くため戻り値は stdout の文字列のままとなり、変換の場所が MAIN に移るだけで減らないため不採用。
+- 複数の一覧をファイル記述子ごとのヒアドキュメント (`3<<EOF 4<<EOF`) で渡す。関数の契約が fd に依存し、ShellSpec で渡しにくいため不採用。
 - グローバル配列で受け渡す。テストに `BeforeEach` / `AfterEach` が要り、関数間の結合も強くなるため不採用。
 - 配列名を渡す (nameref)。関数が呼び出し側の変数名に依存するため不採用。
 - パイプラインで受け渡す。出力した側の失敗を見落とし、DR-14 の fail-first が成り立たなくなるため不採用。
@@ -734,6 +739,7 @@ specifications-index.md §3.5 は、CP の包含・除外の受け渡し方式�
 ### Rationale
 
 各関数を引数と stdout だけで単体テストでき、エラーで確実に止まる。ファイル名によるワークフローコマンドの偽装も防げる。
+Action の入力 (`with:`) は文字列だけを受け付け、`files` と `patterns` は LF 区切りの 1 つの文字列として `env:` から届く。入口の形のまま EO まで扱える。
 
 ### Consequences
 
@@ -769,3 +775,5 @@ specifications-index.md §3.5 は、CP の包含・除外の受け渡し方式�
 | 2026-10-27 | 1.3.0   | Add byte size limits to DR-16 and the check order of DR-14, refresh based-on                                                                |
 | 2026-10-27 | 1.3.1   | Add DR-17 (matching method) and DR-18 (inter-function data contract) from impl harden review                                                |
 | 2026-10-27 | 1.3.2   | Restructure all DRs to the deckrd DR template format (no content change), note DR-17 in DR-02 alternatives                                  |
+| 2026-10-27 | 1.4.0   | Change DR-13: write_multiline_output takes one line per argument and rejects arguments containing CR or LF                                  |
+| 2026-10-27 | 1.4.1   | Clarify DR-18: array conversion at the WMO boundary and inside functions, action inputs arrive as strings, two rejected alternatives        |
