@@ -9,6 +9,10 @@
 # deckrd (micro framework of create specs)
 
 # track README
+!README*
+
+# rules
+rules/
 
 # temp directory
 **/temp/
