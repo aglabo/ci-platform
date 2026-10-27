@@ -2,7 +2,7 @@
 title: "Requirements: _ca-filter-files"
 module: "composite-action/filter-files"
 status: Draft
-version: 1.0.5
+version: 1.0.7
 created: "2026-10-27"
 ---
 
@@ -29,7 +29,7 @@ created: "2026-10-27"
 - 内部 Composite Action `_ca-filter-files` (`action.yml`) とスクリプト `filter-files.sh` の新設
 - glob パターン (`**` / `*` / `?`、`!` で除外) を使ったファイルリストの絞り込み
 - 絞り込み結果 (`files`) と件数 (`count`) の出力
-- 複数行出力関数 `write_multiline_output` の `.github/actions/_libs/output.lib.sh` への追加
+- 複数行出力関数 `write_multiline_output` と出力先の検証関数の `.github/actions/_libs/output.lib.sh` への追加
 - ShellSpec テスト (unit / functional) と `_tests_ca_composite-actions.yml` へのテストジョブ追加
 
 **Out of Scope**:
@@ -91,6 +91,7 @@ created: "2026-10-27"
 | DR-09 | 非ゼロで終了するのは出力不能時と、spec で不正と決めた入力に限る          | ../decision-records.md#DR-09 |
 | DR-10 | 入力の前提を呼び出し元の義務として定める                                 | ../decision-records.md#DR-10 |
 | DR-11 | ダブルクオートの解釈は GitHub Actions (YAML) に任せ、Action では外さない | ../decision-records.md#DR-11 |
+| DR-12 | 出力先の検証関数を `_libs/output.lib.sh` に追加する                      | ../decision-records.md#DR-12 |
 
 ## 4. Functional Requirements
 
@@ -385,7 +386,7 @@ THEN the system SHALL verify that the outputs can be written before writing the 
 ```
 
 **Rationale**: 出力を書き出せないと、後続ステップが `files` と `count` の不整合な値を受け取る。
-出力の検証を最初の書き込みの前に済ませる点は `_ca-resolve-sha` の規約に合わせる (explore review Q-04)。
+出力の検証を最初の書き込みの前に済ませる点は `_ca-resolve-sha` の規約に合わせる (explore review Q-04)。検証には共有ライブラリの関数を使う (DR-12)。
 本 Action が非ゼロで終了するのは、本要件と、spec で失敗と決めた入力 (Open Question「不正なパターン」) の場合に限る。
 
 **Acceptance Criteria**:
@@ -473,13 +474,13 @@ Action 名は `_` プレフィックス (`_ca-filter-files`) とし、内部専�
 - 直接実行されたときだけ main を実行する。source との判別は `_ca-resolve-sha` に合わせ `(return 0 2>/dev/null)` で行う。
 - 環境変数を読むのは main のみとする。
 - エラーは `::error::` を stderr に出力して非ゼロで終了する。
-- 出力は共有ライブラリ `.github/actions/_libs/output.lib.sh` の関数 (`write_output`、`write_multiline_output`) で書き出す。
+- 出力先の検証と出力の書き出しは、共有ライブラリ `.github/actions/_libs/output.lib.sh` の関数 (出力先の検証関数、`write_output`、`write_multiline_output`) で行う。
 
 ### REQ-C-007: _libs/ の変更方針
 
 `.github/actions/_libs/` の変更は、追加のみとしなければならない (MUST)。
 
-- 追加してよいもの: `output.lib.sh` への `write_multiline_output`
+- 追加してよいもの: `output.lib.sh` への `write_multiline_output` と出力先の検証関数 (DR-07, DR-12)
 - 既存関数のシグネチャおよび挙動は変更してはならない (MUST NOT)。
 - 既存利用元 (`ca-setup-repo`, `ca-setup-tool`, `ca-validate-environment`, `_ca-resolve-sha`) の既存テストは、引き続き PASS しなければならない (MUST)。
 
@@ -497,7 +498,7 @@ Action 名は `_` プレフィックス (`_ca-filter-files`) とし、内部専�
 - デコード済みの実パスである。git の引用表記 (`core.quotePath` による `"..."` とエスケープ) はデコードしてから渡す
 - リポジトリ相対で、区切り文字は `/` である
 - 正規化済みであり、先頭の `./` や `/`、`a//b` のような重複した区切りを含まない
-- パスは改行を含まない
+- パスは改行 (LF・CR) を含まない
 - 行の区切りは LF である (`files`・`patterns` とも)。CR の扱いは Open Question とする
 
 本 Action は、条件を満たさない入力を検出・補正しない。REQ-F-001 の両端の空白の除去以外にパスを正規化せず、その文字列のまま照合する。
@@ -599,10 +600,9 @@ Scenario: 一致するファイルが無ければ空の結果で正常終了す�
 # AC-010: 区切り文字の候補が値の行と衝突したら選び直す
 # Requirement: REQ-F-013
 Scenario: 区切り文字の候補が値の行と衝突したら選び直す
-  Given 区切り文字の最初の候補がテストで固定値に差し替えられている
-  And   files 出力の値がその固定値と同じ行を含む
+  Given files 出力の値が、区切り文字の最初の候補と同じ行を含む
   When  the multi-line output is written
-  Then  その固定値とは異なる区切り文字が使われる
+  Then  最初の候補とは異なる区切り文字が使われる
   And   後続ステップが受け取る files 出力は元の値と一致する
 
 # AC-011: 出力先が無ければ何も書かずにエラー終了する
@@ -646,7 +646,6 @@ Scenario: YAML が外したクオートは無く、行内のクオートは残�
 | 不正なパターン (例: `!` のみの行) をエラーとするか                                                           | Spec detail | REQ-F-002        | spec  |
 | `files` に重複したパスがある場合、出力と `count` で重複を残すか、1 件にまとめるか                            | Spec detail | REQ-F-010, F-011 | spec  |
 | `?` の「1 文字」はバイト単位か、文字 (UTF-8 のコードポイント) 単位か                                         | Spec detail | REQ-F-007        | spec  |
-| 区切り文字の候補の生成方法と、テストで候補を差し替える手段 (AC-010 の前提)                                   | Spec detail | REQ-F-013        | spec  |
 | `*`・`**`・`?` の意味を GitHub Actions の `paths` フィルタ構文と一致させるか (除外優先の DR-05 は維持)       | Spec detail | REQ-F-005〜F-007 | spec  |
 | 照合方式: 正規表現への変換 (DR-02) と、`/` 区切りのセグメント単位照合の実装量・テスト容易性の比較            | Impl detail | REQ-F-005〜F-009 | impl  |
 | 照合をファイルごとのループで行うか、`grep -E` などでまとめて行うか (入力順と REQ-F-001 の行の扱いを保てるか) | Impl detail | REQ-F-010        | impl  |
@@ -693,3 +692,5 @@ Scenario: YAML が外したクオートは無く、行内のクオートは残�
 | 2026-10-27 | 1.0.3   | Add REQ-F-016: leave double quote interpretation to GitHub Actions (YAML)                                                 |
 | 2026-10-27 | 1.0.4   | Apply fix review: terminology, AC-009 wording, AC-012 traceability, open question and REQ-C-009 LF scope                  |
 | 2026-10-27 | 1.0.5   | Add follow-up: switch get-changed-files to shared write_multiline_output                                                  |
+| 2026-10-27 | 1.0.6   | Add shared output destination check function to _libs (REQ-C-006, REQ-C-007, DR-12)                                       |
+| 2026-10-27 | 1.0.7   | Apply spec second opinion: forbid CR in paths (REQ-C-009), rewrite AC-010 without candidate injection                     |
