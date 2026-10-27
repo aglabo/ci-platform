@@ -1,8 +1,8 @@
 ---
 title: "Design Specification: _ca-filter-files (Index)"
-based-on: requirements.md v1.0.0
-status: Draft
-version: 1.0.0
+based-on: requirements.md v1.3.0
+status: approved
+version: 1.3.1
 created: "2026-10-27"
 ---
 
@@ -24,11 +24,11 @@ FR ごとの詳細な振る舞いは、各分割ファイルで定義する。�
 
 ### 1.3 Split Files
 
-| File                                                       | Covered REQ                                                                 | Summary                                                          |
-| ---------------------------------------------------------- | --------------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| [specifications-input.md](./specifications-input.md)       | REQ-F-001, REQ-F-002, REQ-F-004, REQ-F-016                                  | 入力の行分割と正規化、パターンの分類、不正なパターンを定義する。 |
-| [specifications-matching.md](./specifications-matching.md) | REQ-F-003, REQ-F-005, REQ-F-006, REQ-F-007, REQ-F-008, REQ-F-009, REQ-F-012 | glob の照合規則と保持条件を定義する。                            |
-| [specifications-output.md](./specifications-output.md)     | REQ-F-010, REQ-F-011, REQ-F-013, REQ-F-014, REQ-F-015                       | 出力先の検証、出力値の組み立て、複数行出力の書式を定義する。     |
+| File                                                       | Covered REQ                                                                 | Summary                                                            |
+| ---------------------------------------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| [specifications-input.md](./specifications-input.md)       | REQ-F-001, REQ-F-002, REQ-F-004, REQ-F-016, REQ-F-017, REQ-F-018            | 入力の検査、行分割と正規化、パターンの分類、不正な入力を定義する。 |
+| [specifications-matching.md](./specifications-matching.md) | REQ-F-003, REQ-F-005, REQ-F-006, REQ-F-007, REQ-F-008, REQ-F-009, REQ-F-012 | glob の照合規則と保持条件を定義する。                              |
+| [specifications-output.md](./specifications-output.md)     | REQ-F-010, REQ-F-011, REQ-F-013, REQ-F-014, REQ-F-015                       | 出力先の検証、出力値の組み立て、複数行出力の書式を定義する。       |
 
 ### 1.4 ID Conventions
 
@@ -56,7 +56,7 @@ git とファイルシステムは参照せず、入力の文字列と照合規�
 照合規則は本仕様で定義した glob 規則に限る。正規表現は受け付けない (DR-03)。
 シェルのオプションの状態に依存しない (REQ-NF-002)。
 
-一致 0 件・空入力は正常な結果とする。非ゼロで終了するのは、不正なパターンと出力不能の場合に限る (DR-09)。
+一致 0 件・空入力は正常な結果とする。非ゼロで終了するのは、不正な入力 (改行・引用表記を含む入力、件数・サイズの上限超過、不正なパターンなど) と出力不能の場合に限る (DR-09, DR-14, DR-16)。
 
 ### 2.2 Design Assumptions
 
@@ -69,8 +69,8 @@ git とファイルシステムは参照せず、入力の文字列と照合規�
 
 - 本 Action は、`contents: read` 以外の権限を必要としない (REQ-C-002)。
 - UTF-8 として不正なバイト列を含む入力は、エラーとする (specifications-input.md R-IN-010)。
-- 両端に空白を持つファイル名は、正規化で別の名前になるため保証しない (DR-08)。
-- パスは CR・LF を含まない (REQ-C-009)。
+- ファイル行は変更しない。両端に空白を持つファイル名も、そのまま照合・出力する (DR-08)。
+- パスは CR・LF を含まない (REQ-C-009)。CR とダブルクオートを含む入力はエラーとする (specifications-input.md R-IN-011, R-IN-012)。パス中の LF は検出できない。
 
 前提が破れた場合の挙動は、本仕様で定義した範囲を除き保証しない。
 
@@ -80,13 +80,13 @@ git とファイルシステムは参照せず、入力の文字列と照合規�
 
 #### Feature Decomposition
 
-| Unit              | Responsibility                                         | REQ Coverage                    |
-| ----------------- | ------------------------------------------------------ | ------------------------------- |
-| parse-input       | 入力を行に分割し、両端の空白を除いて空行を捨てる       | REQ-F-001, REQ-F-016            |
-| classify-patterns | パターン行を包含と除外に分け、不正なパターンを検出する | REQ-F-002, REQ-F-004            |
-| glob-to-regex     | 1 つの glob を、パス全体に一致する照合規則に変換する   | REQ-F-005〜REQ-F-009            |
-| filter            | 保持条件に従って、ファイルを入力順に残す               | REQ-F-003, REQ-F-010, REQ-F-012 |
-| output-emission   | 出力先を検証してから、`files` と `count` を書き出す    | REQ-F-011, REQ-F-013〜REQ-F-015 |
+| Unit              | Responsibility                                                           | REQ Coverage                    |
+| ----------------- | ------------------------------------------------------------------------ | ------------------------------- |
+| parse-input       | 入力を検査し、行に分割する。パターン行だけ両端の空白を除き、空行を捨てる | REQ-F-001, REQ-F-016, REQ-F-017 |
+| classify-patterns | パターン行を包含と除外に分け、不正なパターンを検出する                   | REQ-F-002, REQ-F-004            |
+| glob-to-regex     | 1 つの glob を、パス全体に一致する照合規則に変換する                     | REQ-F-005〜REQ-F-009            |
+| filter            | 保持条件に従って、ファイルを入力順に残す                                 | REQ-F-003, REQ-F-010, REQ-F-012 |
+| output-emission   | 出力先を検証してから、`files` と `count` を書き出す                      | REQ-F-011, REQ-F-013〜REQ-F-015 |
 
 #### Unit Interaction Map
 
@@ -113,9 +113,9 @@ git とファイルシステムは参照せず、入力の文字列と照合規�
 
 ```text
 [INPUT_FILES / INPUT_PATTERNS] --> [parse-input] --> [classify-patterns] --> [glob-to-regex]
-                                                            |                       |
-                                                            v                       v
-                                                     [::error:: exit]          [filter] --> [output-emission] --> [outputs]
+                                         |                  |                       |
+                                         v                  v                       v
+                                  [::error:: exit]   [::error:: exit]          [filter] --> [output-emission] --> [outputs]
                                                                                                    |
                                                                                                    v
                                                                                             [::error:: exit]
@@ -151,23 +151,26 @@ git とファイルシステムは参照せず、入力の文字列と照合規�
 > **Reference**: This section lists formal DRs that affect this specification.
 > DRs are maintained in `decision-records.md` and are authoritative.
 
-| DR-ID | Title                                                                    | Phase  | Impact on This Spec      |
-| ----- | ------------------------------------------------------------------------ | ------ | ------------------------ |
-| DR-01 | ファイルフィルタを git diff から独立した内部 Action に切り出す           | req    | モジュール全体の存在理由 |
-| DR-02 | glob を独自に正規表現へ変換して照合する                                  | req    | 照合規則の実現方式       |
-| DR-03 | パターンは glob のみ受け付け、正規表現は受け付けない                     | req    | 照合規則の範囲           |
-| DR-04 | 包含パターンが 0 件の場合は全ファイルを通す                              | req    | 保持条件                 |
-| DR-05 | 除外パターンは包含パターンより優先する                                   | req    | 保持条件                 |
-| DR-06 | ca-get-changed-files の置き換えは get-changed-files 側で扱う             | req    | Non-Goals                |
-| DR-07 | 複数行出力関数を `_libs` に追加し、区切り文字を一意な文字列にする        | req    | 複数行出力の書式         |
-| DR-08 | 入力行の両端の空白を除去し、空になった行を無視する                       | review | 入力の正規化             |
-| DR-09 | 非ゼロで終了するのは出力不能時と、spec で不正と決めた入力に限る          | review | 失敗条件と評価順序       |
-| DR-10 | 入力の前提を呼び出し元の義務として定める                                 | review | 前提                     |
-| DR-11 | ダブルクオートの解釈は GitHub Actions (YAML) に任せ、Action では外さない | req    | 入力の正規化             |
-| DR-12 | 出力先の検証関数を `_libs/output.lib.sh` に追加する                      | spec   | 出力先の検証             |
-| DR-13 | 共有出力関数の契約を定める                                               | review | 共有関数の契約           |
-| DR-14 | 不正な入力を定義し、最初の 1 件で終了する                                | review | 不正な入力と報告の件数   |
-| DR-15 | エラー形式を内部 Action 共通の形式にそろえる                             | review | エラー形式               |
+| DR-ID | Title                                                                     | Phase  | Impact on This Spec      |
+| ----- | ------------------------------------------------------------------------- | ------ | ------------------------ |
+| DR-01 | ファイルフィルタを git diff から独立した内部 Action に切り出す            | req    | モジュール全体の存在理由 |
+| DR-02 | glob を独自に正規表現へ変換して照合する                                   | req    | 照合規則の実現方式       |
+| DR-03 | パターンは glob のみ受け付け、正規表現は受け付けない                      | req    | 照合規則の範囲           |
+| DR-04 | 包含パターンが 0 件の場合は全ファイルを通す                               | req    | 保持条件                 |
+| DR-05 | 除外パターンは包含パターンより優先する                                    | req    | 保持条件                 |
+| DR-06 | ca-get-changed-files の置き換えは get-changed-files 側で扱う              | req    | Non-Goals                |
+| DR-07 | 複数行出力関数を `_libs` に追加し、区切り文字を一意な文字列にする         | req    | 複数行出力の書式         |
+| DR-08 | パターン行だけ両端の空白を除去し、ファイル行は変えない                    | review | 入力の正規化             |
+| DR-09 | 非ゼロで終了するのは出力不能時と、不正と決めた入力に限る                  | review | 失敗条件と評価順序       |
+| DR-10 | 入力の前提を呼び出し元の義務として定める                                  | review | 前提                     |
+| DR-11 | ダブルクオートの解釈は GitHub Actions (YAML) に任せ、Action では外さない  | req    | 入力の正規化             |
+| DR-12 | 出力先の検証関数を `_libs/output.lib.sh` に追加する                       | spec   | 出力先の検証             |
+| DR-13 | 共有出力関数の契約を定める                                                | review | 共有関数の契約           |
+| DR-14 | 不正な入力を定義し、最初の 1 件で終了する                                 | review | 不正な入力と報告の件数   |
+| DR-15 | エラー形式を内部 Action 共通の形式にそろえる                              | review | エラー形式               |
+| DR-16 | ファイル数・パターン数・バイト数に上限を設け、超えた入力をエラーにする    | review | 件数とサイズの上限       |
+| DR-17 | 照合はファイルごとのループで、事前に生成した ERE と `[[ =~ ]]` で行う     | review | 照合と走査の方式 (7)     |
+| DR-18 | 関数間の複数行データは LF 区切りの文字列 1 つとし、コマンド置換で受け渡す | review | 関数間の受け渡し (3.5)   |
 
 ### 2.7 DD to DR Promotion Criteria
 
@@ -224,7 +227,7 @@ GitHub Actions は Composite Action の `required: true` を強制しない。`f
 - Output Meaning: 保持されたファイルパスと、その件数
 - Possible Outcomes:
   - 成功: `files` と `count` が設定され、終了コードは 0 となる。一致 0 件でも成功とする。
-  - 入力の検証の失敗 (不正なパターン・UTF-8 として不正な行): 出力を 1 つも書き出さず、最初のエラーを 1 件出して非ゼロで終了する。
+  - 入力の検証の失敗 (LF を伴わない CR・UTF-8 として不正な行・ダブルクオートを含むファイル行・件数とサイズの上限超過・不正なパターン): 出力を 1 つも書き出さず、最初のエラーを 1 件出して非ゼロで終了する。
   - 出力先の検証の失敗: 出力を 1 つも書き出さず、エラーを出して非ゼロで終了する。
   - 書き出し開始後の書き込み失敗: エラーを出して非ゼロで終了する。`files` だけが書かれた状態が残り得る (DR-09)。
 
@@ -253,13 +256,13 @@ GitHub Actions は Composite Action の `required: true` を強制しない。`f
 
 評価は次の順で行う (DD-IDX-02)。
 
-| Step | 処理                                                                         | 定義                       |
-| ---: | ---------------------------------------------------------------------------- | -------------------------- |
-|    1 | `files` と `patterns` を行に分割し、UTF-8 として正しいかを検査し、正規化する | specifications-input.md    |
-|    2 | パターンを分類し、不正なパターンを検出する                                   | specifications-input.md    |
-|    3 | 各パターンを照合規則に変換し、ファイルを絞り込む                             | specifications-matching.md |
-|    4 | 出力先を検証する                                                             | specifications-output.md   |
-|    5 | `files`、`count` の順に書き出す                                              | specifications-output.md   |
+| Step | 処理                                                                                                                                                                                                                                                                                                             | 定義                       |
+| ---: | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
+|    1 | `files` と `patterns` の値のバイト数が上限を超えないかを、最初に検査する。次に LF を伴わない CR が無いかを、分割の前に検査する。CRLF を LF に変換してから行に分割し、UTF-8 として正しいか (`files` はダブルクオートの有無も) を検査し、正規化する。続けて `files`・`patterns` の行数が上限を超えないかを検査する | specifications-input.md    |
+|    2 | パターンを分類し、不正なパターンを検出する                                                                                                                                                                                                                                                                       | specifications-input.md    |
+|    3 | 各パターンを照合規則に変換し、ファイルを絞り込む                                                                                                                                                                                                                                                                 | specifications-matching.md |
+|    4 | 出力先を検証する                                                                                                                                                                                                                                                                                                 | specifications-output.md   |
+|    5 | `files`、`count` の順に書き出す                                                                                                                                                                                                                                                                                  | specifications-output.md   |
 
 No reordering is permitted. 各 Step でエラーが起きた場合は、後続の Step を実行しない。
 
@@ -273,7 +276,10 @@ No reordering is permitted. 各 Step でエラーが起きた場合は、後続�
   | VOF  | validate_output_file <file>                 | _libs/output.lib.sh                 | output              |
   | WMO  | write_multiline_output <file> <key> <value> | _libs/output.lib.sh                 | output              |
   | FE   | ff_error <target> <problem> [<value>]       | scripts/_libs/filter-files.lib.sh   | index 3.3           |
+  | CBL  | check_byte_limit <target> <text> <max>      | scripts/_libs/filter-files.lib.sh   | input               |
+  | CLE  | check_line_endings <target> <text>          | scripts/_libs/filter-files.lib.sh   | input               |
   | PL   | parse_lines <text>                          | scripts/_libs/filter-files.lib.sh   | input               |
+  | CLL  | check_line_limit <target> <lines> <max>     | scripts/_libs/filter-files.lib.sh   | input               |
   | CP   | classify_patterns <lines>                   | scripts/_libs/filter-files.lib.sh   | input               |
   | GTR  | glob_to_regex <glob>                        | scripts/_libs/filter-files.lib.sh   | matching            |
   | FF   | filter_files <files> <include> <exclude>    | scripts/_libs/filter-files.lib.sh   | matching            |
@@ -285,7 +291,8 @@ No reordering is permitted. 各 Step でエラーが起きた場合は、後続�
   - 共有ライブラリへの追加は VOF と WMO の 2 点のみとする (REQ-C-007)。
   - VOF と WMO はエラーを出さず、終了コードだけを返す。エラーは呼び出し側が FE で 3.3 の形式で出す。
   - 環境変数を読むのは MAIN のみとし、他の関数は引数だけを入力とする。
-  - CP の包含・除外の受け渡し方式 (配列名の受け渡し、区切り出力など) は impl で決める。
+  - 関数間の複数行データは LF 区切りの文字列 1 つとし、コマンド置換で受け渡す (DR-18)。
+    CP は 1 行ごとに `I<TAB>pattern` / `E<TAB>pattern` を出し、MAIN が包含と除外に分けて FF に渡す。
   - module.md の owns に `_libs/__tests__/unit/` の VOF / WMO のテストファイルを明示する (テスト ID 検査 A)。
 -->
 
@@ -301,40 +308,43 @@ No reordering is permitted. 各 Step でエラーが起きた場合は、後続�
 
 横断的なエッジケースのみを示す。個別のエッジケースは各分割ファイルで定義する。
 
-| Input                                  | Classification                   | REQ                  | Rationale                            |
-| -------------------------------------- | -------------------------------- | -------------------- | ------------------------------------ |
-| 不正なパターンがあり、出力先も使えない | 不正なパターンのエラーで終了する | REQ-F-002, REQ-F-015 | 入力の検証が先 (DD-IDX-02)           |
-| `files` が未指定 (空として届く)        | 0 件の正常終了                   | REQ-F-014            | `required: true` は強制されない      |
-| `files` 0 行で、不正なパターンがある   | 不正なパターンのエラーで終了する | REQ-F-002            | パターンの検証はファイル数によらない |
+| Input                                         | Classification                   | REQ                  | Rationale                            |
+| --------------------------------------------- | -------------------------------- | -------------------- | ------------------------------------ |
+| 不正なパターンがあり、出力先も使えない        | 不正なパターンのエラーで終了する | REQ-F-002, REQ-F-015 | 入力の検証が先 (DD-IDX-02)           |
+| `files` が未指定 (空として届く)               | 0 件の正常終了                   | REQ-F-014            | `required: true` は強制されない      |
+| `files` 0 行で、不正なパターンがある          | 不正なパターンのエラーで終了する | REQ-F-002            | パターンの検証はファイル数によらない |
+| `files` が `"a\nb.sh"` (git の引用表記のまま) | ダブルクオートのエラーで終了する | REQ-F-017            | 引用表記のデコード漏れ (R-IN-012)    |
 
 ---
 
 ## 6. Requirements Traceability
 
-| Requirement ID | Spec Rule                    | Notes                                    |
-| -------------- | ---------------------------- | ---------------------------------------- |
-| REQ-F-001      | R-IN-001〜R-IN-003, R-IN-010 | Covered in: `specifications-input.md`    |
-| REQ-F-002      | R-IN-004〜R-IN-006, R-IN-009 | Covered in: `specifications-input.md`    |
-| REQ-F-003      | R-MAT-010〜R-MAT-013         | Covered in: `specifications-matching.md` |
-| REQ-F-004      | R-IN-007, R-MAT-010          | input / matching                         |
-| REQ-F-005      | R-MAT-002〜R-MAT-005         | Covered in: `specifications-matching.md` |
-| REQ-F-006      | R-MAT-006                    | Covered in: `specifications-matching.md` |
-| REQ-F-007      | R-MAT-007                    | Covered in: `specifications-matching.md` |
-| REQ-F-008      | R-MAT-001                    | Covered in: `specifications-matching.md` |
-| REQ-F-009      | R-MAT-008                    | Covered in: `specifications-matching.md` |
-| REQ-F-010      | R-OUT-003                    | Covered in: `specifications-output.md`   |
-| REQ-F-011      | R-OUT-005                    | Covered in: `specifications-output.md`   |
-| REQ-F-012      | 2.1, R-MAT-013 の注記        | Covered in: `specifications-matching.md` |
-| REQ-F-013      | R-OUT-010〜R-OUT-014         | Covered in: `specifications-output.md`   |
-| REQ-F-014      | R-OUT-004                    | Covered in: `specifications-output.md`   |
-| REQ-F-015      | R-OUT-001, R-OUT-002, 3.4    | Covered in: `specifications-output.md`   |
-| REQ-F-016      | R-IN-008                     | Covered in: `specifications-input.md`    |
-| REQ-NF-002     | 2.1, R-MAT-009               | Covered in: `specifications-matching.md` |
-| REQ-C-001      | 3.1                          | 環境変数契約                             |
-| REQ-C-005      | 3.1, 3.2                     | Action 入出力                            |
-| REQ-C-006      | 3.3, 3.5                     | エラー形式と関数構成                     |
-| REQ-C-007      | 3.5                          | 共有ライブラリへの追加                   |
-| REQ-C-009      | 2.2                          | 前提                                     |
+| Requirement ID | Spec Rule                              | Notes                                    |
+| -------------- | -------------------------------------- | ---------------------------------------- |
+| REQ-F-001      | R-IN-001〜R-IN-003, R-IN-010, R-IN-013 | Covered in: `specifications-input.md`    |
+| REQ-F-002      | R-IN-004〜R-IN-006, R-IN-009           | Covered in: `specifications-input.md`    |
+| REQ-F-003      | R-MAT-010〜R-MAT-013                   | Covered in: `specifications-matching.md` |
+| REQ-F-004      | R-IN-007, R-MAT-010                    | input / matching                         |
+| REQ-F-005      | R-MAT-002〜R-MAT-005                   | Covered in: `specifications-matching.md` |
+| REQ-F-006      | R-MAT-006                              | Covered in: `specifications-matching.md` |
+| REQ-F-007      | R-MAT-007                              | Covered in: `specifications-matching.md` |
+| REQ-F-008      | R-MAT-001                              | Covered in: `specifications-matching.md` |
+| REQ-F-009      | R-MAT-008                              | Covered in: `specifications-matching.md` |
+| REQ-F-010      | R-OUT-003                              | Covered in: `specifications-output.md`   |
+| REQ-F-011      | R-OUT-005                              | Covered in: `specifications-output.md`   |
+| REQ-F-012      | 2.1, R-MAT-013 の注記                  | Covered in: `specifications-matching.md` |
+| REQ-F-013      | R-OUT-010〜R-OUT-014                   | Covered in: `specifications-output.md`   |
+| REQ-F-014      | R-OUT-004                              | Covered in: `specifications-output.md`   |
+| REQ-F-015      | R-OUT-001, R-OUT-002, 3.4              | Covered in: `specifications-output.md`   |
+| REQ-F-016      | R-IN-008                               | Covered in: `specifications-input.md`    |
+| REQ-F-017      | R-IN-011, R-IN-012                     | Covered in: `specifications-input.md`    |
+| REQ-F-018      | R-IN-014〜R-IN-017                     | Covered in: `specifications-input.md`    |
+| REQ-NF-002     | 2.1, R-MAT-009                         | Covered in: `specifications-matching.md` |
+| REQ-C-001      | 3.1                                    | 環境変数契約                             |
+| REQ-C-005      | 3.1, 3.2                               | Action 入出力                            |
+| REQ-C-006      | 3.3, 3.5                               | エラー形式と関数構成                     |
+| REQ-C-007      | 3.5                                    | 共有ライブラリへの追加                   |
+| REQ-C-009      | 2.2                                    | 前提                                     |
 
 ---
 
@@ -342,21 +352,26 @@ No reordering is permitted. 各 Step でエラーが起きた場合は、後続�
 
 > **Status**: COMPLETE
 
-spec で決める項目は、すべて各分割ファイルで決定した。impl で決める項目を次に示す。
+spec で決める項目は、すべて各分割ファイルで決定した。impl で決める項目として残した次の 2 件は、impl で決定した。
 
-| # | Question                                                                                    | Source             | Impact               |
-| - | ------------------------------------------------------------------------------------------- | ------------------ | -------------------- |
-| 1 | 照合方式: 正規表現への変換 (DR-02) と、`/` 区切りのセグメント単位照合の実装量・テスト容易性 | REQ Open Questions | matching の実現方式  |
-| 2 | 照合をファイルごとのループで行うか、`grep -E` などでまとめて行うか                          | REQ Open Questions | 入力順・正規化の保持 |
+| # | Question                                                                                    | Source             | Impact               | Resolution                         |
+| - | ------------------------------------------------------------------------------------------- | ------------------ | -------------------- | ---------------------------------- |
+| 1 | 照合方式: 正規表現への変換 (DR-02) と、`/` 区切りのセグメント単位照合の実装量・テスト容易性 | REQ Open Questions | matching の実現方式  | 正規表現への変換とする (DR-17)     |
+| 2 | 照合をファイルごとのループで行うか、`grep -E` などでまとめて行うか                          | REQ Open Questions | 入力順・正規化の保持 | ファイルごとのループとする (DR-17) |
 
 ---
 
 ## 8. Change History
 
-| Date       | Version | Description                                                               |
-| ---------- | ------- | ------------------------------------------------------------------------- |
-| 2026-10-27 | 0.1.0   | Initial draft                                                             |
-| 2026-10-27 | 0.1.1   | Apply spec explore review: assumptions, failure outcomes and locale note  |
-| 2026-10-27 | 0.1.2   | Apply spec harden review: promote DD-IDX-01 to DR-15, list DR-13 to DR-15 |
-| 2026-10-27 | 0.1.3   | Apply spec fix review: UTF-8 check in evaluation step 1, refresh based-on |
-| 2026-10-27 | 1.0.0   | Initial release                                                           |
+| Date       | Version | Description                                                                                                  |
+| ---------- | ------- | ------------------------------------------------------------------------------------------------------------ |
+| 2026-10-27 | 0.1.0   | Initial draft                                                                                                |
+| 2026-10-27 | 0.1.1   | Apply spec explore review: assumptions, failure outcomes and locale note                                     |
+| 2026-10-27 | 0.1.2   | Apply spec harden review: promote DD-IDX-01 to DR-15, list DR-13 to DR-15                                    |
+| 2026-10-27 | 0.1.3   | Apply spec fix review: UTF-8 check in evaluation step 1, refresh based-on                                    |
+| 2026-10-27 | 1.0.0   | Initial release                                                                                              |
+| 2026-10-27 | 1.1.0   | Follow requirements v1.1.0: files lines unchanged, lone CR and quoted files line errors (REQ-F-017), approve |
+| 2026-10-27 | 1.1.1   | Clarify evaluation order step 1: check lone CR before splitting (R-IN-011)                                   |
+| 2026-10-27 | 1.2.0   | Follow requirements v1.2.0: line count limit check in step 1, list DR-16 (REQ-F-018)                         |
+| 2026-10-27 | 1.3.0   | Follow requirements v1.3.0: byte size limit check first in step 1 (REQ-F-018)                                |
+| 2026-10-27 | 1.3.1   | Apply impl harden review: add CBL, CLE, CLL to 3.5, mark open questions resolved, list DR-17 and DR-18       |

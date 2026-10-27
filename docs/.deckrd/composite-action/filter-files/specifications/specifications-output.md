@@ -1,8 +1,8 @@
 ---
 title: "Design Specification: _ca-filter-files (Output)"
-based-on: requirements.md v1.0.0
-status: Draft
-version: 1.0.0
+based-on: requirements.md v1.3.0
+status: approved
+version: 1.0.3
 created: "2026-10-27"
 ---
 
@@ -88,7 +88,7 @@ created: "2026-10-27"
 | DR-ID | Title                                                             | Phase  | Impact on This Spec  |
 | ----- | ----------------------------------------------------------------- | ------ | -------------------- |
 | DR-07 | 複数行出力関数を `_libs` に追加し、区切り文字を一意な文字列にする | req    | R-OUT-010〜R-OUT-014 |
-| DR-09 | 非ゼロで終了するのは出力不能時と、spec で不正と決めた入力に限る   | review | 失敗時の振る舞い     |
+| DR-09 | 非ゼロで終了するのは出力不能時と、不正と決めた入力に限る          | review | 失敗時の振る舞い     |
 | DR-12 | 出力先の検証関数を `_libs/output.lib.sh` に追加する               | spec   | R-OUT-020〜R-OUT-022 |
 | DR-13 | 共有出力関数の契約を定める                                        | review | 共有関数の契約       |
 | DR-15 | エラー形式を内部 Action 共通の形式にそろえる                      | review | エラー形式           |
@@ -222,3 +222,6 @@ None identified - all requirements are unambiguous.
 | 2026-10-27 | 0.2.1   | Apply spec harden review: promote shared output DDs to DR-13, candidate search terminates           |
 | 2026-10-27 | 0.2.2   | Apply spec fix review: unify term 保持行, refresh based-on                                          |
 | 2026-10-27 | 1.0.0   | Initial release                                                                                     |
+| 2026-10-27 | 1.0.1   | Refresh based-on (requirements v1.1.0), approve                                                     |
+| 2026-10-27 | 1.0.2   | Refresh based-on (requirements v1.2.0)                                                              |
+| 2026-10-27 | 1.0.3   | Refresh based-on (requirements v1.3.0)                                                              |
