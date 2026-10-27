@@ -113,3 +113,30 @@ write_multiline_output() {
   # the group redirect also silences the error raised by the >> redirection itself
   { printf '%s\n' "${key}<<${delimiter}" "$@" "$delimiter" >>"$file"; } 2>/dev/null || return 2
 }
+
+##
+# @description Check that <file> can be used as an output file, without creating anything.
+#              An existing <file> must be a writable regular file;
+#              a missing <file> needs a writable parent directory,
+#              and must neither end in / nor be a dangling symbolic link.
+# @arg $1 file — output file path to check (required)
+# @stdout (none)
+# @stderr (none)
+# @return 0 if <file> is usable
+# @return 1 if <file> is empty
+# @return 2 if <file> is not usable
+validate_output_file() {
+  local file="$1"
+  local parent
+
+  [[ -n "$file" ]] || return 1
+
+  if [[ -e "$file" ]]; then
+    [[ -f "$file" && -w "$file" ]] || return 2
+  else
+    # a trailing / names a directory, and a dangling link cannot be written as a file
+    [[ "$file" != */ && ! -L "$file" ]] || return 2
+    parent="$(dirname -- "$file")/."
+    [[ -d "$parent" && -w "$parent" ]] || return 2
+  fi
+}
