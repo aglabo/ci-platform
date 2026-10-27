@@ -1,21 +1,35 @@
 ---
 title: "ci-platform Change Log"
-version: "0.3.5"
-date: 2026-09-18
+version: "0.4.1"
+date: 2026-10-27
 tags:
   - release
   - composite-actions
   - ci-platform
 summary: >
-  v0.3.5 closes all Dependabot alerts on the documentation site, unifies the pnpm and
-  Node.js version requirements across the repository, adds MDX support to textlint,
-  and switches the repository `.gitignore` to an allowlist.
+  v0.4.1 updates the default Node.js and pnpm versions in the setup action,
+  and upgrades jactionlint and ghalint in the GitHub Actions workflows.
 ---
 
 <!-- textlint-disable
   ja-technical-writing/sentence-length,
   ja-technical-writing/max-comma
   -->
+
+## [0.4.1] - 2026-10-27
+
+### Overview
+
+This release updates tool versions used by workflows and composite actions.
+
+### Changed
+
+#### GitHub Actions
+
+- Updated the default Node.js version from 22 to 24 in `ca-setup-repo`.
+- Updated the default pnpm version from 11.22.0 to 12.15.0 in `ca-setup-repo`.
+- Updated ghalint from 1.5.6 to 1.5.7 in `ru-qa-ghalint.yml`.
+- Updated jactionlint from 2.2.0 to 2.3.0 in `ru-qa-actionlint.yml`.
 
 ## [0.4.0] - 2026-10-15
 
