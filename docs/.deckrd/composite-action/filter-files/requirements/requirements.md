@@ -2,7 +2,7 @@
 title: "Requirements: _ca-filter-files"
 module: "composite-action/filter-files"
 status: Draft
-version: 1.0.7
+version: 1.0.8
 created: "2026-10-27"
 ---
 
@@ -387,7 +387,7 @@ THEN the system SHALL verify that the outputs can be written before writing the 
 
 **Rationale**: 出力を書き出せないと、後続ステップが `files` と `count` の不整合な値を受け取る。
 出力の検証を最初の書き込みの前に済ませる点は `_ca-resolve-sha` の規約に合わせる (explore review Q-04)。検証には共有ライブラリの関数を使う (DR-12)。
-本 Action が非ゼロで終了するのは、本要件と、spec で失敗と決めた入力 (Open Question「不正なパターン」) の場合に限る。
+本 Action が非ゼロで終了するのは、本要件と、spec で失敗と決めた入力 (DR-14) の場合に限る。
 
 **Acceptance Criteria**:
 
@@ -635,20 +635,22 @@ Scenario: YAML が外したクオートは無く、行内のクオートは残�
 
 ## 9. Open Questions
 
-| Question                                                                                                     | Type        | Impact Area      | Owner |
-| ------------------------------------------------------------------------------------------------------------ | ----------- | ---------------- | ----- |
-| `write_multiline_output` の引数・戻り値・出力先の指定方法 (`write_output` との整合)                          | Spec detail | REQ-F-013, C-007 | spec  |
-| `**/` が 0 階層に一致するか (`**/a.sh` が `a.sh` に一致するか)                                               | Spec detail | REQ-F-005        | spec  |
-| `*` / `?` が先頭ドットのファイル (隠しファイル) に一致するか                                                 | Spec detail | REQ-F-006, F-007 | spec  |
-| ブラケット `[...]` を文字クラスとして扱うか、リテラルとして扱うか                                            | Spec detail | REQ-F-009        | spec  |
-| パス中の特殊文字、CR (CRLF 入力) の扱い (パスの途中の空白は除去しない: REQ-F-001, DR-08)                     | Spec detail | REQ-F-001, F-013 | spec  |
-| `**` が `/` を含まないセグメント内 (例: `a**b`) に現れた場合の扱い                                           | Spec detail | REQ-F-005        | spec  |
-| 不正なパターン (例: `!` のみの行) をエラーとするか                                                           | Spec detail | REQ-F-002        | spec  |
-| `files` に重複したパスがある場合、出力と `count` で重複を残すか、1 件にまとめるか                            | Spec detail | REQ-F-010, F-011 | spec  |
-| `?` の「1 文字」はバイト単位か、文字 (UTF-8 のコードポイント) 単位か                                         | Spec detail | REQ-F-007        | spec  |
-| `*`・`**`・`?` の意味を GitHub Actions の `paths` フィルタ構文と一致させるか (除外優先の DR-05 は維持)       | Spec detail | REQ-F-005〜F-007 | spec  |
-| 照合方式: 正規表現への変換 (DR-02) と、`/` 区切りのセグメント単位照合の実装量・テスト容易性の比較            | Impl detail | REQ-F-005〜F-009 | impl  |
-| 照合をファイルごとのループで行うか、`grep -E` などでまとめて行うか (入力順と REQ-F-001 の行の扱いを保てるか) | Impl detail | REQ-F-010        | impl  |
+Owner が spec の項目は、spec で解決した。各行の括弧内に解決先を示す。
+
+| Question                                                                                                                                                  | Type        | Impact Area      | Owner |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | ---------------- | ----- |
+| `write_multiline_output` の引数・戻り値・出力先の指定方法 (`write_output` との整合) (Resolved in spec: DD-OUT-06, DR-13)                                  | Spec detail | REQ-F-013, C-007 | spec  |
+| `**/` が 0 階層に一致するか (`**/a.sh` が `a.sh` に一致するか) (Resolved in spec: DD-MAT-01)                                                              | Spec detail | REQ-F-005        | spec  |
+| `*` / `?` が先頭ドットのファイル (隠しファイル) に一致するか (Resolved in spec: DD-MAT-04)                                                                | Spec detail | REQ-F-006, F-007 | spec  |
+| ブラケット `[...]` を文字クラスとして扱うか、リテラルとして扱うか (Resolved in spec: DD-MAT-03)                                                           | Spec detail | REQ-F-009        | spec  |
+| パス中の特殊文字、CR (CRLF 入力) の扱い (パスの途中の空白は除去しない: REQ-F-001, DR-08) (Resolved in spec: DD-IN-01, REQ-C-009)                          | Spec detail | REQ-F-001, F-013 | spec  |
+| `**` が `/` を含まないセグメント内 (例: `a**b`) に現れた場合の扱い (Resolved in spec: DD-MAT-02)                                                          | Spec detail | REQ-F-005        | spec  |
+| 不正なパターン (例: `!` のみの行) をエラーとするか (Resolved in spec: DR-14)                                                                              | Spec detail | REQ-F-002        | spec  |
+| `files` に重複したパスがある場合、出力と `count` で重複を残すか、1 件にまとめるか (Resolved in spec: specifications-input.md 5 (重複を残す))              | Spec detail | REQ-F-010, F-011 | spec  |
+| `?` の「1 文字」はバイト単位か、文字 (UTF-8 のコードポイント) 単位か (Resolved in spec: DD-MAT-05)                                                        | Spec detail | REQ-F-007        | spec  |
+| `*`・`**`・`?` の意味を GitHub Actions の `paths` フィルタ構文と一致させるか (除外優先の DR-05 は維持) (Resolved in spec: specifications-matching.md 2.1) | Spec detail | REQ-F-005〜F-007 | spec  |
+| 照合方式: 正規表現への変換 (DR-02) と、`/` 区切りのセグメント単位照合の実装量・テスト容易性の比較                                                         | Impl detail | REQ-F-005〜F-009 | impl  |
+| 照合をファイルごとのループで行うか、`grep -E` などでまとめて行うか (入力順と REQ-F-001 の行の扱いを保てるか)                                              | Impl detail | REQ-F-010        | impl  |
 
 ## 10. Traceability
 
@@ -694,3 +696,4 @@ Scenario: YAML が外したクオートは無く、行内のクオートは残�
 | 2026-10-27 | 1.0.5   | Add follow-up: switch get-changed-files to shared write_multiline_output                                                  |
 | 2026-10-27 | 1.0.6   | Add shared output destination check function to _libs (REQ-C-006, REQ-C-007, DR-12)                                       |
 | 2026-10-27 | 1.0.7   | Apply spec second opinion: forbid CR in paths (REQ-C-009), rewrite AC-010 without candidate injection                     |
+| 2026-10-27 | 1.0.8   | Apply spec fix review: mark spec-owned open questions resolved, point REQ-F-015 to DR-14                                  |
