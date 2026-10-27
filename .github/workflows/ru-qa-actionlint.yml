@@ -23,7 +23,7 @@ on:
       version:
         description: "Version of jactionlint to install"
         required: false
-        default: "2.2.0"
+        default: "2.3.0"
         type: string
       config:
         description: "Path to the jactionlint configuration file"

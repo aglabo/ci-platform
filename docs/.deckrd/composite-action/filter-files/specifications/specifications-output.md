@@ -1,8 +1,8 @@
 ---
 title: "Design Specification: _ca-filter-files (Output)"
-based-on: requirements.md v1.0.8
+based-on: requirements.md v1.0.0
 status: Draft
-version: 1.1.2
+version: 1.0.0
 created: "2026-10-27"
 ---
 
@@ -217,7 +217,8 @@ None identified - all requirements are unambiguous.
 
 | Date       | Version | Description                                                                                         |
 | ---------- | ------- | --------------------------------------------------------------------------------------------------- |
-| 2026-10-27 | 1.0.0   | Initial specification                                                                               |
-| 2026-10-27 | 1.1.0   | Apply spec explore review: line-based multiline output, output key format, missing parent directory |
-| 2026-10-27 | 1.1.1   | Apply spec harden review: promote shared output DDs to DR-13, candidate search terminates           |
-| 2026-10-27 | 1.1.2   | Apply spec fix review: unify term 保持行, refresh based-on                                          |
+| 2026-10-27 | 0.1.0   | Initial draft                                                                                       |
+| 2026-10-27 | 0.2.0   | Apply spec explore review: line-based multiline output, output key format, missing parent directory |
+| 2026-10-27 | 0.2.1   | Apply spec harden review: promote shared output DDs to DR-13, candidate search terminates           |
+| 2026-10-27 | 0.2.2   | Apply spec fix review: unify term 保持行, refresh based-on                                          |
+| 2026-10-27 | 1.0.0   | Initial release                                                                                     |

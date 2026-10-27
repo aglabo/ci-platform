@@ -1,8 +1,8 @@
 ---
 title: "Design Specification: _ca-filter-files (Matching)"
-based-on: requirements.md v1.0.8
+based-on: requirements.md v1.0.0
 status: Draft
-version: 1.0.2
+version: 1.0.0
 created: "2026-10-27"
 ---
 
@@ -217,6 +217,7 @@ spec の範囲では無い。照合方式とループ方式は impl で決める
 
 | Date       | Version | Description                                                                               |
 | ---------- | ------- | ----------------------------------------------------------------------------------------- |
-| 2026-10-27 | 1.0.0   | Initial specification                                                                     |
-| 2026-10-27 | 1.0.1   | Apply spec explore review: add a**/b edge case, state conversion never fails, locale note |
-| 2026-10-27 | 1.0.2   | Apply spec fix review: unify term 保持行, refresh based-on                                |
+| 2026-10-27 | 0.1.0   | Initial draft                                                                             |
+| 2026-10-27 | 0.1.1   | Apply spec explore review: add a**/b edge case, state conversion never fails, locale note |
+| 2026-10-27 | 0.1.2   | Apply spec fix review: unify term 保持行, refresh based-on                                |
+| 2026-10-27 | 1.0.0   | Initial release                                                                           |

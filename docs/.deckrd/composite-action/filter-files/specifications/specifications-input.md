@@ -1,8 +1,8 @@
 ---
 title: "Design Specification: _ca-filter-files (Input)"
-based-on: requirements.md v1.0.8
+based-on: requirements.md v1.0.0
 status: Draft
-version: 1.1.2
+version: 1.0.0
 created: "2026-10-27"
 ---
 
@@ -201,7 +201,8 @@ None identified - all requirements are unambiguous.
 
 | Date       | Version | Description                                                                                           |
 | ---------- | ------- | ----------------------------------------------------------------------------------------------------- |
-| 2026-10-27 | 1.0.0   | Initial specification                                                                                 |
-| 2026-10-27 | 1.1.0   | Apply spec explore review: error on whitespace-led exclude and invalid UTF-8, report first error only |
-| 2026-10-27 | 1.1.1   | Apply spec harden review: promote DD-IN-03 to DD-IN-06 to DR-14, clarify check order                  |
-| 2026-10-27 | 1.1.2   | Apply spec fix review: UTF-8 error in outcomes, refresh based-on                                      |
+| 2026-10-27 | 0.1.0   | Initial draft                                                                                         |
+| 2026-10-27 | 0.2.0   | Apply spec explore review: error on whitespace-led exclude and invalid UTF-8, report first error only |
+| 2026-10-27 | 0.2.1   | Apply spec harden review: promote DD-IN-03 to DD-IN-06 to DR-14, clarify check order                  |
+| 2026-10-27 | 0.2.2   | Apply spec fix review: UTF-8 error in outcomes, refresh based-on                                      |
+| 2026-10-27 | 1.0.0   | Initial release                                                                                       |
