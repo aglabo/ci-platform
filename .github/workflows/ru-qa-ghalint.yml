@@ -21,7 +21,7 @@ on:
       version:
         description: "Version of ghalint to install"
         required: false
-        default: "1.5.6"
+        default: "1.5.7"
         type: string
       config:
         description: "Path to the ghalint configuration file"
