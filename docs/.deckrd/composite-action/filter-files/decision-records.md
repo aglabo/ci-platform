@@ -1,9 +1,9 @@
 ---
 title: "Decision Records: _ca-filter-files"
-based-on: requirements.md v1.3.0
+based-on: requirements.md v1.5.0
 module: "composite-action/filter-files"
 status: approved
-version: 1.4.1
+version: 2.1.0
 created: "2026-10-27"
 ---
 
@@ -126,7 +126,10 @@ Bash の `[[ $file == $pattern ]]` では `*` が `/` にも一致し、`*.sh` �
 ## DR-04: 包含パターンが 0 件の場合は全ファイルを通す
 
 **Phase**: req
-**Status**: Accepted
+**Status**: Superseded by DR-19
+
+> 「包含パターンが 0 件なら全件」の規則は、DR-19 の「どのパターンにも一致しないファイルは先頭のパターンで決める」に置き換えた。
+> パターンが 1 件も無い場合に全件を残す扱い (REQ-F-004) は DR-19 が引き継ぐ。
 
 ### Context
 
@@ -161,7 +164,9 @@ Issue #136 は、パターンが空のときに全ファイルを通すか失敗
 ## DR-05: 除外パターンは包含パターンより優先する
 
 **Phase**: req
-**Status**: Accepted
+**Status**: Superseded by DR-19
+
+> 本 DR の方針 (除外が常に優先し、記述順に依存しない) は破棄した。DR-19 の「最後に一致したパターンで決める」に置き換えた。
 
 ### Context
 
@@ -627,7 +632,7 @@ fail-first の方針に従い、最初の誤りで止める。
 
 REQ-F-001 の処理後の件数に上限を設け、超えた入力は `::error::` で報告して出力を書かずに非ゼロで終了する。
 
-- ファイル数の上限は 3000 行、パターン数の上限は 1000 行とする。上限ちょうどは受け付ける
+- ファイル数の上限は 3000 行、パターン数の上限は 100 行とする。上限ちょうどは受け付ける
 - `files`・`patterns` の値のバイト数の上限は、それぞれ 120000 バイトとする。改行の変換・分割の前に、バイト単位で数える
 - 上限値は `filter-files.lib.sh` の定数 (`FF_MAX_FILES`、`FF_MAX_PATTERNS`、`FF_MAX_FILES_BYTES`、`FF_MAX_PATTERNS_BYTES`) として定義する
 - エラーは DR-15 の形式に従い、上限値を `<問題>` に埋め込む (例: `::error::files: exceeds the limit of 3000 lines (got: '3001')`)
@@ -642,6 +647,8 @@ REQ-F-001 の処理後の件数に上限を設け、超えた入力は `::error:
 ### Rationale
 
 ファイル数の上限は、GitHub の PR の差分が最大 3000 ファイルであることに合わせ、通常の利用を妨げない。
+パターン数の上限は、照合時間で決める。`[[ =~ ]]` は呼び出しのたびに ERE をコンパイルし直すため、照合時間はファイル数とパターン数の積に比例する (DR-17)。
+どのパターンにも一致しない最悪の場合、3000 ファイルで 1000 パターンは約 26 秒、100 パターンは約 2.8 秒かかった (Git Bash での計測)。実用的な時間に収まる 100 とする。
 バイト数の上限 120000 は、変数名と終端を含めても `MAX_ARG_STRLEN` に約 11 KB の余裕を残す。
 
 ### Consequences
@@ -698,7 +705,7 @@ glob を ERE に変換し、`[[ =~ ]]` で照合する。
 ### Related
 
 - DR-02
-- DR-05
+- DR-19
 - DR-16
 - REQ-F-003
 - REQ-F-005〜REQ-F-009
@@ -724,7 +731,7 @@ specifications-index.md §3.5 は、CP の包含・除外の受け渡し方式�
 - 受け取る側は変数を `local` で宣言する。代入は別の行でコマンド置換を使い、終了コードは `|| return 1` で伝える
 - パイプラインとプロセス置換では受け渡さない。配列への読み込みは `mapfile -t` (ヒアストリング) だけで行う
 - データを stdout に出すのはコマンド置換の中だけとし、ログへ直接出さない
-- パターンの分類結果は、1 行ごとに `I<TAB>pattern` (包含) または `E<TAB>pattern` (除外) とする
+- パターンは、PPT の結果 (1 行ごとに `pattern` または `!pattern`) のまま、入力の順で受け渡す。包含と除外の別の一覧や、種別を付けた形には変換しない (DR-19)
 - 共有出力関数 `write_multiline_output` (DR-13) だけは、1 引数 = 1 行で受け取る。呼び出し側 (EO) は、LF 区切りの文字列を空でなければ `mapfile -t` で配列にし、`"${lines[@]}"` として渡す。0 件なら行の引数を渡さない
 - 関数の中で 1 件ずつ処理するときは、入口で `mapfile -t` によって配列にしてからループする。関数の間では配列を受け渡さない
 
@@ -758,22 +765,87 @@ Action の入力 (`with:`) は文字列だけを受け付け、`files` と `patt
 
 ---
 
+## DR-19: パターンは記述順に適用し、最後に一致したパターンで保持を決める
+
+**Phase**: impl
+**Status**: Accepted
+
+### Context
+
+DR-05 は、除外パターンに 1 つでも一致したファイルを記述順によらず除くとした。
+この規則では、除外したディレクトリ内の特定のファイルだけを戻す指定 (例: `src/**`、`!src/gen/**`、`src/gen/keep.sh`) ができない。
+利用者が慣れている `.gitignore` や GitHub Actions の `paths` フィルタは、後に書いたパターンを優先する。
+また、CP が包含と除外を `I<TAB>` / `E<TAB>` の形に分類して FF に渡す方式 (本 DR の前の案) は、記述順の情報を使わない。種別を付けた形を受け渡す必要も無い。
+
+### Decision
+
+- パターンは入力の行の順に適用する。ファイルごとに、そのファイルに一致した最後のパターンで決める。包含なら残し、除外なら捨てる
+- どのパターンにも一致しないファイルは、先頭のパターンで決める。先頭が除外なら残し、先頭が包含なら捨てる
+- パターンが 1 件も無い場合は、全ファイルを残す (REQ-F-004)
+- `classify_patterns` を `check_patterns <lines>` に改める。`!` だけの行 (R-IN-005) と、`!` の直後が空白の行 (R-IN-009) を検査し、`ff_error` で報告して 0 / 1 を返す。stdout には何も出さない
+- FF のシグネチャは `filter_files <files> <patterns>` とする。`<patterns>` は PPT の結果 (CP で検査済み) を、`pattern` / `!pattern` の行のまま入力の順で渡す
+- FF は、照合ループの前に各パターンを 1 回だけ `glob_to_regex` で ERE に変換し、種別と ERE を入力の順に持つ (DR-17)。除外は先頭の `!` を 1 つだけ除いてから変換する (`!!a.sh` は `!a.sh` を除外する)
+- FF は、ファイルごとに最後のパターンから先頭へ向けて照合し、最初に一致したパターンで決める
+- MAIN は `check_patterns "$_patterns" || return 1` の後に `filter_files "$_files" "$_patterns"` を呼ぶ。MAIN の内部関数 `_main_split_patterns` は設けない
+
+### Alternatives Considered
+
+- 除外が常に優先する (DR-05)。結果が記述順に依存しないが、除外した中の特定のファイルを戻せないため不採用。
+- CP が `I<TAB>` / `E<TAB>` の分類済みの一覧を出し、FF が包含と除外に振り分ける (本 DR の前の案)。記述順を使わない規則では成り立つが、後勝ちの規則では種別を付ける利点が無く、形式の変換だけが増えるため不採用。
+- 一致しないファイルを常に捨てる (GitHub Actions の `paths` と同じ)。除外だけの一覧で何も残らなくなり、AC-003 と US-002 に反するため不採用。
+- 包含パターンが 1 件も無いときだけ、一致しないファイルを残す (DR-04 の延長)。先頭に除外を書いた一覧の後に包含を足すと、それまで残っていたファイルが一斉に消え、結果が読み取りにくいため不採用。
+
+### Rationale
+
+`.gitignore` や GitHub Actions の `paths` フィルタと同じ後勝ちの規則であり、利用者が結果を予測しやすい。
+先頭のパターンで初期状態を決めるため、除外だけの一覧 (AC-003) と包含で始まる一覧 (AC-001) の両方が、これまでと同じ結果になる。
+CP は検査だけを担い、FF は入力と同じ形のパターン一覧を受け取るため、関数間で形式を変換しない。
+
+### Consequences
+
+- Positive:
+  - 除外したディレクトリ内の特定のファイルを、後の行の包含で戻せる (AC-019)
+  - CP の出力と MAIN の受け渡しが単純になる
+- Negative:
+  - パターンの順序が結果に影響する。並べ替えると結果が変わる
+  - 包含の後に除外、さらに包含と重ねた一覧は、上から順に読まないと結果が分からない
+  - CP と FF の単体テスト (T-FF-CP-*、T-FF-FF-*) の期待値を書き直す必要がある
+
+### Related
+
+- DR-04
+- DR-05
+- DR-17
+- DR-18
+- REQ-F-002
+- REQ-F-003
+- REQ-F-004
+- AC-002
+- AC-003
+- AC-019
+- specifications-matching.md 4
+
+---
+
 ## Change History
 
-| Date       | Version | Description                                                                                                                                 |
-| ---------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| 2026-10-27 | 0.1.0   | Initial draft                                                                                                                               |
-| 2026-10-27 | 0.1.1   | Add alternatives from explore review (DR-02, DR-05)                                                                                         |
-| 2026-10-27 | 0.1.2   | Add DR-08 to DR-10 from harden review                                                                                                       |
-| 2026-10-27 | 0.1.3   | Add DR-11 (double quote interpretation)                                                                                                     |
-| 2026-10-27 | 0.1.4   | Clarify DR-07: get-changed-files switches to shared write_multiline_output later                                                            |
-| 2026-10-27 | 0.1.5   | Add DR-12 (shared output destination check)                                                                                                 |
-| 2026-10-27 | 0.1.6   | Add DR-13 to DR-15 from spec harden review                                                                                                  |
-| 2026-10-27 | 1.0.0   | Initial release                                                                                                                             |
-| 2026-10-27 | 1.1.0   | Apply req second opinion: trim patterns only (DR-08), add lone CR and quoted files line errors (DR-09, DR-14), update DR-10, DR-11, approve |
-| 2026-10-27 | 1.2.0   | Add DR-16 (line count limits), add limit errors to DR-09 and DR-14, refresh based-on                                                        |
-| 2026-10-27 | 1.3.0   | Add byte size limits to DR-16 and the check order of DR-14, refresh based-on                                                                |
-| 2026-10-27 | 1.3.1   | Add DR-17 (matching method) and DR-18 (inter-function data contract) from impl harden review                                                |
-| 2026-10-27 | 1.3.2   | Restructure all DRs to the deckrd DR template format (no content change), note DR-17 in DR-02 alternatives                                  |
-| 2026-10-27 | 1.4.0   | Change DR-13: write_multiline_output takes one line per argument and rejects arguments containing CR or LF                                  |
-| 2026-10-27 | 1.4.1   | Clarify DR-18: array conversion at the WMO boundary and inside functions, action inputs arrive as strings, two rejected alternatives        |
+| Date       | Version | Description                                                                                                                                                                                        |
+| ---------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-10-27 | 0.1.0   | Initial draft                                                                                                                                                                                      |
+| 2026-10-27 | 0.1.1   | Add alternatives from explore review (DR-02, DR-05)                                                                                                                                                |
+| 2026-10-27 | 0.1.2   | Add DR-08 to DR-10 from harden review                                                                                                                                                              |
+| 2026-10-27 | 0.1.3   | Add DR-11 (double quote interpretation)                                                                                                                                                            |
+| 2026-10-27 | 0.1.4   | Clarify DR-07: get-changed-files switches to shared write_multiline_output later                                                                                                                   |
+| 2026-10-27 | 0.1.5   | Add DR-12 (shared output destination check)                                                                                                                                                        |
+| 2026-10-27 | 0.1.6   | Add DR-13 to DR-15 from spec harden review                                                                                                                                                         |
+| 2026-10-27 | 1.0.0   | Initial release                                                                                                                                                                                    |
+| 2026-10-27 | 1.1.0   | Apply req second opinion: trim patterns only (DR-08), add lone CR and quoted files line errors (DR-09, DR-14), update DR-10, DR-11, approve                                                        |
+| 2026-10-27 | 1.2.0   | Add DR-16 (line count limits), add limit errors to DR-09 and DR-14, refresh based-on                                                                                                               |
+| 2026-10-27 | 1.3.0   | Add byte size limits to DR-16 and the check order of DR-14, refresh based-on                                                                                                                       |
+| 2026-10-27 | 1.3.1   | Add DR-17 (matching method) and DR-18 (inter-function data contract) from impl harden review                                                                                                       |
+| 2026-10-27 | 1.3.2   | Restructure all DRs to the deckrd DR template format (no content change), note DR-17 in DR-02 alternatives                                                                                         |
+| 2026-10-27 | 1.4.0   | Change DR-13: write_multiline_output takes one line per argument and rejects arguments containing CR or LF                                                                                         |
+| 2026-10-27 | 1.4.1   | Clarify DR-18: array conversion at the WMO boundary and inside functions, action inputs arrive as strings, two rejected alternatives                                                               |
+| 2026-10-29 | 1.5.0   | Add DR-19: filter_files takes the classified pattern list as one argument and splits include and exclude itself                                                                                    |
+| 2026-10-29 | 2.0.0   | Supersede DR-04 and DR-05 with DR-19: last matching pattern in input order decides, the first pattern decides unmatched files, check_patterns only validates, update DR-17 and DR-18 related items |
+| 2026-10-29 | 2.1.0   | Lower the patterns line limit of DR-16 from 1000 to 100 based on the measured matching time, refresh based-on                                                                                      |
