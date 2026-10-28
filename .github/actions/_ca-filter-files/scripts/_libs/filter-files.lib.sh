@@ -8,6 +8,10 @@
 # https://opensource.org/licenses/MIT
 # shellcheck shell=bash
 
+# ============================================================================
+# Load Guard / Dependencies
+# ============================================================================
+
 # Load guard: return early when this library has already been loaded. The
 # guard is set only at the end of the loading below, so a failed load leaves
 # it unset and the next source tries again.
@@ -36,14 +40,9 @@ unset _ff_dep
 # functions checked (see the load guard at the top).
 FILTER_FILES_LIB_LOADED=1
 
-# ERE that matches a whole line of well-formed UTF-8, following the RFC 3629
-# table (overlong forms, surrogates and code points above U+10FFFF are
-# rejected). The bytes are embedded with $'...' so that this file itself
-# holds no invalid bytes; NUL cannot appear in a Bash string, so the ASCII
-# range starts at \x01. Built once at load time.
-# Use it only under LC_ALL=C (byte-wise matching), unquoted on the right-hand
-# side: [[ $_line =~ $_FF_UTF8_RE ]]
-_FF_UTF8_RE=$'^([\x01-\x7f]|[\xc2-\xdf][\x80-\xbf]|\xe0[\xa0-\xbf][\x80-\xbf]|[\xe1-\xec\xee\xef][\x80-\xbf]{2}|\xed[\x80-\x9f][\x80-\xbf]|\xf0[\x90-\xbf][\x80-\xbf]{2}|[\xf1-\xf3][\x80-\xbf]{3}|\xf4[\x80-\x8f][\x80-\xbf]{2})*$'
+# ============================================================================
+# Constants
+# ============================================================================
 
 # Byte limits of the files and patterns inputs (DR-16; R-IN-016 / R-IN-017),
 # counted on the raw value before conversion or splitting; a value of exactly
@@ -58,6 +57,19 @@ readonly FF_MAX_PATTERNS_BYTES=120000
 # returns at the guard and never re-runs readonly (which would fail).
 readonly FF_MAX_FILES=3000
 readonly FF_MAX_PATTERNS=1000
+
+# ERE that matches a whole line of well-formed UTF-8, following the RFC 3629
+# table (overlong forms, surrogates and code points above U+10FFFF are
+# rejected). The bytes are embedded with $'...' so that this file itself
+# holds no invalid bytes; NUL cannot appear in a Bash string, so the ASCII
+# range starts at \x01. Built once at load time.
+# Use it only under LC_ALL=C (byte-wise matching), unquoted on the right-hand
+# side: [[ $_line =~ $_FF_UTF8_RE ]]
+_FF_UTF8_RE=$'^([\x01-\x7f]|[\xc2-\xdf][\x80-\xbf]|\xe0[\xa0-\xbf][\x80-\xbf]|[\xe1-\xec\xee\xef][\x80-\xbf]{2}|\xed[\x80-\x9f][\x80-\xbf]|\xf0[\x90-\xbf][\x80-\xbf]{2}|[\xf1-\xf3][\x80-\xbf]{3}|\xf4[\x80-\x8f][\x80-\xbf]{2})*$'
+
+# ============================================================================
+# Error Reporting
+# ============================================================================
 
 ##
 # @description Emit a GitHub Actions error annotation. The form is chosen by
@@ -88,6 +100,10 @@ ff_error() {
   _value="${_value//$'\n'/%0A}"
   printf "::error::%s: %s (got: '%s')\n" "$1" "$2" "$_value" >&2
 }
+
+# ============================================================================
+# Public API: Raw Input Checks
+# ============================================================================
 
 ##
 # @description Check that one input is within its byte limit (DR-16), counted
@@ -152,21 +168,9 @@ check_line_endings() {
   return 0
 }
 
-##
-# @description Internal helper shared by parse_filelist and parse_patterns
-#              (no test ID of its own; verified through their tests).
-#              Convert CRLF line breaks to LF and print the text. The line
-#              contents are not changed and empty lines are kept: each caller
-#              applies its own rule for dropping lines.
-#              Callers read the result with a command substitution, which
-#              also drops any trailing LFs.
-# @arg $1 text — raw value of the input
-# @stdout the text with CRLF converted to LF
-# @stderr (none)
-# @return 0 always
-_ff_split_lines() {
-  printf '%s' "${1//$'\r\n'/$'\n'}"
-}
+# ============================================================================
+# Public API: Parsing
+# ============================================================================
 
 ##
 # @description Parse the files input into a list of file lines. CRLF line
@@ -249,6 +253,10 @@ parse_patterns() {
   printf '%s' "$_out"
 }
 
+# ============================================================================
+# Public API: Line-Count Checks
+# ============================================================================
+
 ##
 # @description Check that one input is within its line-count limit (DR-16),
 #              counted on the parsed lines after blank lines are dropped
@@ -280,6 +288,10 @@ check_line_limit() {
   fi
   return 0
 }
+
+# ============================================================================
+# Public API: Pattern Classification / Conversion
+# ============================================================================
 
 ##
 # @description Classify the parsed pattern lines. <lines> is the result of
@@ -387,6 +399,144 @@ glob_to_regex() {
   printf '%s' "^${_out}\$"
 }
 
+# ============================================================================
+# Public API: Filtering
+# ============================================================================
+
+##
+# @description Keep the file lines that pass the keep rule. <files>,
+#              <include> and <exclude> are lines separated by LF, with no
+#              trailing LF (an empty text has no lines, DR-18). <files> is
+#              the parse_filelist result; <include> / <exclude> are the
+#              patterns split from the classify_patterns result (without
+#              the "I<TAB>" / "E<TAB>" prefix and the leading "!").
+#              Each include and exclude pattern is converted once with
+#              glob_to_regex before the files are matched (DR-17, DR-18).
+#              Each file line is checked in this order: a line that matches
+#              any exclude ERE is dropped (exclude wins, R-MAT-011, DR-05);
+#              with no include pattern, every other line is kept
+#              (R-MAT-010, DR-04); a line that matches any include ERE is
+#              kept (R-MAT-012); any other line is dropped (R-MAT-013).
+#              Only the path strings are matched: the file system and git
+#              are never consulted (REQ-F-012).
+#              Kept lines are printed in input order, one printf per line,
+#              so nothing (not even a LF) is printed when no line is kept.
+#              An empty <files>, <include> or <exclude> has no lines and
+#              mapfile is not called for it.
+#              The body is a subshell, so the shell options and the locale
+#              it changes do not leak to the caller. nocasematch is turned
+#              off there before matching, so matching is always
+#              case-sensitive (R-MAT-009, DD-MAT-06), and the caller's
+#              nocasematch is left as it was. LC_ALL is set to C.UTF-8 there
+#              before the patterns are converted and matched, so "?" and
+#              "[^/]" match one UTF-8 character even when the caller's
+#              locale is C (DD-MAT-05), and the caller's LC_ALL is left as
+#              it was (no "local" is needed in the subshell).
+# @arg $1 files — parsed file lines
+# @arg $2 include — include patterns, one per line
+# @arg $3 exclude — exclude patterns, one per line
+# @stdout one kept file line per line, each ending with LF (nothing when no
+#         line is kept)
+# @stderr (none)
+# @return 0; 1 when glob_to_regex fails
+filter_files() (
+  local _f
+  local -a _files=() _include_res=() _exclude_res=()
+  shopt -u nocasematch
+  LC_ALL=C.UTF-8
+  _ff_read_lines _files "$1"
+  _ff_globs_to_regexes _include_res "$2" || return 1
+  _ff_globs_to_regexes _exclude_res "$3" || return 1
+
+  for _f in "${_files[@]}"; do
+    _ff_is_kept _include_res _exclude_res "$_f" && printf '%s\n' "$_f"
+  done
+  return 0
+)
+
+# ============================================================================
+# Public API: Output
+# ============================================================================
+
+##
+# @description Append the files and count outputs to <file>, in this order:
+#              files, then count (DD-OUT-03).
+#              <file> is checked first with validate_output_file: an empty
+#              <file> is reported via ff_error in the empty form
+#              (GITHUB_OUTPUT) and nothing is written (R-OUT-001); a
+#              <file> that is not a writable file (a directory, or a path
+#              whose parent directory does not exist, for example) is
+#              reported as a GITHUB_OUTPUT error with <file> as the value and
+#              nothing is written (R-OUT-002). A <file> that does not exist
+#              yet under a writable directory passes the check and is
+#              created by the first append (R-OUT-021).
+#              <kept> is the filter_files result: kept lines separated by LF,
+#              with no trailing LF (DR-18). The kept lines are written as the
+#              multiline output files with write_multiline_output, one
+#              argument per line (R-OUT-003), and their number as count with
+#              write_output (R-OUT-005). An empty <kept> is read without
+#              calling mapfile, so files gets no lines and count is 0
+#              (R-OUT-004, DR-18). The delimiter is chosen and the file
+#              is appended to by the shared functions of output.lib.sh.
+#              When write_multiline_output fails (any non-zero status), the
+#              failure is reported as a files error with <file> as the value
+#              and count is not written (R-OUT-006). When write_output fails
+#              (any non-zero status), the failure is reported as a count
+#              error with <file> as the value; the files output already
+#              written is left in place (R-OUT-006, DR-09).
+#              The body is a brace group (not a subshell): it changes no
+#              shell option and no locale.
+# @arg $1 file — path of the output file (GITHUB_OUTPUT)
+# @arg $2 kept — kept file lines
+# @stdout (none)
+# @stderr (none) on success; one ::error::GITHUB_OUTPUT: line when <file> is
+#         empty or not a writable file; one ::error::files: or
+#         ::error::count: line when that output cannot be written
+# @return 0 on success, 1 when <file> is empty or not a writable file or
+#         files or count cannot be written
+emit_outputs() {
+  local -a _lines
+  local _rc=0
+  validate_output_file "$1" || _rc=$?
+  if [ "$_rc" -eq 1 ]; then
+    ff_error GITHUB_OUTPUT
+    return 1
+  elif [ "$_rc" -ne 0 ]; then
+    ff_error GITHUB_OUTPUT "is not a writable file" "$1"
+    return 1
+  fi
+  _ff_read_lines _lines "$2"
+  if ! write_multiline_output "$1" files "${_lines[@]}"; then
+    ff_error files "failed to write" "$1"
+    return 1
+  fi
+  if ! write_output "$1" count "${#_lines[@]}"; then
+    ff_error count "failed to write" "$1"
+    return 1
+  fi
+  return 0
+}
+
+# ============================================================================
+# Internal Helpers
+# ============================================================================
+
+##
+# @description Internal helper shared by parse_filelist and parse_patterns
+#              (no test ID of its own; verified through their tests).
+#              Convert CRLF line breaks to LF and print the text. The line
+#              contents are not changed and empty lines are kept: each caller
+#              applies its own rule for dropping lines.
+#              Callers read the result with a command substitution, which
+#              also drops any trailing LFs.
+# @arg $1 text — raw value of the input
+# @stdout the text with CRLF converted to LF
+# @stderr (none)
+# @return 0 always
+_ff_split_lines() {
+  printf '%s' "${1//$'\r\n'/$'\n'}"
+}
+
 ##
 # @description Internal helper of filter_files and emit_outputs (no test ID
 #              of its own; verified through their tests). Read the LF
@@ -467,114 +617,4 @@ _ff_is_kept() {
   _ff_matches_any "$3" "${_ff_exclude_ref[@]}" && return 1
   [ "${#_ff_include_ref[@]}" -eq 0 ] && return 0
   _ff_matches_any "$3" "${_ff_include_ref[@]}"
-}
-
-##
-# @description Keep the file lines that pass the keep rule. <files>,
-#              <include> and <exclude> are lines separated by LF, with no
-#              trailing LF (an empty text has no lines, DR-18). <files> is
-#              the parse_filelist result; <include> / <exclude> are the
-#              patterns split from the classify_patterns result (without
-#              the "I<TAB>" / "E<TAB>" prefix and the leading "!").
-#              Each include and exclude pattern is converted once with
-#              glob_to_regex before the files are matched (DR-17, DR-18).
-#              Each file line is checked in this order: a line that matches
-#              any exclude ERE is dropped (exclude wins, R-MAT-011, DR-05);
-#              with no include pattern, every other line is kept
-#              (R-MAT-010, DR-04); a line that matches any include ERE is
-#              kept (R-MAT-012); any other line is dropped (R-MAT-013).
-#              Only the path strings are matched: the file system and git
-#              are never consulted (REQ-F-012).
-#              Kept lines are printed in input order, one printf per line,
-#              so nothing (not even a LF) is printed when no line is kept.
-#              An empty <files>, <include> or <exclude> has no lines and
-#              mapfile is not called for it.
-#              The body is a subshell, so the shell options and the locale
-#              it changes do not leak to the caller. nocasematch is turned
-#              off there before matching, so matching is always
-#              case-sensitive (R-MAT-009, DD-MAT-06), and the caller's
-#              nocasematch is left as it was. LC_ALL is set to C.UTF-8 there
-#              before the patterns are converted and matched, so "?" and
-#              "[^/]" match one UTF-8 character even when the caller's
-#              locale is C (DD-MAT-05), and the caller's LC_ALL is left as
-#              it was (no "local" is needed in the subshell).
-# @arg $1 files — parsed file lines
-# @arg $2 include — include patterns, one per line
-# @arg $3 exclude — exclude patterns, one per line
-# @stdout one kept file line per line, each ending with LF (nothing when no
-#         line is kept)
-# @stderr (none)
-# @return 0; 1 when glob_to_regex fails
-filter_files() (
-  local _f
-  local -a _files=() _include_res=() _exclude_res=()
-  shopt -u nocasematch
-  LC_ALL=C.UTF-8
-  _ff_read_lines _files "$1"
-  _ff_globs_to_regexes _include_res "$2" || return 1
-  _ff_globs_to_regexes _exclude_res "$3" || return 1
-
-  for _f in "${_files[@]}"; do
-    _ff_is_kept _include_res _exclude_res "$_f" && printf '%s\n' "$_f"
-  done
-  return 0
-)
-
-##
-# @description Append the files and count outputs to <file>, in this order:
-#              files, then count (DD-OUT-03).
-#              <file> is checked first with validate_output_file: an empty
-#              <file> is reported via ff_error in the empty form
-#              (GITHUB_OUTPUT) and nothing is written (R-OUT-001); a
-#              <file> that is not a writable file (a directory, or a path
-#              whose parent directory does not exist, for example) is
-#              reported as a GITHUB_OUTPUT error with <file> as the value and
-#              nothing is written (R-OUT-002). A <file> that does not exist
-#              yet under a writable directory passes the check and is
-#              created by the first append (R-OUT-021).
-#              <kept> is the filter_files result: kept lines separated by LF,
-#              with no trailing LF (DR-18). The kept lines are written as the
-#              multiline output files with write_multiline_output, one
-#              argument per line (R-OUT-003), and their number as count with
-#              write_output (R-OUT-005). An empty <kept> is read without
-#              calling mapfile, so files gets no lines and count is 0
-#              (R-OUT-004, DR-18). The delimiter is chosen and the file
-#              is appended to by the shared functions of output.lib.sh.
-#              When write_multiline_output fails (any non-zero status), the
-#              failure is reported as a files error with <file> as the value
-#              and count is not written (R-OUT-006). When write_output fails
-#              (any non-zero status), the failure is reported as a count
-#              error with <file> as the value; the files output already
-#              written is left in place (R-OUT-006, DR-09).
-#              The body is a brace group (not a subshell): it changes no
-#              shell option and no locale.
-# @arg $1 file — path of the output file (GITHUB_OUTPUT)
-# @arg $2 kept — kept file lines
-# @stdout (none)
-# @stderr (none) on success; one ::error::GITHUB_OUTPUT: line when <file> is
-#         empty or not a writable file; one ::error::files: or
-#         ::error::count: line when that output cannot be written
-# @return 0 on success, 1 when <file> is empty or not a writable file or
-#         files or count cannot be written
-emit_outputs() {
-  local -a _lines
-  local _rc=0
-  validate_output_file "$1" || _rc=$?
-  if [ "$_rc" -eq 1 ]; then
-    ff_error GITHUB_OUTPUT
-    return 1
-  elif [ "$_rc" -ne 0 ]; then
-    ff_error GITHUB_OUTPUT "is not a writable file" "$1"
-    return 1
-  fi
-  _ff_read_lines _lines "$2"
-  if ! write_multiline_output "$1" files "${_lines[@]}"; then
-    ff_error files "failed to write" "$1"
-    return 1
-  fi
-  if ! write_output "$1" count "${#_lines[@]}"; then
-    ff_error count "failed to write" "$1"
-    return 1
-  fi
-  return 0
 }
