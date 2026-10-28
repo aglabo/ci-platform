@@ -2,7 +2,7 @@
 title: "Design Specification: _ca-filter-files (Output)"
 based-on: requirements.md v1.3.0
 status: approved
-version: 1.1.1
+version: 1.2.1
 created: "2026-10-27"
 ---
 
@@ -148,11 +148,11 @@ No reordering is permitted.
 
 **出力先の検証 (output-file-validation):**
 
-| Rule ID   | Step | Condition        | Outcome                                                                                                                                     |
-| --------- | ---: | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| R-OUT-020 |    1 | パスが空         | 1 を返す                                                                                                                                    |
-| R-OUT-021 |    2 | パスが存在しない | 親ディレクトリが存在し、書き込めるディレクトリなら 0、それ以外 (親ディレクトリが無い場合を含む) は 2 を返す。ファイルは作らない (DD-OUT-04) |
-| R-OUT-022 |    3 | パスが存在する   | 通常ファイルで書き込めるなら 0、それ以外 (ディレクトリ・FIFO など) は 2 を返す                                                              |
+| Rule ID   | Step | Condition        | Outcome                                                                                                                                                                                                                                   |
+| --------- | ---: | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| R-OUT-020 |    1 | パスが空         | 1 を返す                                                                                                                                                                                                                                  |
+| R-OUT-021 |    2 | パスが存在しない | 親ディレクトリが存在し、書き込めるディレクトリなら 0、それ以外 (親ディレクトリが無い場合を含む) は 2 を返す。末尾が `/` のパスと、リンク先の無いシンボリックリンクは、ファイルとして書けないため 2 を返す。ファイルは作らない (DD-OUT-04) |
+| R-OUT-022 |    3 | パスが存在する   | 通常ファイルで書き込めるなら 0、それ以外 (ディレクトリ・FIFO など) は 2 を返す                                                                                                                                                            |
 
 - R-OUT-013 は空文字列の引数も 1 行として扱い、空行 1 行を書く。空の項目を捨てるのは入力の解析 (DR-08) の役割であり、WMO は捨てない。
 - R-OUT-011 の候補探しは必ず終わる。行の引数が N 個なら、N + 1 個以内の候補で衝突しない区切り文字が見つかる。
@@ -172,24 +172,28 @@ No reordering is permitted.
 
 ## 5. Edge Cases
 
-| Input                                                 | Classification                         | REQ       | Rationale                      |
-| ----------------------------------------------------- | -------------------------------------- | --------- | ------------------------------ |
-| `GITHUB_OUTPUT` が未設定                              | エラー、何も書かない                   | REQ-F-015 | R-OUT-001                      |
-| `GITHUB_OUTPUT` がディレクトリ                        | エラー、何も書かない                   | REQ-F-015 | R-OUT-002, R-OUT-022           |
-| `GITHUB_OUTPUT` が存在しないファイル (親は書き込み可) | 検証は成功し、書き出しで作られる       | REQ-F-015 | R-OUT-021                      |
-| 保持行が 0 行                                         | `files` は空、`count` は `0`           | REQ-F-014 | R-OUT-004, R-OUT-012           |
-| 保持行が `EOF` を含む                                 | 区切り文字は `EOF_1`                   | REQ-F-013 | R-OUT-011                      |
-| 保持行が `EOF` と `EOF_1` を含む                      | 区切り文字は `EOF_2`                   | REQ-F-013 | R-OUT-011                      |
-| 保持行が `EOF_1` だけを含む                           | 区切り文字は `EOF`                     | REQ-F-013 | 衝突しない最初の候補           |
-| 保持行に `xEOF` や `EOF<SP>` (行全体が一致しない)     | 区切り文字は `EOF`                     | REQ-F-013 | 行全体の一致だけを衝突とする   |
-| 行の引数に LF を含む (`a<LF>b`)                       | 引数不正 (1)                           | REQ-F-013 | R-OUT-010, DD-OUT-05           |
-| 行の引数に空文字列を含む (`a` `""` `b`)               | 空行を含む 3 行をそのまま順に書く      | REQ-F-013 | R-OUT-013 (1 引数 = 1 行)      |
-| 値の行に `<<` や `=` を含む (`a<<b.sh`)               | そのまま行として書く                   | REQ-F-013 | 区切り文字で囲むため衝突しない |
-| キーが `my-key` / `_k1`                               | 書く                                   | REQ-F-013 | DD-OUT-06                      |
-| キーが `a=b` / `a<<b` / `1abc` / 空                   | 引数不正 (1)                           | REQ-F-013 | R-OUT-010, DD-OUT-06           |
-| `GITHUB_OUTPUT` の親ディレクトリが存在しない          | エラー、何も書かない                   | REQ-F-015 | R-OUT-021                      |
-| 保持行が 1000 行                                      | `count` は `1000` (先頭ゼロ・空白なし) | REQ-F-011 | R-OUT-005                      |
-| `count` の書き込みだけ失敗                            | エラー。`files` は書かれたまま残り得る | REQ-F-015 | R-OUT-006, DR-09               |
+| Input                                                            | Classification                         | REQ       | Rationale                      |
+| ---------------------------------------------------------------- | -------------------------------------- | --------- | ------------------------------ |
+| `GITHUB_OUTPUT` が未設定                                         | エラー、何も書かない                   | REQ-F-015 | R-OUT-001                      |
+| `GITHUB_OUTPUT` がディレクトリ                                   | エラー、何も書かない                   | REQ-F-015 | R-OUT-002, R-OUT-022           |
+| `GITHUB_OUTPUT` が存在しないファイル (親は書き込み可)            | 検証は成功し、書き出しで作られる       | REQ-F-015 | R-OUT-021                      |
+| 保持行が 0 行                                                    | `files` は空、`count` は `0`           | REQ-F-014 | R-OUT-004, R-OUT-012           |
+| 保持行が `EOF` を含む                                            | 区切り文字は `EOF_1`                   | REQ-F-013 | R-OUT-011                      |
+| 保持行が `EOF` と `EOF_1` を含む                                 | 区切り文字は `EOF_2`                   | REQ-F-013 | R-OUT-011                      |
+| 保持行が `EOF_1` だけを含む                                      | 区切り文字は `EOF`                     | REQ-F-013 | 衝突しない最初の候補           |
+| 保持行に `xEOF` や `EOF<SP>` (行全体が一致しない)                | 区切り文字は `EOF`                     | REQ-F-013 | 行全体の一致だけを衝突とする   |
+| 行の引数に LF を含む (`a<LF>b`)                                  | 引数不正 (1)                           | REQ-F-013 | R-OUT-010, DD-OUT-05           |
+| 行の引数に空文字列を含む (`a` `""` `b`)                          | 空行を含む 3 行をそのまま順に書く      | REQ-F-013 | R-OUT-013 (1 引数 = 1 行)      |
+| 値の行に `<<` や `=` を含む (`a<<b.sh`)                          | そのまま行として書く                   | REQ-F-013 | 区切り文字で囲むため衝突しない |
+| キーが `my-key` / `_k1`                                          | 書く                                   | REQ-F-013 | DD-OUT-06                      |
+| キーが `a=b` / `a<<b` / `1abc` / 空                              | 引数不正 (1)                           | REQ-F-013 | R-OUT-010, DD-OUT-06           |
+| `GITHUB_OUTPUT` の親ディレクトリが存在しない                     | エラー、何も書かない                   | REQ-F-015 | R-OUT-021                      |
+| `GITHUB_OUTPUT` が存在しない、末尾が `/` のパス                  | エラー、何も書かない                   | REQ-F-015 | R-OUT-021                      |
+| `GITHUB_OUTPUT` がリンク先の無いシンボリックリンク               | エラー、何も書かない                   | REQ-F-015 | R-OUT-021                      |
+| `GITHUB_OUTPUT` が既存の通常ファイルの末尾に `/` を付けたパス    | エラー、何も書かない                   | REQ-F-015 | R-OUT-021                      |
+| `GITHUB_OUTPUT` が書き込める通常ファイルを指すシンボリックリンク | 検証は成功し、リンク先に追記する       | REQ-F-015 | R-OUT-022                      |
+| 保持行が 1000 行                                                 | `count` は `1000` (先頭ゼロ・空白なし) | REQ-F-011 | R-OUT-005                      |
+| `count` の書き込みだけ失敗                                       | エラー。`files` は書かれたまま残り得る | REQ-F-015 | R-OUT-006, DR-09               |
 
 ---
 
@@ -217,15 +221,17 @@ None identified - all requirements are unambiguous.
 
 ## 8. Change History
 
-| Date       | Version | Description                                                                                         |
-| ---------- | ------- | --------------------------------------------------------------------------------------------------- |
-| 2026-10-27 | 0.1.0   | Initial draft                                                                                       |
-| 2026-10-27 | 0.2.0   | Apply spec explore review: line-based multiline output, output key format, missing parent directory |
-| 2026-10-27 | 0.2.1   | Apply spec harden review: promote shared output DDs to DR-13, candidate search terminates           |
-| 2026-10-27 | 0.2.2   | Apply spec fix review: unify term 保持行, refresh based-on                                          |
-| 2026-10-27 | 1.0.0   | Initial release                                                                                     |
-| 2026-10-27 | 1.0.1   | Refresh based-on (requirements v1.1.0), approve                                                     |
-| 2026-10-27 | 1.0.2   | Refresh based-on (requirements v1.2.0)                                                              |
-| 2026-10-27 | 1.0.3   | Refresh based-on (requirements v1.3.0)                                                              |
-| 2026-10-27 | 1.1.0   | Change write_multiline_output to take one line per argument; reject arguments containing LF         |
-| 2026-10-27 | 1.1.1   | Clarify R-OUT-013: an empty-string argument is written as one empty line                            |
+| Date       | Version | Description                                                                                              |
+| ---------- | ------- | -------------------------------------------------------------------------------------------------------- |
+| 2026-10-27 | 0.1.0   | Initial draft                                                                                            |
+| 2026-10-27 | 0.2.0   | Apply spec explore review: line-based multiline output, output key format, missing parent directory      |
+| 2026-10-27 | 0.2.1   | Apply spec harden review: promote shared output DDs to DR-13, candidate search terminates                |
+| 2026-10-27 | 0.2.2   | Apply spec fix review: unify term 保持行, refresh based-on                                               |
+| 2026-10-27 | 1.0.0   | Initial release                                                                                          |
+| 2026-10-27 | 1.0.1   | Refresh based-on (requirements v1.1.0), approve                                                          |
+| 2026-10-27 | 1.0.2   | Refresh based-on (requirements v1.2.0)                                                                   |
+| 2026-10-27 | 1.0.3   | Refresh based-on (requirements v1.3.0)                                                                   |
+| 2026-10-27 | 1.1.0   | Change write_multiline_output to take one line per argument; reject arguments containing LF              |
+| 2026-10-27 | 1.1.1   | Clarify R-OUT-013: an empty-string argument is written as one empty line                                 |
+| 2026-10-29 | 1.2.0   | R-OUT-021: reject a missing path ending in `/` and a dangling symbolic link (return 2)                   |
+| 2026-10-29 | 1.2.1   | Add edge cases: an existing regular file with a trailing `/`, a symbolic link to a writable regular file |

@@ -1,8 +1,8 @@
 ---
 title: "Design Specification: _ca-filter-files (Index)"
-based-on: requirements.md v1.3.0
+based-on: requirements.md v1.4.0
 status: approved
-version: 1.3.2
+version: 1.5.0
 created: "2026-10-27"
 ---
 
@@ -24,11 +24,11 @@ FR ごとの詳細な振る舞いは、各分割ファイルで定義する。�
 
 ### 1.3 Split Files
 
-| File                                                       | Covered REQ                                                                 | Summary                                                            |
-| ---------------------------------------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| [specifications-input.md](./specifications-input.md)       | REQ-F-001, REQ-F-002, REQ-F-004, REQ-F-016, REQ-F-017, REQ-F-018            | 入力の検査、行分割と正規化、パターンの分類、不正な入力を定義する。 |
-| [specifications-matching.md](./specifications-matching.md) | REQ-F-003, REQ-F-005, REQ-F-006, REQ-F-007, REQ-F-008, REQ-F-009, REQ-F-012 | glob の照合規則と保持条件を定義する。                              |
-| [specifications-output.md](./specifications-output.md)     | REQ-F-010, REQ-F-011, REQ-F-013, REQ-F-014, REQ-F-015                       | 出力先の検証、出力値の組み立て、複数行出力の書式を定義する。       |
+| File                                                       | Covered REQ                                                                 | Summary                                                              |
+| ---------------------------------------------------------- | --------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| [specifications-input.md](./specifications-input.md)       | REQ-F-001, REQ-F-002, REQ-F-004, REQ-F-016, REQ-F-017, REQ-F-018            | 入力の検査、行分割と正規化、パターン行の検査、不正な入力を定義する。 |
+| [specifications-matching.md](./specifications-matching.md) | REQ-F-003, REQ-F-005, REQ-F-006, REQ-F-007, REQ-F-008, REQ-F-009, REQ-F-012 | glob の照合規則と保持条件を定義する。                                |
+| [specifications-output.md](./specifications-output.md)     | REQ-F-010, REQ-F-011, REQ-F-013, REQ-F-014, REQ-F-015                       | 出力先の検証、出力値の組み立て、複数行出力の書式を定義する。         |
 
 ### 1.4 ID Conventions
 
@@ -80,22 +80,22 @@ git とファイルシステムは参照せず、入力の文字列と照合規�
 
 #### Feature Decomposition
 
-| Unit              | Responsibility                                                           | REQ Coverage                    |
-| ----------------- | ------------------------------------------------------------------------ | ------------------------------- |
-| parse-input       | 入力を検査し、行に分割する。パターン行だけ両端の空白を除き、空行を捨てる | REQ-F-001, REQ-F-016, REQ-F-017 |
-| classify-patterns | パターン行を包含と除外に分け、不正なパターンを検出する                   | REQ-F-002, REQ-F-004            |
-| glob-to-regex     | 1 つの glob を、パス全体に一致する照合規則に変換する                     | REQ-F-005〜REQ-F-009            |
-| filter            | 保持条件に従って、ファイルを入力順に残す                                 | REQ-F-003, REQ-F-010, REQ-F-012 |
-| output-emission   | 出力先を検証してから、`files` と `count` を書き出す                      | REQ-F-011, REQ-F-013〜REQ-F-015 |
+| Unit            | Responsibility                                                           | REQ Coverage                    |
+| --------------- | ------------------------------------------------------------------------ | ------------------------------- |
+| parse-input     | 入力を検査し、行に分割する。パターン行だけ両端の空白を除き、空行を捨てる | REQ-F-001, REQ-F-016, REQ-F-017 |
+| check-patterns  | パターン行の `!` を検査し、不正なパターンを検出する。行は変えない        | REQ-F-002, REQ-F-004            |
+| glob-to-regex   | 1 つの glob を、パス全体に一致する照合規則に変換する                     | REQ-F-005〜REQ-F-009            |
+| filter          | 保持条件に従って、ファイルを入力順に残す                                 | REQ-F-003, REQ-F-010, REQ-F-012 |
+| output-emission | 出力先を検証してから、`files` と `count` を書き出す                      | REQ-F-011, REQ-F-013〜REQ-F-015 |
 
 #### Unit Interaction Map
 
 ```text
 +-------------+     +-------------------+     +---------------+
-| parse-input | --> | classify-patterns | --> | glob-to-regex |
+| parse-input | --> |  check-patterns   | --> | glob-to-regex |
 +-------------+     +-------------------+     +---------------+
        |                                              |
-       | (files)                                      | (rules)
+       | (files / patterns)                           | (rules, 記述順)
        v                                              v
 +-----------------------------------------------------------+
 |                          filter                           |
@@ -112,7 +112,7 @@ git とファイルシステムは参照せず、入力の文字列と照合規�
 #### Data Flow Diagram
 
 ```text
-[INPUT_FILES / INPUT_PATTERNS] --> [parse-input] --> [classify-patterns] --> [glob-to-regex]
+[INPUT_FILES / INPUT_PATTERNS] --> [parse-input] --> [check-patterns]    --> [glob-to-regex]
                                          |                  |                       |
                                          v                  v                       v
                                   [::error:: exit]   [::error:: exit]          [filter] --> [output-emission] --> [outputs]
@@ -156,8 +156,8 @@ git とファイルシステムは参照せず、入力の文字列と照合規�
 | DR-01 | ファイルフィルタを git diff から独立した内部 Action に切り出す            | req    | モジュール全体の存在理由 |
 | DR-02 | glob を独自に正規表現へ変換して照合する                                   | req    | 照合規則の実現方式       |
 | DR-03 | パターンは glob のみ受け付け、正規表現は受け付けない                      | req    | 照合規則の範囲           |
-| DR-04 | 包含パターンが 0 件の場合は全ファイルを通す                               | req    | 保持条件                 |
-| DR-05 | 除外パターンは包含パターンより優先する                                    | req    | 保持条件                 |
+| DR-04 | 包含パターンが 0 件の場合は全ファイルを通す (Superseded by DR-19)         | req    | なし (DR-19 が置き換え)  |
+| DR-05 | 除外パターンは包含パターンより優先する (Superseded by DR-19)              | req    | なし (DR-19 が置き換え)  |
 | DR-06 | ca-get-changed-files の置き換えは get-changed-files 側で扱う              | req    | Non-Goals                |
 | DR-07 | 複数行出力関数を `_libs` に追加し、区切り文字を一意な文字列にする         | req    | 複数行出力の書式         |
 | DR-08 | パターン行だけ両端の空白を除去し、ファイル行は変えない                    | review | 入力の正規化             |
@@ -171,6 +171,7 @@ git とファイルシステムは参照せず、入力の文字列と照合規�
 | DR-16 | ファイル数・パターン数・バイト数に上限を設け、超えた入力をエラーにする    | review | 件数とサイズの上限       |
 | DR-17 | 照合はファイルごとのループで、事前に生成した ERE と `[[ =~ ]]` で行う     | review | 照合と走査の方式 (7)     |
 | DR-18 | 関数間の複数行データは LF 区切りの文字列 1 つとし、コマンド置換で受け渡す | review | 関数間の受け渡し (3.5)   |
+| DR-19 | パターンは記述順に適用し、最後に一致したパターンで保持を決める            | impl   | 保持条件、CP と FF (3.5) |
 
 ### 2.7 DD to DR Promotion Criteria
 
@@ -259,7 +260,7 @@ GitHub Actions は Composite Action の `required: true` を強制しない。`f
 | Step | 処理                                                                                                                                                                                                                                                                                                             | 定義                       |
 | ---: | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
 |    1 | `files` と `patterns` の値のバイト数が上限を超えないかを、最初に検査する。次に LF を伴わない CR が無いかを、分割の前に検査する。CRLF を LF に変換してから行に分割し、UTF-8 として正しいか (`files` はダブルクオートの有無も) を検査し、正規化する。続けて `files`・`patterns` の行数が上限を超えないかを検査する | specifications-input.md    |
-|    2 | パターンを分類し、不正なパターンを検出する                                                                                                                                                                                                                                                                       | specifications-input.md    |
+|    2 | パターン行を検査し、不正なパターンを検出する                                                                                                                                                                                                                                                                     | specifications-input.md    |
 |    3 | 各パターンを照合規則に変換し、ファイルを絞り込む                                                                                                                                                                                                                                                                 | specifications-matching.md |
 |    4 | 出力先を検証する                                                                                                                                                                                                                                                                                                 | specifications-output.md   |
 |    5 | `files`、`count` の順に書き出す                                                                                                                                                                                                                                                                                  | specifications-output.md   |
@@ -279,7 +280,8 @@ No reordering is permitted. 各 Step でエラーが起きた場合は、後続�
   - 環境変数を読むのは MAIN のみとし、他の関数は引数だけを入力とする。
     ライブラリのロードガード変数 (`*_LIB_LOADED`) は例外とし、`declare -F` で依存関数の定義を確認する (REQ-C-006)。
   - 関数間の複数行データは LF 区切りの文字列 1 つとし、コマンド置換で受け渡す (DR-18)。
-    CP は 1 行ごとに `I<TAB>pattern` / `E<TAB>pattern` を出し、MAIN が包含と除外に分けて FF に渡す。
+    CP (check_patterns) はパターン行を検査するだけで、標準出力に何も出さない。
+    MAIN は PPT の結果 (`pattern` / `!pattern` の行、入力の順) をそのまま FF に渡し、FF が記述順に照合する (DR-19)。
   - write_output は既存の共有関数 (resolve-sha が所有) を使う。テスト ID は割り当てない。
   - module.md の owns に `_libs/__tests__/unit/` の VOF / WMO のテストファイルを明示する (テスト ID 検査 A)。
 -->
@@ -311,7 +313,7 @@ No reordering is permitted. 各 Step でエラーが起きた場合は、後続�
 | -------------- | -------------------------------------- | ---------------------------------------- |
 | REQ-F-001      | R-IN-001〜R-IN-003, R-IN-010, R-IN-013 | Covered in: `specifications-input.md`    |
 | REQ-F-002      | R-IN-004〜R-IN-006, R-IN-009           | Covered in: `specifications-input.md`    |
-| REQ-F-003      | R-MAT-010〜R-MAT-013                   | Covered in: `specifications-matching.md` |
+| REQ-F-003      | R-MAT-011〜R-MAT-013                   | Covered in: `specifications-matching.md` |
 | REQ-F-004      | R-IN-007, R-MAT-010                    | input / matching                         |
 | REQ-F-005      | R-MAT-002〜R-MAT-005                   | Covered in: `specifications-matching.md` |
 | REQ-F-006      | R-MAT-006                              | Covered in: `specifications-matching.md` |
@@ -351,16 +353,18 @@ spec で決める項目は、すべて各分割ファイルで決定した。imp
 
 ## 8. Change History
 
-| Date       | Version | Description                                                                                                        |
-| ---------- | ------- | ------------------------------------------------------------------------------------------------------------------ |
-| 2026-10-27 | 0.1.0   | Initial draft                                                                                                      |
-| 2026-10-27 | 0.1.1   | Apply spec explore review: assumptions, failure outcomes and locale note                                           |
-| 2026-10-27 | 0.1.2   | Apply spec harden review: promote DD-IDX-01 to DR-15, list DR-13 to DR-15                                          |
-| 2026-10-27 | 0.1.3   | Apply spec fix review: UTF-8 check in evaluation step 1, refresh based-on                                          |
-| 2026-10-27 | 1.0.0   | Initial release                                                                                                    |
-| 2026-10-27 | 1.1.0   | Follow requirements v1.1.0: files lines unchanged, lone CR and quoted files line errors (REQ-F-017), approve       |
-| 2026-10-27 | 1.1.1   | Clarify evaluation order step 1: check lone CR before splitting (R-IN-011)                                         |
-| 2026-10-27 | 1.2.0   | Follow requirements v1.2.0: line count limit check in step 1, list DR-16 (REQ-F-018)                               |
-| 2026-10-27 | 1.3.0   | Follow requirements v1.3.0: byte size limit check first in step 1 (REQ-F-018)                                      |
-| 2026-10-27 | 1.3.1   | Apply impl harden review: add CBL, CLE, CLL to 3.5, mark open questions resolved, list DR-17 and DR-18             |
-| 2026-10-27 | 1.3.2   | Apply impl second opinion: split PL into PFL and PPT, load guard exception, move function list to module.md in 3.5 |
+| Date       | Version | Description                                                                                                                         |
+| ---------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-10-27 | 0.1.0   | Initial draft                                                                                                                       |
+| 2026-10-27 | 0.1.1   | Apply spec explore review: assumptions, failure outcomes and locale note                                                            |
+| 2026-10-27 | 0.1.2   | Apply spec harden review: promote DD-IDX-01 to DR-15, list DR-13 to DR-15                                                           |
+| 2026-10-27 | 0.1.3   | Apply spec fix review: UTF-8 check in evaluation step 1, refresh based-on                                                           |
+| 2026-10-27 | 1.0.0   | Initial release                                                                                                                     |
+| 2026-10-27 | 1.1.0   | Follow requirements v1.1.0: files lines unchanged, lone CR and quoted files line errors (REQ-F-017), approve                        |
+| 2026-10-27 | 1.1.1   | Clarify evaluation order step 1: check lone CR before splitting (R-IN-011)                                                          |
+| 2026-10-27 | 1.2.0   | Follow requirements v1.2.0: line count limit check in step 1, list DR-16 (REQ-F-018)                                                |
+| 2026-10-27 | 1.3.0   | Follow requirements v1.3.0: byte size limit check first in step 1 (REQ-F-018)                                                       |
+| 2026-10-27 | 1.3.1   | Apply impl harden review: add CBL, CLE, CLL to 3.5, mark open questions resolved, list DR-17 and DR-18                              |
+| 2026-10-27 | 1.3.2   | Apply impl second opinion: split PL into PFL and PPT, load guard exception, move function list to module.md in 3.5                  |
+| 2026-10-29 | 1.4.0   | MAIN passes the classify_patterns result to FF as one list; FF splits include and exclude (DR-19)                                   |
+| 2026-10-29 | 1.5.0   | Follow requirements v1.4.0: last match wins keep rule, check_patterns only validates, MAIN passes pattern lines to FF as is (DR-19) |
