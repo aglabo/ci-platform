@@ -3,7 +3,7 @@ title: "Implementation Tasks"
 module: "composite-action/get-changed-files"
 status: Active
 created: "2026-10-30 02:11:09"
-source: specifications-index.md v1.3.0, implementation.md v1.0.9
+source: specifications-index.md v2.2.0, implementation.md v2.2.0
 ---
 
 <!-- textlint-disable ja-technical-writing/sentence-length -->
