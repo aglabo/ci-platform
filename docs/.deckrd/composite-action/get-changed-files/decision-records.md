@@ -1,9 +1,9 @@
 ---
 title: "Decision Records: ca-get-changed-files"
-based-on: requirements.md v2.1.2
+based-on: requirements.md v2.2.0
 module: "composite-action/get-changed-files"
 status: approved
-version: 1.4.0
+version: 2.2.0
 created: "2026-10-29"
 ---
 
@@ -574,7 +574,8 @@ LCF・MAINF・RUNF は、`git diff` の結果を実 git リポジトリで検証
 
 ### Decision
 
-大量のパスと特殊文字のパスの fixture は、作業ツリーにファイルを作らず、`git hash-object -w` の blob を `git update-index` で index に直接登録してコミットしなければならない (MUST)。
+大量のパスと特殊文字のパスの fixture は、作業ツリーにファイルを作らずにコミットする。
+`git hash-object -w` の blob を `git update-index` で index に直接登録しなければならない (MUST)。
 これらのケースは、`GF_TMP_ROOT` の直下 (リポジトリの外) に置いた `paths.txt` と `expected.txt` を使い、実際の出力を `expected.txt` と `diff` で比べて検証する。
 git をスタブにしてはならない (MUST NOT)。所要時間はテストの合否に使わず、`GCF_FIXTURE_TIMING` が設定されたときだけ記録する。
 実 git fixture は `_ca-resolve-sha` の `git-fixture.sh` を読み取り専用で使う。
@@ -582,7 +583,8 @@ git をスタブにしてはならない (MUST NOT)。所要時間はテスト�
 ### Alternatives Considered
 
 - Option A: すべてのケースで作業ツリーにファイルを作る。WSL 以外で特殊文字のパスが作れず、3001 件の作成が遅いため不採用。
-- Option B: git をスタブにし、`paths.txt` を `git diff` の出力として返す。git の引用表記 (AC-010 / AC-011) を検証できず、REQ-NF-001 を満たさない。RUNF では resolve-sha も実 git を使うため不採用。
+- Option B: git をスタブにし、`paths.txt` を `git diff` の出力として返す。git の引用表記 (AC-010 / AC-011) を検証できず、REQ-NF-001 を満たさない。
+  RUNF では resolve-sha も実 git を使うため不採用。
 - Option C: 所要時間に閾値を設けてアサーションする。実行環境で大きく変わり、不安定なテストになるため不採用。
 - Option D: 本モジュール専用の fixture helper を持つ。GIT_* の除去などの安全策を重複して持つことになるため不採用。
 
@@ -619,7 +621,7 @@ git をスタブにしてはならない (MUST NOT)。所要時間はテスト�
 
 RUNF は、3 つのスクリプトを action.yml と同じ順で実行するが、action.yml を読まずに env を自前で組み立てる。
 RUNF で「呼び出し元の env が使われない」ことを確かめても、テスト自身が渡した値を確かめるだけになり、action.yml の値が変わっても失敗しない。
-本 Action には、本 Action と内部 Action が持つ上限・下限が 8 つある (一覧のバイト数、件数、pattern の行数とバイト数、commit-count の範囲、履歴の長さ、変更ファイルの件数の下限)。
+本 Action と内部 Action の上限・下限は 8 つある (一覧のバイト数、件数、pattern の行数とバイト数、commit-count の範囲、履歴の長さ、変更ファイルの件数の下限)。
 
 ### Decision
 
@@ -634,7 +636,7 @@ action.yml の値 (env の対応付け、step の構成、入出力) は、静�
 
 ### Rationale
 
-テストが何を検出できるかを、テストの種類ごとに一意にする。境界の検証は、振る舞いが切り替わる 2 点で十分であり、どの境界も同じ基準で漏れなく確かめられる。
+テストの種類ごとの検出範囲を一意に定める。境界の検証は、振る舞いが切り替わる 2 点で十分であり、どの境界も同じ基準で漏れなく確かめられる。
 
 ### Consequences
 
@@ -663,3 +665,4 @@ action.yml の値 (env の対応付け、step の構成、入出力) は、静�
 | 2026-10-30 | 1.2.1   | Clarify DR-12: env compared by name only where the value source differs (overrides, INPUT_FILES, INPUT_PATTERNS)                                                                               |
 | 2026-10-30 | 1.3.0   | Add DR-15 (test fixtures registered to the index of a real git repo, compared with expected files; no git stub, timing recorded only) from impl harden review                                  |
 | 2026-10-30 | 1.4.0   | Add DR-16 (action.yml values are verified by static checks only; boundaries are tested at the accepted edge and the first rejected value) from tasks harden review                             |
+| 2026-10-30 | 2.2.0   | Unify document versions to 2.2.0 and approve                                                                                                                                                   |
