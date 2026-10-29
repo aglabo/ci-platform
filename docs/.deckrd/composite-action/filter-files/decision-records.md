@@ -3,7 +3,7 @@ title: "Decision Records: _ca-filter-files"
 based-on: requirements.md v1.5.0
 module: "composite-action/filter-files"
 status: approved
-version: 2.1.0
+version: 2.1.1
 created: "2026-10-27"
 ---
 
@@ -684,7 +684,7 @@ glob を ERE に変換し、`[[ =~ ]]` で照合する。
 
 - 各パターンの ERE は、照合ループの前に 1 回だけ生成する
 - 照合はファイルごとの Bash ループで行い、ループ内では Bash の組み込み機能だけを使う
-- `LC_ALL=C.UTF-8` は、照合する関数の中で `local` に設定する
+- 照合する関数は本体をサブシェルで書き、その中で `shopt -u nocasematch` と `LC_ALL=C.UTF-8` を設定する (呼び出し元のオプションとロケールは変わらない)
 
 ### Alternatives Considered
 
@@ -849,3 +849,4 @@ CP は検査だけを担い、FF は入力と同じ形のパターン一覧を�
 | 2026-10-29 | 1.5.0   | Add DR-19: filter_files takes the classified pattern list as one argument and splits include and exclude itself                                                                                    |
 | 2026-10-29 | 2.0.0   | Supersede DR-04 and DR-05 with DR-19: last matching pattern in input order decides, the first pattern decides unmatched files, check_patterns only validates, update DR-17 and DR-18 related items |
 | 2026-10-29 | 2.1.0   | Lower the patterns line limit of DR-16 from 1000 to 100 based on the measured matching time, refresh based-on                                                                                      |
+| 2026-10-29 | 2.1.1   | Align DR-17 with the code: filter_files runs in a subshell and sets LC_ALL=C.UTF-8 there instead of local                                                                                          |
