@@ -2,7 +2,7 @@
 title: "Implementation Plan: _ca-filter-files"
 based-on: specifications-index.md v1.5.0
 status: approved
-version: 1.6.0
+version: 1.6.1
 created: "2026-10-27"
 ---
 
@@ -188,10 +188,10 @@ PR は 2 つに分ける。
   区切り文字は、`EOF`、`EOF_1`、`EOF_2` … のうち、行の引数のどれとも衝突しない最初の候補とする (R-OUT-010〜R-OUT-014)。引数不正は 1、書き込み失敗は 2 を返す。
 - 共有関数のテストは、`_libs/__tests__/unit/` に新規ファイルとして置く (`write-output.unit.spec.sh` が手本)。
   ファイル名は `validate-output-file.unit.spec.sh`・`write-multiline-output.unit.spec.sh` の 2 つとする。
-- UTF-8 の検査方式 (`iconv` か、`C.UTF-8` での `grep -ax '.*'` か) は、PFL のタスクで決め、PPT も同じ方式を使う。選ぶ方式は次をすべて満たす (impl harden review W-01)。
+- UTF-8 の検査は、RFC 3629 の表に従う ERE (`_FF_UTF8_RE`、読み込み時に 1 回だけ作る) で、関数内の `local LC_ALL=C` (バイト単位) のもとで各行を `[[ =~ ]]` で照合する。PFL と PPT は同じ方式を使う。この方式は次をすべて満たす (impl harden review W-01)。
   - 行ごとに外部コマンドを起動しない
   - 最初の不正な行を特定し、FE に値として渡せる (R-IN-010)
-  - ロケールは `C.UTF-8` だけを前提にする (specifications-index.md §2.2)
+  - ロケールは `C` と `C.UTF-8` 以外を前提にしない (specifications-index.md §2.2)
 - PFL の検査順 (DR-14、impl second opinion): ファイル行は 1 行ずつ UTF-8、ダブルクオートの順に判定した結果と同じ 1 件を報告する。
   UTF-8 を一括で検査する場合は、最初の不正な UTF-8 行と、最初のダブルクオートを含む行の行番号を比べ、前にある方を報告する。同じ行なら UTF-8 のエラーとする。
 - `module.md` は `workspaces/module/module.md` に置く。`test_scope` (FF)、`owns`、「関数一覧」は記入済みである。
@@ -396,3 +396,4 @@ Phase 1 の開始前、全テストを 1 回実行して結果をベースライ
 | 2026-10-29 | 1.4.0   | filter_files takes the classify_patterns result as one argument and splits include and exclude itself; MAIN no longer splits it (DR-19)                                                                                                                                                                                                                                                                    |
 | 2026-10-29 | 1.5.0   | Follow DR-19: last match wins keep rule with the first pattern deciding unmatched files, classify_patterns becomes check_patterns (no stdout), MAIN passes pattern lines to filter_files as is, refresh references                                                                                                                                                                                         |
 | 2026-10-29 | 1.6.0   | Follow DR-16: lower FF_MAX_PATTERNS from 1000 to 100, record the measured matching time                                                                                                                                                                                                                                                                                                                    |
+| 2026-10-29 | 1.6.1   | Record the chosen UTF-8 check: a Bash ERE (_FF_UTF8_RE) under a function-local LC_ALL=C                                                                                                                                                                                                                                                                                                                    |

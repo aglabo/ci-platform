@@ -2,7 +2,7 @@
 title: "Design Specification: _ca-filter-files (Matching)"
 based-on: requirements.md v1.4.0
 status: approved
-version: 1.2.0
+version: 1.2.1
 created: "2026-10-27"
 ---
 
@@ -116,7 +116,7 @@ See `specifications-index.md` 2.7.
   filter_files <files> <patterns> は、parse_patterns の結果 (check_patterns で検査済みの `pattern` / `!pattern` の行、入力の順) を受け取る。
   照合ループの前に、各パターンを 1 回だけ ERE に変換し、種別と ERE を入力の順に持つ。除外は先頭の `!` を 1 つだけ除いてから変換する。
   ファイルごとに最後のパターンから先頭へ照合し、最初に一致したパターンで決める (DR-19)。保持行を LF 区切りで標準出力へ返す。
-  照合する関数の中で `local LC_ALL=C.UTF-8` を指定して行う。
+  照合する関数は本体をサブシェルで書き、その中で `shopt -u nocasematch` と `LC_ALL=C.UTF-8` を設定して行う (呼び出し元のオプションとロケールは変わらない)。
   照合方式 (正規表現への変換か、セグメント単位か) とループ方式は impl で決める (index Open Questions)。 -->
 
 ---
@@ -237,3 +237,4 @@ spec の範囲では無い。照合方式とループ方式は impl で決定し
 | 2026-10-27 | 1.0.4   | Point open questions to DR-17 (matching method decided in impl)                                                                                                                        |
 | 2026-10-29 | 1.1.0   | filter_files takes the classified pattern list as one argument (DR-19)                                                                                                                 |
 | 2026-10-29 | 1.2.0   | Follow requirements v1.4.0: rewrite R-MAT-010 to R-MAT-013 to last match wins with the first pattern deciding unmatched files, filter_files takes pattern lines in input order (DR-19) |
+| 2026-10-29 | 1.2.1   | Align the locale impl-note with the code: filter_files runs in a subshell and sets LC_ALL=C.UTF-8 there                                                                                |
