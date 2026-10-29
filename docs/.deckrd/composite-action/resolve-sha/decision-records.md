@@ -2,7 +2,7 @@
 title: "Decision Records: _ca-resolve-sha"
 module: "composite-action/resolve-sha"
 status: Draft
-version: 2.1.1
+version: 2.1.2
 created: "2026-10-25"
 ---
 
@@ -83,6 +83,9 @@ created: "2026-10-25"
   - オーバーライドを廃止し、呼び出し元に残す。置き換えタスクの移行コストが増えるため不採用。
 - Rationale: 現行挙動と互換を保ち、`ca-get-changed-files` からの移行を単純な置換にできる。
 - Trade-offs: 入力が 3 つに増え、入力の組み合わせ検証が必要になる。
+- Note (2026-10-29): `ca-get-changed-files` は #134 で入力 `before-sha` / `after-sha` を削除した (get-changed-files DR-03)。
+  本 Action のオーバーライドには、常に空文字列を渡す。
+  本 Action のオーバーライド入力は、内部 Action の汎用機能として残す。
 - Related: REQ-F-011, REQ-F-015, REQ-C-006
 
 ## DR-08: 解決経路を resolution 出力で通知する
@@ -320,3 +323,4 @@ created: "2026-10-25"
 | 2026-10-25 | 2.0.0   | Remove DR-15/16/20/21/22 (over-scoped); add DR-23 (partial clone is an error)                               |
 | 2026-10-25 | 2.1.0   | Add DR-24 (reject empty tree override), DR-25 (push limited to branch create/update); add DR-01 alternative |
 | 2026-10-25 | 2.1.1   | Add DR-26 (shared lib additions stay silent, WO takes output file), DR-27 (action.yml verified statically)  |
+| 2026-10-29 | 2.1.2   | Note on DR-07: ca-get-changed-files drops the override inputs in #134 (get-changed-files DR-03)             |

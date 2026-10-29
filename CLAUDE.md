@@ -53,8 +53,8 @@ GitHub Actions と Git Hooks を統合した品質管理テンプレートを提
 **ディレクトリ構成**:
 
 ```bash
-.github/workflows/      # GitHub Actions ワークフロー (ci-scan-secrets.yml / ci-workflows-qa.yml)
-.github/actions/        # Composite Actions (ca-validate-environment, ca-setup-tool, ca-setup-tool-repo)
+.github/workflows/      # GitHub Actions ワークフロー (ci-*: CI 本体 / ru-*: 再利用可能ワークフロー / _tests_*: Action のテスト)
+.github/actions/        # Composite Actions (ca-*: 公開 / _ca-*: 内部専用 / _libs: 共有ライブラリ)
 configs/                # 品質ツール設定ファイル
 scripts/                # 開発スクリプト (setup-dev-env/prepare-commit-msg)
 runners/                # 品質ツール実行ラッパー (run-shellspec/run-shellcheck/run-shfmt ほか)
@@ -137,8 +137,9 @@ lefthook uninstall && lefthook install    # lefthook 再設定
 
 **ブランチ戦略**: `main` (安定), `releases` (リリース), `feature/*`, `fix/*`, `docs/*`, `refactor/*`, `test/*`
 
-**テスト配置**: `<script_dir>/__tests__/<name>.<tier>.spec.sh`
+**テスト配置**: `<script_dir>/__tests__/<tier>/<name>.<tier>.spec.sh`
 
+- 例: `scripts/_libs/__tests__/unit/output.unit.spec.sh`
 - ティア: `unit`, `functional`, `integration`, `e2e`
 - インポートパターン: `Include ../script.sh` (相対パス)
 - グローバル配列使用時: `BeforeEach`/`AfterEach` による setup/teardown 必須
