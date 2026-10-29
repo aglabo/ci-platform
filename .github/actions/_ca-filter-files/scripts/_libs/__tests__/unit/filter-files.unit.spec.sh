@@ -113,39 +113,18 @@ printf -v _CLL_PATTERNS_OVER_LINES '*.sh\n%.0s' {1..1001}
 _CLL_PATTERNS_OVER_LINES=${_CLL_PATTERNS_OVER_LINES%$'\n'}
 # Two lines; used by T-FF-CLL-08
 _CLL_TWO_LINES=$'a\nb'
-# Expected classify_patterns line for the include pattern "*.sh";
-# used by T-FF-CP-01
-_CP_INCLUDE_LINE=$'I\t*.sh'
-# Expected classify_patterns line for the exclude pattern "!*.md";
-# used by T-FF-CP-02
-_CP_EXCLUDE_LINE=$'E\t*.md'
 # Pattern lines with an include followed by an exclude; used by T-FF-CP-03
 _CP_ORDERED_PATTERNS=$'src/**\n!src/gen/**'
-# Expected classify_patterns output for _CP_ORDERED_PATTERNS, in input order;
-# used by T-FF-CP-03
-_CP_ORDERED_LINES=$'I\tsrc/**\nE\tsrc/gen/**'
 # Pattern line wrapped in double quotes; used by T-FF-CP-04
 _CP_QUOTED_PATTERN='"b.sh"'
-# Expected classify_patterns line for _CP_QUOTED_PATTERN, with the quotes kept
-# as literal characters; used by T-FF-CP-04
-_CP_QUOTED_LINE=$'I\t"b.sh"'
 # Exclude pattern line whose rest starts with a tab; used by T-FF-CP-07
 _CP_TAB_EXCLUDE_PATTERN=$'!\ta.sh'
-# Expected classify_patterns line for the pattern "!!a.sh", with only the
-# first "!" removed; used by T-FF-CP-08
-_CP_DOUBLE_BANG_LINE=$'E\t!a.sh'
 # Two rejected pattern lines ("!" then "! a.sh"); used by T-FF-CP-10
 _CP_TWO_BAD_LINES=$'!\n! a.sh'
 # Include pattern line with a tab inside the pattern; used by T-FF-CP-11
 _CP_INNER_TAB_PATTERN=$'a\tb'
-# Expected classify_patterns line for _CP_INNER_TAB_PATTERN, with the inner
-# tab kept, so the text after the first tab is $'a\tb'; used by T-FF-CP-11
-_CP_INNER_TAB_LINE=$'I\ta\tb'
 # Include pattern line that ends with one backslash; used by T-FF-CP-12
 _CP_BACKSLASH_PATTERN="a\\"
-# Expected classify_patterns line for _CP_BACKSLASH_PATTERN, with the
-# backslash kept as a literal character; used by T-FF-CP-12
-_CP_BACKSLASH_LINE=$'I\ta\\'
 # Locale set while matching a path against the converted ERE;
 # used by T-FF-GTR-01 .. T-FF-GTR-15, T-FF-GTR-17 .. T-FF-GTR-40
 _GTR_UTF8_LOCALE="C.UTF-8"
@@ -164,7 +143,8 @@ _FF_SH_MD_FILES=$'a.sh\nREADME.md\nb.sh'
 # The two .sh lines of _FF_SH_MD_FILES / _FF_SH_MD_SH_FILES in input order;
 # used by T-FF-FF-01, T-FF-FF-03, T-FF-FF-10 (expected)
 _FF_SH_FILES=$'a.sh\nb.sh'
-# Files under src/, one of them under src/gen/; used by T-FF-FF-02
+# Files under src/, one of them under src/gen/; used by T-FF-FF-02,
+# T-FF-FF-15 (input and expected)
 _FF_SRC_FILES=$'src/a.sh\nsrc/gen/b.sh'
 # Files with an .md line between two .sh lines; used by T-FF-FF-03
 _FF_SH_MD_SH_FILES=$'a.sh\na.md\nb.sh'
@@ -174,8 +154,8 @@ _FF_MIXED_DIR_FILES=$'a.sh\ndir/b.md'
 # Files not in pattern order (.md, .sh, .md); used by T-FF-FF-05 (input and
 # expected)
 _FF_UNSORTED_FILES=$'b.md\na.sh\nc.md'
-# Two classified include patterns (.sh first, then .md); used by T-FF-FF-05
-_FF_SH_MD_PATTERNS=$'I\t*.sh\nI\t*.md'
+# Two include patterns (.sh first, then .md); used by T-FF-FF-05
+_FF_SH_MD_PATTERNS=$'*.sh\n*.md'
 # The same path on two lines; used by T-FF-FF-08 (input and expected)
 _FF_DUPLICATE_FILES=$'a.sh\na.sh'
 # Locale of the caller of filter_files; used by T-FF-FF-13
@@ -186,9 +166,23 @@ _FF_MULTIBYTE_PATH='あ.sh'
 # A path that does not exist but matches **/*.sh, then a path that exists
 # in the working directory but does not match; used by T-FF-FF-14
 _FF_FS_FILES=$'no/such/file.sh\nexists.md'
-# Files with an .sh line and an .md line; used by T-FF-FF-16 (input and
+# Files under src/, two of them under src/gen/; used by T-FF-FF-16
+_FF_KEEP_FILES=$'src/a.sh\nsrc/gen/b.sh\nsrc/gen/keep.sh'
+# Files at the top level and in docs/ (.sh, .md, docs/.md); used by
+# T-FF-FF-17
+_FF_DOCS_FILES=$'a.sh\nb.md\ndocs/c.md'
+# A path with a TAB inside, then the same characters without it; used by
+# T-FF-FF-18
+_FF_TAB_FILES=$'a\tb\nab'
+# The path with a TAB inside from _FF_TAB_FILES; used by T-FF-FF-18
+# (pattern and expected)
+_FF_TAB_PATH=$'a\tb'
+# Files with an .md line and an .sh line; used by T-FF-FF-19 (input and
 # expected)
-_FF_UNTYPED_FILES=$'a.sh\nb.md'
+_FF_MD_SH_FILES=$'a.md\nb.sh'
+# A path that starts with "!", then the same path without it; used by
+# T-FF-FF-20
+_FF_BANG_FILES=$'!a.sh\na.sh'
 # Kept lines a.sh and b.sh, LF-separated with no trailing LF; used by T-FF-EO-01
 _EO_TWO_KEPT=$'a.sh\nb.sh'
 # Whole output file after emitting _EO_TWO_KEPT; used by T-FF-EO-01
@@ -330,11 +324,11 @@ _gtr_match() {
 
 ##
 # Run filter_files with the given shell options enabled in the caller, then
-# restore the options; used by T-FF-FF-10, T-FF-FF-11. filter_files is
-# called directly (not in a subshell), so options it changed would be seen
-# here.
+# restore the options; used by T-FF-FF-10, T-FF-FF-11, T-FF-FF-19.
+# filter_files is called directly (not in a subshell), so options it
+# changed would be seen here.
 # @arg $1 files    — passed to filter_files as is
-# @arg $2 patterns — passed to filter_files as is (classified pattern lines)
+# @arg $2 patterns — passed to filter_files as is (pattern / !pattern lines)
 # @arg $3.. names of the shopt options to enable (e.g. nocasematch)
 # @stdout filter_files' stdout
 # @return filter_files' exit code
@@ -505,7 +499,7 @@ _eo_run_with_existing() {
 #                    T-FF-PFL-01 .. T-FF-PFL-19, T-FF-PPT-01 .. T-FF-PPT-12,
 #                    T-FF-CBL-01 .. T-FF-CBL-08, T-FF-CLL-01 .. T-FF-CLL-08,
 #                    T-FF-CP-01 .. T-FF-CP-12, T-FF-GTR-01 .. T-FF-GTR-40,
-#                    T-FF-FF-01 .. T-FF-FF-16, T-FF-EO-01 .. T-FF-EO-13
+#                    T-FF-FF-01 .. T-FF-FF-20, T-FF-EO-01 .. T-FF-EO-13
 Describe 'filter-files.lib.sh'
   ##
   # ff_error: emit one "::error::" annotation line to stderr. The form is chosen
@@ -1182,58 +1176,54 @@ Describe 'filter-files.lib.sh'
   End
 
   ##
-  # classify_patterns: classify each parsed pattern line as an include (I) or
-  # an exclude (E) and print one "<I|E><TAB><pattern>" line per pattern.
+  # check_patterns: check the parsed pattern lines (validation only; nothing
+  # is printed on stdout in any case).
   # Assigned test IDs: T-FF-CP-01 .. T-FF-CP-12
-  # Scenarios: a line that does not start with "!" is an include and is
-  #            printed as "I<TAB><line>"; a line that starts with "!" is an
-  #            exclude and is printed as "E<TAB><rest>" with the leading "!"
-  #            removed; the output keeps the input line order; double quotes
-  #            in a pattern are kept as literal characters (status 0, empty
-  #            stderr);
+  # Scenarios: a line that does not start with "!", a line that starts with
+  #            "!", include and exclude lines mixed, and a line with double
+  #            quotes are accepted (status 0, empty stdout, empty stderr);
   #            a line made only of "!" and an exclude whose rest starts with
   #            a space or a tab are reported (status 1, one ::error::patterns:
-  #            line with the line before the "!" is removed, empty stdout);
-  #            only the first leading "!" is removed, so "!!a.sh" is printed
-  #            as "E<TAB>!a.sh" (status 0, empty stderr); an empty input
-  #            gives no patterns (status 0, empty stdout, empty stderr);
-  #            when two lines are rejected, only the first one is reported
-  #            (status 1, one ::error::patterns: line, empty stdout);
-  #            a tab inside a pattern is kept, so $'a\tb' is printed as
-  #            $'I\ta\tb' (status 0, empty stderr); a backslash inside a
-  #            pattern is kept, so 'a\' is printed as $'I\ta\\' (status 0,
-  #            empty stderr).
-  Describe 'classify_patterns'
-    # 正常系: CP-01 a line that does not start with "!" is an include,
-    #         CP-02 a line that starts with "!" is an exclude,
-    #         CP-03 the output keeps the input line order,
-    #         CP-04 double quotes are kept as literal characters
+  #            line with the rejected line as the value, empty stdout);
+  #            "!!a.sh" is accepted, since the rest after the first "!" is
+  #            neither empty nor starts with whitespace; an empty input is
+  #            accepted as no patterns; when two lines are rejected, only
+  #            the first one is reported (status 1, one ::error::patterns:
+  #            line, empty stdout); a pattern with a tab inside and a pattern
+  #            that ends with a backslash are accepted (status 0, empty
+  #            stdout, empty stderr).
+  Describe 'check_patterns'
+    # 正常系: CP-01 a line that does not start with "!" is accepted,
+    #         CP-02 a line that starts with "!" is accepted,
+    #         CP-03 include and exclude lines mixed are accepted,
+    #         CP-04 a line with double quotes is accepted
+    #         (status 0, empty stdout, empty stderr)
     Context 'When: 正常系'
-      It '[Normal] T-FF-CP-01: ! で始まらない行は包含'
-        When call classify_patterns '*.sh'
+      It '[Normal] T-FF-CP-01: ! で始まらない行を受け付ける'
+        When call check_patterns '*.sh'
         The status should equal 0
-        The entire output should equal "$_CP_INCLUDE_LINE"
+        The output should equal ''
         The stderr should equal ''
       End
 
-      It '[Normal] T-FF-CP-02: ! で始まる行は除外'
-        When call classify_patterns '!*.md'
+      It '[Normal] T-FF-CP-02: ! で始まる行を受け付ける'
+        When call check_patterns '!*.md'
         The status should equal 0
-        The entire output should equal "$_CP_EXCLUDE_LINE"
+        The output should equal ''
         The stderr should equal ''
       End
 
-      It '[Normal] T-FF-CP-03: 記述順を保つ'
-        When call classify_patterns "$_CP_ORDERED_PATTERNS"
+      It '[Normal] T-FF-CP-03: 包含と除外が混在しても受け付ける'
+        When call check_patterns "$_CP_ORDERED_PATTERNS"
         The status should equal 0
-        The entire output should equal "$_CP_ORDERED_LINES"
+        The output should equal ''
         The stderr should equal ''
       End
 
-      It '[Normal] T-FF-CP-04: ダブルクオートを文字として残す'
-        When call classify_patterns "$_CP_QUOTED_PATTERN"
+      It '[Normal] T-FF-CP-04: ダブルクオートを含む行を受け付ける'
+        When call check_patterns "$_CP_QUOTED_PATTERN"
         The status should equal 0
-        The entire output should equal "$_CP_QUOTED_LINE"
+        The output should equal ''
         The stderr should equal ''
       End
     End
@@ -1243,7 +1233,7 @@ Describe 'filter-files.lib.sh'
     #         CP-07 an exclude whose rest starts with a tab is reported
     Context 'When: 異常系'
       It '[Error] T-FF-CP-05: ! だけの行はエラー'
-        When call classify_patterns '!'
+        When call check_patterns '!'
         The status should equal 1
         The stderr should start with '::error::patterns:'
         The stderr should include "(got: '!')"
@@ -1252,7 +1242,7 @@ Describe 'filter-files.lib.sh'
       End
 
       It '[Error] T-FF-CP-06: スペースで始まる除外はエラー'
-        When call classify_patterns '! a.sh'
+        When call check_patterns '! a.sh'
         The status should equal 1
         The stderr should start with '::error::patterns:'
         The stderr should include "(got: '! a.sh')"
@@ -1261,7 +1251,7 @@ Describe 'filter-files.lib.sh'
       End
 
       It '[Error] T-FF-CP-07: タブで始まる除外はエラー'
-        When call classify_patterns "$_CP_TAB_EXCLUDE_PATTERN"
+        When call check_patterns "$_CP_TAB_EXCLUDE_PATTERN"
         The status should equal 1
         The stderr should start with '::error::patterns:'
         The lines of stderr should equal 1
@@ -1269,28 +1259,29 @@ Describe 'filter-files.lib.sh'
       End
     End
 
-    # エッジケース: CP-08 only the first leading "!" is removed,
-    #             CP-09 an empty input gives no patterns,
+    # エッジケース: CP-08 "!!a.sh" is accepted (the rest after the first "!"
+    #             is neither empty nor starts with whitespace),
+    #             CP-09 an empty input is accepted as no patterns,
     #             CP-10 only the first of two rejected lines is reported,
-    #             CP-11 a tab inside a pattern is kept as is,
-    #             CP-12 a backslash inside a pattern is kept as is
+    #             CP-11 a pattern with a tab inside is accepted,
+    #             CP-12 a pattern that ends with a backslash is accepted
     Context 'When: エッジケース'
-      It '[Edge] T-FF-CP-08: 先頭の ! は 1 つだけ除く'
-        When call classify_patterns '!!a.sh'
+      It '[Edge] T-FF-CP-08: ! が 2 つ続く行を受け付ける'
+        When call check_patterns '!!a.sh'
         The status should equal 0
-        The entire output should equal "$_CP_DOUBLE_BANG_LINE"
+        The output should equal ''
         The stderr should equal ''
       End
 
-      It '[Edge] T-FF-CP-09: 空の入力はパターン無し'
-        When call classify_patterns ""
+      It '[Edge] T-FF-CP-09: 空の入力はパターン無しとして受け付ける'
+        When call check_patterns ""
         The status should equal 0
-        The entire output should equal ''
+        The output should equal ''
         The stderr should equal ''
       End
 
       It '[Edge] T-FF-CP-10: 不正な行が 2 つあれば最初の行だけを報告する'
-        When call classify_patterns "$_CP_TWO_BAD_LINES"
+        When call check_patterns "$_CP_TWO_BAD_LINES"
         The status should equal 1
         The stderr should start with '::error::patterns:'
         The stderr should include "(got: '!')"
@@ -1298,17 +1289,17 @@ Describe 'filter-files.lib.sh'
         The output should equal ''
       End
 
-      It '[Edge] T-FF-CP-11: パターン内のタブを変えない'
-        When call classify_patterns "$_CP_INNER_TAB_PATTERN"
+      It '[Edge] T-FF-CP-11: パターン内にタブを含む行を受け付ける'
+        When call check_patterns "$_CP_INNER_TAB_PATTERN"
         The status should equal 0
-        The entire output should equal "$_CP_INNER_TAB_LINE"
+        The output should equal ''
         The stderr should equal ''
       End
 
-      It '[Edge] T-FF-CP-12: パターン内のバックスラッシュを変えない'
-        When call classify_patterns "$_CP_BACKSLASH_PATTERN"
+      It '[Edge] T-FF-CP-12: 末尾がバックスラッシュの行を受け付ける'
+        When call check_patterns "$_CP_BACKSLASH_PATTERN"
         The status should equal 0
-        The entire output should equal "$_CP_BACKSLASH_LINE"
+        The output should equal ''
         The stderr should equal ''
       End
     End
@@ -1626,52 +1617,59 @@ Describe 'filter-files.lib.sh'
 
   ##
   # filter_files: keep the file lines that pass the keep rule, in input order.
-  # Assigned test IDs: T-FF-FF-01 .. T-FF-FF-16
-  # <patterns> is the classify_patterns result: "I<TAB>pattern" (include) and
-  # "E<TAB>pattern" (exclude) lines; any other line is ignored.
-  # Keep rule, checked per line in this order: a line that matches any
-  # exclude pattern is dropped (exclude wins); with no include pattern every
-  # other line is kept; a line that matches any include pattern is kept; any
-  # other line is dropped. Input order and duplicate lines are kept; the
-  # order of the pattern lines does not change the result.
-  # Scenarios: the keep rule (include only, include and exclude, exclude
-  #            only, empty patterns, several include patterns, exclude
-  #            listed before include);
-  #            files that are not kept (no include match, all excluded);
+  # Assigned test IDs: T-FF-FF-01 .. T-FF-FF-20
+  # <patterns> is the parse_patterns result (checked by check_patterns):
+  # "pattern" (include) and "!pattern" (exclude) lines in input order; the
+  # one leading "!" of an exclude line is removed, and a line is never split
+  # at a TAB.
+  # Keep rule (last match wins, DR-19): each file line is checked against
+  # the patterns from the last one to the first, and the first pattern that
+  # matches decides (include: kept, exclude: dropped). A line that matches
+  # no pattern is kept when the first pattern is an exclude and dropped when
+  # it is an include; with no patterns at all every line is kept. Input
+  # order and duplicate lines are kept; the order of the pattern lines can
+  # change the result.
+  # Scenarios: the keep rule (include only, a later exclude over an earlier
+  #            include, exclude only, empty patterns, several include
+  #            patterns, a later include over an earlier exclude, an
+  #            include after an exclude that brings a file back);
+  #            files that are not kept (no match with an include first, a
+  #            later exclude over a named include);
   #            input shape and environment: duplicate lines, empty files,
   #            shell options (globstar / extglob / nocasematch / nocaseglob),
-  #            nocasematch does not change matching, the caller's options and
-  #            locale stay unchanged, the file system is not consulted, and
-  #            pattern lines without a kind are ignored.
-  # FF-10 .. FF-13 call filter_files through the _ff_* helpers, which call it
-  # directly (not in a subshell) so that a change of the caller's state is
-  # seen. FF-14 calls it through _ff_filter_outside_repo, which runs it in a
-  # subshell in a temp dir outside any git work tree.
+  #            nocasematch does not change include or exclude matching, the
+  #            caller's options and locale stay unchanged, the file system
+  #            is not consulted, an exclude first keeps unmatched lines, a
+  #            TAB is part of a pattern, and only one leading "!" is removed.
+  # FF-10 .. FF-13 and FF-19 call filter_files through the _ff_* helpers,
+  # which call it directly (not in a subshell) so that a change of the
+  # caller's state is seen. FF-14 calls it through _ff_filter_outside_repo,
+  # which runs it in a subshell in a temp dir outside any git work tree.
   Describe 'filter_files'
     # 正常系: FF-01 only the lines that match an include pattern are kept;
-    #         FF-02 an exclude pattern wins over an include pattern;
+    #         FF-02 a later exclude pattern overrides an earlier include;
     #         FF-03 with exclude patterns only, every other line is kept;
     #         FF-04 with no patterns at all, every line is kept;
     #         FF-05 with several include patterns, input order is kept;
-    #         FF-15 an exclude pattern listed before an include pattern
-    #         still wins
+    #         FF-15 a later include pattern overrides an earlier exclude;
+    #         FF-16 an include pattern after an exclude brings a file back
     Context 'When: 正常系'
       It '[Normal] T-FF-FF-01: 包含パターンに一致するファイルだけを残す'
-        When call filter_files "$_FF_SH_MD_FILES" $'I\t*.sh'
+        When call filter_files "$_FF_SH_MD_FILES" '*.sh'
         The status should equal 0
         The output should equal "$_FF_SH_FILES"
         The stderr should equal ''
       End
 
-      It '[Normal] T-FF-FF-02: 除外は包含より優先する'
-        When call filter_files "$_FF_SRC_FILES" $'I\tsrc/**\nE\tsrc/gen/**'
+      It '[Normal] T-FF-FF-02: 後に書いた除外が先の包含を打ち消す'
+        When call filter_files "$_FF_SRC_FILES" $'src/**\n!src/gen/**'
         The status should equal 0
         The output should equal 'src/a.sh'
         The stderr should equal ''
       End
 
       It '[Normal] T-FF-FF-03: 除外だけなら残りの全件を残す'
-        When call filter_files "$_FF_SH_MD_SH_FILES" $'E\t*.md'
+        When call filter_files "$_FF_SH_MD_SH_FILES" '!*.md'
         The status should equal 0
         The output should equal "$_FF_SH_FILES"
         The stderr should equal ''
@@ -1691,28 +1689,36 @@ Describe 'filter-files.lib.sh'
         The stderr should equal ''
       End
 
-      It '[Normal] T-FF-FF-15: 除外が包含より前にあっても除外が優先する'
-        When call filter_files "$_FF_SRC_FILES" $'E\tsrc/gen/**\nI\tsrc/**'
+      It '[Normal] T-FF-FF-15: 後に書いた包含が先の除外を打ち消す'
+        When call filter_files "$_FF_SRC_FILES" $'!src/gen/**\nsrc/**'
         The status should equal 0
-        The output should equal 'src/a.sh'
+        The output should equal "$_FF_SRC_FILES"
+        The stderr should equal ''
+      End
+
+      It '[Normal] T-FF-FF-16: 除外の後に書いた包含でファイルを戻せる'
+        When call filter_files "$_FF_KEEP_FILES" $'src/**\n!src/gen/**\nsrc/gen/keep.sh'
+        The status should equal 0
+        The output should equal $'src/a.sh\nsrc/gen/keep.sh'
         The stderr should equal ''
       End
     End
 
-    # 異常系: FF-06 a line that matches no include pattern is dropped, and
-    #         nothing (not even a LF) is printed when no line is kept;
+    # 異常系: FF-06 a line that matches no pattern is dropped when the first
+    #         pattern is an include, and nothing (not even a LF) is printed
+    #         when no line is kept;
     #         FF-07 a line named by an include pattern is still dropped when
-    #         it matches an exclude pattern
+    #         it matches a later exclude pattern
     Context 'When: 異常系'
       It '[Error] T-FF-FF-06: どれにも一致しなければ空を返す'
-        When call filter_files 'a.md' $'I\t*.sh'
+        When call filter_files 'a.md' '*.sh'
         The status should equal 0
         The entire output should equal ''
         The stderr should equal ''
       End
 
-      It '[Error] T-FF-FF-07: 包含に名指しされても除外に一致すれば捨てる'
-        When call filter_files 'src/gen/b.sh' $'I\tsrc/gen/b.sh\nE\tsrc/gen/**'
+      It '[Error] T-FF-FF-07: 包含に名指しされても、後の除外に一致すれば捨てる'
+        When call filter_files 'src/gen/b.sh' $'src/gen/b.sh\n!src/gen/**'
         The status should equal 0
         The entire output should equal ''
         The stderr should equal ''
@@ -1732,40 +1738,46 @@ Describe 'filter-files.lib.sh'
     #             FF-14 lines are kept or dropped by the path strings alone,
     #             outside any git work tree (a missing file is kept, an
     #             existing file is not);
-    #             FF-16 a pattern line that starts with neither "I<TAB>" nor
-    #             "E<TAB>" is ignored (with no include pattern left, every
-    #             line is kept)
+    #             FF-17 with an exclude pattern first, a line that matches no
+    #             pattern is kept (a later include still decides the lines
+    #             it matches);
+    #             FF-18 a TAB inside a pattern line is part of the pattern
+    #             (the line is not split at the TAB);
+    #             FF-19 an exclude pattern stays case-sensitive with
+    #             nocasematch enabled in the caller;
+    #             FF-20 only one leading "!" of an exclude line is removed
+    #             ("!!a.sh" excludes "!a.sh")
     Context 'When: エッジケース'
       It '[Edge] T-FF-FF-08: 重複を残す'
-        When call filter_files "$_FF_DUPLICATE_FILES" $'I\t*.sh'
+        When call filter_files "$_FF_DUPLICATE_FILES" '*.sh'
         The status should equal 0
         The output should equal "$_FF_DUPLICATE_FILES"
         The stderr should equal ''
       End
 
       It '[Edge] T-FF-FF-09: files が空なら空を返す'
-        When call filter_files '' $'I\t*.sh'
+        When call filter_files '' '*.sh'
         The status should equal 0
         The entire output should equal ''
         The stderr should equal ''
       End
 
       It '[Edge] T-FF-FF-10: シェルのオプションが有効でも結果が変わらない'
-        When call _ff_filter_with_options "$_FF_SH_MD_FILES" $'I\t*.sh' globstar extglob nocasematch nocaseglob
+        When call _ff_filter_with_options "$_FF_SH_MD_FILES" '*.sh' globstar extglob nocasematch nocaseglob
         The status should equal 0
         The output should equal "$_FF_SH_FILES"
         The stderr should equal ''
       End
 
       It '[Edge] T-FF-FF-11: nocasematch が有効でも大文字・小文字を区別する'
-        When call _ff_filter_with_options 'a.sh' $'I\t*.SH' nocasematch
+        When call _ff_filter_with_options 'a.sh' '*.SH' nocasematch
         The status should equal 0
         The entire output should equal ''
         The stderr should equal ''
       End
 
       It '[Edge] T-FF-FF-12: 呼び出し元のシェルのオプションを変えない'
-        When call _ff_nocasematch_after_call 'a.sh' $'I\t*.sh'
+        When call _ff_nocasematch_after_call 'a.sh' '*.sh'
         The status should equal 0
         The line 1 of output should equal 'a.sh'
         The line 2 of output should equal 'nocasematch=on'
@@ -1774,7 +1786,7 @@ Describe 'filter-files.lib.sh'
       End
 
       It '[Edge] T-FF-FF-13: 呼び出し元のロケールが C でも UTF-8 の 1 文字で照合する'
-        When call _ff_filter_in_c_locale "$_FF_MULTIBYTE_PATH" $'I\t?.sh'
+        When call _ff_filter_in_c_locale "$_FF_MULTIBYTE_PATH" '?.sh'
         The status should equal 0
         The line 1 of output should equal "$_FF_MULTIBYTE_PATH"
         The line 2 of output should equal "LC_ALL=${_FF_C_LOCALE}"
@@ -1783,16 +1795,37 @@ Describe 'filter-files.lib.sh'
       End
 
       It '[Edge] T-FF-FF-14: ファイルシステムを参照せず文字列だけで判定する'
-        When call _ff_filter_outside_repo "$_FF_FS_FILES" $'I\t**/*.sh'
+        When call _ff_filter_outside_repo "$_FF_FS_FILES" '**/*.sh'
         The status should equal 0
         The output should equal 'no/such/file.sh'
         The stderr should equal ''
       End
 
-      It '[Edge] T-FF-FF-16: 種別の付いていないパターン行は無視する'
-        When call filter_files "$_FF_UNTYPED_FILES" $'X\t*.md'
+      It '[Edge] T-FF-FF-17: 先頭が除外なら、どれにも一致しないファイルを残す'
+        When call filter_files "$_FF_DOCS_FILES" $'!*.md\ndocs/*.md'
         The status should equal 0
-        The output should equal "$_FF_UNTYPED_FILES"
+        The output should equal $'a.sh\ndocs/c.md'
+        The stderr should equal ''
+      End
+
+      It '[Edge] T-FF-FF-18: パターン内のタブをパターンの一部として扱う'
+        When call filter_files "$_FF_TAB_FILES" "$_FF_TAB_PATH"
+        The status should equal 0
+        The output should equal "$_FF_TAB_PATH"
+        The stderr should equal ''
+      End
+
+      It '[Edge] T-FF-FF-19: nocasematch が有効でも除外パターンは大文字・小文字を区別する'
+        When call _ff_filter_with_options "$_FF_MD_SH_FILES" '!*.MD' nocasematch
+        The status should equal 0
+        The output should equal "$_FF_MD_SH_FILES"
+        The stderr should equal ''
+      End
+
+      It '[Edge] T-FF-FF-20: 除外パターンは先頭の ! を 1 つだけ除く'
+        When call filter_files "$_FF_BANG_FILES" '!!a.sh'
+        The status should equal 0
+        The output should equal 'a.sh'
         The stderr should equal ''
       End
     End

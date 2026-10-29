@@ -98,7 +98,7 @@ _mainf_run() {
 # delimiter. Lines are read with IFS= and read -r, so spaces at both ends and
 # backslashes are kept.
 # Used by T-FF-MAINF-01 / 02 / 03 / 04 / 05 / 06 / 07 / 08 / 09 / 10 / 12 / 13 /
-# 14 / 34.
+# 14 / 34 / 36.
 # Requires: _mainf_setup has been called (BeforeEach).
 # @stdout the files lines separated by LF, with no trailing LF
 # @return 0 when a files<< line is found, 1 otherwise
@@ -122,7 +122,7 @@ _mainf_files_output() {
 
 ##
 # Print the value of the count output (the "count=" line) in the output file.
-# Used by T-FF-MAINF-01 / 04 / 12 / 33 / 34.
+# Used by T-FF-MAINF-01 / 04 / 12 / 33 / 34 / 36.
 # Requires: _mainf_setup has been called (BeforeEach).
 # @stdout the count value
 # @return 0 when a count= line is found, 1 otherwise
@@ -176,20 +176,22 @@ _mainf_dir_entries() {
 # filter-files.sh: entry point of the _ca-filter-files composite action; reads
 # the files / patterns inputs from the environment and writes the kept files
 # and their count to GITHUB_OUTPUT.
-# Assigned test IDs: T-FF-MAINF-01 .. T-FF-MAINF-35
+# Assigned test IDs: T-FF-MAINF-01 .. T-FF-MAINF-36
 Describe 'filter-files.sh'
   BeforeEach '_mainf_setup'
   AfterEach '_mainf_teardown'
 
   ##
   # main: check_byte_limit -> check_line_endings -> parse_filelist /
-  # parse_patterns -> check_line_limit -> classify_patterns -> filter_files ->
+  # parse_patterns -> check_line_limit -> check_patterns -> filter_files ->
   # emit_outputs, in this order, with the values read from the environment.
   # Scenarios:
   #   normal (the kept files and their count are written):
-  #     only the files that match an include pattern are kept; an exclude
-  #     pattern wins over an include pattern; with exclude patterns only, every
-  #     file not excluded is kept; with no pattern, every file is kept; a * does
+  #     only the files that match an include pattern are kept; the last
+  #     pattern that matches a file decides (last match wins, DR-19), so an
+  #     exclude pattern written later cancels an earlier include pattern and
+  #     an include pattern written after an exclude brings a file back; with
+  #     exclude patterns only, every file not excluded is kept; with no pattern, every file is kept; a * does
   #     not match a /; a ** matches any depth; a ? matches one character; a .
   #     matches only a literal dot; a path that does not exist is matched as a
   #     string; a path equal to the delimiter does not break the output; when
@@ -219,7 +221,7 @@ Describe 'filter-files.sh'
   #     limit that also has a CR not followed by LF reports only the size error
   #     (check_byte_limit runs before check_line_endings); a files input with a
   #     CR not followed by LF and an invalid pattern reports only the files
-  #     error (check_line_endings runs before classify_patterns); 3000 files
+  #     error (check_line_endings runs before check_patterns); 3000 files
   #     lines with a trailing LF are accepted (the trailing LF is not counted as
   #     a line); an unset patterns input is treated as empty and every file is
   #     kept; a line already in the output file is kept (the outputs are
@@ -237,7 +239,7 @@ Describe 'filter-files.sh'
         The value "$(_mainf_count_output)" should equal 2
       End
 
-      It '[Normal] T-FF-MAINF-02: 除外は包含より優先する'
+      It '[Normal] T-FF-MAINF-02: 後に書いた除外が先の包含を打ち消す'
         export INPUT_FILES=$'src/a.sh\nsrc/gen/b.sh'
         export INPUT_PATTERNS=$'src/**\n!src/gen/**'
         When call _mainf_run
@@ -382,6 +384,16 @@ Describe 'filter-files.sh'
         The value "${#_MAINF_TEXT_120000}" should equal 120000
         The status should equal 0
         The output should equal ''
+      End
+
+      It '[Normal] T-FF-MAINF-36: 除外の後に書いた包含でファイルを戻せる'
+        export INPUT_FILES=$'src/a.sh\nsrc/gen/b.sh\nsrc/gen/keep.sh'
+        export INPUT_PATTERNS=$'src/**\n!src/gen/**\nsrc/gen/keep.sh'
+        When call _mainf_run
+        The status should equal 0
+        The output should equal ''
+        The value "$(_mainf_files_output)" should equal $'src/a.sh\nsrc/gen/keep.sh'
+        The value "$(_mainf_count_output)" should equal 2
       End
     End
 

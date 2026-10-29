@@ -290,60 +290,55 @@ check_line_limit() {
 }
 
 # ============================================================================
-# Public API: Pattern Classification / Conversion
+# Public API: Pattern Check / Conversion
 # ============================================================================
 
 ##
-# @description Classify the parsed pattern lines. <lines> is the result of
-#              parse_patterns: lines separated by LF, with no trailing LF and
-#              no blank lines. A line that starts with "!" is an exclude
-#              pattern and is printed as "E<TAB><rest>", where <rest> is the
-#              line with the one leading "!" removed and otherwise unchanged
-#              (R-IN-004, DD-IN-02). Any other line is an include pattern
-#              and is printed as "I<TAB><line>". Lines are printed in the
-#              original order.
-#              An empty text yields no lines without calling mapfile (DR-18).
+# @description Check the parsed pattern lines (validation only, DR-19).
+#              <lines> is the result of parse_patterns: lines separated by
+#              LF, with no trailing LF and no blank lines. A line that starts
+#              with "!" is an exclude pattern; <rest> is the line with the
+#              one leading "!" removed (R-IN-004, DD-IN-02). Any other line
+#              is an include pattern and is not checked here.
+#              An empty text has no lines and is accepted without calling
+#              mapfile (DR-18).
 #              Each exclude line is checked in order: first a <rest> that is
 #              empty (the line is only "!") is rejected (R-IN-005, DD-IN-03),
 #              then a <rest> that starts with a space or a tab (only those)
 #              is rejected (R-IN-009, DD-IN-04). The first rejected line is
-#              reported via ff_error with the line as it was before the "!"
-#              was removed, and nothing is printed.
-#              The result is printed once, after all lines are classified.
+#              reported via ff_error with the line as it is (DD-IN-05), and
+#              the later lines are not checked.
+#              The lines are not converted: the caller passes the
+#              parse_patterns result to filter_files as is.
 # @arg $1 lines — parsed lines of the patterns input
-# @stdout one "<I|E><TAB><pattern>" line per pattern, separated by LF, with
-#         no trailing LF (nothing when there are no lines or on error)
-# @stderr (none) on success; one ::error::patterns: line on error
-# @return 0 on success, 1 when a line is rejected
-classify_patterns() {
-  local _line _rest _out="" _sep=""
+# @stdout (none)
+# @stderr (none) when every line is accepted; one ::error::patterns: line
+#         when a line is rejected
+# @return 0 when every line is accepted, 1 when a line is rejected
+check_patterns() {
+  local _line _rest
   local -a _lines
   [ -z "$1" ] && return 0
   mapfile -t _lines <<<"$1"
   for _line in "${_lines[@]}"; do
-    if [[ $_line == '!'* ]]; then
-      _rest="${_line#!}"
-      if [ -z "$_rest" ]; then
-        ff_error patterns "exclude pattern is empty" "$_line"
-        return 1
-      fi
-      if [[ $_rest == [$' \t']* ]]; then
-        ff_error patterns "exclude pattern starts with whitespace" "$_line"
-        return 1
-      fi
-      _out+="${_sep}E"$'\t'"$_rest"
-    else
-      _out+="${_sep}I"$'\t'"$_line"
+    [[ $_line == '!'* ]] || continue
+    _rest="${_line#!}"
+    if [ -z "$_rest" ]; then
+      ff_error patterns "exclude pattern is empty" "$_line"
+      return 1
     fi
-    _sep=$'\n'
+    if [[ $_rest == [$' \t']* ]]; then
+      ff_error patterns "exclude pattern starts with whitespace" "$_line"
+      return 1
+    fi
   done
-  printf '%s' "$_out"
+  return 0
 }
 
 ##
 # @description Convert one glob to an anchored ERE. <glob> is one pattern
-#              taken from the classify_patterns result (without the
-#              "I<TAB>" / "E<TAB>" prefix and the leading "!"), used as is.
+#              line (an exclude pattern without its one leading "!"), used
+#              as is.
 #              A glob that is "**" as a whole becomes ".*" (any path,
 #              across "/"). The rest of the glob is read one position at a
 #              time, checked in this order: a "**/" at the start of the glob
@@ -407,19 +402,24 @@ glob_to_regex() {
 # @description Keep the file lines that pass the keep rule. <files> and
 #              <patterns> are lines separated by LF, with no trailing LF
 #              (an empty text has no lines, DR-18). <files> is the
-#              parse_filelist result; <patterns> is the classify_patterns
-#              result as is: "I<TAB><pattern>" lines are include patterns,
-#              "E<TAB><pattern>" lines are exclude patterns, and any other
-#              line is ignored (DR-19).
-#              Before the files are matched, the pattern lines are sorted
-#              into include and exclude, and each pattern is converted once
-#              with glob_to_regex (DR-17, DR-18); the order of the pattern
-#              lines does not change the result.
-#              Each file line is checked in this order: a line that matches
-#              any exclude ERE is dropped (exclude wins, R-MAT-011, DR-05);
-#              with no include pattern, every other line is kept
-#              (R-MAT-010, DR-04); a line that matches any include ERE is
-#              kept (R-MAT-012); any other line is dropped (R-MAT-013).
+#              parse_filelist result; <patterns> is the parse_patterns
+#              result (checked by check_patterns) as is: "pattern" lines are
+#              include patterns and "!pattern" lines are exclude patterns,
+#              in input order (DR-19). A pattern line is never split (a
+#              pattern may contain a TAB).
+#              Before the files are matched, each pattern is converted once
+#              with glob_to_regex (DR-17, DR-18), keeping its kind and ERE
+#              in input order; an exclude pattern is converted with its one
+#              leading "!" removed ("!!a.sh" excludes "!a.sh").
+#              Each file line is matched from the last pattern to the
+#              first, and the first pattern that matches decides (last
+#              match wins): an include pattern keeps the line (R-MAT-011),
+#              an exclude pattern drops it (R-MAT-012). A line that matches
+#              no pattern is kept when the first pattern is an exclude
+#              pattern and dropped when it is an include pattern
+#              (R-MAT-013). With no patterns, every line is kept
+#              (R-MAT-010). The order of the pattern lines can change the
+#              result.
 #              Only the path strings are matched: the file system and git
 #              are never consulted (REQ-F-012).
 #              Kept lines are printed in input order, one printf per line,
@@ -428,30 +428,31 @@ glob_to_regex() {
 #              not called for it.
 #              The body is a subshell, so the shell options and the locale
 #              it changes do not leak to the caller. nocasematch is turned
-#              off there before the pattern lines are sorted and the files
-#              matched, so both are always case-sensitive (R-MAT-009,
-#              DD-MAT-06), and the caller's nocasematch is left as it was.
-#              LC_ALL is set to C.UTF-8 there before the patterns are
-#              sorted, converted and matched, so "?" and
+#              off there before the kinds are decided and the files
+#              matched, so matching is always case-sensitive for include
+#              and exclude patterns alike (R-MAT-009, DD-MAT-06), and the
+#              caller's nocasematch is left as it was.
+#              LC_ALL is set to C.UTF-8 there before the kinds are decided
+#              and the patterns converted and matched, so "?" and
 #              "[^/]" match one UTF-8 character even when the caller's
 #              locale is C (DD-MAT-05), and the caller's LC_ALL is left as
 #              it was (no "local" is needed in the subshell).
 # @arg $1 files — parsed file lines
-# @arg $2 patterns — classified pattern lines ("I<TAB>" / "E<TAB>" prefixed)
+# @arg $2 patterns — pattern / !pattern lines in input order
 # @stdout one kept file line per line, each ending with LF (nothing when no
 #         line is kept)
 # @stderr (none)
 # @return 0; 1 when glob_to_regex fails
 filter_files() (
   local _f
-  local -a _files=() _include_res=() _exclude_res=()
+  local -a _files=() _kinds=() _res=()
   shopt -u nocasematch
   LC_ALL=C.UTF-8
   _ff_read_lines _files "$1"
-  _ff_globs_to_regexes _include_res _exclude_res "$2" || return 1
+  _ff_globs_to_regexes _kinds _res "$2" || return 1
 
   for _f in "${_files[@]}"; do
-    _ff_is_kept _include_res _exclude_res "$_f" && printf '%s\n' "$_f"
+    _ff_is_kept _kinds _res "$_f" && printf '%s\n' "$_f"
   done
   return 0
 )
@@ -559,80 +560,69 @@ _ff_read_lines() {
 
 ##
 # @description Internal helper of filter_files (no test ID of its own;
-#              verified through the filter_files tests). Sort the
-#              classify_patterns lines of <patterns> by kind and convert
-#              each pattern once with glob_to_regex (DR-17, DR-19): an
-#              "I<TAB>" line appends its ERE to the caller's array
-#              <include>, an "E<TAB>" line to the caller's array <exclude>,
-#              each in pattern order. Only the leading "I<TAB>" / "E<TAB>"
-#              is removed (a pattern may contain a TAB). Any other line is
-#              ignored. The kind is matched with case, which is
-#              case-sensitive only with nocasematch off (filter_files turns
-#              it off before calling this). An empty text appends nothing
-#              without calling mapfile (DR-18).
-# @arg $1 include — name of the caller's array to append the include EREs to
-# @arg $2 exclude — name of the caller's array to append the exclude EREs to
-# @arg $3 patterns — classify_patterns result, lines separated by LF, with
-#                    no trailing LF
+#              verified through the filter_files tests). Convert each line of
+#              <patterns> once with glob_to_regex (DR-17, DR-19) and append,
+#              in pattern order, its kind to the caller's array <kinds> and
+#              its ERE to the caller's array <res> (the same index in both).
+#              A line that starts with "!" is an exclude pattern: its kind is
+#              "exclude" and the line with the one leading "!" removed is
+#              converted ("!!a.sh" converts "!a.sh"). Any other line is an
+#              include pattern: its kind is "include" and the whole line is
+#              converted. A line is never split (a pattern may contain a
+#              TAB). An empty text appends nothing without calling mapfile
+#              (DR-18).
+# @arg $1 kinds    — name of the caller's array to append the kinds to
+#                    ("include" / "exclude")
+# @arg $2 res      — name of the caller's array to append the EREs to
+# @arg $3 patterns — pattern / !pattern lines in input order, separated by
+#                    LF, with no trailing LF
 # @stdout (none)
 # @stderr (none)
 # @return 0; 1 when glob_to_regex fails
 _ff_globs_to_regexes() {
-  local -n _ff_include_res_ref="$1" _ff_exclude_res_ref="$2"
+  local -n _ff_kinds_ref="$1" _ff_res_ref="$2"
   local _line _re
   local -a _lines
   _ff_read_lines _lines "$3"
   for _line in "${_lines[@]}"; do
-    case "$_line" in
-    I$'\t'*)
-      _re=$(glob_to_regex "${_line#?$'\t'}") || return 1
-      _ff_include_res_ref+=("$_re")
-      ;;
-    E$'\t'*)
-      _re=$(glob_to_regex "${_line#?$'\t'}") || return 1
-      _ff_exclude_res_ref+=("$_re")
-      ;;
-    esac
+    if [[ $_line == '!'* ]]; then
+      _ff_kinds_ref+=(exclude)
+      _line="${_line#!}"
+    else
+      _ff_kinds_ref+=(include)
+    fi
+    _re=$(glob_to_regex "$_line") || return 1
+    _ff_res_ref+=("$_re")
   done
   return 0
 }
 
 ##
 # @description Internal helper of filter_files (no test ID of its own;
-#              verified through the filter_files tests). Check whether
-#              <line> matches any of the given EREs, using only the [[ =~ ]]
-#              builtin.
-# @arg $1 line — file line to check
-# @arg $2.. EREs to match against (none means no match)
-# @stdout (none)
-# @stderr (none)
-# @return 0 when an ERE matches, 1 otherwise
-_ff_matches_any() {
-  local _line="$1" _re
-  shift
-  for _re in "$@"; do
-    [[ $_line =~ $_re ]] && return 0
-  done
-  return 1
-}
-
-##
-# @description Internal helper of filter_files (no test ID of its own;
 #              verified through the filter_files tests). Apply the keep rule
-#              to one file line, in this order: a line that matches any
-#              exclude ERE is dropped (exclude wins, R-MAT-011, DR-05); with
-#              no include ERE, every other line is kept (R-MAT-010, DR-04);
-#              a line that matches any include ERE is kept (R-MAT-012); any
-#              other line is dropped (R-MAT-013).
-# @arg $1 include — name of the caller's array of include EREs
-# @arg $2 exclude — name of the caller's array of exclude EREs
-# @arg $3 line — file line to check
+#              (last match wins, DR-19) to one file line: with no patterns,
+#              the line is kept (R-MAT-010). Otherwise the EREs are matched
+#              with the [[ =~ ]] builtin from the last one to the first, and
+#              the first one that matches decides: an include pattern keeps
+#              the line (R-MAT-011), an exclude pattern drops it
+#              (R-MAT-012). A line that matches no ERE is kept when the
+#              first pattern is an exclude pattern and dropped when it is
+#              an include pattern (R-MAT-013).
+# @arg $1 kinds — name of the caller's array of kinds ("include" / "exclude")
+# @arg $2 res   — name of the caller's array of EREs (same order as <kinds>)
+# @arg $3 line  — file line to check
 # @stdout (none)
 # @stderr (none)
 # @return 0 when the line is kept, 1 when it is dropped
 _ff_is_kept() {
-  local -n _ff_include_ref="$1" _ff_exclude_ref="$2"
-  _ff_matches_any "$3" "${_ff_exclude_ref[@]}" && return 1
-  [ "${#_ff_include_ref[@]}" -eq 0 ] && return 0
-  _ff_matches_any "$3" "${_ff_include_ref[@]}"
+  local -n _ff_kept_kinds_ref="$1" _ff_kept_res_ref="$2"
+  local _i
+  ((${#_ff_kept_res_ref[@]} == 0)) && return 0
+  for ((_i = ${#_ff_kept_res_ref[@]} - 1; _i >= 0; _i--)); do
+    if [[ $3 =~ ${_ff_kept_res_ref[_i]} ]]; then
+      [ "${_ff_kept_kinds_ref[_i]}" = include ]
+      return
+    fi
+  done
+  [ "${_ff_kept_kinds_ref[0]}" = exclude ]
 }
