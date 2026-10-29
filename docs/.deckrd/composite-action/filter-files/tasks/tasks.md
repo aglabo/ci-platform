@@ -596,6 +596,54 @@ source: specifications-index.md v1.5.0, implementation.md v1.6.0
   - Scenario: Given text が `'"a\nb.sh"'` (バックスラッシュと n の文字列), When `parse_filelist "$text"` を呼ぶ
   - Expected: Then 終了コードは 1 で、stderr は `::error::files:` で始まる (R-IN-012、DD-IN-08)
 
+- [x] **T-05-03-04**: 2 バイトの冗長表現 (C0 AF) をエラーにする
+  - Target: `parse_filelist`
+  - Test ID: T-FF-PFL-20
+  - Scenario: Given text が `$'\xc0\xaf.sh'`, When `parse_filelist "$text"` を呼ぶ
+  - Expected: Then 終了コードは 1 で、stderr は UTF-8 のエラー、stdout は空である (R-IN-010、RFC 3629)
+
+- [x] **T-05-03-05**: 3 バイトの冗長表現 (E0 80 80) をエラーにする
+  - Target: `parse_filelist`
+  - Test ID: T-FF-PFL-21
+  - Scenario: Given text が `$'\xe0\x80\x80.sh'`, When `parse_filelist "$text"` を呼ぶ
+  - Expected: Then 終了コードは 1 で、stderr は UTF-8 のエラー、stdout は空である (R-IN-010、RFC 3629)
+
+- [x] **T-05-03-06**: 4 バイトの冗長表現 (F0 8F BF BF) をエラーにする
+  - Target: `parse_filelist`
+  - Test ID: T-FF-PFL-22
+  - Scenario: Given text が `$'\xf0\x8f\xbf\xbf.sh'`, When `parse_filelist "$text"` を呼ぶ
+  - Expected: Then 終了コードは 1 で、stderr は UTF-8 のエラー、stdout は空である (R-IN-010、RFC 3629)
+
+- [x] **T-05-03-07**: サロゲート (ED A0 80) をエラーにする
+  - Target: `parse_filelist`
+  - Test ID: T-FF-PFL-23
+  - Scenario: Given text が `$'\xed\xa0\x80.sh'`, When `parse_filelist "$text"` を呼ぶ
+  - Expected: Then 終了コードは 1 で、stderr は UTF-8 のエラー、stdout は空である (R-IN-010、RFC 3629)
+
+- [x] **T-05-03-08**: U+10FFFF を超える符号位置 (F4 90 80 80) をエラーにする
+  - Target: `parse_filelist`
+  - Test ID: T-FF-PFL-24
+  - Scenario: Given text が `$'\xf4\x90\x80\x80.sh'`, When `parse_filelist "$text"` を呼ぶ
+  - Expected: Then 終了コードは 1 で、stderr は UTF-8 のエラー、stdout は空である (R-IN-010、RFC 3629)
+
+- [x] **T-05-03-09**: 先頭バイト F5 をエラーにする
+  - Target: `parse_filelist`
+  - Test ID: T-FF-PFL-25
+  - Scenario: Given text が `$'\xf5\x80\x80\x80.sh'`, When `parse_filelist "$text"` を呼ぶ
+  - Expected: Then 終了コードは 1 で、stderr は UTF-8 のエラー、stdout は空である (R-IN-010、RFC 3629)
+
+- [x] **T-05-03-10**: 途中で切れたバイト列 (E3 81) をエラーにする
+  - Target: `parse_filelist`
+  - Test ID: T-FF-PFL-26
+  - Scenario: Given text が `$'a\xe3\x81.sh'`, When `parse_filelist "$text"` を呼ぶ
+  - Expected: Then 終了コードは 1 で、stderr は UTF-8 のエラー、stdout は空である (R-IN-010、RFC 3629)
+
+- [x] **T-05-03-11**: 先頭バイトの無い継続バイト (80) をエラーにする
+  - Target: `parse_filelist`
+  - Test ID: T-FF-PFL-27
+  - Scenario: Given text が `$'a\x80.sh'`, When `parse_filelist "$text"` を呼ぶ
+  - Expected: Then 終了コードは 1 で、stderr は UTF-8 のエラー、stdout は空である (R-IN-010、RFC 3629)
+
 #### T-05-04: 報告する 1 件の順序 (DR-14)
 
 - [x] **T-05-04-01**: 前の行のダブルクオートを、後の行の不正な UTF-8 より先に報告する
@@ -637,6 +685,24 @@ source: specifications-index.md v1.5.0, implementation.md v1.6.0
   - Test ID: T-FF-PFL-19
   - Scenario: Given text が `あ.sh`, When `parse_filelist "$text"` を呼ぶ
   - Expected: Then 終了コードは 0 で、stdout は `あ.sh` である
+
+- [x] **T-05-05-04**: U+0080 (C2 80) の行を残す
+  - Target: `parse_filelist`
+  - Test ID: T-FF-PFL-28
+  - Scenario: Given text が `$'\xc2\x80.sh'` (最小の 2 バイト文字), When `parse_filelist "$text"` を呼ぶ
+  - Expected: Then 終了コードは 0 で、stdout は入力の行そのままである (RFC 3629)
+
+- [x] **T-05-05-05**: U+FFFF (EF BF BF) の行を残す
+  - Target: `parse_filelist`
+  - Test ID: T-FF-PFL-29
+  - Scenario: Given text が `$'\xef\xbf\xbf.sh'` (最大の 3 バイト文字), When `parse_filelist "$text"` を呼ぶ
+  - Expected: Then 終了コードは 0 で、stdout は入力の行そのままである (RFC 3629)
+
+- [x] **T-05-05-06**: U+10FFFF (F4 8F BF BF) の行を残す
+  - Target: `parse_filelist`
+  - Test ID: T-FF-PFL-30
+  - Scenario: Given text が `$'\xf4\x8f\xbf\xbf.sh'` (最大の符号位置), When `parse_filelist "$text"` を呼ぶ
+  - Expected: Then 終了コードは 0 で、stdout は入力の行そのままである (RFC 3629)
 
 ---
 
@@ -1576,13 +1642,13 @@ source: specifications-index.md v1.5.0, implementation.md v1.6.0
   - Target: `filter-files.sh`
   - Test ID: T-FF-MAINF-16
   - Scenario: Given `INPUT_FILES` が 3000 行、`INPUT_PATTERNS` が 100 行 (どちらもバイト数の上限以内), When スクリプトを実行する
-  - Expected: Then 終了コードは 0 である (AC-017)
+  - Expected: Then 終了コードは 0 で、files の出力は 3000 行すべて (入力順)、count の出力は `3000` である (AC-017)
 
 - [x] **T-13-01-17**: サイズの上限ちょうどは受け付ける
   - Target: `filter-files.sh`
   - Test ID: T-FF-MAINF-17
   - Scenario: Given `INPUT_FILES` が 120000 バイト (3000 行以内), When スクリプトを実行する
-  - Expected: Then 終了コードは 0 である (AC-018)
+  - Expected: Then 終了コードは 0 で、files の出力は 120000 バイトの行そのまま、count の出力は `1` である (AC-018)
 
 - [x] **T-13-01-18**: 除外の後に書いた包含でファイルを戻せる
   - Target: `filter-files.sh`
@@ -1716,11 +1782,11 @@ source: specifications-index.md v1.5.0, implementation.md v1.6.0
 
 #### T-14-01: 入出力と環境変数の対応付け
 
-- [x] **T-14-01-01**: 2 つの入力が環境変数に対応付けられている
+- [x] **T-14-01-01**: 2 つの入力がそれぞれ対応する環境変数に対応付けられている
   - Target: `action.yml`
   - Test ID: T-FF-ACT-01
-  - Scenario: Given action.yml, When step の `env` から環境変数名を抽出する
-  - Expected: Then `INPUT_FILES` と `INPUT_PATTERNS` がある (REQ-C-005)
+  - Scenario: Given action.yml, When step の `env` の対応付け (`KEY: value`) を抽出する
+  - Expected: Then `INPUT_FILES: ${{ inputs.files }}` と `INPUT_PATTERNS: ${{ inputs.patterns }}` がある (入れ替わっていない。REQ-C-005)
 
 - [x] **T-14-01-02**: outputs は files と count の 2 つである
   - Target: `action.yml`
@@ -1728,11 +1794,11 @@ source: specifications-index.md v1.5.0, implementation.md v1.6.0
   - Scenario: Given action.yml, When `outputs` の名前を抽出する
   - Expected: Then `files` と `count` の 2 つだけである
 
-- [x] **T-14-01-03**: outputs の値は実在する step ID を参照している
+- [x] **T-14-01-03**: outputs の値は実在する step の同名の出力を参照している
   - Target: `action.yml`
   - Test ID: T-FF-ACT-03
-  - Scenario: Given action.yml, When outputs の `value` が参照する step ID を抽出する
-  - Expected: Then その ID を持つ step が action.yml に存在する
+  - Scenario: Given action.yml, When outputs の各 `value` を抽出する
+  - Expected: Then 各値は `${{ steps.<id>.outputs.<出力名> }}` の形で、`<id>` を持つ step が存在し、`<出力名>` はその output 自身の名前である (files と count が入れ替わっていない)
 
 - [x] **T-14-01-04**: 環境変数は run を持つ同じ step にある
   - Target: `action.yml`
