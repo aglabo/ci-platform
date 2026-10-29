@@ -139,33 +139,34 @@ check_byte_limit() {
 #              split. Text whose line breaks are LF or CRLF is accepted
 #              (CRLF is not inspected here; it is converted to LF later).
 #              An empty text is accepted.
-#              The text is split at each LF; only a single CR right before
-#              the LF is allowed. A CR anywhere else, including at the end of
-#              a last line that has no LF after it, is reported via ff_error
-#              with that line as the value.
+#              Only a single CR right before an LF is allowed. A CR anywhere
+#              else, including at the end of a last line that has no LF after
+#              it, is reported via ff_error with that line as the value.
+#              An accepted text is not split into lines: each CRLF is
+#              replaced with LF and the result is searched for a CR. Only when a CR remains is the
+#              converted text split into lines and the first line with a CR
+#              located; that line is read from the original text, so the
+#              value keeps its CRs.
+#              Runs under a function-local LC_ALL=C (CR and LF are ASCII).
 # @arg $1 target — name of the checked input ("files" or "patterns")
 # @arg $2 text   — raw value of the input
 # @stdout (none)
 # @stderr (none) when the line endings are accepted; one ::error:: line otherwise
 # @return 0 when the line endings are accepted, 1 otherwise
 check_line_endings() {
-  local _rest="$2" _line _body
-  while [ -n "$_rest" ]; do
-    if [[ "$_rest" == *$'\n'* ]]; then
-      _line="${_rest%%$'\n'*}"
-      _rest="${_rest#*$'\n'}"
-      _body="${_line%$'\r'}"
-    else
-      _line="$_rest"
-      _rest=""
-      _body="$_line"
-    fi
-    if [[ "$_body" == *$'\r'* ]]; then
-      ff_error "$1" "contains a CR not followed by LF" "$_line"
-      return 1
-    fi
+  local LC_ALL=C
+  local _s="${2//$'\r\n'/$'\n'}" _conv _lines _i
+
+  if [[ $_s != *$'\r'* ]]; then
+    return 0
+  fi
+  mapfile -t _conv <<<"$_s"
+  for _i in "${!_conv[@]}"; do
+    [[ ${_conv[_i]} == *$'\r'* ]] && break
   done
-  return 0
+  mapfile -t _lines <<<"$2"
+  ff_error "$1" "contains a CR not followed by LF" "${_lines[_i]}"
+  return 1
 }
 
 # ============================================================================
