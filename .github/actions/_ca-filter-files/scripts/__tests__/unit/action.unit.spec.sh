@@ -17,9 +17,16 @@ _ACT_YML="${SHELLSPEC_PROJECT_ROOT}/.github/actions/_ca-filter-files/action.yml"
 
 # --- 内部ヘルパー ---
 # 定数
-# The 2 step env vars required by REQ-C-005 / index §3.1; used by T-FF-ACT-01
-# and T-FF-ACT-04
+# The 2 step env vars required by REQ-C-005 / index §3.1; used by T-FF-ACT-04
 _ACT_ENV_VARS="INPUT_FILES INPUT_PATTERNS"
+# The expected step env mappings, one `KEY: value` line each (the form
+# _act_step_env_map prints); used by T-FF-ACT-01
+# shellcheck disable=SC2016
+_ACT_ENV_MAPPINGS='INPUT_FILES: ${{ inputs.files }}
+INPUT_PATTERNS: ${{ inputs.patterns }}'
+# ERE matching an outputs value that reads one step output; group 1 is the
+# step ID, group 2 the step output name; used by T-FF-ACT-03
+_ACT_OUTPUT_VALUE_RE='^\$\{\{ steps\.([A-Za-z0-9_-]+)\.outputs\.([A-Za-z0-9_-]+) \}\}$'
 # The expected outputs names, sorted (LC_ALL=C), one per line; used by T-FF-ACT-02
 _ACT_OUTPUT_NAMES="count
 files"
@@ -120,18 +127,19 @@ _act_each_step() {
 }
 
 ##
-# Print each name of _ACT_ENV_VARS that no step of the runs section maps in
-# its `env:`, one per line.
+# Print each line of _ACT_ENV_MAPPINGS that no step of the runs section has
+# in its `env:` exactly (key and value), one per line. A swapped or wrong
+# value is reported as well as a missing key.
 # Requires: none (reads _ACT_YML).
-# @stdout the missing env var names (blank when all are present)
+# @stdout the missing mappings (blank when all are present)
 # @return 0 on success, 1 when action.yml does not exist
-_act_missing_env_vars() {
+_act_missing_env_mappings() {
   [ -f "$_ACT_YML" ] || return 1
-  local _keys _var
-  _keys=$(_act_each_step _act_step_env_keys) || return 1
-  for _var in $_ACT_ENV_VARS; do
-    printf '%s\n' "$_keys" | grep -qx "$_var" || echo "$_var"
-  done
+  local _maps _mapping
+  _maps=$(_act_each_step _act_step_env_map) || return 1
+  while IFS= read -r _mapping; do
+    printf '%s\n' "$_maps" | grep -qxF "$_mapping" || echo "$_mapping"
+  done <<<"$_ACT_ENV_MAPPINGS"
 }
 
 ##
@@ -172,26 +180,27 @@ _act_step_ids() {
 }
 
 ##
-# Print each step ID referenced as `steps.<id>.` by a `value:` of the top-level
-# outputs section that no step of the runs section declares, sorted and unique,
-# one per line.
+# Print each name of the top-level outputs section whose `value:` is not
+# `${{ steps.<id>.outputs.<name> }}` with <id> declared by a step of the runs
+# section and <name> equal to the output's own name, one per line, in file
+# order. A dangling step ID and a value read from another output (e.g. files
+# and count swapped) are both reported.
 # Requires: none (reads _ACT_YML).
-# @stdout the dangling step IDs (blank when every reference resolves)
+# @stdout the output names with a wrong value (blank when every value is right)
 # @return 0 on success, 1 when action.yml does not exist
-_act_dangling_output_refs() {
+_act_bad_output_values() {
   [ -f "$_ACT_YML" ] || return 1
-  local _ids _ref
+  local _ids _name _value
   _ids=$(_act_step_ids) || return 1
-  _act_section outputs | awk '
-    /^    value:/ {
-      while (match($0, /steps\.[A-Za-z0-9_-]+\./)) {
-        print substr($0, RSTART + 6, RLENGTH - 7)
-        $0 = substr($0, RSTART + RLENGTH)
-      }
-    }
-  ' | LC_ALL=C sort -u | while IFS= read -r _ref; do
-    printf '%s\n' "$_ids" | grep -qxF "$_ref" || echo "$_ref"
-  done
+  while IFS= read -r _name; do
+    _value=$(_act_child_block outputs "$_name" | sed -n 's/^    value:[ ]*\(.*[^ ]\)[ ]*$/\1/p')
+    if [[ $_value =~ $_ACT_OUTPUT_VALUE_RE ]] &&
+      [ "${BASH_REMATCH[2]}" = "$_name" ] &&
+      printf '%s\n' "$_ids" | grep -qxF "${BASH_REMATCH[1]}"; then
+      continue
+    fi
+    echo "$_name"
+  done < <(_act_child_names outputs)
 }
 
 ##
@@ -298,15 +307,16 @@ _act_input_contract() {
 Describe 'action.yml'
   ##
   # Mapping of inputs / outputs / step env vars.
-  # Verifies the step env passes every variable filter-files.sh reads
-  # (REQ-C-005) in the same step whose run executes filter-files.sh, and the
-  # outputs section declares exactly files and count, each referencing a step
-  # ID that exists in the runs section.
+  # Verifies the step env maps each input to its own variable that
+  # filter-files.sh reads (REQ-C-005) in the same step whose run executes
+  # filter-files.sh, and the outputs section declares exactly files and count,
+  # each reading the step output of the same name from a step ID that exists
+  # in the runs section.
   # Test IDs: T-FF-ACT-01 .. T-FF-ACT-04
   Describe '入出力と環境変数の対応付け'
     Context 'When: 正常系'
-      It '[Normal] T-FF-ACT-01: 2 つの入力が環境変数に対応付けられている'
-        When call _act_missing_env_vars
+      It '[Normal] T-FF-ACT-01: 2 つの入力がそれぞれ対応する環境変数に対応付けられている'
+        When call _act_missing_env_mappings
         The status should be success
         The output should be blank
       End
@@ -316,8 +326,8 @@ Describe 'action.yml'
         The output should equal "$_ACT_OUTPUT_NAMES"
       End
 
-      It '[Normal] T-FF-ACT-03: outputs の値は実在する step ID を参照している'
-        When call _act_dangling_output_refs
+      It '[Normal] T-FF-ACT-03: outputs の値は実在する step の同名の出力を参照している'
+        When call _act_bad_output_values
         The status should be success
         The output should be blank
       End

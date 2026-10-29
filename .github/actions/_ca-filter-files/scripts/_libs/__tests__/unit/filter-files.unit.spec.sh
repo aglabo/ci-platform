@@ -72,6 +72,29 @@ _PFL_BAD_UTF8_THEN_QUOTE_TEXT=$'\xff.sh\n"a.sh"'
 # Text with one double-quoted line that also has an invalid UTF-8 byte;
 # used by T-FF-PFL-16
 _PFL_QUOTED_BAD_UTF8_TEXT=$'"\xff.sh"'
+# Line with an overlong 2-byte form of "/" (C0 AF); used by T-FF-PFL-20
+_PFL_OVERLONG_2_TEXT=$'\xc0\xaf.sh'
+# Line with an overlong 3-byte form of NUL (E0 80 80); used by T-FF-PFL-21
+_PFL_OVERLONG_3_TEXT=$'\xe0\x80\x80.sh'
+# Line with an overlong 4-byte form of U+FFFF (F0 8F BF BF); used by T-FF-PFL-22
+_PFL_OVERLONG_4_TEXT=$'\xf0\x8f\xbf\xbf.sh'
+# Line with the surrogate U+D800 (ED A0 80); used by T-FF-PFL-23
+_PFL_SURROGATE_TEXT=$'\xed\xa0\x80.sh'
+# Line with U+110000, above U+10FFFF (F4 90 80 80); used by T-FF-PFL-24
+_PFL_ABOVE_MAX_TEXT=$'\xf4\x90\x80\x80.sh'
+# Line with the lead byte F5, never valid in UTF-8 (F5 80 80 80); used by
+# T-FF-PFL-25
+_PFL_LEAD_F5_TEXT=$'\xf5\x80\x80\x80.sh'
+# Line with a 3-byte sequence cut after 2 bytes (E3 81); used by T-FF-PFL-26
+_PFL_TRUNCATED_TEXT=$'a\xe3\x81.sh'
+# Line with a continuation byte and no lead byte (80); used by T-FF-PFL-27
+_PFL_LONE_CONT_TEXT=$'a\x80.sh'
+# Line with U+0080, the smallest 2-byte character (C2 80); used by T-FF-PFL-28
+_PFL_MIN_2_TEXT=$'\xc2\x80.sh'
+# Line with U+FFFF, the largest 3-byte character (EF BF BF); used by T-FF-PFL-29
+_PFL_MAX_3_TEXT=$'\xef\xbf\xbf.sh'
+# Line with U+10FFFF, the largest code point (F4 8F BF BF); used by T-FF-PFL-30
+_PFL_MAX_4_TEXT=$'\xf4\x8f\xbf\xbf.sh'
 # Text made only of LFs; used by T-FF-PFL-18
 _PFL_NEWLINES_ONLY_TEXT=$'\n\n'
 # Pattern text with two LF-separated lines; used by T-FF-PPT-01 (input and expected)
@@ -681,7 +704,10 @@ Describe 'filter-files.lib.sh'
   #                    T-FF-PFL-05, T-FF-PFL-06, T-FF-PFL-07, T-FF-PFL-08,
   #                    T-FF-PFL-09, T-FF-PFL-10, T-FF-PFL-11, T-FF-PFL-12,
   #                    T-FF-PFL-13, T-FF-PFL-14, T-FF-PFL-15, T-FF-PFL-16,
-  #                    T-FF-PFL-17, T-FF-PFL-18, T-FF-PFL-19
+  #                    T-FF-PFL-17, T-FF-PFL-18, T-FF-PFL-19, T-FF-PFL-20,
+  #                    T-FF-PFL-21, T-FF-PFL-22, T-FF-PFL-23, T-FF-PFL-24,
+  #                    T-FF-PFL-25, T-FF-PFL-26, T-FF-PFL-27, T-FF-PFL-28,
+  #                    T-FF-PFL-29, T-FF-PFL-30
   # Scenarios: two LF-separated lines are returned unchanged; CRLF line
   #            breaks are converted to LF; a trailing LF yields no empty
   #            line; a zero-length line is dropped; duplicate paths are
@@ -692,7 +718,10 @@ Describe 'filter-files.lib.sh'
   #            a line starting with "!" is kept as a path ("!" has a
   #            meaning only in patterns);
   #            a line that is not valid UTF-8 is reported (status 1, one
-  #            ::error::files: line, empty stdout); a line containing a
+  #            ::error::files: line, empty stdout); so are overlong forms,
+  #            a surrogate, code points above U+10FFFF, the lead byte F5,
+  #            a truncated sequence and a lone continuation byte (RFC 3629);
+  #            a line containing a
   #            double quote is reported with its value (status 1); a line
   #            still in git's quoted form ("a\nb.sh", backslash and n) is
   #            reported with the backslash unchanged (status 1);
@@ -703,7 +732,8 @@ Describe 'filter-files.lib.sh'
   #            double quote;
   #            an empty string gives 0 lines (status 0, empty stdout and
   #            stderr); an input made only of LFs also gives 0 lines;
-  #            a non-ASCII line that is valid UTF-8 is kept unchanged.
+  #            a non-ASCII line that is valid UTF-8 is kept unchanged, also
+  #            at the boundaries U+0080, U+FFFF and U+10FFFF.
   Describe 'parse_filelist'
     # 正常系: PFL-01 two LF-separated lines, PFL-02 CRLF converted to LF,
     #         PFL-03 no empty line for a trailing LF,
@@ -787,7 +817,13 @@ Describe 'filter-files.lib.sh'
     #         PFL-15 invalid UTF-8 on an earlier line is reported before
     #         a double quote on a later line,
     #         PFL-16 invalid UTF-8 is reported when the same line also has
-    #         a double quote
+    #         a double quote,
+    #         PFL-20 .. 22 overlong 2 / 3 / 4-byte forms are reported,
+    #         PFL-23 a surrogate is reported,
+    #         PFL-24 a code point above U+10FFFF is reported,
+    #         PFL-25 the lead byte F5 is reported,
+    #         PFL-26 a truncated sequence is reported,
+    #         PFL-27 a lone continuation byte is reported
     Context 'When: 異常系'
       It '[Error] T-FF-PFL-11: UTF-8 として不正な行をエラーにする'
         When call parse_filelist "$_PFL_BAD_UTF8_TEXT"
@@ -832,11 +868,62 @@ Describe 'filter-files.lib.sh'
         The stderr should include "invalid UTF-8"
         The stderr should not include "double quote"
       End
+      It '[Error] T-FF-PFL-20: 2 バイトの冗長表現 (C0 AF) をエラーにする'
+        When call parse_filelist "$_PFL_OVERLONG_2_TEXT"
+        The status should equal 1
+        The stderr should include "invalid UTF-8"
+        The output should equal ''
+      End
+      It '[Error] T-FF-PFL-21: 3 バイトの冗長表現 (E0 80 80) をエラーにする'
+        When call parse_filelist "$_PFL_OVERLONG_3_TEXT"
+        The status should equal 1
+        The stderr should include "invalid UTF-8"
+        The output should equal ''
+      End
+      It '[Error] T-FF-PFL-22: 4 バイトの冗長表現 (F0 8F BF BF) をエラーにする'
+        When call parse_filelist "$_PFL_OVERLONG_4_TEXT"
+        The status should equal 1
+        The stderr should include "invalid UTF-8"
+        The output should equal ''
+      End
+      It '[Error] T-FF-PFL-23: サロゲート (ED A0 80) をエラーにする'
+        When call parse_filelist "$_PFL_SURROGATE_TEXT"
+        The status should equal 1
+        The stderr should include "invalid UTF-8"
+        The output should equal ''
+      End
+      It '[Error] T-FF-PFL-24: U+10FFFF を超える符号位置 (F4 90 80 80) をエラーにする'
+        When call parse_filelist "$_PFL_ABOVE_MAX_TEXT"
+        The status should equal 1
+        The stderr should include "invalid UTF-8"
+        The output should equal ''
+      End
+      It '[Error] T-FF-PFL-25: 先頭バイト F5 をエラーにする'
+        When call parse_filelist "$_PFL_LEAD_F5_TEXT"
+        The status should equal 1
+        The stderr should include "invalid UTF-8"
+        The output should equal ''
+      End
+      It '[Error] T-FF-PFL-26: 途中で切れたバイト列 (E3 81) をエラーにする'
+        When call parse_filelist "$_PFL_TRUNCATED_TEXT"
+        The status should equal 1
+        The stderr should include "invalid UTF-8"
+        The output should equal ''
+      End
+      It '[Error] T-FF-PFL-27: 先頭バイトの無い継続バイト (80) をエラーにする'
+        When call parse_filelist "$_PFL_LONE_CONT_TEXT"
+        The status should equal 1
+        The stderr should include "invalid UTF-8"
+        The output should equal ''
+      End
     End
 
     # エッジケース: PFL-17 an empty string gives 0 lines,
     #             PFL-18 an input made only of LFs gives 0 lines,
-    #             PFL-19 a non-ASCII line that is valid UTF-8 is kept
+    #             PFL-19 a non-ASCII line that is valid UTF-8 is kept,
+    #             PFL-28 U+0080 (the smallest 2-byte character) is kept,
+    #             PFL-29 U+FFFF (the largest 3-byte character) is kept,
+    #             PFL-30 U+10FFFF (the largest code point) is kept
     Context 'When: エッジケース'
       It '[Edge] T-FF-PFL-17: 空文字列は 0 行'
         When call parse_filelist ""
@@ -854,6 +941,24 @@ Describe 'filter-files.lib.sh'
         When call parse_filelist 'あ.sh'
         The status should equal 0
         The entire output should equal 'あ.sh'
+        The stderr should equal ''
+      End
+      It '[Edge] T-FF-PFL-28: U+0080 (C2 80) の行を残す'
+        When call parse_filelist "$_PFL_MIN_2_TEXT"
+        The status should equal 0
+        The entire output should equal "$_PFL_MIN_2_TEXT"
+        The stderr should equal ''
+      End
+      It '[Edge] T-FF-PFL-29: U+FFFF (EF BF BF) の行を残す'
+        When call parse_filelist "$_PFL_MAX_3_TEXT"
+        The status should equal 0
+        The entire output should equal "$_PFL_MAX_3_TEXT"
+        The stderr should equal ''
+      End
+      It '[Edge] T-FF-PFL-30: U+10FFFF (F4 8F BF BF) の行を残す'
+        When call parse_filelist "$_PFL_MAX_4_TEXT"
+        The status should equal 0
+        The entire output should equal "$_PFL_MAX_4_TEXT"
         The stderr should equal ''
       End
     End

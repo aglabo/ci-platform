@@ -22,8 +22,9 @@ printf -v _MAINF_FILES_3000_LF 'f%d.sh\n' {1..3000}
 _MAINF_FILES_3000="${_MAINF_FILES_3000_LF%$'\n'}"
 # 3001 file lines f1.sh .. f3001.sh; used by T-FF-MAINF-21
 printf -v _MAINF_FILES_3001 'f%d.sh\n' {1..3001}
-# 100 pattern lines: *.sh (matches every file at once, so the run stays fast)
-# followed by p2.md .. p100.md; used by T-FF-MAINF-16
+# 100 pattern lines: *.sh (keeps every file) followed by p2.md .. p100.md,
+# which match no file; under last-match-wins each file is checked against
+# all 100 patterns before *.sh matches (worst case); used by T-FF-MAINF-16
 printf -v _MAINF_PATTERNS_100 'p%d.md\n' {2..100}
 _MAINF_PATTERNS_100="*.sh"$'\n'"${_MAINF_PATTERNS_100%$'\n'}"
 # 101 pattern lines p1.sh .. p101.sh; used by T-FF-MAINF-22
@@ -98,7 +99,7 @@ _mainf_run() {
 # delimiter. Lines are read with IFS= and read -r, so spaces at both ends and
 # backslashes are kept.
 # Used by T-FF-MAINF-01 / 02 / 03 / 04 / 05 / 06 / 07 / 08 / 09 / 10 / 12 / 13 /
-# 14 / 34 / 36.
+# 14 / 16 / 17 / 34 / 36.
 # Requires: _mainf_setup has been called (BeforeEach).
 # @stdout the files lines separated by LF, with no trailing LF
 # @return 0 when a files<< line is found, 1 otherwise
@@ -122,7 +123,7 @@ _mainf_files_output() {
 
 ##
 # Print the value of the count output (the "count=" line) in the output file.
-# Used by T-FF-MAINF-01 / 04 / 12 / 33 / 34 / 36.
+# Used by T-FF-MAINF-01 / 04 / 12 / 16 / 17 / 33 / 34 / 36.
 # Requires: _mainf_setup has been called (BeforeEach).
 # @stdout the count value
 # @return 0 when a count= line is found, 1 otherwise
@@ -375,6 +376,8 @@ Describe 'filter-files.sh'
         When call _mainf_run
         The status should equal 0
         The output should equal ''
+        The value "$(_mainf_files_output)" should equal "$_MAINF_FILES_3000"
+        The value "$(_mainf_count_output)" should equal 3000
       End
 
       It '[Normal] T-FF-MAINF-17: サイズの上限ちょうどは受け付ける'
@@ -384,6 +387,8 @@ Describe 'filter-files.sh'
         The value "${#_MAINF_TEXT_120000}" should equal 120000
         The status should equal 0
         The output should equal ''
+        The value "$(_mainf_files_output)" should equal "$_MAINF_TEXT_120000"
+        The value "$(_mainf_count_output)" should equal 1
       End
 
       It '[Normal] T-FF-MAINF-36: 除外の後に書いた包含でファイルを戻せる'
