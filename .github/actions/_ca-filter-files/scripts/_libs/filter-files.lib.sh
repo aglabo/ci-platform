@@ -13,8 +13,10 @@
 # ============================================================================
 
 # Load guard: return early when this library has already been loaded. The
-# guard is set only at the end of the loading below, so a failed load leaves
-# it unset and the next source tries again.
+# guard is set only after the shared library has been loaded and its
+# functions checked, so a failed load leaves it unset and the next source
+# tries again. Everything after the guard (constants and function
+# definitions) cannot fail, so keep fallible steps before it.
 [ -n "${FILTER_FILES_LIB_LOADED:-}" ] && return 0
 
 # Directory of the shared libraries (.github/actions/_libs)
@@ -48,14 +50,20 @@ FILTER_FILES_LIB_LOADED=1
 # counted on the raw value before conversion or splitting; a value of exactly
 # the limit is accepted. Defined after the load guard is set, so a second
 # source returns at the guard and never re-runs readonly (which would fail).
+# The four limits are read by filter-files.sh, not by this library, so
+# SC2034 (appears unused) is disabled for each of them.
+# shellcheck disable=SC2034
 readonly FF_MAX_FILES_BYTES=120000
+# shellcheck disable=SC2034
 readonly FF_MAX_PATTERNS_BYTES=120000
 
 # Line-count limits of the files and patterns inputs (DR-16; R-IN-014 /
 # R-IN-015), counted after blank lines are dropped; a count of exactly the
 # limit is accepted. Defined after the load guard is set, so a second source
 # returns at the guard and never re-runs readonly (which would fail).
+# shellcheck disable=SC2034
 readonly FF_MAX_FILES=3000
+# shellcheck disable=SC2034
 readonly FF_MAX_PATTERNS=100
 
 # ERE that matches a whole line of well-formed UTF-8, following the RFC 3629
