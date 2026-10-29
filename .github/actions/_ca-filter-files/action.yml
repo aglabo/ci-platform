@@ -1,0 +1,41 @@
+# src: ./.github/actions/_ca-filter-files/action.yml
+# @(#) : Composite (internal): filter a file list by glob patterns
+#
+# Copyright (c) 2026- aglabo <https://github.com/aglabo>
+#
+# This software is released under the MIT License.
+# https://opensource.org/licenses/MIT
+
+name: "_ca-filter-files"
+description: |
+  Internal action: filter a newline-separated file list by glob patterns.
+  Lines starting with "!" in patterns exclude matching files.
+  Empty patterns keep every file. Zero matches is a success (count "0").
+
+inputs:
+  files:
+    description: "File paths to filter, one per line."
+    required: true
+  patterns:
+    description: "Glob patterns, one per line. A line starting with ! excludes matching files. Leave empty to keep every file."
+    required: false
+    default: ""
+
+outputs:
+  files:
+    description: "Kept file paths, one per line, in input order. Empty string when none are kept."
+    value: ${{ steps.filter-files.outputs.files }}
+  count:
+    description: "Number of kept files as a decimal integer string without leading zeros or surrounding whitespace."
+    value: ${{ steps.filter-files.outputs.count }}
+
+runs:
+  using: composite
+  steps:
+    - name: Filter files
+      id: filter-files
+      shell: bash
+      env:
+        INPUT_FILES: ${{ inputs.files }}
+        INPUT_PATTERNS: ${{ inputs.patterns }}
+      run: bash "${GITHUB_ACTION_PATH}/scripts/filter-files.sh"
