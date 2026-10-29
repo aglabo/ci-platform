@@ -1,8 +1,8 @@
 ---
 title: "Design Specification: ca-get-changed-files (Action)"
-based-on: requirements.md v2.1.2
+based-on: requirements.md v2.2.0
 status: approved
-version: 1.2.2
+version: 2.2.0
 created: "2026-10-29"
 ---
 
@@ -228,3 +228,4 @@ None identified - all requirements are unambiguous.
 | 2026-10-29 | 1.2.0   | Add R-ACT-046: static check of the description (AC-017); refresh based-on (requirements v2.1.2)                      |
 | 2026-10-30 | 1.2.1   | Promote DD-ACT-01 / DD-ACT-03 to DR-12                                                                               |
 | 2026-10-30 | 1.2.2   | Apply spec fix review: cite DR-12, unify stage terms                                                                 |
+| 2026-10-30 | 2.2.0   | Unify document versions to 2.2.0 and approve                                                                         |

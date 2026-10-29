@@ -1,8 +1,8 @@
 ---
 title: "Implementation Plan: ca-get-changed-files"
-based-on: specifications-index.md v1.3.0
+based-on: specifications-index.md v2.2.0
 status: approved
-version: 1.0.9
+version: 2.2.0
 created: "2026-10-30"
 ---
 
@@ -53,10 +53,10 @@ PR は 1 つとする。実装は `feat-134/get-changed-files/02-impl` ブラン
     helper の変更は本モジュールのテストに影響する。resolve-sha 側で helper を変えるときは、本モジュールのテストも実行する。
   - CI ジョブは `test-resolve-sha` ジョブの書き方に合わせる (R-IDX-001〜R-IDX-007)。
 - Specifications:
-  - specifications-index.md v1.3.0
-  - specifications-action.md v1.2.2
-  - specifications-diff.md v1.2.0
-- Requirements: requirements.md v2.1.2
+  - specifications-index.md v2.2.0
+  - specifications-action.md v2.2.0
+  - specifications-diff.md v2.2.0
+- Requirements: requirements.md v2.2.0
 - Decision Records: decision-records.md
   - DR-01〜DR-15
 
@@ -276,3 +276,4 @@ PR 本文には、REQ-C-008 の 5 項目 (破壊的変更と移行方法) を記
 | 2026-10-30 | 1.0.7   | Apply impl second opinion: RUNF failure checks the filter-files step output only, add a RUNF pull_request case, CI failure cases also check empty files / count                                                                                         |
 | 2026-10-30 | 1.0.8   | Record the dependency-check message of get-changed-files.lib.sh, and the MAINF helpers (bash run for normal cases, subshell source and stub for R-DIF-016)                                                                                              |
 | 2026-10-30 | 1.0.9   | Include the library load guard variables (*_LIB_LOADED) in the env isolation of MAINF and RUNF (tasks harden GF-03)                                                                                                                                     |
+| 2026-10-30 | 2.2.0   | Unify document versions to 2.2.0 and approve                                                                                                                                                                                                            |

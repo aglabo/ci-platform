@@ -1,8 +1,8 @@
 ---
 title: "Design Specification: ca-get-changed-files (Index)"
-based-on: requirements.md v2.1.2
+based-on: requirements.md v2.2.0
 status: approved
-version: 1.3.0
+version: 2.2.0
 created: "2026-10-29"
 ---
 
@@ -380,3 +380,4 @@ requirements の Open Questions のうち、Owner が spec の項目は次のと
 | 2026-10-30 | 1.2.0   | Apply spec harden review: R-IDX-002 condition and count check, promote DD-IDX-02 to DR-14, add DR-12..DR-14                                                                                                                                    |
 | 2026-10-30 | 1.2.1   | Apply spec fix review: unify stage terms, explicit R-IDX-004 outcomes, rule order note, move GITHUB_ACTION_PATH assumption, cite DR-14, GACT scope, R-IDX range, REQ-C-003 in split files                                                      |
 | 2026-10-30 | 1.3.0   | Apply spec second opinion: R-IDX-003/004 use two files to exercise the multi-line handoff, git settings assumption, edge cases ("!" with no changes, quoted path among excluded files)                                                         |
+| 2026-10-30 | 2.2.0   | Unify document versions to 2.2.0 and approve                                                                                                                                                                                                   |

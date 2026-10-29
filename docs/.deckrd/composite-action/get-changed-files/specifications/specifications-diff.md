@@ -1,8 +1,8 @@
 ---
 title: "Design Specification: ca-get-changed-files (Diff)"
-based-on: requirements.md v2.1.2
+based-on: requirements.md v2.2.0
 status: approved
-version: 1.2.0
+version: 2.2.0
 created: "2026-10-29"
 ---
 
@@ -252,3 +252,4 @@ None identified - all requirements are unambiguous.
 | 2026-10-30 | 1.1.1   | Promote DD-DIF-02 to DR-13; reference DR-14 for error wording                                                                                                                              |
 | 2026-10-30 | 1.1.2   | Apply spec fix review: unify stage terms, close the sentence in 2.1, cite DR-13                                                                                                            |
 | 2026-10-30 | 1.2.0   | Apply spec second opinion: add R-DIF-033 (limit in sync with filter-files), type change edge case                                                                                          |
+| 2026-10-30 | 2.2.0   | Unify document versions to 2.2.0 and approve                                                                                                                                               |

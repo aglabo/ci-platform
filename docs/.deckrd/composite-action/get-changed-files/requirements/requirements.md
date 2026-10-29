@@ -2,7 +2,7 @@
 title: "Requirements: ca-get-changed-files"
 module: "composite-action/get-changed-files"
 status: approved
-version: 2.1.2
+version: 2.2.0
 created: "2026-10-29"
 ---
 
@@ -702,3 +702,4 @@ Owner が spec / impl の項目は、spec で解決した。各行の括弧内�
 | 2026-10-29 | 2.1.0   | Apply req harden review: delete filter.lib.sh and its test (F-008, DR-09), checkout to the workspace is a caller obligation (C-003, AC-017, DR-10), define empty pattern (F-004), cite DR-11 in assumptions                                                                          |
 | 2026-10-29 | 2.1.1   | Apply req second opinion: split push rows in F-002 (normal / fallback, HEAD-based), add pattern errors to F-006, compatibility policy for external users (C-008), assumptions (cwd guarantee, first-parent tree diff, fallback range, internal script contract)                      |
 | 2026-10-29 | 2.1.2   | Apply req fix review: unify terms (変更ファイルの一覧, 絞り込みの段, 改訂前, 解決済み), AC-012 covers both limits, add AC-018 (invalid pattern), move AC-015 to F-003/F-005, reorder C-008, cite filter-files REQ-F-017/DR-14, scope cites DR-09                                     |
+| 2026-10-30 | 2.2.0   | Unify document versions to 2.2.0 and approve                                                                                                                                                                                                                                         |
