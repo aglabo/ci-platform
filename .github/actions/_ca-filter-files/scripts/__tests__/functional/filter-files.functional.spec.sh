@@ -22,12 +22,12 @@ printf -v _MAINF_FILES_3000_LF 'f%d.sh\n' {1..3000}
 _MAINF_FILES_3000="${_MAINF_FILES_3000_LF%$'\n'}"
 # 3001 file lines f1.sh .. f3001.sh; used by T-FF-MAINF-21
 printf -v _MAINF_FILES_3001 'f%d.sh\n' {1..3001}
-# 1000 pattern lines: *.sh (matches every file at once, so the run stays fast)
-# followed by p2.md .. p1000.md; used by T-FF-MAINF-16
-printf -v _MAINF_PATTERNS_1000 'p%d.md\n' {2..1000}
-_MAINF_PATTERNS_1000="*.sh"$'\n'"${_MAINF_PATTERNS_1000%$'\n'}"
-# 1001 pattern lines p1.sh .. p1001.sh; used by T-FF-MAINF-22
-printf -v _MAINF_PATTERNS_1001 'p%d.sh\n' {1..1001}
+# 100 pattern lines: *.sh (matches every file at once, so the run stays fast)
+# followed by p2.md .. p100.md; used by T-FF-MAINF-16
+printf -v _MAINF_PATTERNS_100 'p%d.md\n' {2..100}
+_MAINF_PATTERNS_100="*.sh"$'\n'"${_MAINF_PATTERNS_100%$'\n'}"
+# 101 pattern lines p1.sh .. p101.sh; used by T-FF-MAINF-22
+printf -v _MAINF_PATTERNS_101 'p%d.sh\n' {1..101}
 # 119997 "a" characters; the base of _MAINF_TEXT_120000 and _MAINF_CR_120001
 printf -v _MAINF_A_119997 '%*s' 119997 ''
 _MAINF_A_119997="${_MAINF_A_119997// /a}"
@@ -201,13 +201,13 @@ Describe 'filter-files.sh'
   #     CRLF line endings are turned into LF before the lines are split; a
   #     pattern with no quotes (as YAML leaves it after removing them) is
   #     matched as it is; quotes inside a pattern line are kept as characters;
-  #     exactly 3000 files lines and 1000 patterns lines (the line limits) are
+  #     exactly 3000 files lines and 100 patterns lines (the line limits) are
   #     accepted; a files input of exactly 120000 bytes (the size limit) is
   #     accepted.
   #   error (one ::error:: line, nothing written to the output file):
   #     an unset GITHUB_OUTPUT; a CR not followed by LF in the files input; a
   #     files line containing a double quote; 3001 files lines (one over the
-  #     line limit); 1001 patterns lines (one over the line limit); a files
+  #     line limit); 101 patterns lines (one over the line limit); a files
   #     input of 120001 bytes (one over the size limit); a patterns input of
   #     120001 bytes (one over the size limit); a GITHUB_OUTPUT that is a
   #     directory (nothing is created in the directory); a pattern line of only
@@ -371,7 +371,7 @@ Describe 'filter-files.sh'
 
       It '[Normal] T-FF-MAINF-16: 件数の上限ちょうどは受け付ける'
         export INPUT_FILES="$_MAINF_FILES_3000"
-        export INPUT_PATTERNS="$_MAINF_PATTERNS_1000"
+        export INPUT_PATTERNS="$_MAINF_PATTERNS_100"
         When call _mainf_run
         The status should equal 0
         The output should equal ''
@@ -440,9 +440,9 @@ Describe 'filter-files.sh'
         The file "$_MAINF_OUTPUT" should be empty file
       End
 
-      It '[Error] T-FF-MAINF-22: patterns が 1001 行'
+      It '[Error] T-FF-MAINF-22: patterns が 101 行'
         export INPUT_FILES='a.sh'
-        export INPUT_PATTERNS="$_MAINF_PATTERNS_1001"
+        export INPUT_PATTERNS="$_MAINF_PATTERNS_101"
         When call _mainf_run
         The status should not equal 0
         The output should equal ''

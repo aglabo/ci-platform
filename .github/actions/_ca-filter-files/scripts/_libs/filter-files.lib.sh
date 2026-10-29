@@ -56,7 +56,7 @@ readonly FF_MAX_PATTERNS_BYTES=120000
 # limit is accepted. Defined after the load guard is set, so a second source
 # returns at the guard and never re-runs readonly (which would fail).
 readonly FF_MAX_FILES=3000
-readonly FF_MAX_PATTERNS=1000
+readonly FF_MAX_PATTERNS=100
 
 # ERE that matches a whole line of well-formed UTF-8, following the RFC 3629
 # table (overlong forms, surrogates and code points above U+10FFFF are

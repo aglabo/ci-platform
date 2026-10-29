@@ -101,15 +101,15 @@ printf -v _CBL_KANA_MAX_TEXT 'あ%.0s' {1..40000}
 # LF); used by T-FF-CLL-02
 printf -v _CLL_FILES_MAX_LINES 'a.sh\n%.0s' {1..3000}
 _CLL_FILES_MAX_LINES=${_CLL_FILES_MAX_LINES%$'\n'}
-# patterns lines of exactly FF_MAX_PATTERNS (1000) lines ("*.sh" each, no
+# patterns lines of exactly FF_MAX_PATTERNS (100) lines ("*.sh" each, no
 # trailing LF); used by T-FF-CLL-03
-printf -v _CLL_PATTERNS_MAX_LINES '*.sh\n%.0s' {1..1000}
+printf -v _CLL_PATTERNS_MAX_LINES '*.sh\n%.0s' {1..100}
 _CLL_PATTERNS_MAX_LINES=${_CLL_PATTERNS_MAX_LINES%$'\n'}
 # files lines of FF_MAX_FILES + 1 (3001) lines; used by T-FF-CLL-04
 printf -v _CLL_FILES_OVER_LINES 'a.sh\n%.0s' {1..3001}
 _CLL_FILES_OVER_LINES=${_CLL_FILES_OVER_LINES%$'\n'}
-# patterns lines of FF_MAX_PATTERNS + 1 (1001) lines; used by T-FF-CLL-05
-printf -v _CLL_PATTERNS_OVER_LINES '*.sh\n%.0s' {1..1001}
+# patterns lines of FF_MAX_PATTERNS + 1 (101) lines; used by T-FF-CLL-05
+printf -v _CLL_PATTERNS_OVER_LINES '*.sh\n%.0s' {1..101}
 _CLL_PATTERNS_OVER_LINES=${_CLL_PATTERNS_OVER_LINES%$'\n'}
 # Two lines; used by T-FF-CLL-08
 _CLL_TWO_LINES=$'a\nb'
@@ -1092,11 +1092,11 @@ Describe 'filter-files.lib.sh'
   # Assigned test IDs: T-FF-CLL-01, T-FF-CLL-02, T-FF-CLL-03, T-FF-CLL-04,
   #                    T-FF-CLL-05, T-FF-CLL-06, T-FF-CLL-07, T-FF-CLL-08
   # Scenarios: the line-limit constants FF_MAX_FILES and FF_MAX_PATTERNS are
-  #            3000 and 1000 and readonly (status 0, empty stderr); files
+  #            3000 and 100 and readonly (status 0, empty stderr); files
   #            lines of exactly FF_MAX_FILES (3000) and patterns lines of
-  #            exactly FF_MAX_PATTERNS (1000) are accepted (status 0, empty
+  #            exactly FF_MAX_PATTERNS (100) are accepted (status 0, empty
   #            stderr); files lines of FF_MAX_FILES + 1 (3001) and patterns
-  #            lines of FF_MAX_PATTERNS + 1 (1001) are rejected (status 1,
+  #            lines of FF_MAX_PATTERNS + 1 (101) are rejected (status 1,
   #            one ::error::<name>: line with the line count); an empty text
   #            is 0 lines and is accepted (status 0, empty stderr); one line
   #            without a trailing LF is 1 line and is accepted at a limit of
@@ -1104,15 +1104,15 @@ Describe 'filter-files.lib.sh'
   #            rejected at a limit of 1 (status 1, one ::error::files: line
   #            with got: '2').
   Describe 'check_line_limit'
-    # 正常系: CLL-01 the line-limit constants are 3000 and 1000 and readonly,
+    # 正常系: CLL-01 the line-limit constants are 3000 and 100 and readonly,
     #         CLL-02 files lines of exactly 3000 accepted,
-    #         CLL-03 patterns lines of exactly 1000 accepted
+    #         CLL-03 patterns lines of exactly 100 accepted
     Context 'When: 正常系'
-      It '[Normal] T-FF-CLL-01: 件数の上限の定数は 3000 と 1000'
+      It '[Normal] T-FF-CLL-01: 件数の上限の定数は 3000 と 100'
         When call declare -p FF_MAX_FILES FF_MAX_PATTERNS
         The status should equal 0
         The line 1 of output should equal 'declare -r FF_MAX_FILES="3000"'
-        The line 2 of output should equal 'declare -r FF_MAX_PATTERNS="1000"'
+        The line 2 of output should equal 'declare -r FF_MAX_PATTERNS="100"'
         The stderr should equal ''
       End
 
@@ -1122,7 +1122,7 @@ Describe 'filter-files.lib.sh'
         The stderr should equal ''
       End
 
-      It '[Normal] T-FF-CLL-03: patterns 1000 行を受け付ける'
+      It '[Normal] T-FF-CLL-03: patterns 100 行を受け付ける'
         When call check_line_limit patterns "$_CLL_PATTERNS_MAX_LINES" "$FF_MAX_PATTERNS"
         The status should equal 0
         The stderr should equal ''
@@ -1130,7 +1130,7 @@ Describe 'filter-files.lib.sh'
     End
 
     # 異常系: CLL-04 files lines one over the limit (3001) are reported,
-    #         CLL-05 patterns lines one over the limit (1001) are reported
+    #         CLL-05 patterns lines one over the limit (101) are reported
     #         (nothing is printed to stdout)
     Context 'When: 異常系'
       It '[Error] T-FF-CLL-04: files 3001 行はエラー'
@@ -1140,10 +1140,10 @@ Describe 'filter-files.lib.sh'
         The output should equal ''
       End
 
-      It '[Error] T-FF-CLL-05: patterns 1001 行はエラー'
+      It '[Error] T-FF-CLL-05: patterns 101 行はエラー'
         When call check_line_limit patterns "$_CLL_PATTERNS_OVER_LINES" "$FF_MAX_PATTERNS"
         The status should equal 1
-        The stderr should equal "::error::patterns: exceeds the limit of 1000 lines (got: '1001')"
+        The stderr should equal "::error::patterns: exceeds the limit of 100 lines (got: '101')"
         The output should equal ''
       End
     End
