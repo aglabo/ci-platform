@@ -174,8 +174,8 @@ _FF_MIXED_DIR_FILES=$'a.sh\ndir/b.md'
 # Files not in pattern order (.md, .sh, .md); used by T-FF-FF-05 (input and
 # expected)
 _FF_UNSORTED_FILES=$'b.md\na.sh\nc.md'
-# Two include patterns (.sh first, then .md); used by T-FF-FF-05
-_FF_SH_MD_PATTERNS=$'*.sh\n*.md'
+# Two classified include patterns (.sh first, then .md); used by T-FF-FF-05
+_FF_SH_MD_PATTERNS=$'I\t*.sh\nI\t*.md'
 # The same path on two lines; used by T-FF-FF-08 (input and expected)
 _FF_DUPLICATE_FILES=$'a.sh\na.sh'
 # Locale of the caller of filter_files; used by T-FF-FF-13
@@ -186,6 +186,9 @@ _FF_MULTIBYTE_PATH='あ.sh'
 # A path that does not exist but matches **/*.sh, then a path that exists
 # in the working directory but does not match; used by T-FF-FF-14
 _FF_FS_FILES=$'no/such/file.sh\nexists.md'
+# Files with an .sh line and an .md line; used by T-FF-FF-16 (input and
+# expected)
+_FF_UNTYPED_FILES=$'a.sh\nb.md'
 # Kept lines a.sh and b.sh, LF-separated with no trailing LF; used by T-FF-EO-01
 _EO_TWO_KEPT=$'a.sh\nb.sh'
 # Whole output file after emitting _EO_TWO_KEPT; used by T-FF-EO-01
@@ -330,18 +333,17 @@ _gtr_match() {
 # restore the options; used by T-FF-FF-10, T-FF-FF-11. filter_files is
 # called directly (not in a subshell), so options it changed would be seen
 # here.
-# @arg $1 files   — passed to filter_files as is
-# @arg $2 include — passed to filter_files as is
-# @arg $3 exclude — passed to filter_files as is
-# @arg $4.. names of the shopt options to enable (e.g. nocasematch)
+# @arg $1 files    — passed to filter_files as is
+# @arg $2 patterns — passed to filter_files as is (classified pattern lines)
+# @arg $3.. names of the shopt options to enable (e.g. nocasematch)
 # @stdout filter_files' stdout
 # @return filter_files' exit code
 _ff_filter_with_options() {
-  local _files="$1" _include="$2" _exclude="$3" _saved _rc=0
-  shift 3
+  local _files="$1" _patterns="$2" _saved _rc=0
+  shift 2
   _saved=$(shopt -p "$@") || :
   shopt -s "$@"
-  filter_files "$_files" "$_include" "$_exclude" || _rc=$?
+  filter_files "$_files" "$_patterns" || _rc=$?
   eval "$_saved"
   return "$_rc"
 }
@@ -503,7 +505,7 @@ _eo_run_with_existing() {
 #                    T-FF-PFL-01 .. T-FF-PFL-19, T-FF-PPT-01 .. T-FF-PPT-12,
 #                    T-FF-CBL-01 .. T-FF-CBL-08, T-FF-CLL-01 .. T-FF-CLL-08,
 #                    T-FF-CP-01 .. T-FF-CP-12, T-FF-GTR-01 .. T-FF-GTR-40,
-#                    T-FF-FF-01 .. T-FF-FF-14, T-FF-EO-01 .. T-FF-EO-13
+#                    T-FF-FF-01 .. T-FF-FF-16, T-FF-EO-01 .. T-FF-EO-13
 Describe 'filter-files.lib.sh'
   ##
   # ff_error: emit one "::error::" annotation line to stderr. The form is chosen
@@ -1624,18 +1626,23 @@ Describe 'filter-files.lib.sh'
 
   ##
   # filter_files: keep the file lines that pass the keep rule, in input order.
-  # Assigned test IDs: T-FF-FF-01 .. T-FF-FF-14
+  # Assigned test IDs: T-FF-FF-01 .. T-FF-FF-16
+  # <patterns> is the classify_patterns result: "I<TAB>pattern" (include) and
+  # "E<TAB>pattern" (exclude) lines; any other line is ignored.
   # Keep rule, checked per line in this order: a line that matches any
   # exclude pattern is dropped (exclude wins); with no include pattern every
   # other line is kept; a line that matches any include pattern is kept; any
-  # other line is dropped. Input order and duplicate lines are kept.
+  # other line is dropped. Input order and duplicate lines are kept; the
+  # order of the pattern lines does not change the result.
   # Scenarios: the keep rule (include only, include and exclude, exclude
-  #            only, empty patterns, several include patterns);
+  #            only, empty patterns, several include patterns, exclude
+  #            listed before include);
   #            files that are not kept (no include match, all excluded);
   #            input shape and environment: duplicate lines, empty files,
   #            shell options (globstar / extglob / nocasematch / nocaseglob),
   #            nocasematch does not change matching, the caller's options and
-  #            locale stay unchanged, and the file system is not consulted.
+  #            locale stay unchanged, the file system is not consulted, and
+  #            pattern lines without a kind are ignored.
   # FF-10 .. FF-13 call filter_files through the _ff_* helpers, which call it
   # directly (not in a subshell) so that a change of the caller's state is
   # seen. FF-14 calls it through _ff_filter_outside_repo, which runs it in a
@@ -1645,40 +1652,49 @@ Describe 'filter-files.lib.sh'
     #         FF-02 an exclude pattern wins over an include pattern;
     #         FF-03 with exclude patterns only, every other line is kept;
     #         FF-04 with no patterns at all, every line is kept;
-    #         FF-05 with several include patterns, input order is kept
+    #         FF-05 with several include patterns, input order is kept;
+    #         FF-15 an exclude pattern listed before an include pattern
+    #         still wins
     Context 'When: 正常系'
       It '[Normal] T-FF-FF-01: 包含パターンに一致するファイルだけを残す'
-        When call filter_files "$_FF_SH_MD_FILES" '*.sh' ''
+        When call filter_files "$_FF_SH_MD_FILES" $'I\t*.sh'
         The status should equal 0
         The output should equal "$_FF_SH_FILES"
         The stderr should equal ''
       End
 
       It '[Normal] T-FF-FF-02: 除外は包含より優先する'
-        When call filter_files "$_FF_SRC_FILES" 'src/**' 'src/gen/**'
+        When call filter_files "$_FF_SRC_FILES" $'I\tsrc/**\nE\tsrc/gen/**'
         The status should equal 0
         The output should equal 'src/a.sh'
         The stderr should equal ''
       End
 
       It '[Normal] T-FF-FF-03: 除外だけなら残りの全件を残す'
-        When call filter_files "$_FF_SH_MD_SH_FILES" '' '*.md'
+        When call filter_files "$_FF_SH_MD_SH_FILES" $'E\t*.md'
         The status should equal 0
         The output should equal "$_FF_SH_FILES"
         The stderr should equal ''
       End
 
       It '[Normal] T-FF-FF-04: パターンが無ければ全件を残す'
-        When call filter_files "$_FF_MIXED_DIR_FILES" '' ''
+        When call filter_files "$_FF_MIXED_DIR_FILES" ''
         The status should equal 0
         The output should equal "$_FF_MIXED_DIR_FILES"
         The stderr should equal ''
       End
 
       It '[Normal] T-FF-FF-05: 包含が複数でも出力はファイルの入力順'
-        When call filter_files "$_FF_UNSORTED_FILES" "$_FF_SH_MD_PATTERNS" ''
+        When call filter_files "$_FF_UNSORTED_FILES" "$_FF_SH_MD_PATTERNS"
         The status should equal 0
         The output should equal "$_FF_UNSORTED_FILES"
+        The stderr should equal ''
+      End
+
+      It '[Normal] T-FF-FF-15: 除外が包含より前にあっても除外が優先する'
+        When call filter_files "$_FF_SRC_FILES" $'E\tsrc/gen/**\nI\tsrc/**'
+        The status should equal 0
+        The output should equal 'src/a.sh'
         The stderr should equal ''
       End
     End
@@ -1689,14 +1705,14 @@ Describe 'filter-files.lib.sh'
     #         it matches an exclude pattern
     Context 'When: 異常系'
       It '[Error] T-FF-FF-06: どれにも一致しなければ空を返す'
-        When call filter_files 'a.md' '*.sh' ''
+        When call filter_files 'a.md' $'I\t*.sh'
         The status should equal 0
         The entire output should equal ''
         The stderr should equal ''
       End
 
       It '[Error] T-FF-FF-07: 包含に名指しされても除外に一致すれば捨てる'
-        When call filter_files 'src/gen/b.sh' 'src/gen/b.sh' 'src/gen/**'
+        When call filter_files 'src/gen/b.sh' $'I\tsrc/gen/b.sh\nE\tsrc/gen/**'
         The status should equal 0
         The entire output should equal ''
         The stderr should equal ''
@@ -1715,38 +1731,41 @@ Describe 'filter-files.lib.sh'
     #             caller, and the caller's LC_ALL is still C after the call;
     #             FF-14 lines are kept or dropped by the path strings alone,
     #             outside any git work tree (a missing file is kept, an
-    #             existing file is not)
+    #             existing file is not);
+    #             FF-16 a pattern line that starts with neither "I<TAB>" nor
+    #             "E<TAB>" is ignored (with no include pattern left, every
+    #             line is kept)
     Context 'When: エッジケース'
       It '[Edge] T-FF-FF-08: 重複を残す'
-        When call filter_files "$_FF_DUPLICATE_FILES" '*.sh' ''
+        When call filter_files "$_FF_DUPLICATE_FILES" $'I\t*.sh'
         The status should equal 0
         The output should equal "$_FF_DUPLICATE_FILES"
         The stderr should equal ''
       End
 
       It '[Edge] T-FF-FF-09: files が空なら空を返す'
-        When call filter_files '' '*.sh' ''
+        When call filter_files '' $'I\t*.sh'
         The status should equal 0
         The entire output should equal ''
         The stderr should equal ''
       End
 
       It '[Edge] T-FF-FF-10: シェルのオプションが有効でも結果が変わらない'
-        When call _ff_filter_with_options "$_FF_SH_MD_FILES" '*.sh' '' globstar extglob nocasematch nocaseglob
+        When call _ff_filter_with_options "$_FF_SH_MD_FILES" $'I\t*.sh' globstar extglob nocasematch nocaseglob
         The status should equal 0
         The output should equal "$_FF_SH_FILES"
         The stderr should equal ''
       End
 
       It '[Edge] T-FF-FF-11: nocasematch が有効でも大文字・小文字を区別する'
-        When call _ff_filter_with_options 'a.sh' '*.SH' '' nocasematch
+        When call _ff_filter_with_options 'a.sh' $'I\t*.SH' nocasematch
         The status should equal 0
         The entire output should equal ''
         The stderr should equal ''
       End
 
       It '[Edge] T-FF-FF-12: 呼び出し元のシェルのオプションを変えない'
-        When call _ff_nocasematch_after_call 'a.sh' '*.sh' ''
+        When call _ff_nocasematch_after_call 'a.sh' $'I\t*.sh'
         The status should equal 0
         The line 1 of output should equal 'a.sh'
         The line 2 of output should equal 'nocasematch=on'
@@ -1755,7 +1774,7 @@ Describe 'filter-files.lib.sh'
       End
 
       It '[Edge] T-FF-FF-13: 呼び出し元のロケールが C でも UTF-8 の 1 文字で照合する'
-        When call _ff_filter_in_c_locale "$_FF_MULTIBYTE_PATH" '?.sh' ''
+        When call _ff_filter_in_c_locale "$_FF_MULTIBYTE_PATH" $'I\t?.sh'
         The status should equal 0
         The line 1 of output should equal "$_FF_MULTIBYTE_PATH"
         The line 2 of output should equal "LC_ALL=${_FF_C_LOCALE}"
@@ -1764,9 +1783,16 @@ Describe 'filter-files.lib.sh'
       End
 
       It '[Edge] T-FF-FF-14: ファイルシステムを参照せず文字列だけで判定する'
-        When call _ff_filter_outside_repo "$_FF_FS_FILES" '**/*.sh' ''
+        When call _ff_filter_outside_repo "$_FF_FS_FILES" $'I\t**/*.sh'
         The status should equal 0
         The output should equal 'no/such/file.sh'
+        The stderr should equal ''
+      End
+
+      It '[Edge] T-FF-FF-16: 種別の付いていないパターン行は無視する'
+        When call filter_files "$_FF_UNTYPED_FILES" $'X\t*.md'
+        The status should equal 0
+        The output should equal "$_FF_UNTYPED_FILES"
         The stderr should equal ''
       End
     End

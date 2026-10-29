@@ -404,14 +404,17 @@ glob_to_regex() {
 # ============================================================================
 
 ##
-# @description Keep the file lines that pass the keep rule. <files>,
-#              <include> and <exclude> are lines separated by LF, with no
-#              trailing LF (an empty text has no lines, DR-18). <files> is
-#              the parse_filelist result; <include> / <exclude> are the
-#              patterns split from the classify_patterns result (without
-#              the "I<TAB>" / "E<TAB>" prefix and the leading "!").
-#              Each include and exclude pattern is converted once with
-#              glob_to_regex before the files are matched (DR-17, DR-18).
+# @description Keep the file lines that pass the keep rule. <files> and
+#              <patterns> are lines separated by LF, with no trailing LF
+#              (an empty text has no lines, DR-18). <files> is the
+#              parse_filelist result; <patterns> is the classify_patterns
+#              result as is: "I<TAB><pattern>" lines are include patterns,
+#              "E<TAB><pattern>" lines are exclude patterns, and any other
+#              line is ignored (DR-19).
+#              Before the files are matched, the pattern lines are sorted
+#              into include and exclude, and each pattern is converted once
+#              with glob_to_regex (DR-17, DR-18); the order of the pattern
+#              lines does not change the result.
 #              Each file line is checked in this order: a line that matches
 #              any exclude ERE is dropped (exclude wins, R-MAT-011, DR-05);
 #              with no include pattern, every other line is kept
@@ -421,20 +424,20 @@ glob_to_regex() {
 #              are never consulted (REQ-F-012).
 #              Kept lines are printed in input order, one printf per line,
 #              so nothing (not even a LF) is printed when no line is kept.
-#              An empty <files>, <include> or <exclude> has no lines and
-#              mapfile is not called for it.
+#              An empty <files> or <patterns> has no lines and mapfile is
+#              not called for it.
 #              The body is a subshell, so the shell options and the locale
 #              it changes do not leak to the caller. nocasematch is turned
-#              off there before matching, so matching is always
-#              case-sensitive (R-MAT-009, DD-MAT-06), and the caller's
-#              nocasematch is left as it was. LC_ALL is set to C.UTF-8 there
-#              before the patterns are converted and matched, so "?" and
+#              off there before the pattern lines are sorted and the files
+#              matched, so both are always case-sensitive (R-MAT-009,
+#              DD-MAT-06), and the caller's nocasematch is left as it was.
+#              LC_ALL is set to C.UTF-8 there before the patterns are
+#              sorted, converted and matched, so "?" and
 #              "[^/]" match one UTF-8 character even when the caller's
 #              locale is C (DD-MAT-05), and the caller's LC_ALL is left as
 #              it was (no "local" is needed in the subshell).
 # @arg $1 files — parsed file lines
-# @arg $2 include — include patterns, one per line
-# @arg $3 exclude — exclude patterns, one per line
+# @arg $2 patterns — classified pattern lines ("I<TAB>" / "E<TAB>" prefixed)
 # @stdout one kept file line per line, each ending with LF (nothing when no
 #         line is kept)
 # @stderr (none)
@@ -445,8 +448,7 @@ filter_files() (
   shopt -u nocasematch
   LC_ALL=C.UTF-8
   _ff_read_lines _files "$1"
-  _ff_globs_to_regexes _include_res "$2" || return 1
-  _ff_globs_to_regexes _exclude_res "$3" || return 1
+  _ff_globs_to_regexes _include_res _exclude_res "$2" || return 1
 
   for _f in "${_files[@]}"; do
     _ff_is_kept _include_res _exclude_res "$_f" && printf '%s\n' "$_f"
@@ -557,24 +559,40 @@ _ff_read_lines() {
 
 ##
 # @description Internal helper of filter_files (no test ID of its own;
-#              verified through the filter_files tests). Convert each
-#              pattern line of <patterns> once with glob_to_regex and append
-#              the EREs, in pattern order, to the caller's array <name>
-#              (DR-17, DR-18). An empty text appends nothing without calling
-#              mapfile.
-# @arg $1 name — name of the caller's array to append the EREs to
-# @arg $2 patterns — patterns, one per line
+#              verified through the filter_files tests). Sort the
+#              classify_patterns lines of <patterns> by kind and convert
+#              each pattern once with glob_to_regex (DR-17, DR-19): an
+#              "I<TAB>" line appends its ERE to the caller's array
+#              <include>, an "E<TAB>" line to the caller's array <exclude>,
+#              each in pattern order. Only the leading "I<TAB>" / "E<TAB>"
+#              is removed (a pattern may contain a TAB). Any other line is
+#              ignored. The kind is matched with case, which is
+#              case-sensitive only with nocasematch off (filter_files turns
+#              it off before calling this). An empty text appends nothing
+#              without calling mapfile (DR-18).
+# @arg $1 include — name of the caller's array to append the include EREs to
+# @arg $2 exclude — name of the caller's array to append the exclude EREs to
+# @arg $3 patterns — classify_patterns result, lines separated by LF, with
+#                    no trailing LF
 # @stdout (none)
 # @stderr (none)
 # @return 0; 1 when glob_to_regex fails
 _ff_globs_to_regexes() {
-  local -n _ff_regexes_ref="$1"
-  local _p _re
-  local -a _globs
-  _ff_read_lines _globs "$2"
-  for _p in "${_globs[@]}"; do
-    _re=$(glob_to_regex "$_p") || return 1
-    _ff_regexes_ref+=("$_re")
+  local -n _ff_include_res_ref="$1" _ff_exclude_res_ref="$2"
+  local _line _re
+  local -a _lines
+  _ff_read_lines _lines "$3"
+  for _line in "${_lines[@]}"; do
+    case "$_line" in
+    I$'\t'*)
+      _re=$(glob_to_regex "${_line#?$'\t'}") || return 1
+      _ff_include_res_ref+=("$_re")
+      ;;
+    E$'\t'*)
+      _re=$(glob_to_regex "${_line#?$'\t'}") || return 1
+      _ff_exclude_res_ref+=("$_re")
+      ;;
+    esac
   done
   return 0
 }
