@@ -362,37 +362,16 @@ check_patterns() {
 #              The caller matches with LC_ALL=C.UTF-8, so "?" matches one
 #              UTF-8 character (not one byte) of a non-ASCII path.
 #              The conversion never fails.
+#              The conversion is done by _ff_glob_to_regex_var; this
+#              function prints its result.
 # @arg $1 glob — one glob pattern
 # @stdout the anchored ERE, with no trailing LF
 # @stderr (none)
 # @return 0
 glob_to_regex() {
-  local _out="" _i=0 _g="/$1"
-  if [ "$1" = '**' ]; then
-    _out='.*'
-    _i=2
-  fi
-  # ${_g:_i} starts with the character before position _i ("/" at the start)
-  while ((_i < ${#1})); do
-    case "${_g:_i}" in
-    '/**/'*)
-      _out+='(.*/)?'
-      _i=$((_i + 3))
-      continue
-      ;;
-    ?'/**')
-      _out+='/.+'
-      break
-      ;;
-    ?'*'*) _out+='[^/]*' ;;
-    ?'?'*) _out+='[^/]' ;;
-    # ERE metacharacters: . [ ] \ ( ) { } + | ^ $
-    ?[]'[.\(){}+|^$']*) _out+="\\${1:_i:1}" ;;
-    *) _out+="${1:_i:1}" ;;
-    esac
-    _i=$((_i + 1))
-  done
-  printf '%s' "^${_out}\$"
+  local _re
+  _ff_glob_to_regex_var _re "$1"
+  printf '%s' "$_re"
 }
 
 # ============================================================================
@@ -409,7 +388,8 @@ glob_to_regex() {
 #              in input order (DR-19). A pattern line is never split (a
 #              pattern may contain a TAB).
 #              Before the files are matched, each pattern is converted once
-#              with glob_to_regex (DR-17, DR-18), keeping its kind and ERE
+#              with _ff_glob_to_regex_var (the glob_to_regex conversion;
+#              DR-17, DR-18), keeping its kind and ERE
 #              in input order; an exclude pattern is converted with its one
 #              leading "!" removed ("!!a.sh" excludes "!a.sh").
 #              Each file line is matched from the last pattern to the
@@ -443,14 +423,14 @@ glob_to_regex() {
 # @stdout one kept file line per line, each ending with LF (nothing when no
 #         line is kept)
 # @stderr (none)
-# @return 0; 1 when glob_to_regex fails
+# @return 0 always
 filter_files() (
   local _f
   local -a _files=() _kinds=() _res=()
   shopt -u nocasematch
   LC_ALL=C.UTF-8
   _ff_read_lines _files "$1"
-  _ff_globs_to_regexes _kinds _res "$2" || return 1
+  _ff_globs_to_regexes _kinds _res "$2"
 
   for _f in "${_files[@]}"; do
     _ff_is_kept _kinds _res "$_f" && printf '%s\n' "$_f"
@@ -560,9 +540,54 @@ _ff_read_lines() {
 }
 
 ##
+# @description Internal helper of glob_to_regex and _ff_globs_to_regexes (no
+#              test ID of its own; verified through the glob_to_regex and
+#              filter_files tests). Convert one glob to an anchored ERE as
+#              described for glob_to_regex, and store it in the caller's
+#              variable <name> (printf -v, so no subshell is forked).
+#              The locals are prefixed with "_ff_gtr_" so that they never
+#              hide the caller's variable; <name> must not start with
+#              "_ff_gtr_". The conversion never fails.
+# @arg $1 name — name of the caller's variable to store the ERE in
+# @arg $2 glob — one glob pattern
+# @stdout (none)
+# @stderr (none)
+# @return 0 always
+_ff_glob_to_regex_var() {
+  local _ff_gtr_out="" _ff_gtr_i=0 _ff_gtr_g="/$2"
+  if [ "$2" = '**' ]; then
+    _ff_gtr_out='.*'
+    _ff_gtr_i=2
+  fi
+  # ${_ff_gtr_g:_ff_gtr_i} starts with the character before position
+  # _ff_gtr_i ("/" at the start)
+  while ((_ff_gtr_i < ${#2})); do
+    case "${_ff_gtr_g:_ff_gtr_i}" in
+    '/**/'*)
+      _ff_gtr_out+='(.*/)?'
+      _ff_gtr_i=$((_ff_gtr_i + 3))
+      continue
+      ;;
+    ?'/**')
+      _ff_gtr_out+='/.+'
+      break
+      ;;
+    ?'*'*) _ff_gtr_out+='[^/]*' ;;
+    ?'?'*) _ff_gtr_out+='[^/]' ;;
+    # ERE metacharacters: . [ ] \ ( ) { } + | ^ $
+    ?[]'[.\(){}+|^$']*) _ff_gtr_out+="\\${2:_ff_gtr_i:1}" ;;
+    *) _ff_gtr_out+="${2:_ff_gtr_i:1}" ;;
+    esac
+    _ff_gtr_i=$((_ff_gtr_i + 1))
+  done
+  printf -v "$1" '%s' "^${_ff_gtr_out}\$"
+}
+
+##
 # @description Internal helper of filter_files (no test ID of its own;
 #              verified through the filter_files tests). Convert each line of
-#              <patterns> once with glob_to_regex (DR-17, DR-19) and append,
+#              <patterns> once with _ff_glob_to_regex_var (the glob_to_regex
+#              conversion; DR-17, DR-19) and append,
 #              in pattern order, its kind to the caller's array <kinds> and
 #              its ERE to the caller's array <res> (the same index in both).
 #              A line that starts with "!" is an exclude pattern: its kind is
@@ -579,7 +604,7 @@ _ff_read_lines() {
 #                    LF, with no trailing LF
 # @stdout (none)
 # @stderr (none)
-# @return 0; 1 when glob_to_regex fails
+# @return 0 always
 _ff_globs_to_regexes() {
   local -n _ff_kinds_ref="$1" _ff_res_ref="$2"
   local _line _re
@@ -592,7 +617,7 @@ _ff_globs_to_regexes() {
     else
       _ff_kinds_ref+=(include)
     fi
-    _re=$(glob_to_regex "$_line") || return 1
+    _ff_glob_to_regex_var _re "$_line"
     _ff_res_ref+=("$_re")
   done
   return 0
