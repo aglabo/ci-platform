@@ -2,7 +2,7 @@
 title: "Requirements: _ca-filter-files"
 module: "composite-action/filter-files"
 status: approved
-version: 1.3.1
+version: 1.5.0
 created: "2026-10-27"
 ---
 
@@ -83,8 +83,8 @@ created: "2026-10-27"
 | DR-01 | ファイルフィルタを git diff から独立した内部 Action に切り出す           | ../decision-records.md#DR-01 |
 | DR-02 | glob を独自に正規表現へ変換して照合する                                  | ../decision-records.md#DR-02 |
 | DR-03 | パターンは glob のみ受け付け、正規表現は受け付けない                     | ../decision-records.md#DR-03 |
-| DR-04 | 包含パターンが 0 件の場合は全ファイルを通す                              | ../decision-records.md#DR-04 |
-| DR-05 | 除外パターンは包含パターンより優先する                                   | ../decision-records.md#DR-05 |
+| DR-04 | 包含パターンが 0 件の場合は全ファイルを通す (Superseded by DR-19)        | ../decision-records.md#DR-04 |
+| DR-05 | 除外パターンは包含パターンより優先する (Superseded by DR-19)             | ../decision-records.md#DR-05 |
 | DR-06 | ca-get-changed-files の置き換えは get-changed-files 側で扱う             | ../decision-records.md#DR-06 |
 | DR-07 | 複数行出力関数を `_libs` に追加し、区切り文字を一意な文字列にする        | ../decision-records.md#DR-07 |
 | DR-08 | パターン行だけ両端の空白を除去し、ファイル行は変えない                   | ../decision-records.md#DR-08 |
@@ -93,6 +93,7 @@ created: "2026-10-27"
 | DR-11 | ダブルクオートの解釈は GitHub Actions (YAML) に任せ、Action では外さない | ../decision-records.md#DR-11 |
 | DR-12 | 出力先の検証関数を `_libs/output.lib.sh` に追加する                      | ../decision-records.md#DR-12 |
 | DR-16 | ファイル数・パターン数・バイト数に上限を設け、超えた入力をエラーにする   | ../decision-records.md#DR-16 |
+| DR-19 | パターンは記述順に適用し、最後に一致したパターンで保持を決める           | ../decision-records.md#DR-19 |
 
 ## 4. Functional Requirements
 
@@ -135,41 +136,52 @@ patterns は両端のスペース・タブを除去し、空になった行を�
 ```text
 GIVEN REQ-F-001 の処理後に patterns が 1 行以上残っている
   WHEN the action parses patterns
-THEN the system SHALL classify a line starting with "!" as an exclude pattern (the pattern is the text after "!"),
-     and SHALL classify every other line as an include pattern.
+THEN the system SHALL treat a line starting with "!" as an exclude pattern (the pattern is the text after the first "!"),
+     SHALL treat every other line as an include pattern,
+     and SHALL keep the patterns in the order of the input lines.
 ```
 
-**Rationale**: 1 つの入力で包含と除外を表現するため (Issue #136)。空行は REQ-F-001 で除かれるため、ここでは分類しない。
+**Rationale**: 1 つの入力で包含と除外を表現するため (Issue #136)。
+パターンの順序は保持条件 (REQ-F-003) で意味を持つため、入力の行の順のまま扱う。包含と除外を別の一覧に分けない。
+空行は REQ-F-001 で除かれるため、ここでは扱わない。
 
 **Acceptance Criteria**:
 
 | AC ID  | Scenario                                                        |
 | ------ | --------------------------------------------------------------- |
-| AC-002 | 除外パターンに一致するファイルは包含より優先して除かれる        |
+| AC-002 | 後に書いた除外が先の包含を打ち消す                              |
 | AC-003 | 除外パターンのみの場合は、それ以外の全ファイルが残る            |
 | AC-012 | files の行は変えず、patterns は両端の空白を除いて空行を無視する |
+| AC-019 | 除外の後に書いた包含でファイルを戻せる                          |
 
 ### REQ-F-003: 保持条件
 
 - EARS Type: event-driven
 
 ```text
-GIVEN 包含パターンと除外パターンが分類済みである
+GIVEN REQ-F-002 の処理後にパターンが 1 件以上ある
   WHEN the action evaluates a file path
-THEN the system SHALL keep the file if and only if
-     (it matches at least one include pattern OR there are no include patterns)
-     AND it matches no exclude pattern.
+THEN the system SHALL apply the patterns in input order and let the last pattern that matches the path decide,
+     SHALL keep the file when that pattern is an include pattern,
+     and SHALL drop the file when that pattern is an exclude pattern.
+     When no pattern matches the path, the system SHALL keep the file if the first pattern is an exclude pattern
+     and SHALL drop the file if the first pattern is an include pattern.
 ```
 
-**Rationale**: Issue #136 の保持条件をそのまま規範化する。除外優先は DR-05、包含 0 件の扱いは DR-04。
+**Rationale**: `.gitignore` や GitHub Actions の `paths` フィルタと同じく、後に書いたパターンを優先する (DR-19)。
+後に書いた除外は先の包含を打ち消し (AC-002)、さらに後に書いた包含で特定のファイルを戻せる (AC-019)。
+どのパターンにも一致しないファイルは、先頭のパターンで決める。
+包含で始まる一覧は一致しないファイルを捨て (AC-001)、除外で始まる一覧はそれ以外の全ファイルを残す (AC-003)。
+パターンの順序は結果に影響する。
 
 **Acceptance Criteria**:
 
-| AC ID  | Scenario                                                 |
-| ------ | -------------------------------------------------------- |
-| AC-001 | 包含パターンに一致するファイルだけが残る                 |
-| AC-002 | 除外パターンに一致するファイルは包含より優先して除かれる |
-| AC-003 | 除外パターンのみの場合は、それ以外の全ファイルが残る     |
+| AC ID  | Scenario                                             |
+| ------ | ---------------------------------------------------- |
+| AC-001 | 包含パターンに一致するファイルだけが残る             |
+| AC-002 | 後に書いた除外が先の包含を打ち消す                   |
+| AC-003 | 除外パターンのみの場合は、それ以外の全ファイルが残る |
+| AC-019 | 除外の後に書いた包含でファイルを戻せる               |
 
 ### REQ-F-004: 空パターン
 
@@ -181,7 +193,8 @@ GIVEN patterns が未指定、空文字列、または REQ-F-001 で無視され
 THEN the system SHALL keep all files and SHALL NOT fail.
 ```
 
-**Rationale**: 包含パターン 0 件 = 全件一致とする REQ-F-003 と整合させる。`ca-get-changed-files` で `pattern` を省略したときの現行挙動 (全件) とも一致する (DR-04)。
+**Rationale**: パターンが 1 件も無いと、REQ-F-003 の判定 (最後に一致したパターン、先頭のパターン) を適用できない。このため全件を残すと定める。
+`ca-get-changed-files` で `pattern` を省略したときの現行挙動 (全件) とも一致する (DR-19)。
 
 **Acceptance Criteria**:
 
@@ -468,17 +481,17 @@ patterns のダブルクオートは REQ-F-016 に従いリテラルとして扱
 
 ```text
 GIVEN files または patterns の値が 120000 バイトを超える、
-      または REQ-F-001 の処理後に、files が 3000 行を超える、または patterns が 1000 行を超える
+      または REQ-F-001 の処理後に、files が 3000 行を超える、または patterns が 100 行を超える
   NOT DO filter the files or write any output
 THEN the system SHALL check the byte size of each value before any other input check,
-     SHALL check the number of lines before classifying patterns,
+     SHALL check the number of lines before checking the pattern lines of REQ-F-002,
      SHALL perform both checks before writing the first output,
      SHALL print an "::error::" message to stderr,
      and SHALL exit with a non-zero status.
 ```
 
 **Rationale**: 件数に上限を設け、照合時間と入出力の規模を見積もれるようにする (impl second opinion)。
-ファイル数の上限は、GitHub の PR の差分が最大 3000 ファイルであることに合わせる。パターン数の上限は 1000 とする。
+ファイル数の上限は、GitHub の PR の差分が最大 3000 ファイルであることに合わせる。パターン数の上限は 100 とする。照合時間はファイル数とパターン数の積に比例するため、ファイル数の上限 3000 のもとで実用的な時間に収まる値とする (DR-16)。
 上限ちょうどの件数は受け付ける。件数は REQ-F-001 で無視した行を含めない。
 上限値はスクリプトの定数として定義する (DR-16)。
 バイト数の上限は、Linux の環境変数 1 つ分の上限 (`MAX_ARG_STRLEN`、131072 バイト) に余裕を残すように決める。
@@ -585,7 +598,7 @@ Action 名は `_` プレフィックス (`_ca-filter-files`) とし、内部専�
 | Story ID | Role                                           | Goal                                                       | Reason                                                       | Related Requirements                       |
 | -------- | ---------------------------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------ |
 | US-001   | 内部の呼び出し元 Action (ca-get-changed-files) | 取得済みのファイル一覧を複数の glob パターンで絞り込みたい | git pathspec の単一パターン制約をなくすため                  | REQ-F-001, REQ-F-002, REQ-F-003, REQ-F-010 |
-| US-002   | Composite Action の開発者                      | `!` で特定のファイルを除外したい                           | 生成物やテストデータを処理対象から外すため                   | REQ-F-002, REQ-F-003                       |
+| US-002   | Composite Action の開発者                      | `!` で特定のファイルを除外し、必要なら後の行で戻したい     | 生成物やテストデータを処理対象から外すため                   | REQ-F-002, REQ-F-003                       |
 | US-003   | Composite Action の開発者                      | `*` と `**` の意味が明確な glob で指定したい               | パターンが意図しない階層のファイルに一致するのを防ぐため     | REQ-F-005, REQ-F-006, REQ-F-007, REQ-F-008 |
 | US-004   | 内部の呼び出し元 Action                        | パターン省略時は全ファイルを受け取りたい                   | フィルタ不要な呼び出しでも同じ Action を使えるようにするため | REQ-F-004                                  |
 | US-005   | 内部の呼び出し元 Action                        | 件数で後続処理を分岐したい                                 | 対象 0 件のときに処理を省略するため                          | REQ-F-011, REQ-F-014                       |
@@ -603,9 +616,9 @@ Scenario: 包含パターンに一致するファイルだけが残る
   Then  files 出力は "a.sh", "b.sh" の順の 2 行である
   And   count 出力は "2" である
 
-# AC-002: 除外パターンに一致するファイルは包含より優先して除かれる
+# AC-002: 後に書いた除外が先の包含を打ち消す
 # Requirement: REQ-F-002, REQ-F-003
-Scenario: 除外パターンに一致するファイルは包含より優先して除かれる
+Scenario: 後に書いた除外が先の包含を打ち消す
   Given files が "src/a.sh", "src/gen/b.sh" の 2 行である
   And   patterns が "src/**" と "!src/gen/**" の 2 行である
   When  the action is invoked
@@ -740,14 +753,14 @@ Scenario: ダブルクオートを含む files の行は、何も書かずにエ
 # AC-017: 件数が上限を超えた入力は、何も書かずにエラー終了する
 # Requirement: REQ-F-018
 Scenario: 件数が上限を超えた入力は、何も書かずにエラー終了する
-  Given files が 3000 行、patterns が 1000 行である
+  Given files が 3000 行、patterns が 100 行である
   When  the action is invoked
   Then  the action exits with status 0
   When  files が 3001 行で the action is invoked
   Then  stderr に "::error::files: " で始まるメッセージが出力される
   And   出力は 1 つも書かれない
   And   the action exits with a non-zero status
-  When  patterns が 1001 行で the action is invoked
+  When  patterns が 101 行で the action is invoked
   Then  stderr に "::error::patterns: " で始まるメッセージが出力される
   And   出力は 1 つも書かれない
   And   the action exits with a non-zero status
@@ -765,60 +778,69 @@ Scenario: サイズが上限を超えた入力は、何も書かずにエラー�
   When  patterns の値が 120001 バイトで the action is invoked
   Then  stderr に "::error::patterns: exceeds the limit of 120000 bytes" で始まるメッセージが出力される
   And   the action exits with a non-zero status
+
+# AC-019: 除外の後に書いた包含でファイルを戻せる
+# Requirement: REQ-F-002, REQ-F-003
+Scenario: 除外の後に書いた包含でファイルを戻せる
+  Given files が "src/a.sh", "src/gen/b.sh", "src/gen/keep.sh" の 3 行である
+  And   patterns が "src/**", "!src/gen/**", "src/gen/keep.sh" の 3 行である
+  When  the action is invoked
+  Then  files 出力は "src/a.sh", "src/gen/keep.sh" の順の 2 行である
+  And   count 出力は "2" である
 ```
 
 ## 9. Open Questions
 
 Owner が spec の項目は、spec で解決した。各行の括弧内に解決先を示す。
 
-| Question                                                                                                                                                  | Type        | Impact Area      | Owner |
-| --------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | ---------------- | ----- |
-| `write_multiline_output` の引数・戻り値・出力先の指定方法 (`write_output` との整合) (Resolved in spec: DD-OUT-06, DR-13)                                  | Spec detail | REQ-F-013, C-007 | spec  |
-| `**/` が 0 階層に一致するか (`**/a.sh` が `a.sh` に一致するか) (Resolved in spec: DD-MAT-01)                                                              | Spec detail | REQ-F-005        | spec  |
-| `*` / `?` が先頭ドットのファイル (隠しファイル) に一致するか (Resolved in spec: DD-MAT-04)                                                                | Spec detail | REQ-F-006, F-007 | spec  |
-| ブラケット `[...]` を文字クラスとして扱うか、リテラルとして扱うか (Resolved in spec: DD-MAT-03)                                                           | Spec detail | REQ-F-009        | spec  |
-| パス中の特殊文字、CR (CRLF 入力) の扱い (files の行は変更せず CRLF を LF に変換、CR のみはエラー: REQ-F-001, REQ-F-017, REQ-C-009)                        | Spec detail | REQ-F-001, F-013 | spec  |
-| `**` が `/` を含まないセグメント内 (例: `a**b`) に現れた場合の扱い (Resolved in spec: DD-MAT-02)                                                          | Spec detail | REQ-F-005        | spec  |
-| 不正なパターン (例: `!` のみの行) をエラーとするか (Resolved in spec: DR-14)                                                                              | Spec detail | REQ-F-002        | spec  |
-| `files` に重複したパスがある場合、出力と `count` で重複を残すか、1 件にまとめるか (Resolved in spec: specifications-input.md 5 (重複を残す))              | Spec detail | REQ-F-010, F-011 | spec  |
-| `?` の「1 文字」はバイト単位か、文字 (UTF-8 のコードポイント) 単位か (Resolved in spec: DD-MAT-05)                                                        | Spec detail | REQ-F-007        | spec  |
-| `*`・`**`・`?` の意味を GitHub Actions の `paths` フィルタ構文と一致させるか (除外優先の DR-05 は維持) (Resolved in spec: specifications-matching.md 2.1) | Spec detail | REQ-F-005〜F-007 | spec  |
-| 照合方式: 正規表現への変換 (DR-02) と、`/` 区切りのセグメント単位照合の実装量・テスト容易性の比較                                                         | Impl detail | REQ-F-005〜F-009 | impl  |
-| 照合をファイルごとのループで行うか、`grep -E` などでまとめて行うか (入力順と REQ-F-001 の行の扱いを保てるか)                                              | Impl detail | REQ-F-010        | impl  |
+| Question                                                                                                                                                         | Type        | Impact Area      | Owner |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | ---------------- | ----- |
+| `write_multiline_output` の引数・戻り値・出力先の指定方法 (`write_output` との整合) (Resolved in spec: DD-OUT-06, DR-13)                                         | Spec detail | REQ-F-013, C-007 | spec  |
+| `**/` が 0 階層に一致するか (`**/a.sh` が `a.sh` に一致するか) (Resolved in spec: DD-MAT-01)                                                                     | Spec detail | REQ-F-005        | spec  |
+| `*` / `?` が先頭ドットのファイル (隠しファイル) に一致するか (Resolved in spec: DD-MAT-04)                                                                       | Spec detail | REQ-F-006, F-007 | spec  |
+| ブラケット `[...]` を文字クラスとして扱うか、リテラルとして扱うか (Resolved in spec: DD-MAT-03)                                                                  | Spec detail | REQ-F-009        | spec  |
+| パス中の特殊文字、CR (CRLF 入力) の扱い (files の行は変更せず CRLF を LF に変換、CR のみはエラー: REQ-F-001, REQ-F-017, REQ-C-009)                               | Spec detail | REQ-F-001, F-013 | spec  |
+| `**` が `/` を含まないセグメント内 (例: `a**b`) に現れた場合の扱い (Resolved in spec: DD-MAT-02)                                                                 | Spec detail | REQ-F-005        | spec  |
+| 不正なパターン (例: `!` のみの行) をエラーとするか (Resolved in spec: DR-14)                                                                                     | Spec detail | REQ-F-002        | spec  |
+| `files` に重複したパスがある場合、出力と `count` で重複を残すか、1 件にまとめるか (Resolved in spec: specifications-input.md 5 (重複を残す))                     | Spec detail | REQ-F-010, F-011 | spec  |
+| `?` の「1 文字」はバイト単位か、文字 (UTF-8 のコードポイント) 単位か (Resolved in spec: DD-MAT-05)                                                               | Spec detail | REQ-F-007        | spec  |
+| `*`・`**`・`?` の意味を GitHub Actions の `paths` フィルタ構文と一致させるか (パターンの記述順の扱いは DR-19) (Resolved in spec: specifications-matching.md 2.1) | Spec detail | REQ-F-005〜F-007 | spec  |
+| 照合方式: 正規表現への変換 (DR-02) と、`/` 区切りのセグメント単位照合の実装量・テスト容易性の比較                                                                | Impl detail | REQ-F-005〜F-009 | impl  |
+| 照合をファイルごとのループで行うか、`grep -E` などでまとめて行うか (入力順と REQ-F-001 の行の扱いを保てるか)                                                     | Impl detail | REQ-F-010        | impl  |
 
 ## 10. Traceability
 
-| REQ ID     | AC IDs                 | Type           |
-| ---------- | ---------------------- | -------------- |
-| REQ-F-001  | AC-001, AC-012, AC-014 | Functional     |
-| REQ-F-002  | AC-002, AC-003, AC-012 | Functional     |
-| REQ-F-003  | AC-001, AC-002, AC-003 | Functional     |
-| REQ-F-004  | AC-004                 | Functional     |
-| REQ-F-005  | AC-005                 | Functional     |
-| REQ-F-006  | AC-005                 | Functional     |
-| REQ-F-007  | AC-005                 | Functional     |
-| REQ-F-008  | AC-005                 | Functional     |
-| REQ-F-009  | AC-006                 | Functional     |
-| REQ-F-010  | AC-001, AC-012         | Functional     |
-| REQ-F-011  | AC-001, AC-004, AC-012 | Functional     |
-| REQ-F-012  | AC-007                 | Functional     |
-| REQ-F-013  | AC-008, AC-010         | Functional     |
-| REQ-F-014  | AC-009                 | Functional     |
-| REQ-F-015  | AC-011                 | Functional     |
-| REQ-F-016  | AC-013                 | Functional     |
-| REQ-F-017  | AC-015, AC-016         | Functional     |
-| REQ-F-018  | AC-017, AC-018         | Functional     |
-| REQ-NF-001 | N/A                    | Non-Functional |
-| REQ-NF-002 | N/A                    | Non-Functional |
-| REQ-C-001  | N/A                    | Constraint     |
-| REQ-C-002  | N/A                    | Constraint     |
-| REQ-C-003  | N/A                    | Constraint     |
-| REQ-C-004  | N/A                    | Constraint     |
-| REQ-C-005  | N/A                    | Constraint     |
-| REQ-C-006  | N/A                    | Constraint     |
-| REQ-C-007  | N/A                    | Constraint     |
-| REQ-C-008  | N/A                    | Constraint     |
-| REQ-C-009  | N/A                    | Constraint     |
+| REQ ID     | AC IDs                         | Type           |
+| ---------- | ------------------------------ | -------------- |
+| REQ-F-001  | AC-001, AC-012, AC-014         | Functional     |
+| REQ-F-002  | AC-002, AC-003, AC-012, AC-019 | Functional     |
+| REQ-F-003  | AC-001, AC-002, AC-003, AC-019 | Functional     |
+| REQ-F-004  | AC-004                         | Functional     |
+| REQ-F-005  | AC-005                         | Functional     |
+| REQ-F-006  | AC-005                         | Functional     |
+| REQ-F-007  | AC-005                         | Functional     |
+| REQ-F-008  | AC-005                         | Functional     |
+| REQ-F-009  | AC-006                         | Functional     |
+| REQ-F-010  | AC-001, AC-012                 | Functional     |
+| REQ-F-011  | AC-001, AC-004, AC-012         | Functional     |
+| REQ-F-012  | AC-007                         | Functional     |
+| REQ-F-013  | AC-008, AC-010                 | Functional     |
+| REQ-F-014  | AC-009                         | Functional     |
+| REQ-F-015  | AC-011                         | Functional     |
+| REQ-F-016  | AC-013                         | Functional     |
+| REQ-F-017  | AC-015, AC-016                 | Functional     |
+| REQ-F-018  | AC-017, AC-018                 | Functional     |
+| REQ-NF-001 | N/A                            | Non-Functional |
+| REQ-NF-002 | N/A                            | Non-Functional |
+| REQ-C-001  | N/A                            | Constraint     |
+| REQ-C-002  | N/A                            | Constraint     |
+| REQ-C-003  | N/A                            | Constraint     |
+| REQ-C-004  | N/A                            | Constraint     |
+| REQ-C-005  | N/A                            | Constraint     |
+| REQ-C-006  | N/A                            | Constraint     |
+| REQ-C-007  | N/A                            | Constraint     |
+| REQ-C-008  | N/A                            | Constraint     |
+| REQ-C-009  | N/A                            | Constraint     |
 
 ## 11. Change History
 
@@ -838,3 +860,5 @@ Owner が spec の項目は、spec で解決した。各行の括弧内に解決
 | 2026-10-27 | 1.2.0   | Apply impl second opinion: add line count limits for files (3000) and patterns (1000) (REQ-F-018, AC-017, DR-16)                                                                                                                                                                 |
 | 2026-10-27 | 1.3.0   | Add byte size limits (120000 bytes) for files and patterns to REQ-F-018, add AC-018 (DR-16)                                                                                                                                                                                      |
 | 2026-10-27 | 1.3.1   | Clarify REQ-C-006: library load guard variables are excepted from the main-only environment variable rule                                                                                                                                                                        |
+| 2026-10-29 | 1.4.0   | Change the keep rule to last match wins in input order, the first pattern decides unmatched files (REQ-F-002, REQ-F-003, REQ-F-004, AC-002, add AC-019, DR-19)                                                                                                                   |
+| 2026-10-29 | 1.5.0   | Lower the patterns line limit from 1000 to 100 to keep the matching time practical (REQ-F-018, AC-017, DR-16)                                                                                                                                                                    |

@@ -1,8 +1,8 @@
 ---
 title: "Implementation Plan: _ca-filter-files"
-based-on: specifications-index.md v1.3.2
+based-on: specifications-index.md v1.5.0
 status: approved
-version: 1.3.1
+version: 1.6.1
 created: "2026-10-27"
 ---
 
@@ -15,7 +15,7 @@ created: "2026-10-27"
 入力は `files` (必須) と `patterns` (任意、既定値は空文字列) とする。
 出力は `files` (保持行、入力順)、`count` (10 進整数文字列) の 2 つとする。
 純粋なフィルタであり、git とファイルシステムを参照しない (REQ-F-012)。
-評価順序は specifications-index.md §3.4 に従う。入力の検査・正規化 → パターンの分類 → 照合 → 出力先の検証 → files、count の書き出しの順とし、入力の検証をすべて終えてから出力先を検証する (DD-IDX-02)。
+評価順序は specifications-index.md §3.4 に従う。入力の検査・正規化 → パターン行の検査 → 照合 → 出力先の検証 → files、count の書き出しの順とし、入力の検証をすべて終えてから出力先を検証する (DD-IDX-02)。
 
 本計画の範囲は、Composite Action の作成と CI ジョブの追加までとする。`ca-get-changed-files` への組み込みは #134 の別タスクとする。
 
@@ -57,14 +57,14 @@ PR は 2 つに分ける。
   - resolve-sha は共有ライブラリを別 PR (#141) に分け、CI ジョブを後から (#144) 足した。
   - 本計画は、共有ライブラリを別 PR に分け、CI ジョブを最初から含める (REQ-C-008)。
 - Specifications:
-  - specifications-index.md v1.3.2
-  - specifications-input.md v1.3.1
-  - specifications-matching.md v1.0.4
-  - specifications-output.md v1.0.3
-- Requirements: requirements.md v1.3.1
-- Decision Records: decision-records.md v1.3.2
-  - DR-02、DR-04、DR-05、DR-06、DR-07、DR-08、DR-09
-  - DR-12、DR-13、DR-14、DR-15、DR-16、DR-17、DR-18
+  - specifications-index.md v1.5.0
+  - specifications-input.md v1.4.0
+  - specifications-matching.md v1.2.0
+  - specifications-output.md v1.1.1
+- Requirements: requirements.md v1.4.0
+- Decision Records: decision-records.md v2.0.0
+  - DR-02、DR-06、DR-07、DR-08、DR-09 (DR-04・DR-05 は DR-19 で置き換え)
+  - DR-12、DR-13、DR-14、DR-15、DR-16、DR-17、DR-18、DR-19
 
 ### 1.3 Design Decisions
 
@@ -92,10 +92,9 @@ PR は 2 つに分ける。
     `read` のループや、行ごとに外部コマンドを起動する方式は使わない。
   - コマンド置換の結果を受ける変数は `local` で先に宣言し、代入は別の行で行う (`local _x=$(fn)` は `fn` の終了コードを失うため。impl explore review A-04)。
   - データを stdout に出すのはコマンド置換の中だけとし、ログへ直接 echo しない (ファイル名によるワークフローコマンドの偽装を防ぐ)。
-  - CP は 1 パターン 1 行の `I<TAB>pattern` / `E<TAB>pattern` を出す。
-    種別は最初のタブより前 (`${_line%%$'\t'*}`)、パターンは最初のタブより後 (`${_line#*$'\t'}`) とし、パターン内のタブやバックスラッシュを変えない。
-  - CP の出力は MAIN が 1 行ずつ種別とパターンに分け、包含と除外の 2 つの LF 区切り文字列にして FF に渡す。FF のシグネチャ (module.md の「関数一覧」) は変えない (impl harden review GF-01)。
-  - FF は、各パターンの ERE を照合ループの前に 1 回だけ生成して配列に持ち、ループ内では Bash の組み込み機能 (`[[ =~ ]]`) だけを使う。
+  - CP (`check_patterns`) はパターン行を検査するだけで、stdout に何も出さない。終了コード (0 / 1) だけを返す (DR-19)。
+  - MAIN は、CP が 0 を返した後、PPT の結果 (`pattern` / `!pattern` の行、入力の順) をそのまま FF に渡す。包含と除外の分離や種別の付与はしない (DR-19。impl harden review GF-01 の「MAIN が分ける」方式と、`I<TAB>` / `E<TAB>` の分類済み一覧の方式を置き換える)。
+  - FF は、各パターンの種別と ERE を照合ループの前に 1 回だけ生成し、入力の順で配列に持つ。ループ内では Bash の組み込み機能 (`[[ =~ ]]`) だけを使う。パターン内のタブやバックスラッシュは変えない。
   - データの形の流れ (入口から出力まで):
 
     | 段階                                      | 形                                                                                        |
@@ -103,7 +102,7 @@ PR は 2 つに分ける。
     | `with:` の `files` / `patterns`           | 文字列。YAML のシーケンス (`- item`) は書けず、ブロックスカラー (`\|`) で 1 行 1 件       |
     | `action.yml` → スクリプト                 | `env:` 経由の環境変数。LF 区切りの 1 つの文字列 (末尾に LF が付き得る)                    |
     | MAIN → PFL / PPT                          | LF 区切りの文字列。PFL / PPT が行に分け、空行を捨てる (DR-08)                             |
-    | MAIN → FF (`<files> <include> <exclude>`) | LF 区切りの文字列 3 つ (末尾に LF なし、0 件は空文字列)                                   |
+    | MAIN → FF (`<files> <patterns>`)          | LF 区切りの文字列 2 つ (末尾に LF なし、0 件は空文字列)。patterns は PPT の結果そのまま   |
     | FF の中                                   | 入口で `mapfile -t` によって配列にし、1 件ずつ照合する                                    |
     | FF → 呼び出し側                           | stdout に `printf '%s\n'` で 1 行ずつ出し、コマンド置換で LF 区切りの文字列として受け取る |
     | EO → WMO                                  | 保持行を空でなければ `mapfile -t` で配列にし、`"${lines[@]}"` (1 引数 = 1 行) で渡す      |
@@ -129,8 +128,10 @@ PR は 2 つに分ける。
 
   - `**/` を変換した直後の位置は「`/` の直後」として扱い、続く `**` を改めて 2〜4 で判定する (`**/**`、`a/**/**/b`)。
   - 判定は `**` を `*` より先に行う (最長一致)。`***.sh` は `**` (4) と `*` (5) になる。
-- 除外の確定 (DR-05、R-MAT-011): 除外パターンに一致したファイルは、パターンの記述順によらずリストから除く。後のパターンでファイルを戻すことはできない。
-- 件数の上限 (DR-16、REQ-F-018): `filter-files.lib.sh` に readonly 定数 `FF_MAX_FILES=3000`・`FF_MAX_PATTERNS=1000` を置く。
+- 保持の判定 (DR-19、R-MAT-010〜R-MAT-013): パターンを記述順に適用し、ファイルに一致した最後のパターンで決める (包含なら残し、除外なら捨てる)。
+  どのパターンにも一致しなければ、先頭のパターンが除外なら残し、包含なら捨てる。パターンが 0 件なら全件を残す。
+  除外の後に書いた包含で、ファイルを戻せる (AC-019)。
+- 件数の上限 (DR-16、REQ-F-018): `filter-files.lib.sh` に readonly 定数 `FF_MAX_FILES=3000`・`FF_MAX_PATTERNS=100` を置く。
   CLL は空行を捨てた後の行数で判定し、上限ちょうどは受け付ける。
   エラーは `::error::files: exceeds the limit of 3000 lines (got: '3001')` の形式とする (DR-15。文言は下の「エラーの文言」)。
 - サイズの上限 (DR-16、REQ-F-018): readonly 定数 `FF_MAX_FILES_BYTES=120000`・`FF_MAX_PATTERNS_BYTES=120000` を置く。
@@ -142,14 +143,14 @@ PR は 2 つに分ける。
   2. CR (files) → CR (patterns)
   3. files 行 (UTF-8 → ダブルクオート) → patterns 行 (UTF-8)
   4. 件数の上限 (files → patterns)
-  5. パターンの分類 (`!` だけ → 空白で始まる除外)
+  5. パターン行の検査 (`!` だけ → 空白で始まる除外)
   6. 出力先の検証 → 書き出し
 - MAIN の関数の呼び出し順 (DR-14、specifications-index.md §3.4): 次の順に呼び、失敗したら以降を呼ばずに非 0 で終了する。
   1. CBL (files) → CBL (patterns)
   2. CLE (files) → CLE (patterns)
   3. PFL → PPT
   4. CLL (files、PFL の結果) → CLL (patterns、PPT の結果)
-  5. CP → 包含と除外への分離
+  5. CP (`check_patterns`)
   6. FF
   7. EO (`${GITHUB_OUTPUT:-}` と FF の結果を渡す)
 - エラーの文言 (DR-15、specifications-input.md §4、specifications-output.md §4):
@@ -157,7 +158,7 @@ PR は 2 つに分ける。
     キーは Rule ID とし、各関数はテーブルを参照して FE に渡す。関数の中に文言を直接書かない。
   - 英語の文言は、spec が定めているもの (R-IN-014〜R-IN-017 の `exceeds the limit of ...`) はそれに従い、それ以外はコーディング時に決める。
   - テーブルの値は完成した固定の文字列とする。printf の書式は使わない (値の `%` が書式として解釈されるのを防ぐため)。
-  - 上限の値 (3000・1000・120000) は文言に直接書かず、ライブラリの読み込み時に定数を展開して組み込む (`rs_error` の `_RS_MAX_COMMIT_COUNT` と同じ書き方)。
+  - 上限の値 (3000・100・120000) は文言に直接書かず、ライブラリの読み込み時に定数を展開して組み込む (`rs_error` の `_RS_MAX_COMMIT_COUNT` と同じ書き方)。
   - 実行時の値 (行・行数・パス) は、FE の `<value>` で渡す。
   - ユニットテストは、期待値をテーブルの参照で組み立てるか、文言の一部 (対象・値など) で照合する。文言をテストに重ねて書かない。
   - 対象と値は次のとおりとする (spec の規則で決まる部分)。
@@ -187,10 +188,10 @@ PR は 2 つに分ける。
   区切り文字は、`EOF`、`EOF_1`、`EOF_2` … のうち、行の引数のどれとも衝突しない最初の候補とする (R-OUT-010〜R-OUT-014)。引数不正は 1、書き込み失敗は 2 を返す。
 - 共有関数のテストは、`_libs/__tests__/unit/` に新規ファイルとして置く (`write-output.unit.spec.sh` が手本)。
   ファイル名は `validate-output-file.unit.spec.sh`・`write-multiline-output.unit.spec.sh` の 2 つとする。
-- UTF-8 の検査方式 (`iconv` か、`C.UTF-8` での `grep -ax '.*'` か) は、PFL のタスクで決め、PPT も同じ方式を使う。選ぶ方式は次をすべて満たす (impl harden review W-01)。
+- UTF-8 の検査は、RFC 3629 の表に従う ERE (`_FF_UTF8_RE`、読み込み時に 1 回だけ作る) で、関数内の `local LC_ALL=C` (バイト単位) のもとで各行を `[[ =~ ]]` で照合する。PFL と PPT は同じ方式を使う。この方式は次をすべて満たす (impl harden review W-01)。
   - 行ごとに外部コマンドを起動しない
   - 最初の不正な行を特定し、FE に値として渡せる (R-IN-010)
-  - ロケールは `C.UTF-8` だけを前提にする (specifications-index.md §2.2)
+  - ロケールは `C` と `C.UTF-8` 以外を前提にしない (specifications-index.md §2.2)
 - PFL の検査順 (DR-14、impl second opinion): ファイル行は 1 行ずつ UTF-8、ダブルクオートの順に判定した結果と同じ 1 件を報告する。
   UTF-8 を一括で検査する場合は、最初の不正な UTF-8 行と、最初のダブルクオートを含む行の行番号を比べ、前にある方を報告する。同じ行なら UTF-8 のエラーとする。
 - `module.md` は `workspaces/module/module.md` に置く。`test_scope` (FF)、`owns`、「関数一覧」は記入済みである。
@@ -204,12 +205,14 @@ PR は 2 つに分ける。
 - 関数の中のコマンドの失敗は、`set -e` に頼らず `|| return 1` で呼び出し元へ返す。`if` の条件や `||` の左辺など、`set -e` が効かない文脈で呼ばれても失敗が伝わるようにする (impl second opinion)。
 - CBL: `check_byte_limit <target> <text> <max>`。バイト数が max を超えれば FE でエラーを出して 1 を返す。
 - CLL: `check_line_limit <target> <lines> <max>`。行数が max を超えれば FE でエラーを出して 1 を返す。
-- CP: `!` で始まる行を除外、それ以外を包含に分類する。パターンが 0 件の場合の扱い (全件) は FF が担う (R-IN-007)。
-  - 先頭の `!` は 1 つだけ除く。`!!a.sh` は除外パターン `!a.sh` になる (R-IN-004)。
-  - `!` を除いた残りは、再び空白を除去しない (DD-IN-02)。残りが空ならエラー (R-IN-005)、空白で始まればエラー (R-IN-009) とし、行ごとにこの順で判定する。
-  - ダブルクオートは文字として残す (R-IN-008)。
+- CP: `check_patterns <lines>`。`!` で始まる行を検査し、不正なら FE でエラーを出して 1 を返す。正しければ 0 を返す。stdout には何も出さない (DR-19)。
+  - パターンが 0 件の場合は 0 を返す。全件を残す扱いは FF が担う (R-IN-007、R-MAT-010)。
+  - `!` を 1 つ除いた残りは、再び空白を除去しない (DD-IN-02)。残りが空ならエラー (R-IN-005)、空白で始まればエラー (R-IN-009) とし、行ごとにこの順で判定する。
+  - `!!a.sh` は正しい行とする (除外パターン `!a.sh`。R-IN-004)。ダブルクオートを含む行も正しい行とする (R-IN-008)。
 - GTR: 上の「glob の変換順」の表で変換し、全体一致のアンカーを付ける。ブラケットはリテラルとして扱う (R-MAT-008)。
-- FF: 除外を優先し、包含が 0 件なら全件を対象にする。入力順と重複を保つ。
+- FF: `filter_files <files> <patterns>`。上の「保持の判定」に従い、入力順と重複を保つ。
+  - 照合ループの前に、各パターン行の種別 (`!` で始まれば除外) と ERE を、入力の順で配列に持つ。除外は先頭の `!` を 1 つだけ除いてから GTR で変換する (`!!a.sh` は `!a.sh` を除外する)。
+  - ファイルごとに最後のパターンから先頭へ照合し、最初に一致したパターンの種別で決める。どれにも一致しなければ、先頭のパターンの種別で決める。
   - シェルのオプションに結果が依存しない (R-MAT-009、REQ-NF-002)。`[[ =~ ]]` は `nocasematch` の影響を受ける。
   - そのため本体をサブシェル `filter_files() ( ... )` で書き、その中で `shopt -u nocasematch` と `LC_ALL=C.UTF-8` を設定する。呼び出し元のオプションとロケールは変わらない。
   - `globstar` / `extglob` / `nocaseglob` はパス名展開にだけ効く。変数は常にクオートし、パス名展開を起こさない。
@@ -279,14 +282,14 @@ Phase 1 の開始前、全テストを 1 回実行して結果をベースライ
 
 - CBL と定数 `FF_MAX_FILES_BYTES`・`FF_MAX_PATTERNS_BYTES` (120000) を追加する (R-IN-016、R-IN-017)
   - 日本語を含む値を、文字数ではなくバイト数で数えることをテストする
-- CLL と定数 `FF_MAX_FILES` (3000)・`FF_MAX_PATTERNS` (1000) を追加する (R-IN-014、R-IN-015)
+- CLL と定数 `FF_MAX_FILES` (3000)・`FF_MAX_PATTERNS` (100) を追加する (R-IN-014、R-IN-015)
 - どちらも上限ちょうどは受け付け、超えたらエラーにする
 - T-FF-CBL-*、T-FF-CLL-*
 
-#### Commit 5: feat(filter-files): add classify_patterns
+#### Commit 5: feat(filter-files): add check_patterns
 
-- CP を追加する (R-IN-004〜R-IN-009)
-- `I<TAB>` / `E<TAB>` を stdout に出力する
+- CP (`check_patterns`) を追加する (R-IN-004〜R-IN-009)
+- 検査だけを行い、stdout には何も出さない。正しい入力では 0 を返し、stdout が空であることをテストする (DR-19)
 - `!` だけの行と、空白で始まる除外をエラーにする
 - `!!a.sh`、`!` の後のタブ、ダブルクオートを含むパターンをテストする (specifications-input.md §5)
 - T-FF-CP-*
@@ -303,7 +306,9 @@ Phase 1 の開始前、全テストを 1 回実行して結果をベースライ
 #### Commit 2: feat(filter-files): add filter_files
 
 - FF を追加する (R-MAT-010〜R-MAT-013)
-- 除外を優先し、包含が 0 件なら全件とし、入力順と重複を保つ
+- 最後に一致したパターンで決め、どれにも一致しなければ先頭のパターンで決める。パターンが 0 件なら全件とし、入力順と重複を保つ (DR-19)
+- パターンは PPT の結果 (`pattern` / `!pattern` の行、入力の順) を 1 つの引数で受け取る
+- パターンの順序で結果が変わること、除外の後の包含でファイルを戻せること、先頭が除外なら一致しないファイルを残すことをテストする
 - 本体をサブシェルで書き、`shopt -u nocasematch` と `LC_ALL=C.UTF-8` を設定する
 - `shopt -s globstar extglob nocasematch nocaseglob` を有効にしたテストを書く (REQ-NF-002、specifications-matching.md §5 の impl-note)
   - 結果が変わらないこと
@@ -328,21 +333,22 @@ Phase 1 の開始前、全テストを 1 回実行して結果をベースライ
 #### Commit 2: feat(filter-files): add filter-files.sh entry script
 
 - MAIN (`scripts/filter-files.sh`) を追加する。環境変数を読む唯一の箇所とし、1.3 の「MAIN の関数の呼び出し順」で関数を呼ぶ
-- CP の出力を包含と除外に分けて FF に渡す (1.3 の受け渡し形式)
+- `check_patterns "$_patterns" || return 1` の後、PPT の結果をそのまま FF へ渡す (`filter_files "$_files" "$_patterns"`。1.3 の受け渡し形式、DR-19)
 - 次の書き方は `_ca-resolve-sha/scripts/resolve-sha.sh` に合わせる (REQ-C-006)
   - `set -euo pipefail`、ライブラリの読み込み、`(return 0 2>/dev/null)` の main ガード
-- T-FF-MAINF-* (functional): AC-001〜AC-018 を検証する
+- T-FF-MAINF-* (functional): AC-001〜AC-019 を検証する
   - specifications-index.md §5 の横断的なエッジケースも検証する
     - 不正なパターンがあり、出力先も使えない → パターンのエラーで終了する (DD-IDX-02)
     - `files` が未指定 (空) → 0 件で正常終了する
     - `files` が 0 行で、不正なパターンがある → パターンのエラーで終了する
     - `files` が `"a\nb.sh"` → ダブルクオートのエラーで終了する
   - 検査が複数当たる入力で、呼び出し順 (1.3) のとおり最初の 1 件だけが報告されることを確かめる
-- 上限ちょうどの入力 (files 3000 行・patterns 1000 行、バイト数の上限以内) で、実機で実行時間を測り、PR に記録する (impl explore review G-01)
+- 上限ちょうどの入力 (files 3000 行・patterns 100 行、バイト数の上限以内) で、実機で実行時間を測り、PR に記録する (impl explore review G-01)
   - 負荷の条件として、全パターンが一致しない場合、長いパターン、`**` を繰り返すパターンも測る (impl second opinion)
   - 実用的な速度に収まらない場合は、`FF_MAX_PATTERNS` を下げる。目標の時間と新しい上限は、計測結果を見てユーザーが決める
   - 上限を下げる場合は、まず次の文書を改訂する: requirements (REQ-F-018)、decision-records (DR-16)、specifications-input (R-IN-015、DD-IN-10)
   - その後で定数とテスト (T-FF-CLL-*、T-FF-MAINF-*) を更新する。PR-B のマージ前に済ませる
+  - 計測結果 (Git Bash、3000 ファイル、全パターンが一致しない場合): 1000 パターンで約 26 秒、100 パターンで約 2.8 秒。ユーザーの判断で `FF_MAX_PATTERNS` を 100 に下げた (DR-16)
 
 ### Phase 6: Action Definition and CI (PR-B)
 
@@ -387,3 +393,7 @@ Phase 1 の開始前、全テストを 1 回実行して結果をベースライ
 | 2026-10-27 | 1.2.3   | Fix working branch name                                                                                                                                                                                                                                                                                                                                                                                    |
 | 2026-10-27 | 1.3.0   | Change WMO to one line per argument (DR-13), EO passes kept lines as an array via mapfile                                                                                                                                                                                                                                                                                                                  |
 | 2026-10-27 | 1.3.1   | Document the data shape flow from action inputs to outputs, unrepresentable data, line handling, size limits, multi-line test literals                                                                                                                                                                                                                                                                     |
+| 2026-10-29 | 1.4.0   | filter_files takes the classify_patterns result as one argument and splits include and exclude itself; MAIN no longer splits it (DR-19)                                                                                                                                                                                                                                                                    |
+| 2026-10-29 | 1.5.0   | Follow DR-19: last match wins keep rule with the first pattern deciding unmatched files, classify_patterns becomes check_patterns (no stdout), MAIN passes pattern lines to filter_files as is, refresh references                                                                                                                                                                                         |
+| 2026-10-29 | 1.6.0   | Follow DR-16: lower FF_MAX_PATTERNS from 1000 to 100, record the measured matching time                                                                                                                                                                                                                                                                                                                    |
+| 2026-10-29 | 1.6.1   | Record the chosen UTF-8 check: a Bash ERE (_FF_UTF8_RE) under a function-local LC_ALL=C                                                                                                                                                                                                                                                                                                                    |
