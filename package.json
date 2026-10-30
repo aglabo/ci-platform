@@ -13,6 +13,7 @@
   "scripts": {
     "prepare": "bash ./scripts/setup-dev-env.sh",
     "scan:secrets": "concurrently \"betterleaks protect --config ./configs/betterleaks.toml\" \"secretlint --secretlintrc ./configs/secretlint.config.yaml .\"",
+    "scan:secrets:history": "betterleaks git . --config ./configs/betterleaks.toml --verbose",
     "check:dprint": "dprint check --list-different",
     "check:dprint:diff": "dprint check",
     "format:dprint": "dprint fmt",
@@ -22,6 +23,7 @@
     "lint:gha": "concurrently \"pnpm run lint:gha:actions\" \"pnpm run lint:gha:workflows\"",
     "lint:gha:actions": "bash runners/run-actionlint.sh ",
     "lint:gha:workflows": "concurrently \"pnpm exec ghalint run --config ./configs/ghalint.yaml\" \"pnpm exec ghalint act --config ./configs/ghalint.yaml\"",
+    "lint:gha:act": "pnpm exec ghalint act --config ./configs/ghalint.yaml",
     "lint:spells": "cspell --config .vscode/cspell.json --cache --cache-location .cache/cspell/cSpellCache ",
     "lint:text": "bash runners/run-textlint.sh ",
     "lint:markdown": "bash runners/run-markdownlint.sh ",
