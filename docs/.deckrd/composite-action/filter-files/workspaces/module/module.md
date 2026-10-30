@@ -24,8 +24,8 @@ spec と impl はこの一覧を参照し、関数名・シグネチャ・所在
 | VOF          | `validate_output_file <file>`                     | `.github/actions/_libs/output.lib.sh`                | specifications-output.md     |
 | WMO          | `write_multiline_output <file> <key> [<line>...]` | `.github/actions/_libs/output.lib.sh`                | specifications-output.md     |
 | FE           | `ff_error <target> <problem> [<value>]`           | `_ca-filter-files/scripts/_libs/filter-files.lib.sh` | specifications-index.md §3.3 |
-| CBL          | `check_byte_limit <target> <text> <max>`          | 同上                                                 | specifications-input.md      |
-| CLE          | `check_line_endings <target> <text>`              | 同上                                                 | specifications-input.md      |
+| CBL          | `check_byte_limit <target> <text> <max>`          | `.github/actions/_libs/validation.lib.sh`            | specifications-input.md      |
+| CLE          | `check_line_endings <target> <text>`              | `_ca-filter-files/scripts/_libs/filter-files.lib.sh` | specifications-input.md      |
 | PFL          | `parse_filelist <text>`                           | 同上                                                 | specifications-input.md      |
 | PPT          | `parse_patterns <text>`                           | 同上                                                 | specifications-input.md      |
 | CLL          | `check_line_limit <target> <lines> <max>`         | 同上                                                 | specifications-input.md      |
@@ -56,7 +56,7 @@ spec と impl はこの一覧を参照し、関数名・シグネチャ・所在
 | CLE   | check_line_endings (_ca-filter-files/scripts/_libs/filter-files.lib.sh) |
 | PFL   | parse_filelist (_ca-filter-files/scripts/_libs/filter-files.lib.sh)     |
 | PPT   | parse_patterns (_ca-filter-files/scripts/_libs/filter-files.lib.sh)     |
-| CBL   | check_byte_limit (_ca-filter-files/scripts/_libs/filter-files.lib.sh)   |
+| CBL   | check_byte_limit (.github/actions/_libs/validation.lib.sh)              |
 | CLL   | check_line_limit (_ca-filter-files/scripts/_libs/filter-files.lib.sh)   |
 | CP    | check_patterns (_ca-filter-files/scripts/_libs/filter-files.lib.sh)     |
 | GTR   | glob_to_regex (_ca-filter-files/scripts/_libs/filter-files.lib.sh)      |

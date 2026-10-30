@@ -1,8 +1,8 @@
 ---
 title: "Implementation Plan: _ca-filter-files"
-based-on: specifications-index.md v1.5.0
+based-on: specifications-index.md v1.6.1
 status: approved
-version: 1.6.1
+version: 1.7.1
 created: "2026-10-27"
 ---
 
@@ -47,7 +47,7 @@ PR は 2 つに分ける。
 - テストを追加したコミットでは、テスト ID の機械検査 B / D を実行する。検査 A / C は、PR-A の最後 (Phase 1 の後) と PR-B の最後 (Phase 6 の後) に実行する。
 - 内部シンボルは先頭アンダースコアで区別する。
 - 環境変数を読むのは MAIN だけとし、`${VAR:-}` の形で読む (REQ-C-006)。
-  ライブラリのロードガード変数 (`*_LIB_LOADED`) は例外とし、Phase 2 の `declare -F` による関数の存在確認と組み合わせる。
+  ライブラリのロードガード変数 (`*_LIB_LOADED`) は例外とする。ガード変数は判定直後に設定し、共有ライブラリの読み込みに失敗したら 1 を返す。
 - 失敗系のテストは、`set -e` が効かない文脈 (ShellSpec の `When call`) で終了コードとエラー出力を確認する。関数内のコマンドの失敗が、`set -e` なしでも呼び出し元へ返ることを確かめるため (impl second opinion)。
 
 ### 1.2 Reference
@@ -254,6 +254,7 @@ Phase 1 の開始前、全テストを 1 回実行して結果をベースライ
 #### Commit 1: feat(filter-files): add library skeleton and ff_error
 
 - `filter-files.lib.sh` の骨格を作る (ロードガード、`output.lib.sh` の読み込み、`declare -F` による関数の存在確認)
+  - v1.7.0 で `declare -F` による関数の存在確認は廃止した (requirements.md v1.6.0 REQ-C-006)
 - FE を追加する。specifications-index.md §3.3 の形式、空値の形式、`%` / CR / LF のエンコードに対応する
 - エラーメッセージテーブル (キーは Rule ID) の枠を作る。各規則の文言は、その規則を担う関数のコミットで追加する
 - T-FF-FE-* (ロードガードのテストを含む)
@@ -397,3 +398,5 @@ Phase 1 の開始前、全テストを 1 回実行して結果をベースライ
 | 2026-10-29 | 1.5.0   | Follow DR-19: last match wins keep rule with the first pattern deciding unmatched files, classify_patterns becomes check_patterns (no stdout), MAIN passes pattern lines to filter_files as is, refresh references                                                                                                                                                                                         |
 | 2026-10-29 | 1.6.0   | Follow DR-16: lower FF_MAX_PATTERNS from 1000 to 100, record the measured matching time                                                                                                                                                                                                                                                                                                                    |
 | 2026-10-29 | 1.6.1   | Record the chosen UTF-8 check: a Bash ERE (_FF_UTF8_RE) under a function-local LC_ALL=C                                                                                                                                                                                                                                                                                                                    |
+| 2026-10-31 | 1.7.0   | Follow specifications-index v1.6.0: set the load guard first, return 1 on a failed shared library load, drop the declare -F check                                                                                                                                                                                                                                                                          |
+| 2026-10-31 | 1.7.1   | Follow specifications-index v1.6.1 (CBL lives in the shared _libs/validation.lib.sh)                                                                                                                                                                                                                                                                                                                       |

@@ -9,6 +9,7 @@
 
 # shellcheck shell=bash
 # shellcheck disable=SC2034,SC2154
+# cspell:words dirx axxb
 
 # Test suite for filter-files.lib.sh
 # Module: composite-action/filter-files (test_scope FF)
@@ -1941,11 +1942,12 @@ Describe 'filter-files.lib.sh'
   # outputs, in this order.
   # Assigned test IDs: T-FF-EO-01 .. T-FF-EO-13
   # Steps: validate_output_file returning 1 is reported as the empty form of a
-  # GITHUB_OUTPUT error and returning 2 as a GITHUB_OUTPUT error with the path
-  # as the value, both without writing anything; then files is written with
-  # write_multiline_output (one argument per kept line); then count is written
-  # with write_output. A failed write stops with an error naming that output
-  # key, and files already written is left in place.
+  # GITHUB_OUTPUT error and returning 2 as the GITHUB_OUTPUT "is not a
+  # writable file" error with the path as the value, both without writing
+  # anything; then files is written with write_multiline_output (one argument
+  # per kept line); then count is written with write_output. A failed write
+  # stops with the "failed to write" error naming that output key with the
+  # path as the value, and files already written is left in place.
   # Scenarios: files and count; no kept lines; an output file that cannot be
   #            written; boundaries of the values and of the output file.
   # Every example uses the output file and directory in the temp dir created
@@ -1988,12 +1990,15 @@ Describe 'filter-files.lib.sh'
       End
     End
 
-    # 異常系: EO-05 an empty output file path is reported in the empty form;
-    # EO-06 a directory as the output file is reported with its path and
-    # nothing is created inside it; EO-07 an output file whose parent
-    # directory does not exist is reported as a GITHUB_OUTPUT error;
-    # EO-08 a failed files write is reported and count is not written;
-    # EO-09 a failed count write is reported and files is left in place
+    # 異常系: each error is checked as the exact single stderr line.
+    # EO-05 an empty output file path is reported in the empty form;
+    # EO-06 a directory as the output file is reported as "is not a writable
+    # file" with its path and nothing is created inside it; EO-07 an output
+    # file whose parent directory does not exist is reported the same way;
+    # EO-08 a failed files write is reported as "files: failed to write" with
+    # the path and count is not written; EO-09 a failed count write is
+    # reported as "count: failed to write" with the path and files is left
+    # in place
     Context 'When: 異常系'
       It '[Error] T-FF-EO-05: 出力先が空ならエラー'
         When call emit_outputs '' a.sh
@@ -2006,8 +2011,7 @@ Describe 'filter-files.lib.sh'
         When call _eo_run_into_dir "$_eo_dir" a.sh
         The status should equal 1
         The output should equal ''
-        The stderr should start with '::error::GITHUB_OUTPUT:'
-        The stderr should include "(got: '${_eo_dir}')"
+        The stderr should equal "::error::GITHUB_OUTPUT: is not a writable file (got: '${_eo_dir}')"
         The variable _eo_dir_entries should equal 0
       End
 
@@ -2015,15 +2019,14 @@ Describe 'filter-files.lib.sh'
         When call emit_outputs "${_eo_tmpdir}/no-such-dir/out" a.sh
         The status should equal 1
         The output should equal ''
-        The stderr should start with '::error::GITHUB_OUTPUT:'
+        The stderr should equal "::error::GITHUB_OUTPUT: is not a writable file (got: '${_eo_tmpdir}/no-such-dir/out')"
       End
 
       It '[Error] T-FF-EO-08: files の書き込みに失敗したら count を書かない'
         When call _eo_run_with_failing_wmo "$_eo_file" a.sh
         The status should equal 1
         The output should equal ''
-        The stderr should start with '::error::files:'
-        The stderr should include "(got: '${_eo_file}')"
+        The stderr should equal "::error::files: failed to write (got: '${_eo_file}')"
         The contents of file "$_eo_file" should not include 'count='
         The contents of file "$_eo_file" should not include 'files<<'
       End
@@ -2032,8 +2035,7 @@ Describe 'filter-files.lib.sh'
         When call _eo_run_with_failing_wo "$_eo_file" a.sh
         The status should equal 1
         The output should equal ''
-        The stderr should start with '::error::count:'
-        The stderr should include "(got: '${_eo_file}')"
+        The stderr should equal "::error::count: failed to write (got: '${_eo_file}')"
         The contents of file "$_eo_file" should include 'files<<EOF'
         The contents of file "$_eo_file" should not include 'count='
       End

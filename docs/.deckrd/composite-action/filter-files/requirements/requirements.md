@@ -2,7 +2,7 @@
 title: "Requirements: _ca-filter-files"
 module: "composite-action/filter-files"
 status: approved
-version: 1.5.0
+version: 1.6.0
 created: "2026-10-27"
 ---
 
@@ -562,7 +562,8 @@ Action 名は `_` プレフィックス (`_ca-filter-files`) とし、内部専�
 - ライブラリのロードガードを持つ。
 - 直接実行されたときだけ main を実行する。source との判別は `_ca-resolve-sha` に合わせ `(return 0 2>/dev/null)` で行う。
 - 環境変数を読むのは main のみとする。ただし、ライブラリが自身で設定するロードガード変数 (`*_LIB_LOADED`) は除く。
-  ロードガードにより読み込みが省かれた場合に備え、依存する関数が定義されていることを `declare -F` で確認する。
+  ガード変数はガードの判定直後に設定する。依存ライブラリの読み込みに失敗したら 1 を返してアクションを失敗させ、ガード変数の解除や再試行は考慮しない。
+  ガード変数が設定済みなら、そのライブラリと依存ライブラリの関数・定数は最初の読み込みで定義済みとみなし、`declare -F` による依存関数の確認は行わない。
 - エラーは `::error::` を stderr に出力して非ゼロで終了する。
 - 出力先の検証と出力の書き出しは、共有ライブラリ `.github/actions/_libs/output.lib.sh` の関数 (出力先の検証関数、`write_output`、`write_multiline_output`) で行う。
 
@@ -862,3 +863,4 @@ Owner が spec の項目は、spec で解決した。各行の括弧内に解決
 | 2026-10-27 | 1.3.1   | Clarify REQ-C-006: library load guard variables are excepted from the main-only environment variable rule                                                                                                                                                                        |
 | 2026-10-29 | 1.4.0   | Change the keep rule to last match wins in input order, the first pattern decides unmatched files (REQ-F-002, REQ-F-003, REQ-F-004, AC-002, add AC-019, DR-19)                                                                                                                   |
 | 2026-10-29 | 1.5.0   | Lower the patterns line limit from 1000 to 100 to keep the matching time practical (REQ-F-018, AC-017, DR-16)                                                                                                                                                                    |
+| 2026-10-31 | 1.6.0   | Change the REQ-C-006 load guard policy: set the guard first, fail the action on a failed library load, drop the declare -F dependency check                                                                                                                                      |

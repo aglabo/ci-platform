@@ -92,7 +92,7 @@ _EO_VALUE_LF=$'a\nb'
 _EO_VALUE_CR=$'a\rb'
 # Known resolution followed by a trailing LF, rejected before the first write; used by T-RS-EO-13
 _EO_RESOLUTION_LF=$'event\n'
-# Path of resolve-sha.lib.sh, sourced in a fresh bash process; used by T-RS-RLG-01 .. T-RS-RLG-07
+# Path of resolve-sha.lib.sh, sourced in a fresh bash process; used by T-RS-RLG-01 .. T-RS-RLG-04
 _RLG_LIB_PATH="${SHELLSPEC_PROJECT_ROOT}/.github/actions/_ca-resolve-sha/scripts/_libs/resolve-sha.lib.sh"
 # Directory name (under GF_TMP_ROOT) of the throwaway repository used as the cwd
 # when a fixture is called with an empty path; used by T-RS-GF-01 .. T-RS-GF-04
@@ -858,8 +858,7 @@ _rlg_resource_lib_in_fresh_shell() {
 # Copy resolve-sha.lib.sh alone to ${GF_TMP_ROOT}/action/scripts/_libs/, where
 # its relative path ../../../_libs/ resolves to ${GF_TMP_ROOT}/_libs/, which
 # does not exist (so neither shared library can be found); used by
-# _rlg_source_isolated_copy and _rlg_resource_isolated_copy
-# (T-RS-RLG-03, T-RS-RLG-07).
+# _rlg_source_isolated_copy (T-RS-RLG-03).
 # Requires: gf_setup has been called (BeforeEach).
 # @stdout the path of the copy as one line
 # @return 0 on success, 1 when the directory cannot be created or the copy fails
@@ -889,51 +888,6 @@ _rlg_source_isolated_copy() {
     . "$1"
   ' _ "$_copy"
 }
-
-##
-# Copy resolve-sha.lib.sh alone into GF_TMP_ROOT (with _rlg_copy_lib_alone)
-# and source the copy twice in a fresh bash process, tolerating the
-# first failure with `|| true`; used by the load guard group (T-RS-RLG-07).
-# The stderr of the first source is discarded, so stderr only shows the second.
-# RESOLVE_SHA_LIB_LOADED, VALIDATION_LIB_LOADED and OUTPUT_LIB_LOADED are unset
-# before sourcing.
-# Requires: gf_setup has been called (BeforeEach).
-# @stdout whatever the second source writes to stdout
-# @stderr whatever the second source writes to stderr
-# @return exit status of the second source of the copy
-_rlg_resource_isolated_copy() {
-  local _copy
-  _copy="$(_rlg_copy_lib_alone)" || return 1
-  bash -c '
-    unset RESOLVE_SHA_LIB_LOADED VALIDATION_LIB_LOADED OUTPUT_LIB_LOADED
-    . "$1" 2>/dev/null || true
-    . "$1"
-  ' _ "$_copy"
-}
-
-##
-# Source resolve-sha.lib.sh in a fresh bash process where the load guard of one
-# shared library is already exported (as if inherited from the job
-# environment) although that library has not been loaded; used by the load
-# guard group (T-RS-RLG-05, T-RS-RLG-06). RESOLVE_SHA_LIB_LOADED,
-# VALIDATION_LIB_LOADED and OUTPUT_LIB_LOADED are unset first, then <guard> is
-# exported as 1.
-# @arg $1 guard — shared library guard variable to export
-#                 (VALIDATION_LIB_LOADED or OUTPUT_LIB_LOADED)
-# @stdout "loaded=<RESOLVE_SHA_LIB_LOADED>" as one line
-# @stderr whatever the source writes to stderr
-# @return exit status of the source
-_rlg_source_lib_with_inherited_guard() {
-  bash -c '
-    unset RESOLVE_SHA_LIB_LOADED VALIDATION_LIB_LOADED OUTPUT_LIB_LOADED
-    export "$2=1"
-    . "$1"
-    _source_status=$?
-    echo "loaded=${RESOLVE_SHA_LIB_LOADED:-}"
-    exit "$_source_status"
-  ' _ "$_RLG_LIB_PATH" "$1"
-}
-
 
 ##
 # BeforeEach of the git-fixture group (T-RS-GF-01 .. T-RS-GF-05): create the
@@ -1024,7 +978,7 @@ _gfg_leaky_setup() {
 #                    T-RS-VOV-01 .. T-RS-VOV-18, T-RS-IPC-01 .. T-RS-IPC-14,
 #                    T-RS-IC-01 .. T-RS-IC-07, T-RS-VC-01 .. T-RS-VC-06,
 #                    T-RS-RHN-01 .. T-RS-RHN-17, T-RS-RSH-01 .. T-RS-RSH-39,
-#                    T-RS-EO-01 .. T-RS-EO-19, T-RS-RLG-01 .. T-RS-RLG-07
+#                    T-RS-EO-01 .. T-RS-EO-19, T-RS-RLG-01 .. T-RS-RLG-04
 Describe 'resolve-sha.lib.sh'
   ##
   # rs_error: emit one "::error::" annotation line to stderr, in the normal form
@@ -2343,17 +2297,13 @@ Describe 'resolve-sha.lib.sh'
   # validation.lib.sh and output.lib.sh. Every example sources the library in a
   # fresh bash process (via the _rlg_* helpers), because the spec shell has
   # already loaded it via Include.
-  # Assigned test IDs: T-RS-RLG-01 .. T-RS-RLG-07
+  # Assigned test IDs: T-RS-RLG-01 .. T-RS-RLG-04
   # Scenarios: the first source returns 0, sets the guard to 1 and defines the
   #            library's own functions (rs_error) and those of the shared
   #            libraries (validate_positive_int); a second source returns 0
   #            with empty stderr; a missing shared library (validation.lib.sh)
-  #            makes the source fail, and a failed source leaves the guard
-  #            unset so a retry fails too; an inherited shared library guard
-  #            (OUTPUT_LIB_LOADED / VALIDATION_LIB_LOADED) that leaves a
-  #            required function undefined makes the source fail naming it;
-  #            a preset guard makes the source return 0 early without defining
-  #            the library's functions.
+  #            makes the source fail; a preset guard makes the source return 0
+  #            early without defining the library's functions.
   Describe 'load guard'
     # 正常系: the first source in a fresh process sets the guard and defines the functions
     Context 'When: 正常系'
@@ -2373,33 +2323,13 @@ Describe 'resolve-sha.lib.sh'
       End
     End
 
-    # 異常系: a shared library or function is missing, so loading must fail instead of continuing
+    # 異常系: a shared library is missing, so loading must fail instead of continuing
     Context 'When: 異常系'
       BeforeEach 'gf_setup'
       AfterEach 'gf_cleanup'
 
       It '[Error] T-RS-RLG-03: validation.lib.sh が見つからなければ読み込みを失敗させる'
         When call _rlg_source_isolated_copy
-        The status should not equal 0
-        The stderr should include 'validation.lib.sh'
-      End
-
-      It '[Error] T-RS-RLG-05: OUTPUT_LIB_LOADED が継承されていれば write_output 未定義で読み込みを失敗させる'
-        When call _rlg_source_lib_with_inherited_guard OUTPUT_LIB_LOADED
-        The status should not equal 0
-        The output should equal 'loaded='
-        The stderr should include 'write_output'
-      End
-
-      It '[Error] T-RS-RLG-06: VALIDATION_LIB_LOADED が継承されていれば validate_positive_int 未定義で読み込みを失敗させる'
-        When call _rlg_source_lib_with_inherited_guard VALIDATION_LIB_LOADED
-        The status should not equal 0
-        The output should equal 'loaded='
-        The stderr should include 'validate_positive_int'
-      End
-
-      It '[Error] T-RS-RLG-07: 失敗した読み込みはガード変数を設定せず 2 回目の読み込みも失敗する'
-        When call _rlg_resource_isolated_copy
         The status should not equal 0
         The stderr should include 'validation.lib.sh'
       End
