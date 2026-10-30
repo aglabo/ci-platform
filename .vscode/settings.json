@@ -8,6 +8,12 @@
   },
   "markdownlint.configFile": "configs/.markdownlint.yaml",
 
+  // ShellCheck
+  // Use the same rcfile as runners/run-shellcheck.sh; the relative path is
+  // resolved from the workspace root.
+  "shellcheck.useWorkspaceRootAsCwd": true,
+  "shellcheck.customArgs": ["--rcfile=configs/shellcheckrc"],
+
   // YAML
   // Composite action files must not be validated against the workflow schema,
   // which requires `on`/`jobs` and rejects `inputs`/`runs`.
