@@ -3,7 +3,7 @@ title: "Implementation Tasks"
 module: "composite-action/filter-files"
 status: Active
 created: "2026-10-27 17:18:46"
-source: specifications-index.md v1.5.0, implementation.md v1.6.0
+source: specifications-index.md v1.6.1, implementation.md v1.7.1
 ---
 
 <!-- textlint-disable ja-technical-writing/sentence-length -->
@@ -392,7 +392,7 @@ source: specifications-index.md v1.5.0, implementation.md v1.6.0
   - Target: `filter-files.lib.sh`
   - Test ID: T-FF-FE-08
   - Scenario: Given `filter-files.lib.sh` だけを、相対パスの `output.lib.sh` が存在しない一時ディレクトリに複製する, When 複製を source する
-  - Expected: Then 終了コードは 0 以外である (`declare -F` による依存関数の確認、fail-first)
+  - Expected: Then 終了コードは 0 以外である (共有ライブラリの読み込み失敗で 1 を返す、fail-first)
 
 ### [エッジケース] Edge Cases
 
@@ -1488,25 +1488,25 @@ source: specifications-index.md v1.5.0, implementation.md v1.6.0
   - Target: `emit_outputs`
   - Test ID: T-FF-EO-06
   - Scenario: Given 出力先が既存のディレクトリ, When `emit_outputs "$dir" a.sh` を呼ぶ
-  - Expected: Then 終了コードは 1 で、stderr は `::error::GITHUB_OUTPUT:` で始まり `(got: '<dir>')` を含み、ディレクトリ内に何も作られない (R-OUT-002)
+  - Expected: Then 終了コードは 1 で、stderr は `::error::GITHUB_OUTPUT: is not a writable file (got: '<dir>')` の 1 行で、ディレクトリ内に何も作られない (R-OUT-002)
 
 - [x] **T-12-03-03**: 親ディレクトリが無ければエラー
   - Target: `emit_outputs`
   - Test ID: T-FF-EO-07
   - Scenario: Given 出力先が `$tmp/no-such-dir/out`, When `emit_outputs` を呼ぶ
-  - Expected: Then 終了コードは 1 で、stderr は `::error::GITHUB_OUTPUT:` で始まる (R-OUT-002)
+  - Expected: Then 終了コードは 1 で、stderr は `::error::GITHUB_OUTPUT: is not a writable file (got: '$tmp/no-such-dir/out')` の 1 行である (R-OUT-002)
 
 - [x] **T-12-03-04**: files の書き込みに失敗したら count を書かない
   - Target: `emit_outputs`
   - Test ID: T-FF-EO-08
   - Scenario: Given `write_multiline_output` を 2 を返すスタブに差し替える, When `emit_outputs "$file" a.sh` を呼ぶ
-  - Expected: Then 終了コードは 1 で、stderr は `::error::files:` で始まり出力先のパスを含み、出力先に `count=` は無い (R-OUT-006)
+  - Expected: Then 終了コードは 1 で、stderr は `::error::files: failed to write (got: '<file>')` の 1 行で、出力先に `count=` は無い (R-OUT-006)
 
 - [x] **T-12-03-05**: count の書き込みに失敗したら files は残る
   - Target: `emit_outputs`
   - Test ID: T-FF-EO-09
   - Scenario: Given `write_output` を 2 を返すスタブに差し替える, When `emit_outputs "$file" a.sh` を呼ぶ
-  - Expected: Then 終了コードは 1 で、stderr は `::error::count:` で始まり、出力先には `files<<EOF` が残る (R-OUT-006、DR-09)
+  - Expected: Then 終了コードは 1 で、stderr は `::error::count: failed to write (got: '<file>')` の 1 行で、出力先には `files<<EOF` が残る (R-OUT-006、DR-09)
 
 ### [エッジケース] Edge Cases
 
