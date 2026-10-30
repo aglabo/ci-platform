@@ -2,7 +2,7 @@
 title: "Implementation Plan: ca-get-changed-files"
 based-on: specifications-index.md v2.2.0
 status: approved
-version: 2.3.1
+version: 2.3.2
 created: "2026-10-30"
 ---
 
@@ -83,8 +83,8 @@ PR は 1 つとする。実装は `feat-134/get-changed-files/02-impl` ブラン
 - ロードガード変数は `GET_CHANGED_FILES_LIB_LOADED` とする。書き方は `filter-files.lib.sh` に合わせる。
   - ガード変数は判定直後に設定する。共有ライブラリ `_libs/output.lib.sh` と `_libs/validation.lib.sh` (`_libs/error.lib.sh` を読み込む) を自身の位置から読み込み、失敗したら 1 を返してアクションを失敗させる。
   - ガード変数が設定済みなら、ライブラリと共有ライブラリの関数は最初の読み込みで定義済みとみなし、`declare -F` による依存関数の確認は行わない (`filter-files.lib.sh` と同じ形)。
-- 上限の定数は `readonly GCF_MAX_FILES_BYTES=120000` とする (DR-13)。
-  - `_ca-filter-files` のライブラリは別プロセスで動くため、読み込まない (impl-note DD-DIF-03)。値の一致は GACT の静的検査で確かめる (R-DIF-033)。
+- 上限の定数は `readonly GCF_MAX_FILES_BYTES=$GHA_MAX_ENV_VALUE_BYTES` とする (DR-13)。共通定数 `GHA_MAX_ENV_VALUE_BYTES` (120000) は `_libs/constants.lib.sh` が定義し、`_libs/validation.lib.sh` の後に読み込む。
+  - `_ca-filter-files` のライブラリは別プロセスで動くため、読み込まない (impl-note DD-DIF-03)。値の一致は、両ライブラリが同じ共通定数を代入していることを GACT の静的検査で確かめる (R-DIF-033)。
 - エラー出力は共有ライブラリ `_libs/error.lib.sh` の `gha_error <target> [<problem> <value>]` を使う。
   - 形式は `ff_error` / `rs_error` と同じ (DD-IDX-01、DR-14)。引数が 3 個未満なら空の形式、3 個なら通常の形式とする。値の `%` / CR / LF は `%25` / `%0D` / `%0A` にエンコードする。
   - `gha_error` 自体は T-GCF-GE / T-GCF-ELG で検証する。本 Action での形式は LCF と MAINF のテストで検証する。
@@ -135,7 +135,7 @@ PR は 1 つとする。実装は `feat-134/get-changed-files/02-impl` ブラン
   - 通常のケースは、スクリプトを `bash` で実行する内部ヘルパーで動かす。
   - R-DIF-016 (検証を通過した後の書き込み失敗) だけは専用の内部ヘルパーを使う。サブシェルの中でスクリプトを source し、`write_multiline_output` を 0 以外を返す関数に差し替えてから `main` を呼ぶ。`set -euo pipefail` を ShellSpec の実行シェルに残さないためである。
 - GACT (unit): action.yml を awk で静的に検査する。RUNF は action.yml を読まないため、step の構成と env の値は GACT だけが検証する。`_ca-filter-files` の action.unit.spec.sh の抽出関数 (`_act_section`・`_act_step`・step env の抽出) を、本ファイルの内部ヘルパーとして書く (所有範囲の外のファイルは読み込まない)。
-  - R-ACT-040 は `_ca-resolve-sha/action.yml`、R-ACT-041 は `_ca-filter-files/action.yml`、R-DIF-033 は `_ca-filter-files/scripts/_libs/filter-files.lib.sh` の `FF_MAX_FILES_BYTES` を読んで比べる。
+  - R-ACT-040 は `_ca-resolve-sha/action.yml`、R-ACT-041 は `_ca-filter-files/action.yml`、R-DIF-033 は `_ca-filter-files/scripts/_libs/filter-files.lib.sh` の `FF_MAX_FILES_BYTES` の右辺を読んで比べる。
   - step の数 (3)・順序・`id` (R-ACT-010〜R-ACT-012、DD-ACT-04) と、全 step が `shell: bash` で `if:`・`continue-on-error` を持たないこと (R-ACT-013) を検査する。
   - 3 つの step の env は、期待する `KEY: value` の行の集合と過不足なく一致することを確かめる (R-ACT-020〜R-ACT-023。filter-files の T-FF-ACT-01 と同じ方式)。
 - RUNF (functional): `ca-get-changed-files`・`_ca-resolve-sha`・`_ca-filter-files`・`_libs` を一時ディレクトリにコピーし、action.yml と同じパスと env で 3 つのスクリプトを順に実行する (AC-014)。
@@ -291,3 +291,4 @@ PR 本文には、REQ-C-008 の 5 項目 (破壊的変更と移行方法) を記
 | 2026-10-31 | 2.2.7   | Match the RUNF tests: the pull_request case compares files with the tasks.md T-04-01-02 expected list, and RUNF passes GITHUB_OUTPUT per step instead of exporting it                                                                                   |
 | 2026-10-31 | 2.3.0   | Set the load guard first and return 1 on a failed shared library load; drop the declare -F dependency check and its error (removes T-GCF-MAINF-14)                                                                                                      |
 | 2026-10-31 | 2.3.1   | Use the shared gha_error, GHA_* wording constants and check_byte_limit instead of _gcf_error, the duplicated wording constants and the inline byte check                                                                                                |
+| 2026-10-31 | 2.3.2   | Assign the shared GHA_MAX_ENV_VALUE_BYTES of _libs/constants.lib.sh to GCF_MAX_FILES_BYTES; GACT compares the right-hand sides                                                                                                                          |

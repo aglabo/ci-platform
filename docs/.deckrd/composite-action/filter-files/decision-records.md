@@ -3,7 +3,7 @@ title: "Decision Records: _ca-filter-files"
 based-on: requirements.md v1.5.0
 module: "composite-action/filter-files"
 status: approved
-version: 2.1.1
+version: 2.1.2
 created: "2026-10-27"
 ---
 
@@ -635,6 +635,8 @@ REQ-F-001 の処理後の件数に上限を設け、超えた入力は `::error:
 - ファイル数の上限は 3000 行、パターン数の上限は 100 行とする。上限ちょうどは受け付ける
 - `files`・`patterns` の値のバイト数の上限は、それぞれ 120000 バイトとする。改行の変換・分割の前に、バイト単位で数える
 - 上限値は `filter-files.lib.sh` の定数 (`FF_MAX_FILES`、`FF_MAX_PATTERNS`、`FF_MAX_FILES_BYTES`、`FF_MAX_PATTERNS_BYTES`) として定義する
+  - 他の Action と共通する根拠を持つ値には、`_libs/constants.lib.sh` の共通定数を代入する。
+    `FF_MAX_FILES` は `GHA_MAX_PR_FILES`、2 つのバイト数の上限は `GHA_MAX_ENV_VALUE_BYTES` とする
 - エラーは DR-15 の形式に従い、上限値を `<問題>` に埋め込む (例: `::error::files: exceeds the limit of 3000 lines (got: '3001')`)
 
 ### Alternatives Considered
@@ -850,3 +852,4 @@ CP は検査だけを担い、FF は入力と同じ形のパターン一覧を�
 | 2026-10-29 | 2.0.0   | Supersede DR-04 and DR-05 with DR-19: last matching pattern in input order decides, the first pattern decides unmatched files, check_patterns only validates, update DR-17 and DR-18 related items |
 | 2026-10-29 | 2.1.0   | Lower the patterns line limit of DR-16 from 1000 to 100 based on the measured matching time, refresh based-on                                                                                      |
 | 2026-10-29 | 2.1.1   | Align DR-17 with the code: filter_files runs in a subshell and sets LC_ALL=C.UTF-8 there instead of local                                                                                          |
+| 2026-10-31 | 2.1.2   | DR-16: assign the shared constants of _libs/constants.lib.sh to the files and byte limits                                                                                                          |

@@ -3,7 +3,7 @@ title: "Implementation Tasks"
 module: "composite-action/get-changed-files"
 status: Active
 created: "2026-10-30 02:11:09"
-source: specifications-index.md v2.2.0, specifications-diff.md v2.2.1, implementation.md v2.3.1
+source: specifications-index.md v2.2.0, specifications-diff.md v2.2.1, implementation.md v2.3.2
 ---
 
 <!-- textlint-disable ja-technical-writing/sentence-length -->
@@ -518,11 +518,11 @@ YAML は読むだけで実行しない。section・step・env の抽出は、本
   - Scenario: Given action.yml と `_ca-filter-files/action.yml`, When 両者の step の env の変数名を比べる
   - Expected: Then 変数名の集合が一致する (R-ACT-041、DR-12)
 
-- [x] **T-03-04-03**: バイト数の上限が filter-files と同じ値
+- [x] **T-03-04-03**: バイト数の上限が filter-files と同じ共通定数を代入している
   - Target: `get-changed-files.lib.sh`
   - Test ID: T-GCF-GACT-23
-  - Scenario: Given `get-changed-files.lib.sh` と `_ca-filter-files/scripts/_libs/filter-files.lib.sh`, When 両ファイルから上限の定数 (`GCF_MAX_FILES_BYTES`・`FF_MAX_FILES_BYTES`) を読む
-  - Expected: Then 両者は同じ値 (`120000`) である (R-DIF-033、DR-13)
+  - Scenario: Given `get-changed-files.lib.sh` と `_ca-filter-files/scripts/_libs/filter-files.lib.sh`, When 両ファイルから上限の定数 (`GCF_MAX_FILES_BYTES`・`FF_MAX_FILES_BYTES`) の右辺を読む
+  - Expected: Then 両者は同じ共通定数 (`$GHA_MAX_ENV_VALUE_BYTES`) である (R-DIF-033、DR-13)
 
 ---
 
