@@ -4,6 +4,8 @@ test_scope: GCF
 owns:
   - .github/actions/ca-get-changed-files/**
   - .github/actions/_libs/error.lib.sh
+  - .github/actions/_libs/constants.lib.sh
+  - .github/actions/_libs/__tests__/unit/constants.unit.spec.sh
   - .github/actions/_libs/__tests__/unit/gha-error.unit.spec.sh
   - .github/actions/_libs/__tests__/unit/check-byte-limit.unit.spec.sh
 ---
@@ -29,6 +31,7 @@ spec と impl はこの一覧を参照し、関数名・シグネチャ・所在
 | GE           | `gha_error <target> [<problem> <value>]`   | `_libs/error.lib.sh`                                          | (共通化、仕様変更なし)   |
 | ELG          | `error.lib.sh` のロードガードと定数        | `_libs/error.lib.sh`                                          | (共通化、仕様変更なし)   |
 | CBL          | `check_byte_limit <target> <text> <max>`   | `_libs/validation.lib.sh`                                     | (共通化、仕様変更なし)   |
+| CLG          | `constants.lib.sh` のガードと共通定数      | `_libs/constants.lib.sh`                                      | (共通化、仕様変更なし)   |
 
 - 略語は綴り全体で 1 個とする。
 - 旧テスト (`T-gcf-*`・`T-rsv-*`・`T-rsl-*`・`T-wrt-*`) は削除し、上の略語で書き直す。
@@ -45,3 +48,4 @@ spec と impl はこの一覧を参照し、関数名・シグネチャ・所在
 | GE    | gha_error <target> [<problem> <value>]                            |
 | ELG   | error.lib.sh のロードガードと定数                                 |
 | CBL   | check_byte_limit <target> <text> <max>                            |
+| CLG   | constants.lib.sh のロードガードと共通定数                         |
