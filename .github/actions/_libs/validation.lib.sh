@@ -9,8 +9,21 @@
 
 # shellcheck shell=bash
 
+# Load guard: return early when this library has already been loaded. The
+# guard is set first; a failed load of error.lib.sh below returns 1, which
+# makes the action fail, so the library is never sourced again afterwards.
 [ -n "${VALIDATION_LIB_LOADED:-}" ] && return 0
 VALIDATION_LIB_LOADED=1
+
+# error.lib.sh (gha_error) is loaded from this library's own directory. The
+# private _VALIDATION_LIB_DIR is unset after a successful load so that no name
+# leaks into the caller (callers such as validate-inputs.lib.sh rely on their
+# SCRIPT_DIR); a failed load fails the action, so it is left as is.
+_VALIDATION_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=.github/actions/_libs/error.lib.sh
+# shellcheck disable=SC1091
+. "${_VALIDATION_LIB_DIR}/error.lib.sh" || return 1
+unset _VALIDATION_LIB_DIR
 
 ##
 # @description Validate a value against a whitelist ERE regex pattern.
@@ -101,4 +114,32 @@ validate_positive_int() {
   [[ "$value" =~ ^[1-9][0-9]*$ ]] || return 1
   ((${#value} <= ${#max})) || return 1
   ((value <= max))
+}
+
+##
+# @description Check that a value is within a byte limit. A value of exactly
+#              the limit is accepted; only a value longer than <max> bytes
+#              (> max) is reported via gha_error as
+#              "<target>: exceeds the limit of <max> bytes (got: '<bytes>')".
+#              The length is counted under a function-local LC_ALL=C, so it
+#              is a byte count whatever the caller's locale is.
+#              LC_ALL=C must be set in its own local statement: in a single
+#              "local LC_ALL=C _bytes=${#2}" the ${#2} is expanded before
+#              LC_ALL=C takes effect and counts characters.
+# @arg $1 target — name of the checked value, used in the error message
+# @arg $2 text   — the value to check
+# @arg $3 max    — byte limit (trusted internal argument; not validated)
+# @stdout (none)
+# @stderr (none) when the value is within the limit; one ::error::<target>:
+#         line when it exceeds the limit
+# @return 0 when the value is within the limit, 1 when it exceeds the limit
+check_byte_limit() {
+  local LC_ALL=C
+  local _bytes=${#2}
+
+  if ((_bytes > $3)); then
+    gha_error "$1" "exceeds the limit of $3 bytes" "$_bytes"
+    return 1
+  fi
+  return 0
 }
