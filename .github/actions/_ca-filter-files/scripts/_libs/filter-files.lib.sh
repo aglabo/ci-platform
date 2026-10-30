@@ -13,34 +13,20 @@
 # ============================================================================
 
 # Load guard: return early when this library has already been loaded. The
-# guard is set only after the shared library has been loaded and its
-# functions checked, so a failed load leaves it unset and the next source
-# tries again. Everything after the guard (constants and function
-# definitions) cannot fail, so keep fallible steps before it.
+# guard is set first; a failed load of output.lib.sh / validation.lib.sh below
+# returns 1, which makes the action fail, so the library is never sourced
+# again afterwards.
 [ -n "${FILTER_FILES_LIB_LOADED:-}" ] && return 0
+FILTER_FILES_LIB_LOADED=1
 
 # Directory of the shared libraries (.github/actions/_libs)
 _FF_COMMON_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)/_libs"
 # shellcheck source=.github/actions/_libs/output.lib.sh
 # shellcheck disable=SC1091
 . "${_FF_COMMON_LIB_DIR}/output.lib.sh" || return 1
-
-# The shared library trusts its own guard variable, so an inherited
-# OUTPUT_LIB_LOADED (e.g. exported via the job environment) makes the source
-# above return 0 without defining anything. Check the shared functions this
-# library calls actually exist.
-for _ff_dep in validate_output_file write_multiline_output write_output; do
-  if ! declare -F "$_ff_dep" >/dev/null; then
-    printf 'filter-files.lib.sh: required function not defined: %s\n' "$_ff_dep" >&2
-    unset _ff_dep
-    return 1
-  fi
-done
-unset _ff_dep
-
-# Mark as loaded only now, after the shared library has been loaded and its
-# functions checked (see the load guard at the top).
-FILTER_FILES_LIB_LOADED=1
+# shellcheck source=.github/actions/_libs/validation.lib.sh
+# shellcheck disable=SC1091
+. "${_FF_COMMON_LIB_DIR}/validation.lib.sh" || return 1
 
 # ============================================================================
 # Constants
@@ -80,67 +66,17 @@ _FF_UTF8_RE=$'^([\x01-\x7f]|[\xc2-\xdf][\x80-\xbf]|\xe0[\xa0-\xbf][\x80-\xbf]|[\
 # ============================================================================
 
 ##
-# @description Emit a GitHub Actions error annotation. The form is chosen by
-#              the argument count, not by the value:
-#                normal form (3 args): "::error::<target>: <problem> (got: '<value>')"
-#                empty form  (2 args): "::error::<target>: value must not be empty"
-#              (an explicitly passed "" still uses the normal form)
-#              <value> is encoded so that it stays on one line and cannot
-#              inject a workflow command, in this order:
-#                "%" -> "%25" (first, so the "%" in "%0D"/"%0A" is not
-#                re-encoded), then CR -> "%0D", then LF -> "%0A".
-#              <target> and <problem> are printed as is.
-# @arg $1 target  — name of the offending input or variable (e.g. "files")
-# @arg $2 problem — short description of what is wrong (e.g. "bad line");
-#                   not printed in the empty form
-# @arg $3 value   — optional; when omitted, the empty form is used
+# @description Compatibility wrapper for gha_error (_libs/error.lib.sh). Kept
+#              because the existing callers and tests use the ff_error name.
+# @arg $@ same as gha_error (<target> [<problem> <value>])
 # @stdout (none)
-# @stderr one ::error:: line
-# @return 0 always (exiting non-zero is the caller's responsibility)
-ff_error() {
-  if [ "$#" -lt 3 ]; then
-    printf "::error::%s: value must not be empty\n" "$1" >&2
-    return 0
-  fi
-  local _value="$3"
-  _value="${_value//%/%25}"
-  _value="${_value//$'\r'/%0D}"
-  _value="${_value//$'\n'/%0A}"
-  printf "::error::%s: %s (got: '%s')\n" "$1" "$2" "$_value" >&2
-}
+# @stderr same as gha_error (one ::error:: line)
+# @return same as gha_error (0 always)
+ff_error() { gha_error "$@"; }
 
 # ============================================================================
 # Public API: Raw Input Checks
 # ============================================================================
-
-##
-# @description Check that one input is within its byte limit (DR-16), counted
-#              on the raw value before it is converted or split. A value of
-#              exactly the limit is accepted; only a value longer than
-#              <max> bytes (> max) is reported via ff_error as
-#              "<target>: exceeds the limit of <max> bytes (got: '<bytes>')".
-#              The length is counted under a function-local LC_ALL=C, so it
-#              is a byte count whatever the caller's locale is (DD-IN-11).
-#              LC_ALL=C must be set in its own local statement: in a single
-#              "local LC_ALL=C _bytes=${#2}" the ${#2} is expanded before
-#              LC_ALL=C takes effect and counts characters.
-# @arg $1 target — name of the checked input ("files" or "patterns")
-# @arg $2 text   — raw value of the input
-# @arg $3 max    — byte limit (FF_MAX_FILES_BYTES or FF_MAX_PATTERNS_BYTES)
-# @stdout (none)
-# @stderr (none) when the value is within the limit; one ::error::<target>:
-#         line when it exceeds the limit
-# @return 0 when the value is within the limit, 1 when it exceeds the limit
-check_byte_limit() {
-  local LC_ALL=C
-  local _bytes=${#2}
-
-  if ((_bytes > $3)); then
-    ff_error "$1" "exceeds the limit of $3 bytes" "$_bytes"
-    return 1
-  fi
-  return 0
-}
 
 ##
 # @description Check the line endings of one input before it is converted or
@@ -491,19 +427,19 @@ emit_outputs() {
   local _rc=0
   validate_output_file "$1" || _rc=$?
   if [ "$_rc" -eq 1 ]; then
-    ff_error GITHUB_OUTPUT
+    ff_error "$GHA_TARGET_GITHUB_OUTPUT"
     return 1
   elif [ "$_rc" -ne 0 ]; then
-    ff_error GITHUB_OUTPUT "is not a writable file" "$1"
+    ff_error "$GHA_TARGET_GITHUB_OUTPUT" "$GHA_MSG_NOT_WRITABLE" "$1"
     return 1
   fi
   _ff_read_lines _lines "$2"
   if ! write_multiline_output "$1" files "${_lines[@]}"; then
-    ff_error files "failed to write" "$1"
+    ff_error files "$GHA_MSG_WRITE_FAILED" "$1"
     return 1
   fi
   if ! write_output "$1" count "${#_lines[@]}"; then
-    ff_error count "failed to write" "$1"
+    ff_error count "$GHA_MSG_WRITE_FAILED" "$1"
     return 1
   fi
   return 0
