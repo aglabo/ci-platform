@@ -53,7 +53,7 @@ _RS_OUTPUT_KEYS=(before_sha after_sha resolution)
 #              - 3 arguments (normal form):
 #                "::error::<target>: <problem> (got: '<value>')"
 #                (an explicitly passed "" still uses this form)
-#              - 2 arguments (empty form; <problem> is not printed):
+#              - fewer than 3 arguments (empty form; callers pass <target> only):
 #                "::error::<target>: value must not be empty"
 #              <value> is encoded so that it cannot break the line or inject a
 #              workflow command: "%" -> "%25" first, then CR -> "%0D" and
