@@ -9,9 +9,11 @@
 # shellcheck shell=bash
 
 # Load guard: return early when this library has already been loaded. The
-# guard is set only at the end of the loading below, so a failed load leaves
-# it unset and the next source tries again.
+# guard is set first; a failed load of validation.lib.sh / output.lib.sh below
+# returns 1, which makes the action fail, so the library is never sourced
+# again afterwards.
 [ -n "${RESOLVE_SHA_LIB_LOADED:-}" ] && return 0
+RESOLVE_SHA_LIB_LOADED=1
 
 # Directory of the shared libraries (.github/actions/_libs)
 _RS_COMMON_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)/_libs"
@@ -21,21 +23,6 @@ _RS_COMMON_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)/_libs
 # shellcheck source=.github/actions/_libs/output.lib.sh
 # shellcheck disable=SC1091
 . "${_RS_COMMON_LIB_DIR}/output.lib.sh" || return 1
-
-# The shared libraries trust their own guard variables, so an inherited
-# VALIDATION_LIB_LOADED / OUTPUT_LIB_LOADED (e.g. exported via the job
-# environment) makes the sources above return 0 without defining anything.
-# Check the shared functions this library calls actually exist.
-for _rs_dep in validate_positive_int write_output; do
-  if ! declare -F "$_rs_dep" >/dev/null; then
-    printf 'resolve-sha.lib.sh: required function not defined: %s\n' "$_rs_dep" >&2
-    unset _rs_dep
-    return 1
-  fi
-done
-unset _rs_dep
-
-RESOLVE_SHA_LIB_LOADED=1
 
 # SHA of git's empty tree object; used as the base when no parent commit exists
 RS_EMPTY_TREE_SHA="4b825dc642cb6eb9a060e54bf8d69288fbee4904"
@@ -48,33 +35,13 @@ _RS_MAX_COMMIT_COUNT=1000
 _RS_OUTPUT_KEYS=(before_sha after_sha resolution)
 
 ##
-# @description Emit a GitHub Actions error annotation. The form is chosen by
-#              argument count, not by whether the value is empty:
-#              - 3 arguments (normal form):
-#                "::error::<target>: <problem> (got: '<value>')"
-#                (an explicitly passed "" still uses this form)
-#              - fewer than 3 arguments (empty form; callers pass <target> only):
-#                "::error::<target>: value must not be empty"
-#              <value> is encoded so that it cannot break the line or inject a
-#              workflow command: "%" -> "%25" first, then CR -> "%0D" and
-#              LF -> "%0A". <target> and <problem> are printed as is.
-# @arg $1 target  — name of the offending input or variable (e.g. "commit-count")
-# @arg $2 problem — short description of what is wrong (e.g. "invalid")
-# @arg $3 value   — optional; when omitted, the empty form is used
+# @description Compatibility wrapper for gha_error (_libs/error.lib.sh). Kept
+#              because the existing callers and tests use the rs_error name.
+# @arg $@ same as gha_error (<target> [<problem> <value>])
 # @stdout (none)
-# @stderr one ::error:: line
-# @return 0 always (exiting non-zero is the caller's responsibility)
-rs_error() {
-  if [ "$#" -lt 3 ]; then
-    printf "::error::%s: value must not be empty\n" "$1" >&2
-    return 0
-  fi
-  local _value="$3"
-  _value="${_value//%/%25}"
-  _value="${_value//$'\r'/%0D}"
-  _value="${_value//$'\n'/%0A}"
-  printf "::error::%s: %s (got: '%s')\n" "$1" "$2" "$_value" >&2
-}
+# @stderr same as gha_error (one ::error:: line)
+# @return same as gha_error (0 always)
+rs_error() { gha_error "$@"; }
 
 ##
 # @description Confirm the commit-count input. An explicit empty string uses
@@ -554,7 +521,7 @@ resolve_sha() {
 _rs_check_output_file() {
   # R-OUT-003
   if [[ -z "$1" ]]; then
-    rs_error GITHUB_OUTPUT
+    rs_error "$GHA_TARGET_GITHUB_OUTPUT"
     return 1
   fi
   # R-OUT-004: probe the file itself, or its parent directory when the file
@@ -563,7 +530,7 @@ _rs_check_output_file() {
   local _rs_probe="$1"
   [[ -e "$1" ]] || _rs_probe="$(dirname -- "$1")/."
   if [[ -d "$1" || ! -w "$_rs_probe" ]]; then
-    rs_error GITHUB_OUTPUT "is not a writable file" "$1"
+    rs_error "$GHA_TARGET_GITHUB_OUTPUT" "$GHA_MSG_NOT_WRITABLE" "$1"
     return 1
   fi
 }
@@ -622,7 +589,7 @@ _rs_check_resolution() {
 # @return 0 on success, 1 when the write fails
 _rs_write_output() {
   write_output "$1" "$2" "$3" && return 0
-  rs_error "$2" "failed to write" "$3"
+  rs_error "$2" "$GHA_MSG_WRITE_FAILED" "$3"
   return 1
 }
 
