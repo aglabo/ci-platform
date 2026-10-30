@@ -6,6 +6,7 @@
 # MIT License
 # shellcheck shell=bash
 
+# shellcheck disable=SC1091
 Include "${SHELLSPEC_PROJECT_ROOT}/scripts/setup-dev-env.sh"
 
 # ─── Internal Helpers ───────────────────────────────────────────────────────
