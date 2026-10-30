@@ -131,107 +131,96 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Prepare test diff (add temporary file and commit)
-        id: prepare-diff
+      # The action resolves the range from the event itself (pull_request: base/head,
+      # others: HEAD~1 with the default commit-count), so the expected lists are
+      # computed from the same range with the same git diff options.
+      - name: Prepare expected files
+        id: prepare-expected
         if: steps.checkout.outcome == 'success'
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
-          git config user.email "ci-test@example.com"
-          git config user.name "CI Test"
-          _before_sha=$(git rev-parse HEAD)
-          mkdir temp
-          echo "ci-test" > temp/ci-test-changed-files.txt
-          git add -f temp/ci-test-changed-files.txt
-          git commit -m "ci-test: temporary file for ca-get-changed-files test"
-          _after_sha=$(git rev-parse HEAD)
+          if [ "${EVENT_NAME}" = "pull_request" ]; then
+            _before="${BASE_SHA}"
+            _after="${HEAD_SHA}"
+          else
+            _before=$(git rev-parse HEAD~1)
+            _after=$(git rev-parse HEAD)
+          fi
+          _all=$(git -c core.quotePath=false diff --name-only --diff-filter=ACMR --end-of-options "${_before}" "${_after}")
+          _yml=$(printf '%s\n' "${_all}" | grep -E '\.yml$' || true)
+          _not_yml=$(printf '%s\n' "${_all}" | grep -vE '\.yml$' | grep -v '^$' || true)
+          _delim="EOF_$(openssl rand -hex 8)"
           {
-            echo "before-sha=${_before_sha}"
-            echo "after-sha=${_after_sha}"
-            echo "test-file=temp/ci-test-changed-files.txt"
+            echo "range=${_before}..${_after}"
+            printf 'files-all<<%s\n%s\n%s\n' "${_delim}" "${_all}" "${_delim}"
+            printf 'files-yml<<%s\n%s\n%s\n' "${_delim}" "${_yml}" "${_delim}"
+            printf 'files-not-yml<<%s\n%s\n%s\n' "${_delim}" "${_not_yml}" "${_delim}"
           } >> "${GITHUB_OUTPUT}"
 
       - name: Test ca-get-changed-files (no pattern)
         id: test-changed-files
-        if: steps.prepare-diff.outcome == 'success'
+        if: steps.prepare-expected.outcome == 'success'
         uses: ./.github/actions/ca-get-changed-files
-        with:
-          before-sha: ${{ steps.prepare-diff.outputs.before-sha }}
-          after-sha: ${{ steps.prepare-diff.outputs.after-sha }}
 
-      - name: Test ca-get-changed-files (pattern matches test file)
-        id: test-changed-files-pattern-match
-        if: steps.prepare-diff.outcome == 'success'
+      - name: Test ca-get-changed-files (include pattern)
+        id: test-changed-files-include
+        if: steps.prepare-expected.outcome == 'success'
         uses: ./.github/actions/ca-get-changed-files
         with:
-          before-sha: ${{ steps.prepare-diff.outputs.before-sha }}
-          after-sha: ${{ steps.prepare-diff.outputs.after-sha }}
-          pattern: "*.txt"
+          pattern: "**/*.yml"
 
-      - name: Test ca-get-changed-files (pattern does not match)
-        id: test-changed-files-pattern-nomatch
-        if: steps.prepare-diff.outcome == 'success'
+      - name: Test ca-get-changed-files (exclude pattern)
+        id: test-changed-files-exclude
+        if: steps.prepare-expected.outcome == 'success'
         uses: ./.github/actions/ca-get-changed-files
         with:
-          before-sha: ${{ steps.prepare-diff.outputs.before-sha }}
-          after-sha: ${{ steps.prepare-diff.outputs.after-sha }}
-          pattern: "*.yml"
+          pattern: |
+            **
+            !**/*.yml
 
       - name: Verify outputs
         id: verify
         if: steps.test-changed-files.outcome == 'success'
         env:
-          TEST_FILE: ${{ steps.prepare-diff.outputs.test-file }}
+          RANGE: ${{ steps.prepare-expected.outputs.range }}
+          EXPECTED_ALL: ${{ steps.prepare-expected.outputs.files-all }}
+          EXPECTED_YML: ${{ steps.prepare-expected.outputs.files-yml }}
+          EXPECTED_NOT_YML: ${{ steps.prepare-expected.outputs.files-not-yml }}
           FILES_ALL: ${{ steps.test-changed-files.outputs.files }}
           COUNT_ALL: ${{ steps.test-changed-files.outputs.count }}
-          FILES_TXT: ${{ steps.test-changed-files-pattern-match.outputs.files }}
-          COUNT_TXT: ${{ steps.test-changed-files-pattern-match.outputs.count }}
-          FILES_YML: ${{ steps.test-changed-files-pattern-nomatch.outputs.files }}
-          COUNT_YML: ${{ steps.test-changed-files-pattern-nomatch.outputs.count }}
+          FILES_YML: ${{ steps.test-changed-files-include.outputs.files }}
+          COUNT_YML: ${{ steps.test-changed-files-include.outputs.count }}
+          FILES_NOT_YML: ${{ steps.test-changed-files-exclude.outputs.files }}
+          COUNT_NOT_YML: ${{ steps.test-changed-files-exclude.outputs.count }}
         run: |
           _failed=0
+          echo "range: ${RANGE}"
 
-          echo "=== no-pattern result ==="
-          echo "count: ${COUNT_ALL}"
-          echo "files: ${FILES_ALL}"
+          # verify <label> <expected files> <actual files> <actual count>
+          verify() {
+            local _expected_count=0
+            [ -z "$2" ] || _expected_count=$(printf '%s\n' "$2" | wc -l | tr -d ' ')
+            echo "=== $1 result ==="
+            echo "count: $4"
+            echo "files: $3"
+            if [ "$3" != "$2" ]; then
+              echo "::error::[$1] Expected files: $2, got: $3"
+              _failed=1
+            fi
+            if [ "$4" != "${_expected_count}" ]; then
+              echo "::error::[$1] Expected count ${_expected_count}, got: $4"
+              _failed=1
+            fi
+          }
 
-          echo "=== pattern=*.txt result ==="
-          echo "count: ${COUNT_TXT}"
-          echo "files: ${FILES_TXT}"
-
-          echo "=== pattern=*.yml result ==="
-          echo "count: ${COUNT_YML}"
-          echo "files: ${FILES_YML}"
-
-          # no-pattern: test file must be detected
-          if [ "${COUNT_ALL}" -lt 1 ]; then
-            echo "::error::[no-pattern] Expected count >= 1, got: ${COUNT_ALL}"
-            _failed=1
-          fi
-          if ! echo "${FILES_ALL}" | grep -qF "${TEST_FILE}"; then
-            echo "::error::[no-pattern] Expected '${TEST_FILE}' in files, got: ${FILES_ALL}"
-            _failed=1
-          fi
-
-          # pattern=*.txt: test file must be detected
-          if [ "${COUNT_TXT}" -lt 1 ]; then
-            echo "::error::[pattern=*.txt] Expected count >= 1, got: ${COUNT_TXT}"
-            _failed=1
-          fi
-          if ! echo "${FILES_TXT}" | grep -qF "${TEST_FILE}"; then
-            echo "::error::[pattern=*.txt] Expected '${TEST_FILE}' in files, got: ${FILES_TXT}"
-            _failed=1
-          fi
-
-          # pattern=*.yml: test file must NOT appear (no yml changed)
-          if echo "${FILES_YML}" | grep -qF "${TEST_FILE}"; then
-            echo "::error::[pattern=*.yml] '${TEST_FILE}' should not appear, got: ${FILES_YML}"
-            _failed=1
-          fi
+          verify "no-pattern" "${EXPECTED_ALL}" "${FILES_ALL}" "${COUNT_ALL}"
+          verify "pattern=**/*.yml" "${EXPECTED_YML}" "${FILES_YML}" "${COUNT_YML}"
+          verify "pattern=** !**/*.yml" "${EXPECTED_NOT_YML}" "${FILES_NOT_YML}" "${COUNT_NOT_YML}"
 
           exit "${_failed}"
-
-      - name: Cleanup test diff (reset temporary commit)
-        if: steps.prepare-diff.outcome == 'success'
-        run: git reset --hard HEAD~1
 
   test-resolve-sha:
     name: Test _ca-resolve-sha
