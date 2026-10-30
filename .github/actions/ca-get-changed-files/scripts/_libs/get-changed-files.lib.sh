@@ -13,9 +13,9 @@
 # ============================================================================
 
 # Load guard: return early when this library has already been loaded. The
-# guard is set first; a failed load of output.lib.sh / validation.lib.sh below
-# returns 1, which makes the action fail, so the library is never sourced
-# again afterwards.
+# guard is set first; a failed load of output.lib.sh / validation.lib.sh /
+# constants.lib.sh below returns 1, which makes the action fail, so the
+# library is never sourced again afterwards.
 [ -n "${GET_CHANGED_FILES_LIB_LOADED:-}" ] && return 0
 GET_CHANGED_FILES_LIB_LOADED=1
 
@@ -27,6 +27,9 @@ _GCF_COMMON_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)/_lib
 # shellcheck source=.github/actions/_libs/validation.lib.sh
 # shellcheck disable=SC1091
 . "${_GCF_COMMON_LIB_DIR}/validation.lib.sh" || return 1
+# shellcheck source=.github/actions/_libs/constants.lib.sh
+# shellcheck disable=SC1091
+. "${_GCF_COMMON_LIB_DIR}/constants.lib.sh" || return 1
 
 # ============================================================================
 # Constants
@@ -35,9 +38,10 @@ _GCF_COMMON_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)/_lib
 # Byte limit of the changed-file list (DR-13; R-DIF-003), measured on the
 # list joined by LF with no trailing LF; a list of exactly the limit is accepted.
 # Public, like FF_MAX_FILES_BYTES of _ca-filter-files, which it must match
-# (R-DIF-033). Defined after the load guard is set, so a second source
-# returns at the guard and never re-runs readonly (which would fail).
-readonly GCF_MAX_FILES_BYTES=120000
+# (R-DIF-033): both are assigned the shared GHA_MAX_ENV_VALUE_BYTES
+# (_libs/constants.lib.sh). Defined after the load guard is set, so a second
+# source returns at the guard and never re-runs readonly (which would fail).
+readonly GCF_MAX_FILES_BYTES=$GHA_MAX_ENV_VALUE_BYTES
 
 # ============================================================================
 # Constants: Error Wording (specifications-diff.md "エラーの文言")

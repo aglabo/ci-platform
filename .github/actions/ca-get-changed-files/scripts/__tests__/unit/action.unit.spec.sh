@@ -73,8 +73,10 @@ _ACT_DIR="${SHELLSPEC_PROJECT_ROOT}/.github/actions/ca-get-changed-files"
 _ACT_GCF_LIB="${SHELLSPEC_PROJECT_ROOT}/.github/actions/ca-get-changed-files/scripts/_libs/get-changed-files.lib.sh"
 # The internal filter-files library that defines FF_MAX_FILES_BYTES, read as data only (no Include, no source); used by T-GCF-GACT-23
 _ACT_FF_LIB="${SHELLSPEC_PROJECT_ROOT}/.github/actions/_ca-filter-files/scripts/_libs/filter-files.lib.sh"
-# The expected byte limit of the file list shared by both libraries (R-DIF-033, DR-13); used by T-GCF-GACT-23
-_ACT_MAX_FILES_BYTES=120000
+# The expected right-hand side of the file list byte limit in both libraries: the shared constant
+# of _libs/constants.lib.sh, as written in the source (R-DIF-033, DR-13); used by T-GCF-GACT-23
+# shellcheck disable=SC2016
+_ACT_MAX_FILES_BYTES_RHS='$GHA_MAX_ENV_VALUE_BYTES'
 
 # 関数
 ##
@@ -510,28 +512,28 @@ _act_legacy_function_defs() {
 }
 
 ##
-# Print the value of a numeric constant from its `readonly <name>=<digits>`
-# line in a library file (R-DIF-033, DR-13). The value is checked statically:
-# the library is read as text, never sourced (impl-note DD-DIF-03).
+# Print the right-hand side of a constant from its `readonly <name>=<rhs>`
+# line in a library file, as written (R-DIF-033, DR-13). The value is checked
+# statically: the library is read as text, never sourced (impl-note DD-DIF-03).
 # Requires: none (reads the given file).
 # @arg $1 file — path of the library to read
 # @arg $2 name — constant name (e.g. GCF_MAX_FILES_BYTES)
-# @stdout the constant's value
+# @stdout the constant's right-hand side (e.g. $GHA_MAX_ENV_VALUE_BYTES)
 # @return 0 on success, 1 when the file does not exist or no such line is found
 _act_limit_value() {
   [ -f "$1" ] || return 1
   local _value
-  _value=$(sed -n "s/^readonly $2=\([0-9][0-9]*\)\$/\1/p" "$1")
+  _value=$(sed -n "s/^readonly $2=\(..*\)\$/\1/p" "$1")
   [ -n "$_value" ] || return 1
   printf '%s\n' "$_value"
 }
 
 ##
-# Print FF_MAX_FILES_BYTES of the internal _ca-filter-files library
-# (_ACT_FF_LIB), read through _act_limit_value without sourcing it
-# (impl-note DD-DIF-03).
+# Print the right-hand side of FF_MAX_FILES_BYTES of the internal
+# _ca-filter-files library (_ACT_FF_LIB), read through _act_limit_value
+# without sourcing it (impl-note DD-DIF-03).
 # Requires: none (reads _ACT_FF_LIB).
-# @stdout the constant's value
+# @stdout the constant's right-hand side
 # @return 0 on success, 1 when the file does not exist or the line is not found
 _act_ff_limit_value() {
   _act_limit_value "$_ACT_FF_LIB" FF_MAX_FILES_BYTES
@@ -575,7 +577,8 @@ Describe 'ca-get-changed-files'
   # after SHA overrides, matches the internal _ca-resolve-sha action's env
   # line for line; the filter-files step's env variable names match those of
   # the internal _ca-filter-files action; the file list byte limit
-  # GCF_MAX_FILES_BYTES equals FF_MAX_FILES_BYTES of _ca-filter-files.
+  # GCF_MAX_FILES_BYTES and FF_MAX_FILES_BYTES of _ca-filter-files are both
+  # assigned the shared constant GHA_MAX_ENV_VALUE_BYTES.
   Describe 'action.yml と配下の静的検査'
     # 正常系: the declared contract of action.yml
     Context 'When: 正常系'
@@ -723,11 +726,11 @@ Describe 'ca-get-changed-files'
         The output should be blank
       End
 
-      It '[Edge] T-GCF-GACT-23: バイト数の上限が filter-files と同じ値'
+      It '[Edge] T-GCF-GACT-23: バイト数の上限が filter-files と同じ共通定数を代入している'
         When call _act_limit_value "$_ACT_GCF_LIB" GCF_MAX_FILES_BYTES
         The status should be success
-        The output should equal "$_ACT_MAX_FILES_BYTES"
-        The result of function _act_ff_limit_value should equal "$_ACT_MAX_FILES_BYTES"
+        The output should equal "$_ACT_MAX_FILES_BYTES_RHS"
+        The result of function _act_ff_limit_value should equal "$_ACT_MAX_FILES_BYTES_RHS"
       End
     End
   End
