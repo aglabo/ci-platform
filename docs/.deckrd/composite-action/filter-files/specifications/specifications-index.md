@@ -1,8 +1,8 @@
 ---
 title: "Design Specification: _ca-filter-files (Index)"
-based-on: requirements.md v1.4.0
+based-on: requirements.md v1.6.0
 status: approved
-version: 1.5.0
+version: 1.6.1
 created: "2026-10-27"
 ---
 
@@ -276,9 +276,10 @@ No reordering is permitted. 各 Step でエラーが起きた場合は、後続�
 
   - files と patterns は検査と正規化が異なる (R-IN-002, R-IN-003, R-IN-012) ため、行の分割と正規化を PFL と PPT に分ける。
   - 共有ライブラリへの追加は VOF と WMO の 2 点のみとする (REQ-C-007)。
+    CBL (check_byte_limit) は後に get-changed-files モジュールが共通化のため共有ライブラリ `_libs/validation.lib.sh` へ移した。本モジュールはそれを読み込んで使い、本モジュールからの共有ライブラリへの追加は VOF と WMO のままとする。
   - VOF と WMO はエラーを出さず、終了コードだけを返す。エラーは呼び出し側が FE で 3.3 の形式で出す。
   - 環境変数を読むのは MAIN のみとし、他の関数は引数だけを入力とする。
-    ライブラリのロードガード変数 (`*_LIB_LOADED`) は例外とし、`declare -F` で依存関数の定義を確認する (REQ-C-006)。
+    ライブラリのロードガード変数 (`*_LIB_LOADED`) は例外とする。ガード変数は判定直後に設定し、依存ライブラリの読み込みに失敗したら 1 を返す (REQ-C-006)。
   - 関数間の複数行データは LF 区切りの文字列 1 つとし、コマンド置換で受け渡す (DR-18)。
     CP (check_patterns) はパターン行を検査するだけで、標準出力に何も出さない。
     MAIN は PPT の結果 (`pattern` / `!pattern` の行、入力の順) をそのまま FF に渡し、FF が記述順に照合する (DR-19)。
@@ -353,18 +354,20 @@ spec で決める項目は、すべて各分割ファイルで決定した。imp
 
 ## 8. Change History
 
-| Date       | Version | Description                                                                                                                         |
-| ---------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| 2026-10-27 | 0.1.0   | Initial draft                                                                                                                       |
-| 2026-10-27 | 0.1.1   | Apply spec explore review: assumptions, failure outcomes and locale note                                                            |
-| 2026-10-27 | 0.1.2   | Apply spec harden review: promote DD-IDX-01 to DR-15, list DR-13 to DR-15                                                           |
-| 2026-10-27 | 0.1.3   | Apply spec fix review: UTF-8 check in evaluation step 1, refresh based-on                                                           |
-| 2026-10-27 | 1.0.0   | Initial release                                                                                                                     |
-| 2026-10-27 | 1.1.0   | Follow requirements v1.1.0: files lines unchanged, lone CR and quoted files line errors (REQ-F-017), approve                        |
-| 2026-10-27 | 1.1.1   | Clarify evaluation order step 1: check lone CR before splitting (R-IN-011)                                                          |
-| 2026-10-27 | 1.2.0   | Follow requirements v1.2.0: line count limit check in step 1, list DR-16 (REQ-F-018)                                                |
-| 2026-10-27 | 1.3.0   | Follow requirements v1.3.0: byte size limit check first in step 1 (REQ-F-018)                                                       |
-| 2026-10-27 | 1.3.1   | Apply impl harden review: add CBL, CLE, CLL to 3.5, mark open questions resolved, list DR-17 and DR-18                              |
-| 2026-10-27 | 1.3.2   | Apply impl second opinion: split PL into PFL and PPT, load guard exception, move function list to module.md in 3.5                  |
-| 2026-10-29 | 1.4.0   | MAIN passes the classify_patterns result to FF as one list; FF splits include and exclude (DR-19)                                   |
-| 2026-10-29 | 1.5.0   | Follow requirements v1.4.0: last match wins keep rule, check_patterns only validates, MAIN passes pattern lines to FF as is (DR-19) |
+| Date       | Version | Description                                                                                                                                     |
+| ---------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-10-27 | 0.1.0   | Initial draft                                                                                                                                   |
+| 2026-10-27 | 0.1.1   | Apply spec explore review: assumptions, failure outcomes and locale note                                                                        |
+| 2026-10-27 | 0.1.2   | Apply spec harden review: promote DD-IDX-01 to DR-15, list DR-13 to DR-15                                                                       |
+| 2026-10-27 | 0.1.3   | Apply spec fix review: UTF-8 check in evaluation step 1, refresh based-on                                                                       |
+| 2026-10-27 | 1.0.0   | Initial release                                                                                                                                 |
+| 2026-10-27 | 1.1.0   | Follow requirements v1.1.0: files lines unchanged, lone CR and quoted files line errors (REQ-F-017), approve                                    |
+| 2026-10-27 | 1.1.1   | Clarify evaluation order step 1: check lone CR before splitting (R-IN-011)                                                                      |
+| 2026-10-27 | 1.2.0   | Follow requirements v1.2.0: line count limit check in step 1, list DR-16 (REQ-F-018)                                                            |
+| 2026-10-27 | 1.3.0   | Follow requirements v1.3.0: byte size limit check first in step 1 (REQ-F-018)                                                                   |
+| 2026-10-27 | 1.3.1   | Apply impl harden review: add CBL, CLE, CLL to 3.5, mark open questions resolved, list DR-17 and DR-18                                          |
+| 2026-10-27 | 1.3.2   | Apply impl second opinion: split PL into PFL and PPT, load guard exception, move function list to module.md in 3.5                              |
+| 2026-10-29 | 1.4.0   | MAIN passes the classify_patterns result to FF as one list; FF splits include and exclude (DR-19)                                               |
+| 2026-10-29 | 1.5.0   | Follow requirements v1.4.0: last match wins keep rule, check_patterns only validates, MAIN passes pattern lines to FF as is (DR-19)             |
+| 2026-10-31 | 1.6.0   | Follow requirements v1.6.0: set the load guard first and return 1 on a failed library load, no declare -F check (REQ-C-006)                     |
+| 2026-10-31 | 1.6.1   | Note that CBL now lives in the shared _libs/validation.lib.sh (moved by get-changed-files); this module still adds only VOF and WMO (REQ-C-007) |
