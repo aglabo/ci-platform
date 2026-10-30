@@ -2,7 +2,7 @@
 title: "Implementation Plan: _ca-resolve-sha"
 based-on: specifications-index.md v2.1.1
 status: Draft
-version: 1.1.3
+version: 1.1.4
 created: "2026-10-25"
 ---
 
@@ -17,7 +17,8 @@ created: "2026-10-25"
 本計画の範囲は、Composite Action の作成までとする。Phase 5 の完了は単体実装の完了を意味し、ランナー上での動作検証は #134 で行う (DR-27)。
 
 - 既存のワークフローとアクションは変更しない。`ca-get-changed-files` への組み込みは #134 の別タスクとする。
-- 共有ライブラリ `.github/actions/_libs/` への変更は、REQ-C-008 の追加 (ロードガード、VPI、WO) に限る。
+- 本計画による共有ライブラリ `.github/actions/_libs/` への変更は、REQ-C-008 の追加 (ロードガード、VPI、WO) に限る。
+  `error.lib.sh`・`constants.lib.sh`・`check_byte_limit` は、後に get-changed-files モジュールが追加した。`rs_error` はその `gha_error` の互換ラッパーとなった (tasks.md T-15)。
 - 完了条件は、次のすべてを満たすこととする。
   - actionlint / ghalint を通過する
   - ShellSpec の全テストに `not ok` が無い
@@ -244,3 +245,4 @@ specifications-index.md §3.5 の impl-note を補う。tasks.md はこの記述
 | 2026-10-25 | 1.1.1   | Apply harden / fix review: spec impl-note moved out of Phase 0, Phase 1 stop condition, DR-26/27 refs, wording                         |
 | 2026-10-25 | 1.1.2   | Apply codex review: action.yml wiring checks, no-fetch and partial-write tests, file:// shallow fixture, env and exit-code handling    |
 | 2026-10-25 | 1.1.3   | Add per-function implementation details (IPC exit codes, NCC stdout, RE forms, RSH override detection, EO error target, error wording) |
+| 2026-10-31 | 1.1.4   | Note that error.lib.sh / constants.lib.sh / check_byte_limit came later from get-changed-files and rs_error now wraps gha_error        |
