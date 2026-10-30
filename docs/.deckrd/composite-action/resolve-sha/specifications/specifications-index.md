@@ -2,7 +2,7 @@
 title: "Design Specification: _ca-resolve-sha (Index)"
 based-on: requirements.md v2.1.0
 status: Draft
-version: 2.1.2
+version: 2.1.3
 created: "2026-10-25"
 ---
 
@@ -304,7 +304,7 @@ checkout の深さと取得対象は REQ-C-003 に従う。本仕様での帰結
   | ---- | ------------------------------------------------------------------------- | -------------------------------- | ------------------- |
   | VLG  | validation.lib.sh のロードガード                                          | _libs/validation.lib.sh          | —                   |
   | VPI  | validate_positive_int <value> <max>                                       | _libs/validation.lib.sh          | input               |
-  | RE   | rs_error <target> <problem> [<value>]                                     | scripts/_libs/resolve-sha.lib.sh | index 3.3           |
+  | RE   | rs_error <target> [<problem> <value>] (gha_error の互換ラッパー)          | scripts/_libs/resolve-sha.lib.sh | index 3.3           |
   | NCC  | normalize_commit_count <value>                                            | scripts/_libs/resolve-sha.lib.sh | input               |
   | VOV  | validate_override <before> <after>                                        | scripts/_libs/resolve-sha.lib.sh | input               |
   | IPC  | is_partial_clone                                                          | scripts/_libs/resolve-sha.lib.sh | resolution          |
@@ -318,7 +318,9 @@ checkout の深さと取得対象は REQ-C-003 に従う。本仕様での帰結
   | ACT  | action.yml の静的検査                                                     | action.yml                       | index 3.1           |
 
   - 空ツリー SHA の定数は、モジュール専用ライブラリに置く。他モジュールが必要とした時点で共有ライブラリへ昇格する。
-  - 共有ライブラリへの追加は、WO、VPI、validation.lib.sh のロードガードの 3 点のみとする (REQ-C-008)。
+  - 本モジュールによる共有ライブラリへの追加は、WO、VPI、validation.lib.sh のロードガードの 3 点のみとする (REQ-C-008)。
+    error.lib.sh (gha_error)、constants.lib.sh、check_byte_limit は、後に get-changed-files モジュールが共通化のため追加した。
+    validation.lib.sh は error.lib.sh を読み込み、RE は gha_error を呼ぶだけの互換ラッパーとなった (tasks.md T-15)。
   - MAIN の functional テストは、レイヤサフィックス F を付けた MAINF となる。
   - 戻り値の規約: 内部の解決処理は "<before> <after> <resolution>" を空白区切りの 1 行で標準出力へ返す。
     呼び出し側は `if ! out=$(...); then exit 1; fi` で失敗を検知し、`read -r` で分解する。
@@ -431,11 +433,12 @@ REQUIREMENTS の Open Question (merge 履歴で第一親の系列が shallow 境
 
 ## 8. Change History
 
-| Date       | Version | Description                                                                                                                                                                        |
-| ---------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 2026-10-25 | 1.0.0   | Initial specification                                                                                                                                                              |
-| 2026-10-25 | 1.1.0   | Apply requirements v1.2.0 and DR-15..DR-22: git environment contract, commit type check, ID scheme                                                                                 |
-| 2026-10-25 | 2.0.0   | Apply requirements v2.0.0 and DR-23: remove git environment contract, add partial clone rejection                                                                                  |
-| 2026-10-25 | 2.1.0   | Apply requirements v2.1.0 and DR-24/25: push ref check in evaluation order, GITHUB_REF / GITHUB_EVENT_DELETED, error value encoding, fetch-depth scope, after vs working tree note |
-| 2026-10-25 | 2.1.1   | Update impl-note function list: add VLG / RE / ACT, WO and EO take output file, VPI drops field (DR-26, DR-27)                                                                     |
-| 2026-10-26 | 2.1.2   | Untrusted working directory now fails with R-RES-026 (resolution v2.2.0)                                                                                                           |
+| Date       | Version | Description                                                                                                                                                                                        |
+| ---------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-10-25 | 1.0.0   | Initial specification                                                                                                                                                                              |
+| 2026-10-25 | 1.1.0   | Apply requirements v1.2.0 and DR-15..DR-22: git environment contract, commit type check, ID scheme                                                                                                 |
+| 2026-10-25 | 2.0.0   | Apply requirements v2.0.0 and DR-23: remove git environment contract, add partial clone rejection                                                                                                  |
+| 2026-10-25 | 2.1.0   | Apply requirements v2.1.0 and DR-24/25: push ref check in evaluation order, GITHUB_REF / GITHUB_EVENT_DELETED, error value encoding, fetch-depth scope, after vs working tree note                 |
+| 2026-10-25 | 2.1.1   | Update impl-note function list: add VLG / RE / ACT, WO and EO take output file, VPI drops field (DR-26, DR-27)                                                                                     |
+| 2026-10-26 | 2.1.2   | Untrusted working directory now fails with R-RES-026 (resolution v2.2.0)                                                                                                                           |
+| 2026-10-31 | 2.1.3   | impl-note: RE is now a compatibility wrapper of gha_error; the 3-item limit covers this module's own additions, and error.lib.sh / constants.lib.sh / check_byte_limit came from get-changed-files |

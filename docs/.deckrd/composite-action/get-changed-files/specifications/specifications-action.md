@@ -1,8 +1,8 @@
 ---
 title: "Design Specification: ca-get-changed-files (Action)"
-based-on: requirements.md v2.2.0
+based-on: requirements.md v2.3.0
 status: approved
-version: 2.2.0
+version: 2.2.1
 created: "2026-10-29"
 ---
 
@@ -66,7 +66,7 @@ created: "2026-10-29"
 > **Derivation**: All items below originate from REQUIREMENTS Section "Out of Scope".
 
 - 出力の追加 (`resolution` を含む) ← REQ: Out of Scope #4
-- 内部 Action と `_libs/` の変更 ← REQ: Out of Scope #3
+- 内部 Action の契約と `_libs/` の既存関数の変更 ← REQ: Out of Scope #3
 
 ### 2.5 Behavioral Design Decisions
 
@@ -205,7 +205,7 @@ No reordering is permitted.
 | REQ-C-004      | —                               | actionlint / ghalint                 |
 | REQ-C-005      | R-ACT-001, R-ACT-002, R-ACT-043 |                                      |
 | REQ-C-003      | R-ACT-003, R-ACT-046            |                                      |
-| REQ-C-006      | R-ACT-040, R-ACT-041            | 内部 Action は読むだけで変更しない   |
+| REQ-C-006      | R-ACT-040, R-ACT-041            | 内部 Action の契約は変更しない       |
 | REQ-F-003      | —                               | Covered in: `specifications-diff.md` |
 
 ---
@@ -229,3 +229,4 @@ None identified - all requirements are unambiguous.
 | 2026-10-30 | 1.2.1   | Promote DD-ACT-01 / DD-ACT-03 to DR-12                                                                               |
 | 2026-10-30 | 1.2.2   | Apply spec fix review: cite DR-12, unify stage terms                                                                 |
 | 2026-10-30 | 2.2.0   | Unify document versions to 2.2.0 and approve                                                                         |
+| 2026-10-31 | 2.2.1   | Follow requirements v2.3.0: Non-Goals and the REQ-C-006 trace note refer to the internal actions' contracts          |

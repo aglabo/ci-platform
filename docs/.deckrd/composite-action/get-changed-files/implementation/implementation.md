@@ -1,8 +1,8 @@
 ---
 title: "Implementation Plan: ca-get-changed-files"
-based-on: specifications-index.md v2.2.0
+based-on: specifications-index.md v2.2.1
 status: approved
-version: 2.3.2
+version: 2.3.3
 created: "2026-10-30"
 ---
 
@@ -18,9 +18,10 @@ SHA の解決を `_ca-resolve-sha`、glob による絞り込みを `_ca-filter-f
 入力は `commit-count` と `pattern` (glob、複数行、`!` で除外) とし、出力 `files` / `count` は従来どおりとする。
 評価順序は specifications-index.md §3.4 に従う。SHA の解決 → 変更ファイルの取得 → 絞り込み → 出力の公開の順とし、いずれかの段が失敗したら後続の段を実行しない。
 
-本計画の範囲は、`ca-get-changed-files` 配下の書き直し、旧ライブラリ `filter.lib.sh` の削除、`test-get-changed-files` ジョブの改訂までとする。
+本計画の範囲は、`ca-get-changed-files` 配下の書き直し、旧ライブラリ `filter.lib.sh` の削除、共有ライブラリへの追加、`test-get-changed-files` ジョブの改訂までとする。
 
-- `_ca-resolve-sha/`・`_ca-filter-files/`・`_libs/` は変更しない (REQ-C-006)。読み込みと、テストでの読み取り専用の利用に限る。
+- `_ca-resolve-sha/`・`_ca-filter-files/` の契約は変更しない (REQ-C-006)。両者のライブラリを共有ライブラリへ置き換える変更は、各モジュールの文書 (`_ca-filter-files` implementation.md v1.7.x、`_ca-resolve-sha` tasks.md T-15) で扱う。
+- `_libs/` の変更は、`error.lib.sh`・`constants.lib.sh` の追加と、`validation.lib.sh` への `check_byte_limit` の追加に限る (REQ-C-006)。既存関数は変更しない。
 - `CHANGELOG.md` は変更しない。記載は次のマイナーリリースの release PR で行う (DD-IDX-04)。
 - 完了条件は、次のすべてを満たすこととする。
   - actionlint / ghalint を通過する
@@ -180,7 +181,7 @@ Phase 1 の開始前に、全テストを 1 回実行して結果をベースラ
 
 #### Commit 1: feat(get-changed-files): add get-changed-files.lib.sh with list_changed_files
 
-- `scripts/_libs/get-changed-files.lib.sh` を作る (ロードガード、`GCF_MAX_FILES_BYTES`、`_gcf_error`、LCF が出すエラーの文言 (R-DIF-002・R-DIF-003))
+- `scripts/_libs/get-changed-files.lib.sh` を作る (ロードガード、`GCF_MAX_FILES_BYTES`、LCF が出すエラーの文言 (R-DIF-002・R-DIF-003))
   - 各部分は、それを検証する T-GCF-LCF-* の RGR で入れる。ロードガードは T-GCF-LCF-20 で入れる
   - `output.lib.sh` の読み込みと関数の存在確認、`main` だけが使うエラーの文言は、Phase 2 Commit 1 で入れる (LCF は使わず、検証するテストも MAINF にある)
   - v2.3.1 で `_gcf_error` と共通の文言の定数を共有ライブラリ (`gha_error`、`GHA_*`)、バイト数の検査を `check_byte_limit` に置き換え、関数の存在確認を廃止した
@@ -292,3 +293,4 @@ PR 本文には、REQ-C-008 の 5 項目 (破壊的変更と移行方法) を記
 | 2026-10-31 | 2.3.0   | Set the load guard first and return 1 on a failed shared library load; drop the declare -F dependency check and its error (removes T-GCF-MAINF-14)                                                                                                      |
 | 2026-10-31 | 2.3.1   | Use the shared gha_error, GHA_* wording constants and check_byte_limit instead of _gcf_error, the duplicated wording constants and the inline byte check                                                                                                |
 | 2026-10-31 | 2.3.2   | Assign the shared GHA_MAX_ENV_VALUE_BYTES of _libs/constants.lib.sh to GCF_MAX_FILES_BYTES; GACT compares the right-hand sides                                                                                                                          |
+| 2026-10-31 | 2.3.3   | Follow requirements v2.3.0 (REQ-C-006): scope includes the shared-library additions; drop the stale _gcf_error from Phase 1 Commit 1                                                                                                                    |
