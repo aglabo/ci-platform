@@ -2,7 +2,7 @@
 title: "Design Specification: ca-get-changed-files (Diff)"
 based-on: requirements.md v2.2.0
 status: approved
-version: 2.2.0
+version: 2.2.1
 created: "2026-10-29"
 ---
 
@@ -71,10 +71,10 @@ SHA の解決は `_ca-resolve-sha`、絞り込みは `_ca-filter-files` の仕�
 
 ### 2.5 Behavioral Design Decisions
 
-| ID        | Decision                                                                                                       | Rationale                                                                                                        | Affected Rules | Status           |
-| --------- | -------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- | -------------- | ---------------- |
-| DD-DIF-01 | `git diff` は `-c core.quotePath=false`、`--name-only`、`--diff-filter=ACMR` だけを指定し、pathspec を渡さない | リネーム検出などはリポジトリの設定に任せる。`--name-only` と ACMR では、リネームでも追加でも新しいパスが出る     | R-DIF-001      | Active           |
-| DD-DIF-02 | 一覧のバイト数が 120000 を超えたら、`files` を書く前にエラーとする                                             | 環境変数の上限を超えると絞り込みの段が起動できず、`::error::` が出ない (REQ-F-006)。上限は filter-files と同じ値 | R-DIF-003      | Promoted → DR-13 |
+| ID        | Decision                                                                                                                                                            | Rationale                                                                                                                                                  | Affected Rules | Status           |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- | ---------------- |
+| DD-DIF-01 | `git diff` は `-c core.quotePath=false`、`--name-only`、`--diff-filter=ACMR` だけを指定し、pathspec を渡さない。`<before> <after>` の前に `--end-of-options` を置く | リネーム検出などはリポジトリの設定に任せる。`--name-only` と ACMR では、リネームでも追加でも新しいパスが出る。`-` で始まる値はオプションとして解釈させない | R-DIF-001      | Active           |
+| DD-DIF-02 | 一覧のバイト数が 120000 を超えたら、`files` を書く前にエラーとする                                                                                                  | 環境変数の上限を超えると絞り込みの段が起動できず、`::error::` が出ない (REQ-F-006)。上限は filter-files と同じ値                                           | R-DIF-003      | Promoted → DR-13 |
 
 **Status Values:**
 
@@ -144,12 +144,12 @@ See `specifications-index.md` 2.7.
 
 **変更ファイルの取得 (list-changes):**
 
-| Rule ID   | Step | Condition                                                 | Outcome                                                                                                                      |
-| --------- | ---: | --------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| R-DIF-001 |    1 | —                                                         | 作業ディレクトリで `git -c core.quotePath=false diff --name-only --diff-filter=ACMR <before> <after>` を実行する (DD-DIF-01) |
-| R-DIF-002 |    1 | `git diff` が非ゼロで終了した                             | エラー (対象 `files`)。一覧を返さずに失敗する                                                                                |
-| R-DIF-003 |    2 | 一覧 (LF で連結、末尾の LF なし) が 120000 バイトを超える | エラー (対象 `files`)。一覧を返さずに失敗する (DR-13)                                                                        |
-| R-DIF-004 |    3 | —                                                         | 一覧を `git diff` の出力順のまま返す。行の加工 (引用表記の解除、空白の除去、並べ替え、重複の除去) はしない                   |
+| Rule ID   | Step | Condition                                                 | Outcome                                                                                                                                       |
+| --------- | ---: | --------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| R-DIF-001 |    1 | —                                                         | 作業ディレクトリで `git -c core.quotePath=false diff --name-only --diff-filter=ACMR --end-of-options <before> <after>` を実行する (DD-DIF-01) |
+| R-DIF-002 |    1 | `git diff` が非ゼロで終了した                             | エラー (対象 `files`)。一覧を返さずに失敗する                                                                                                 |
+| R-DIF-003 |    2 | 一覧 (LF で連結、末尾の LF なし) が 120000 バイトを超える | エラー (対象 `files`)。一覧を返さずに失敗する (DR-13)                                                                                         |
+| R-DIF-004 |    3 | —                                                         | 一覧を `git diff` の出力順のまま返す。行の加工 (引用表記の解除、空白の除去、並べ替え、重複の除去) はしない                                    |
 
 - バイト数は文字数ではなくバイト数で数える。120000 バイトちょうどは受け付ける。
 - R-DIF-002 では、git 自身の標準エラー出力は抑えずにそのまま出し、その後に `::error::` の 1 行を出す。原因の調査に git のメッセージを使えるようにする。
@@ -203,21 +203,22 @@ Step 1〜4 で失敗した場合、`$GITHUB_OUTPUT` には何も書かない。
 
 ## 5. Edge Cases
 
-| Input                                                     | Classification                                 | REQ       | Rationale                                            |
-| --------------------------------------------------------- | ---------------------------------------------- | --------- | ---------------------------------------------------- |
-| before と after が同じツリー                              | `files` は空、成功                             | REQ-F-003 | R-DIF-004, R-DIF-015                                 |
-| before が空ツリー SHA                                     | after の全ファイルを返す                       | REQ-F-003 | R-DIF-001 (2 引数の形)                               |
-| 削除だけの差分                                            | `files` は空、成功                             | REQ-F-003 | `--diff-filter=ACMR`                                 |
-| 通常ファイルからシンボリックリンクへの変更 (型の変更 `T`) | `files` に含めない                             | REQ-F-003 | `--diff-filter=ACMR` は `T` を含まない。改訂前と同じ |
-| リネーム (`a.sh` → `b.sh`)                                | `b.sh` だけを返す                              | REQ-F-003 | DD-DIF-01                                            |
-| `docs/日本語.md` の追加                                   | そのまま返す                                   | REQ-F-003 | DR-06                                                |
-| `a"b.sh`・`a\b.sh`・タブを含むパスの追加                  | 引用表記のまま返す。絞り込みの段でエラーになる | REQ-F-006 | R-DIF-004, DR-06                                     |
-| 空白を含むパス (`my file.sh`)                             | そのまま返す                                   | REQ-F-003 | `core.quotePath` は空白を引用しない                  |
-| 一覧がちょうど 120000 バイト                              | 受け付ける                                     | REQ-F-006 | R-DIF-003                                            |
-| 一覧が 120001 バイト                                      | エラー、何も書かない                           | REQ-F-006 | R-DIF-003                                            |
-| `BEFORE_SHA` が不在のコミット (契約違反)                  | `git diff` が失敗し、エラー                    | REQ-F-006 | R-DIF-002                                            |
-| `GITHUB_OUTPUT` が未設定                                  | `git diff` を実行せずにエラー                  | REQ-F-006 | R-DIF-012                                            |
-| 一覧に行全体が `EOF` の行がある                           | 区切り文字は `EOF_1` (共有ライブラリの規則)    | REQ-F-003 | `_ca-filter-files` R-OUT-011                         |
+| Input                                                     | Classification                                       | REQ       | Rationale                                            |
+| --------------------------------------------------------- | ---------------------------------------------------- | --------- | ---------------------------------------------------- |
+| before と after が同じツリー                              | `files` は空、成功                                   | REQ-F-003 | R-DIF-004, R-DIF-015                                 |
+| before が空ツリー SHA                                     | after の全ファイルを返す                             | REQ-F-003 | R-DIF-001 (2 引数の形)                               |
+| 削除だけの差分                                            | `files` は空、成功                                   | REQ-F-003 | `--diff-filter=ACMR`                                 |
+| 通常ファイルからシンボリックリンクへの変更 (型の変更 `T`) | `files` に含めない                                   | REQ-F-003 | `--diff-filter=ACMR` は `T` を含まない。改訂前と同じ |
+| リネーム (`a.sh` → `b.sh`)                                | `b.sh` だけを返す                                    | REQ-F-003 | DD-DIF-01                                            |
+| `docs/日本語.md` の追加                                   | そのまま返す                                         | REQ-F-003 | DR-06                                                |
+| `a"b.sh`・`a\b.sh`・タブを含むパスの追加                  | 引用表記のまま返す。絞り込みの段でエラーになる       | REQ-F-006 | R-DIF-004, DR-06                                     |
+| 空白を含むパス (`my file.sh`)                             | そのまま返す                                         | REQ-F-003 | `core.quotePath` は空白を引用しない                  |
+| 一覧がちょうど 120000 バイト                              | 受け付ける                                           | REQ-F-006 | R-DIF-003                                            |
+| 一覧が 120001 バイト                                      | エラー、何も書かない                                 | REQ-F-006 | R-DIF-003                                            |
+| `BEFORE_SHA` が不在のコミット (契約違反)                  | `git diff` が失敗し、エラー                          | REQ-F-006 | R-DIF-002                                            |
+| `BEFORE_SHA` が `-` で始まる値 (契約違反)                 | オプションとして解釈せず `git diff` が失敗し、エラー | REQ-F-006 | R-DIF-001, R-DIF-002                                 |
+| `GITHUB_OUTPUT` が未設定                                  | `git diff` を実行せずにエラー                        | REQ-F-006 | R-DIF-012                                            |
+| 一覧に行全体が `EOF` の行がある                           | 区切り文字は `EOF_1` (共有ライブラリの規則)          | REQ-F-003 | `_ca-filter-files` R-OUT-011                         |
 
 ---
 
@@ -253,3 +254,4 @@ None identified - all requirements are unambiguous.
 | 2026-10-30 | 1.1.2   | Apply spec fix review: unify stage terms, close the sentence in 2.1, cite DR-13                                                                                                            |
 | 2026-10-30 | 1.2.0   | Apply spec second opinion: add R-DIF-033 (limit in sync with filter-files), type change edge case                                                                                          |
 | 2026-10-30 | 2.2.0   | Unify document versions to 2.2.0 and approve                                                                                                                                               |
+| 2026-10-30 | 2.2.1   | Put --end-of-options before <before> <after> in R-DIF-001 / DD-DIF-01, add the option-like before edge case                                                                                |
