@@ -1381,6 +1381,7 @@ source: specifications-index.md v2.1.1, implementation.md v1.1.3
 ## T-15: resolve-sha.lib.sh のロードガード
 
 対象: `scripts/_libs/resolve-sha.lib.sh` のロードガードと共有ライブラリの読み込み (RLG)。implementation.md Phase 2 Commit 1 (骨格のロードガード) とコーディング規約の fail-first に基づく。テストファイルは `scripts/_libs/__tests__/unit/resolve-sha.unit.spec.sh` の RLG グループ。読み込みは新しい bash プロセスで行い、ガードの状態を例の間で持ち越さない。
+ガード変数は判定直後に設定する。共有ライブラリの読み込みに失敗したら 1 を返してアクションを失敗させ、ガード変数の解除や再試行は考慮しない。ガード変数が設定済みなら関数・定数を定義済みとみなし、依存関数を確認しない (T-RS-RLG-05〜07 は欠番)。
 
 ### [正常] Normal Cases
 
