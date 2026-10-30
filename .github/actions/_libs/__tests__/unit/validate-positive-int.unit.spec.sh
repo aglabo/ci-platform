@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# src: .github/actions/_libs/validation.lib.sh
-# @(#) : validation utility functions for composite actions
+# src: .github/actions/_libs/__tests__/unit/validate-positive-int.unit.spec.sh
+# @(#) : unit tests for validate_positive_int in validation.lib.sh
 #
 # Copyright (c) 2026- atsushifx <https://github.com/atsushifx>
 #

@@ -1,5 +1,14 @@
 #!/usr/bin/env bash
+# src: .github/actions/ca-validate-environment/scripts/__tests__/validate-permissions/functional/validate-permissions.functional.spec.sh
+# @(#) : functional tests for validate_permissions in validate-permissions.sh
+#
+# Copyright (c) 2026- atsushifx <https://github.com/atsushifx>
+#
+# This software is released under the MIT License.
+# https://opensource.org/licenses/MIT
+
 # shellcheck shell=bash
+# shellcheck disable=SC2034,SC2329
 
 Describe 'validate-permissions.sh - validate_permissions() Functional'
   SCRIPT_DIR="${SHELLSPEC_PROJECT_ROOT}/.github/actions/ca-validate-environment/scripts"

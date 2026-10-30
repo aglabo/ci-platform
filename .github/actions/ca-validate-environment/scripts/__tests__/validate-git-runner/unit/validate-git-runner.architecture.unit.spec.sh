@@ -1,4 +1,12 @@
 #!/usr/bin/env bash
+# src: .github/actions/ca-validate-environment/scripts/__tests__/validate-git-runner/unit/validate-git-runner.architecture.unit.spec.sh
+# @(#) : unit tests for the architecture checks of validate-git-runner.sh
+#
+# Copyright (c) 2026- atsushifx <https://github.com/atsushifx>
+#
+# This software is released under the MIT License.
+# https://opensource.org/licenses/MIT
+
 # shellcheck shell=bash
 
 Describe 'validate-git-runner.sh - Architecture Unit'

@@ -1,4 +1,12 @@
-#!/bin/bash
+#!/usr/bin/env bash
+# src: .github/actions/_ca-resolve-sha/scripts/__tests__/unit/action.unit.spec.sh
+# @(#) : static checks for _ca-resolve-sha/action.yml
+#
+# Copyright (c) 2026- atsushifx <https://github.com/atsushifx>
+#
+# This software is released under the MIT License.
+# https://opensource.org/licenses/MIT
+
 # shellcheck shell=bash
 
 # Test suite for action.yml
