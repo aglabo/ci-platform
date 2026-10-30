@@ -1,5 +1,5 @@
-# src: ./.github/actions/validate-environment/action.yml
-# @(#) : Composite: get changed files on push or pull_request
+# src: ./.github/actions/ca-get-changed-files/action.yml
+# @(#) : Composite: get the files changed by an event, filtered by glob patterns
 #
 # Copyright (c) 2026- aglabo <https://github.com/aglabo>
 #
@@ -8,63 +8,64 @@
 
 name: "get-changed-files"
 description: |
-  Get changed files between commits using git diff.
-  IMPORTANT: Requires fetch-depth: 0 in actions/checkout step.
-  Supports push and pull_request events. For pull_request, uses base/head SHA automatically.
+  Get the files changed by the triggering event and filter them by glob patterns.
+  push uses the event's before/after commits, pull_request uses the base/head
+  commits, and any other event uses the last commit-count commits (HEAD~N).
+  IMPORTANT: The caller's actions/checkout step must use fetch-depth: 0.
+  A partial clone is not supported and fails.
+  A push of a deleted branch or of a tag is not supported and fails.
+  Check out the target repository into the working directory (GITHUB_WORKSPACE);
+  do not set the path input of actions/checkout.
 
 inputs:
-  before-sha:
-    description: "Base commit SHA. Defaults to pull_request.base.sha for PR events, github.event.before for push events."
+  commit-count:
+    description: "Positive integer N (1-1000) for the HEAD~N range, used for push without a usable before SHA and for events other than push / pull_request."
     required: false
-    default: ""
-  after-sha:
-    description: "Head commit SHA. Defaults to pull_request.head.sha for PR events, github.sha for push events."
-    required: false
-    default: ""
+    default: "1"
   pattern:
-    description: "Git pathspec glob filter (e.g. '*.ts', 'src/**/*.sh'). Empty = all files."
+    description: "Glob patterns, one per line. A line starting with ! excludes matching files. Leave empty to keep every file."
     required: false
     default: ""
 
 outputs:
   files:
-    description: "Newline-separated list of changed file paths (added/copied/modified/renamed)"
-    value: ${{ steps.get-changed-files.outputs.files }}
+    description: "Changed file paths kept by the patterns, one per line. Empty string when none are kept."
+    value: ${{ steps.filter-files.outputs.files }}
   count:
-    description: "Number of changed files"
-    value: ${{ steps.get-changed-files.outputs.count }}
+    description: "Number of kept files as a decimal integer string without leading zeros or surrounding whitespace."
+    value: ${{ steps.filter-files.outputs.count }}
 
 runs:
   using: composite
   steps:
-    - name: Resolve SHA for event
+    - name: Resolve SHA range
       id: resolve-sha
       shell: bash
-      run: |
-        . "${{ github.action_path }}/scripts/_libs/filter.lib.sh"
-        if ! _result=$(resolve_sha_for_event \
-          "${INPUT_BEFORE_SHA}" \
-          "${INPUT_AFTER_SHA}" \
-          "${GITHUB_EVENT_NAME}"); then
-          exit 1
-        fi
-        _before=$(echo "$_result" | head -n1)
-        _after=$(echo "$_result" | tail -n1)
-        echo "before_sha=${_before}" >> "$GITHUB_OUTPUT"
-        echo "after_sha=${_after}" >> "$GITHUB_OUTPUT"
       env:
-        INPUT_BEFORE_SHA: ${{ inputs.before-sha }}
-        INPUT_AFTER_SHA: ${{ inputs.after-sha }}
-        GITHUB_BASE_SHA: ${{ github.event.pull_request.base.sha }}
-        GITHUB_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        GITHUB_EVENT_NAME: ${{ github.event_name }}
+        GITHUB_REF: ${{ github.ref }}
+        GITHUB_EVENT_DELETED: ${{ github.event.deleted }}
         GITHUB_BEFORE_SHA: ${{ github.event.before }}
         GITHUB_AFTER_SHA: ${{ github.sha }}
+        GITHUB_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        GITHUB_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        INPUT_COMMIT_COUNT: ${{ inputs.commit-count }}
+        INPUT_BEFORE_SHA: ""
+        INPUT_AFTER_SHA: ""
+      run: bash "${GITHUB_ACTION_PATH}/../_ca-resolve-sha/scripts/resolve-sha.sh"
 
     - name: Get changed files
       id: get-changed-files
       shell: bash
-      run: bash "${{ github.action_path }}/scripts/get-changed-files.sh"
       env:
         BEFORE_SHA: ${{ steps.resolve-sha.outputs.before_sha }}
         AFTER_SHA: ${{ steps.resolve-sha.outputs.after_sha }}
-        PATTERN: ${{ inputs.pattern }}
+      run: bash "${GITHUB_ACTION_PATH}/scripts/get-changed-files.sh"
+
+    - name: Filter files
+      id: filter-files
+      shell: bash
+      env:
+        INPUT_FILES: ${{ steps.get-changed-files.outputs.files }}
+        INPUT_PATTERNS: ${{ inputs.pattern }}
+      run: bash "${GITHUB_ACTION_PATH}/../_ca-filter-files/scripts/filter-files.sh"
