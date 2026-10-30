@@ -2,7 +2,7 @@
 title: "Implementation Plan: _ca-filter-files"
 based-on: specifications-index.md v1.6.1
 status: approved
-version: 1.7.1
+version: 1.7.2
 created: "2026-10-27"
 ---
 
@@ -132,9 +132,11 @@ PR は 2 つに分ける。
   どのパターンにも一致しなければ、先頭のパターンが除外なら残し、包含なら捨てる。パターンが 0 件なら全件を残す。
   除外の後に書いた包含で、ファイルを戻せる (AC-019)。
 - 件数の上限 (DR-16、REQ-F-018): `filter-files.lib.sh` に readonly 定数 `FF_MAX_FILES=3000`・`FF_MAX_PATTERNS=100` を置く。
+  `FF_MAX_FILES` には共通定数 `GHA_MAX_PR_FILES` (`_libs/constants.lib.sh`、GitHub の PR の差分の最大ファイル数) を代入する。
   CLL は空行を捨てた後の行数で判定し、上限ちょうどは受け付ける。
   エラーは `::error::files: exceeds the limit of 3000 lines (got: '3001')` の形式とする (DR-15。文言は下の「エラーの文言」)。
 - サイズの上限 (DR-16、REQ-F-018): readonly 定数 `FF_MAX_FILES_BYTES=120000`・`FF_MAX_PATTERNS_BYTES=120000` を置く。
+  どちらにも共通定数 `GHA_MAX_ENV_VALUE_BYTES` (`_libs/constants.lib.sh`、環境変数 1 つの値のバイト上限) を代入する。
   CBL は変換・分割の前の値を、関数内で `local LC_ALL=C` にしてから `${#var}` で数える (外部コマンドを使わない)。
 - CLE の新設: R-IN-011 (LF を伴わない CR を分割前に検査する) を担う関数として追加する。
   分割前の CR 検査は specifications-index.md §3.4 Step 1 と specifications-input.md の R-IN-011 に従う。
@@ -400,3 +402,4 @@ Phase 1 の開始前、全テストを 1 回実行して結果をベースライ
 | 2026-10-29 | 1.6.1   | Record the chosen UTF-8 check: a Bash ERE (_FF_UTF8_RE) under a function-local LC_ALL=C                                                                                                                                                                                                                                                                                                                    |
 | 2026-10-31 | 1.7.0   | Follow specifications-index v1.6.0: set the load guard first, return 1 on a failed shared library load, drop the declare -F check                                                                                                                                                                                                                                                                          |
 | 2026-10-31 | 1.7.1   | Follow specifications-index v1.6.1 (CBL lives in the shared _libs/validation.lib.sh)                                                                                                                                                                                                                                                                                                                       |
+| 2026-10-31 | 1.7.2   | Assign the shared constants of _libs/constants.lib.sh to FF_MAX_FILES and the byte limits                                                                                                                                                                                                                                                                                                                  |
