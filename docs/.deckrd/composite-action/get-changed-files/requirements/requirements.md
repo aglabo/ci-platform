@@ -2,7 +2,7 @@
 title: "Requirements: ca-get-changed-files"
 module: "composite-action/get-changed-files"
 status: approved
-version: 2.2.0
+version: 2.3.0
 created: "2026-10-29"
 ---
 
@@ -36,6 +36,7 @@ SHA の解決と glob による絞り込みは内部 Action に任せ、本 Acti
 - `git diff` による変更ファイルの一覧の取得 (pathspec なし)
 - `_ca-filter-files` のスクリプトによる絞り込みと、出力 `files` / `count` の書き出し
 - `scripts/_libs/filter.lib.sh` とそのテストの削除 (DR-09)
+- 共有ライブラリ `.github/actions/_libs/` への `gha_error`・共通定数・`check_byte_limit` の追加 (REQ-C-006)
 - ShellSpec テストと `_tests_ca_composite-actions.yml` の `test-get-changed-files` ジョブの改訂
 - `CHANGELOG.md` への破壊的変更と移行方法の記載
 
@@ -43,7 +44,7 @@ SHA の解決と glob による絞り込みは内部 Action に任せ、本 Acti
 
 - SHA 解決の規則そのもの (`_ca-resolve-sha` の要件に従う)
 - glob の照合規則そのもの (`_ca-filter-files` の要件に従う)
-- `_ca-resolve-sha` / `_ca-filter-files` / `.github/actions/_libs/` の変更
+- `_ca-resolve-sha` / `_ca-filter-files` の契約の変更と、`.github/actions/_libs/` の既存関数の変更 (REQ-C-006)
 - 出力 `files` / `count` の形式の変更、出力の追加 (`resolution` を含む。DR-08)
 - `actions/checkout` の `fetch-depth: 0` 要件の緩和
 - 3000 件または 120000 バイトを超える差分の取得 (DR-07)
@@ -425,10 +426,20 @@ pull_request の base / head が存在しない場合は、`_ca-resolve-sha` REQ
 
 上記を満たさなければならない (MUST)。
 
-### REQ-C-006: 内部 Action と _libs/ を変更しない
+### REQ-C-006: 内部 Action の契約と _libs/ の既存関数を変更しない
 
-`.github/actions/_ca-resolve-sha/`、`.github/actions/_ca-filter-files/`、`.github/actions/_libs/` を変更してはならない (MUST NOT)。
+内部 Action (`.github/actions/_ca-resolve-sha/`、`.github/actions/_ca-filter-files/`) の契約を変更してはならない (MUST NOT)。
+契約は、入力・出力・エラーの文言とする。
 内部 Action の契約に不足がある場合は、本モジュールでは対処せず、各モジュールの要件の改訂として扱う。
+
+`.github/actions/_libs/` の変更は、次の追加に限らなければならない (MUST)。
+
+- `error.lib.sh` (`gha_error` と、共通のエラーの文言の定数)
+- `constants.lib.sh` (複数の Action に共通する上限の定数)
+- `validation.lib.sh` への `check_byte_limit` と、`error.lib.sh` の読み込み
+
+既存関数のシグネチャと挙動は変更してはならない (MUST NOT)。
+内部 Action のライブラリをこれらの共有ライブラリへ置き換える変更は、契約を変えない範囲に限り、各モジュールの文書の改訂として扱う。
 
 ### REQ-C-007: CI テストジョブ
 
@@ -703,3 +714,4 @@ Owner が spec / impl の項目は、spec で解決した。各行の括弧内�
 | 2026-10-29 | 2.1.1   | Apply req second opinion: split push rows in F-002 (normal / fallback, HEAD-based), add pattern errors to F-006, compatibility policy for external users (C-008), assumptions (cwd guarantee, first-parent tree diff, fallback range, internal script contract)                      |
 | 2026-10-29 | 2.1.2   | Apply req fix review: unify terms (変更ファイルの一覧, 絞り込みの段, 改訂前, 解決済み), AC-012 covers both limits, add AC-018 (invalid pattern), move AC-015 to F-003/F-005, reorder C-008, cite filter-files REQ-F-017/DR-14, scope cites DR-09                                     |
 | 2026-10-30 | 2.2.0   | Unify document versions to 2.2.0 and approve                                                                                                                                                                                                                                         |
+| 2026-10-31 | 2.3.0   | REQ-C-006: allow the shared-library additions this module owns (error.lib.sh, constants.lib.sh, check_byte_limit) and keep the internal actions' contracts unchanged; scope and Out of Scope follow                                                                                  |

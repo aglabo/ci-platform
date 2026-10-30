@@ -1,8 +1,8 @@
 ---
 title: "Design Specification: ca-get-changed-files (Index)"
-based-on: requirements.md v2.2.0
+based-on: requirements.md v2.3.0
 status: approved
-version: 2.2.0
+version: 2.2.1
 created: "2026-10-29"
 ---
 
@@ -116,7 +116,7 @@ ID は分割ファイルをまたいで一意とし、廃止した ID は再利�
 
 - SHA 解決の規則そのもの ← REQ: Out of Scope #1
 - glob の照合規則そのもの ← REQ: Out of Scope #2
-- 内部 Action と `_libs/` の変更 ← REQ: Out of Scope #3
+- 内部 Action の契約と `_libs/` の既存関数の変更 ← REQ: Out of Scope #3
 - 出力の追加 (`resolution` を含む) ← REQ: Out of Scope #4
 - `fetch-depth: 0` 要件の緩和 ← REQ: Out of Scope #5
 - 3000 件または 120000 バイトを超える差分の取得 ← REQ: Out of Scope #6
@@ -381,3 +381,4 @@ requirements の Open Questions のうち、Owner が spec の項目は次のと
 | 2026-10-30 | 1.2.1   | Apply spec fix review: unify stage terms, explicit R-IDX-004 outcomes, rule order note, move GITHUB_ACTION_PATH assumption, cite DR-14, GACT scope, R-IDX range, REQ-C-003 in split files                                                      |
 | 2026-10-30 | 1.3.0   | Apply spec second opinion: R-IDX-003/004 use two files to exercise the multi-line handoff, git settings assumption, edge cases ("!" with no changes, quoted path among excluded files)                                                         |
 | 2026-10-30 | 2.2.0   | Unify document versions to 2.2.0 and approve                                                                                                                                                                                                   |
+| 2026-10-31 | 2.2.1   | Follow requirements v2.3.0: Non-Goals limit the excluded change to the internal actions' contracts and existing _libs functions                                                                                                                |

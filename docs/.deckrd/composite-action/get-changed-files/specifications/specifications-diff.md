@@ -1,8 +1,8 @@
 ---
 title: "Design Specification: ca-get-changed-files (Diff)"
-based-on: requirements.md v2.2.0
+based-on: requirements.md v2.3.0
 status: approved
-version: 2.2.1
+version: 2.2.2
 created: "2026-10-29"
 ---
 
@@ -174,7 +174,7 @@ Step 1〜4 で失敗した場合、`$GITHUB_OUTPUT` には何も書かない。
   R-DIF-020: set -euo pipefail、ライブラリのロードガード、(return 0 2>/dev/null) による main のガードを持つ (DD-DIF-04)。
   R-DIF-021: list_changed_files は scripts/_libs/get-changed-files.lib.sh、main は scripts/get-changed-files.sh に置く。
   R-DIF-022: 出力先の検証と書き出しは、共有ライブラリ _libs/output.lib.sh の関数 (validate_output_file、write_multiline_output) で行う。
-  共有ライブラリは変更しない。 -->
+  共有ライブラリの既存関数は変更しない (REQ-C-006)。 -->
 
 **旧ライブラリの削除 (legacy-removal):**
 
@@ -255,3 +255,4 @@ None identified - all requirements are unambiguous.
 | 2026-10-30 | 1.2.0   | Apply spec second opinion: add R-DIF-033 (limit in sync with filter-files), type change edge case                                                                                          |
 | 2026-10-30 | 2.2.0   | Unify document versions to 2.2.0 and approve                                                                                                                                               |
 | 2026-10-30 | 2.2.1   | Put --end-of-options before <before> <after> in R-DIF-001 / DD-DIF-01, add the option-like before edge case                                                                                |
+| 2026-10-31 | 2.2.2   | Follow requirements v2.3.0: the impl-note keeps existing shared-library functions unchanged instead of the whole library                                                                   |
