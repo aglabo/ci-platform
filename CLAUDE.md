@@ -10,8 +10,8 @@ GitHub Actions と Git Hooks を統合した品質管理テンプレートを提
 
 **コア機能**:
 
-- ローカル品質管理: lefthook (gitleaks/secretlint/commitlint/AI コミットメッセージ)
-- CI/CD 基盤: GitHub Actions 再利用可能ワークフロー (actionlint/ghalint/gitleaks)
+- ローカル品質管理: lefthook (betterleaks/secretlint/commitlint/AI コミットメッセージ)
+- CI/CD 基盤: GitHub Actions 再利用可能ワークフロー (actionlint/ghalint/betterleaks)
 - ドキュメント品質: textlint/markdownlint/dprint
 - テストフレームワーク: ShellSpec (Bash)
 
@@ -24,31 +24,31 @@ GitHub Actions と Git Hooks を統合した品質管理テンプレートを提
 
 **IDD Framework スキル** (Issue/PR/コミット管理は必ずスキル経由):
 
-参照先: `C:\Users\atsushifx\.claude\plugins\marketplaces\claude-idd-framework-marketplace`
+参照先: `C:\Users\atsushifx\.claude\plugins\marketplaces\idd-framework` (プラグイン名 `idd`)
 
-- Issue 作成: `/claude-idd-framework:\idd\issue:new`
-- Issue 編集: `/claude-idd-framework:\idd\issue:edit`
-- Issue 一覧: `/claude-idd-framework:\idd\issue:list`
-- Issue Push: `/claude-idd-framework:\idd\issue:push`
-- PR 作成/Push: `/claude-idd-framework:idd-pr new`/`/claude-idd-framework:idd-pr push`
-- コミットメッセージ: `/claude-idd-framework:idd-commit-message`
+- Issue 作成: `/idd:idd:issue:new`
+- Issue 編集: `/idd:idd:issue:edit`
+- Issue 一覧: `/idd:idd:issue:list`
+- Issue Push: `/idd:idd:issue:push`
+- PR 作成/Push: `/idd:idd-pr new`/`/idd:idd-pr push`
+- コミットメッセージ: `/idd:idd-commit-message`
 
 **絶対禁止**:
 
 - テストファイル (`__tests__/**/*.spec.sh`) の変更 (明示的指示がない限り)
 - IDD スキルを使わずに手動で Issue/PR/コミット作成
 - `contents: write`、`id-token: write` の安易な追加
-- gitleaks/secretlint 除外設定の追加
+- betterleaks/secretlint 除外設定の追加
 
 **保護領域** (変更時は理由明記):
 
-`configs/gitleaks.toml`, `configs/secretlint.config.yaml`, `lefthook.yml`, `.github/workflows/*.yml`
+`configs/betterleaks.toml`, `configs/secretlint.config.yaml`, `lefthook.yml`, `.github/workflows/*.yml`
 
 ## 技術スタック
 
 **コア**: GitHub Actions (再利用可能ワークフロー), lefthook (Git Hook 統合), ShellSpec (Bash テスト)
 
-**品質ツール**: actionlint, ghalint, gitleaks, secretlint, textlint, markdownlint, dprint, commitlint
+**品質ツール**: actionlint, ghalint, betterleaks, secretlint, textlint, markdownlint, dprint, commitlint
 
 **ディレクトリ構成**:
 
@@ -68,7 +68,8 @@ runners/                # 品質ツール実行ラッパー (run-shellspec/run-s
 - `cd` を使うと後続コマンドが失敗する → **`cd` 禁止**
 - spec ファイルはリポジトリ相対パスで渡す (例: `.github/actions/_libs/__tests__/unit/output.unit.spec.sh`)
   - 絶対パスは `Not found a path: C.` で失敗する (`C:/...` 形式、`/c/...` 形式のどちらでも)
-  - glob (`*.spec.sh`) は WSL 実行時に展開されず `Not found a path` で失敗する → ファイルを 1 つずつ渡す
+  - glob (`*.spec.sh`) は WSL 経由の実行では展開されず `Not found a path` で失敗する → ファイルを 1 つずつ渡す
+    - `runners/exec/shellspec-exec.sh` 自体は glob を展開できる。Windows からの実行は WSL 経由になるため使えない
 - runner スクリプト自体と `PROJECT_ROOT` は Unix 形式 `/c/...` で指定する
 - ShellSpec のデフォルト出力は TTY に直接書き込む → `2>&1 | cat` では捕捉不可
 - `pnpm run test:sh` 経由ではサブプロセスの出力が見えない
@@ -102,7 +103,7 @@ bash ./scripts/setup-dev-env.sh           # lefthook + ShellSpec インストー
 
 # テスト実行 (shellspec 直接呼び出し禁止、run-shellspec.sh 経由のみ)
 # 引数は「テスト種別 / リポジトリ相対の spec ファイル」のいずれか
-# (ディレクトリ・絶対パス・glob は不可。WSL 実行時は glob が展開されない)
+# (ディレクトリ・絶対パスは不可。glob は WSL 経由の実行で展開されないため使わない)
 bash ./runners/run-shellspec.sh all       # 全テスト
 bash ./runners/run-shellspec.sh unit      # 種別指定 (all/unit/functional/integration/system/e2e)
 bash ./runners/run-shellspec.sh .github/actions/_libs/__tests__/unit/output.unit.spec.sh  # spec ファイル指定
@@ -115,9 +116,10 @@ pnpm run lint:text -- --fix               # 自動修正
 dprint fmt                                # フォーマット
 
 # CI 検証 (ローカル)
-actionlint -config-file ./configs/actionlint.yaml .github/workflows/*.yml
-ghalint run --config ./configs/ghalint.yaml
-gitleaks detect --source . --verbose
+pnpm run lint:gha                         # jactionlint (workflows) + ghalint run / ghalint act
+pnpm run lint:gha:actions .github/actions/<action>/action.yml  # jactionlint (引数なしは workflows のみ)
+pnpm run lint:gha:act .github/actions/<action>/action.yml      # ghalint act (引数なしは全 action)
+pnpm run scan:secrets:history             # betterleaks で git 履歴全体を走査
 
 # トラブルシューティング
 lefthook uninstall && lefthook install    # lefthook 再設定
@@ -135,13 +137,16 @@ lefthook uninstall && lefthook install    # lefthook 再設定
 
 - 型: `feat`, `fix`, `docs`, `test`, `refactor`, `perf`, `ci`, `config`, `release`, `merge`, `build`, `style`, `deps`, `chore`
 
-**ブランチ戦略**: `main` (安定), `releases` (リリース), `feature/*`, `fix/*`, `docs/*`, `refactor/*`, `test/*`
+**ブランチ戦略**: `main` (安定), `releases` (リリース), 作業ブランチ `<type>-<issue-number>/<scope>/<description>`
+
+- 例: `refactor-134/workflow/get-changed-files`
+- 詳細は `docs/.deckrd/rules/deckrd-rule-workflow.md` に従う
 
 **テスト配置**: `<script_dir>/__tests__/<tier>/<name>.<tier>.spec.sh`
 
 - 例: `scripts/_libs/__tests__/unit/output.unit.spec.sh`
 - ティア: `unit`, `functional`, `integration`, `e2e`
-- インポートパターン: `Include ../script.sh` (相対パス)
+- インポートパターン: `Include "${SHELLSPEC_PROJECT_ROOT}/<repo-relative path>"` (プロジェクトルート起点)
 - グローバル配列使用時: `BeforeEach`/`AfterEach` による setup/teardown 必須
 
 ## ドキュメント参照
