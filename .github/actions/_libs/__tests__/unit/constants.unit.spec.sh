@@ -103,7 +103,7 @@ _clg_resource_lib_in_fresh_shell() {
 #            return early without defining anything, while an empty guard loads
 #            the library as usual.
 Describe 'constants.lib.sh'
-  Describe 'T-GCF-CLG: load guard and constants'
+  Describe 'load guard and constants'
     # 正常系: the library is sourced with the guard variable unset
     Context 'When: 正常系'
       It '[Normal] T-GCF-CLG-01: 未設定で source すると CONSTANTS_LIB_LOADED=1 になる'
