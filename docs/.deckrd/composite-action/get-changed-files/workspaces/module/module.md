@@ -3,6 +3,9 @@ title: get-changed-files
 test_scope: GCF
 owns:
   - .github/actions/ca-get-changed-files/**
+  - .github/actions/_libs/error.lib.sh
+  - .github/actions/_libs/__tests__/unit/gha-error.unit.spec.sh
+  - .github/actions/_libs/__tests__/unit/check-byte-limit.unit.spec.sh
 ---
 
 ## get-changed-files
@@ -23,6 +26,9 @@ spec と impl はこの一覧を参照し、関数名・シグネチャ・所在
 | MAINF        | `main` (functional テスト)                 | `ca-get-changed-files/scripts/get-changed-files.sh`           | specifications-diff.md   |
 | RUNF         | 3 つのスクリプトの連鎖 (functional テスト) | `ca-get-changed-files/action.yml` の step 順                  | specifications-action.md |
 | GACT         | `action.yml` と配下の静的検査              | `ca-get-changed-files/action.yml`                             | specifications-action.md |
+| GE           | `gha_error <target> [<problem> <value>]`   | `_libs/error.lib.sh`                                          | (共通化、仕様変更なし)   |
+| ELG          | `error.lib.sh` のロードガードと定数        | `_libs/error.lib.sh`                                          | (共通化、仕様変更なし)   |
+| CBL          | `check_byte_limit <target> <text> <max>`   | `_libs/validation.lib.sh`                                     | (共通化、仕様変更なし)   |
 
 - 略語は綴り全体で 1 個とする。
 - 旧テスト (`T-gcf-*`・`T-rsv-*`・`T-rsl-*`・`T-wrt-*`) は削除し、上の略語で書き直す。
@@ -30,6 +36,12 @@ spec と impl はこの一覧を参照し、関数名・シグネチャ・所在
 
 ## テスト対象の略語
 
-| 略語 | 対象 |
-| ---- | ---- |
-|      |      |
+| 略語  | 対象                                                              |
+| ----- | ----------------------------------------------------------------- |
+| LCF   | list_changed_files <before> <after>                               |
+| MAINF | main (get-changed-files.sh、functional テスト)                    |
+| RUNF  | 3 つのスクリプトの連鎖 (action.yml の step 順、functional テスト) |
+| GACT  | action.yml と配下の静的検査                                       |
+| GE    | gha_error <target> [<problem> <value>]                            |
+| ELG   | error.lib.sh のロードガードと定数                                 |
+| CBL   | check_byte_limit <target> <text> <max>                            |
