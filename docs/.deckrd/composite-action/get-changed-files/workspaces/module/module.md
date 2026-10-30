@@ -23,7 +23,7 @@ SHA の解決を `_ca-resolve-sha` (#135)、glob による絞り込みを `_ca-f
 spec と impl はこの一覧を参照し、関数名・シグネチャ・所在を再掲しない。
 
 | テストの略語 | 関数                                       | 所在                                                          | 担当仕様                 |
-|--------------|--------------------------------------------|---------------------------------------------------------------|--------------------------|
+| ------------ | ------------------------------------------ | ------------------------------------------------------------- | ------------------------ |
 | LCF          | `list_changed_files <before> <after>`      | `ca-get-changed-files/scripts/_libs/get-changed-files.lib.sh` | specifications-diff.md   |
 | MAINF        | `main` (functional テスト)                 | `ca-get-changed-files/scripts/get-changed-files.sh`           | specifications-diff.md   |
 | RUNF         | 3 つのスクリプトの連鎖 (functional テスト) | `ca-get-changed-files/action.yml` の step 順                  | specifications-action.md |
