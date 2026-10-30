@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# src: .github/actions/_libs/validation.lib.sh
-# @(#) : validation utility functions for composite actions
+# src: .github/actions/_ca-resolve-sha/scripts/_libs/__tests__/unit/resolve-sha.unit.spec.sh
+# @(#) : unit tests for resolve-sha.lib.sh
 #
 # Copyright (c) 2026- atsushifx <https://github.com/atsushifx>
 #

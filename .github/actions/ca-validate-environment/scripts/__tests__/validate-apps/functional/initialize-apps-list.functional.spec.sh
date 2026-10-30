@@ -1,4 +1,12 @@
-#!/bin/bash
+#!/usr/bin/env bash
+# src: .github/actions/ca-validate-environment/scripts/__tests__/validate-apps/functional/initialize-apps-list.functional.spec.sh
+# @(#) : functional tests for initialize_apps_list in validate-apps.sh
+#
+# Copyright (c) 2026- atsushifx <https://github.com/atsushifx>
+#
+# This software is released under the MIT License.
+# https://opensource.org/licenses/MIT
+
 # shellcheck shell=bash
 # shellcheck disable=SC2034,SC2154
 

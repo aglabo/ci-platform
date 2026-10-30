@@ -1,4 +1,12 @@
-#!/bin/bash
+#!/usr/bin/env bash
+# src: .github/actions/_libs/__tests__/unit/env.unit.spec.sh
+# @(#) : unit tests for env.lib.sh
+#
+# Copyright (c) 2026- atsushifx <https://github.com/atsushifx>
+#
+# This software is released under the MIT License.
+# https://opensource.org/licenses/MIT
+
 # shellcheck shell=bash
 # shellcheck disable=SC2034,SC2154,SC2329
 

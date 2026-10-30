@@ -1,4 +1,12 @@
-#!/bin/bash
+#!/usr/bin/env bash
+# src: .github/actions/_ca-filter-files/scripts/__tests__/functional/filter-files.functional.spec.sh
+# @(#) : functional tests for filter-files.sh
+#
+# Copyright (c) 2026- atsushifx <https://github.com/atsushifx>
+#
+# This software is released under the MIT License.
+# https://opensource.org/licenses/MIT
+
 # shellcheck shell=bash
 # shellcheck disable=SC2034,SC2154
 

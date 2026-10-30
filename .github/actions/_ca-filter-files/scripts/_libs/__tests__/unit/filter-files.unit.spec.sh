@@ -226,8 +226,11 @@ _EO_EXISTING_LINE='existing=1'
 # Source filter-files.lib.sh in a fresh bash process and print the observable
 # state; used by the load guard group (T-FF-FE-05, T-FF-FE-13).
 # The spec shell has already loaded the library via Include, so the source runs
-# in a new process with FILTER_FILES_LIB_LOADED and OUTPUT_LIB_LOADED unset; if
-# $1 is given, FILTER_FILES_LIB_LOADED is preset to it.
+# in a new process with FILTER_FILES_LIB_LOADED and the shared library guards
+# (OUTPUT_LIB_LOADED, VALIDATION_LIB_LOADED, ERROR_LIB_LOADED) unset; if $1 is
+# given, FILTER_FILES_LIB_LOADED is preset to it. Only the library's own
+# ff_error and the output.lib.sh functions are reported; check_byte_limit and
+# gha_error (validation.lib.sh / error.lib.sh) are covered by T-GCF-CBL-03.
 # @arg $1 preset — optional value assigned to FILTER_FILES_LIB_LOADED before sourcing
 # @stdout one per line:
 #         "loaded=<FILTER_FILES_LIB_LOADED>",
@@ -239,7 +242,7 @@ _EO_EXISTING_LINE='existing=1'
 # @return exit status of the fresh bash process
 _fe_source_lib_in_fresh_shell() {
   bash -c '
-    unset FILTER_FILES_LIB_LOADED OUTPUT_LIB_LOADED
+    unset FILTER_FILES_LIB_LOADED OUTPUT_LIB_LOADED VALIDATION_LIB_LOADED ERROR_LIB_LOADED
     [ "$#" -ge 2 ] && FILTER_FILES_LIB_LOADED="$2"
     . "$1"
     _source_status=$?
@@ -257,7 +260,8 @@ _fe_source_lib_in_fresh_shell() {
 
 ##
 # Source filter-files.lib.sh twice in a fresh bash process; used by the load
-# guard group (T-FF-FE-06). FILTER_FILES_LIB_LOADED and OUTPUT_LIB_LOADED are
+# guard group (T-FF-FE-06). FILTER_FILES_LIB_LOADED and the shared library
+# guards (OUTPUT_LIB_LOADED, VALIDATION_LIB_LOADED, ERROR_LIB_LOADED) are
 # unset first, so the first source loads the library and the second one
 # sources it again in the already-loaded state.
 # @stdout nothing
@@ -265,7 +269,7 @@ _fe_source_lib_in_fresh_shell() {
 # @return exit status of the second source
 _fe_resource_lib_in_fresh_shell() {
   bash -c '
-    unset FILTER_FILES_LIB_LOADED OUTPUT_LIB_LOADED
+    unset FILTER_FILES_LIB_LOADED OUTPUT_LIB_LOADED VALIDATION_LIB_LOADED ERROR_LIB_LOADED
     . "$1"
     . "$1"
   ' _ "$_FE_LIB_PATH"
@@ -291,8 +295,9 @@ _fe_teardown() {
 # Copy only filter-files.lib.sh to ${_fe_tmpdir}/action/scripts/_libs/ and
 # source the copy in a fresh bash process; used by T-FF-FE-08.
 # The copy's relative shared library ${_fe_tmpdir}/_libs/output.lib.sh does
-# not exist, so the source cannot load it. FILTER_FILES_LIB_LOADED and
-# OUTPUT_LIB_LOADED are unset first.
+# not exist, so the source cannot load it. FILTER_FILES_LIB_LOADED and the
+# shared library guards (OUTPUT_LIB_LOADED, VALIDATION_LIB_LOADED,
+# ERROR_LIB_LOADED) are unset first.
 # Requires: _fe_tmpdir set by _fe_setup
 # @stderr whatever the source writes to stderr
 # @return exit status of the source
@@ -301,7 +306,7 @@ _fe_source_isolated_copy() {
   mkdir -p "$_copy_dir"
   cp "$_FE_LIB_PATH" "${_copy_dir}/filter-files.lib.sh"
   bash -c '
-    unset FILTER_FILES_LIB_LOADED OUTPUT_LIB_LOADED
+    unset FILTER_FILES_LIB_LOADED OUTPUT_LIB_LOADED VALIDATION_LIB_LOADED ERROR_LIB_LOADED
     . "$1"
   ' _ "${_copy_dir}/filter-files.lib.sh"
 }
@@ -2079,7 +2084,8 @@ Describe 'filter-files.lib.sh'
 
   ##
   # load guard: FILTER_FILES_LIB_LOADED marks the library as loaded, and the
-  # first source loads the shared library output.lib.sh. Every example sources
+  # first source loads the shared libraries output.lib.sh and validation.lib.sh
+  # (which loads error.lib.sh). Every example sources
   # the library in a fresh bash process (via the _fe_*_fresh_shell helpers),
   # because the spec shell has already loaded it via Include.
   # Assigned test IDs: T-FF-FE-05, T-FF-FE-06, T-FF-FE-08, T-FF-FE-13

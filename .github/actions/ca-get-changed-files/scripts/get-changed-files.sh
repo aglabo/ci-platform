@@ -57,8 +57,9 @@ _main_check_inputs() {
 ##
 # @description Entry point of the ca-get-changed-files composite action.
 #              Together with _main_check_inputs, the only place that reads
-#              the environment; unset variables are treated as empty. Calls, in this fixed order and stopping at
-#              the first failure: _main_check_inputs (R-DIF-010 -> R-DIF-011
+#              the environment; unset variables are treated as empty.
+#              Calls, in this fixed order and stopping at the first failure:
+#              _main_check_inputs (R-DIF-010 -> R-DIF-011
 #              -> R-DIF-012 -> R-DIF-013; nothing is written on failure) ->
 #              list_changed_files, run in the current directory (R-DIF-002 /
 #              R-DIF-003; nothing is written on failure) ->

@@ -1,4 +1,12 @@
 #!/usr/bin/env bash
+# src: .github/actions/ca-validate-environment/scripts/__tests__/validate-apps/unit/validate-app-special.unit.spec.sh
+# @(#) : unit tests for validate_app_special in validate-apps.sh
+#
+# Copyright (c) 2026- atsushifx <https://github.com/atsushifx>
+#
+# This software is released under the MIT License.
+# https://opensource.org/licenses/MIT
+
 # shellcheck shell=bash
 # ShellSpec tests for validate_app_special function
 
