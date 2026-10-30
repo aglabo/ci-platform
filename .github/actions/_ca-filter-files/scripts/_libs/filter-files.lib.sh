@@ -13,9 +13,9 @@
 # ============================================================================
 
 # Load guard: return early when this library has already been loaded. The
-# guard is set first; a failed load of output.lib.sh / validation.lib.sh below
-# returns 1, which makes the action fail, so the library is never sourced
-# again afterwards.
+# guard is set first; a failed load of output.lib.sh / validation.lib.sh /
+# constants.lib.sh below returns 1, which makes the action fail, so the
+# library is never sourced again afterwards.
 [ -n "${FILTER_FILES_LIB_LOADED:-}" ] && return 0
 FILTER_FILES_LIB_LOADED=1
 
@@ -27,6 +27,9 @@ _FF_COMMON_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)/_libs
 # shellcheck source=.github/actions/_libs/validation.lib.sh
 # shellcheck disable=SC1091
 . "${_FF_COMMON_LIB_DIR}/validation.lib.sh" || return 1
+# shellcheck source=.github/actions/_libs/constants.lib.sh
+# shellcheck disable=SC1091
+. "${_FF_COMMON_LIB_DIR}/constants.lib.sh" || return 1
 
 # ============================================================================
 # Constants
@@ -34,21 +37,25 @@ _FF_COMMON_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)/_libs
 
 # Byte limits of the files and patterns inputs (DR-16; R-IN-016 / R-IN-017),
 # counted on the raw value before conversion or splitting; a value of exactly
-# the limit is accepted. Defined after the load guard is set, so a second
-# source returns at the guard and never re-runs readonly (which would fail).
+# the limit is accepted. Both are assigned the shared GHA_MAX_ENV_VALUE_BYTES
+# (_libs/constants.lib.sh), since the inputs reach the step through env.
+# Defined after the load guard is set, so a second source returns at the
+# guard and never re-runs readonly (which would fail).
 # The four limits are read by filter-files.sh, not by this library, so
 # SC2034 (appears unused) is disabled for each of them.
 # shellcheck disable=SC2034
-readonly FF_MAX_FILES_BYTES=120000
+readonly FF_MAX_FILES_BYTES=$GHA_MAX_ENV_VALUE_BYTES
 # shellcheck disable=SC2034
-readonly FF_MAX_PATTERNS_BYTES=120000
+readonly FF_MAX_PATTERNS_BYTES=$GHA_MAX_ENV_VALUE_BYTES
 
 # Line-count limits of the files and patterns inputs (DR-16; R-IN-014 /
 # R-IN-015), counted after blank lines are dropped; a count of exactly the
-# limit is accepted. Defined after the load guard is set, so a second source
-# returns at the guard and never re-runs readonly (which would fail).
+# limit is accepted. The files limit is the shared GHA_MAX_PR_FILES
+# (_libs/constants.lib.sh); the patterns limit is specific to this action.
+# Defined after the load guard is set, so a second source returns at the
+# guard and never re-runs readonly (which would fail).
 # shellcheck disable=SC2034
-readonly FF_MAX_FILES=3000
+readonly FF_MAX_FILES=$GHA_MAX_PR_FILES
 # shellcheck disable=SC2034
 readonly FF_MAX_PATTERNS=100
 
