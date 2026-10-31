@@ -10,7 +10,7 @@ tags:
   - scenarios
 ---
 
-<!-- cspell:words rhysd -->
+{/*cspell:words jactionlint jdx*/}
 
 ## 📋 基本シナリオ
 
@@ -18,13 +18,13 @@ tags:
 
 ---
 
-## シナリオ A: setup-tool で actionlint をインストールして lint を実行
+## シナリオ A: setup-tool で jactionlint をインストールして lint を実行
 
-GitHub Actions ワークフローの構文を検証する `actionlint` をインストールして実行します。
+GitHub Actions ワークフローの構文を検証する `jactionlint` をインストールして実行します。
 
 ```yaml
 jobs:
-  actionlint:
+  jactionlint:
     name: Lint GitHub Actions workflows
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -37,18 +37,18 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Install actionlint
+      - name: Install jactionlint
         id: setup-tool
         if: steps.checkout.outcome == 'success'
         uses: aglabo/ci-platform/.github/actions/ca-setup-tool@<SHA> # vX.Y.Z
         with:
-          repo: rhysd/actionlint
-          tool-version: "1.7.12"
+          repo: jdx/jactionlint
+          tool-version: "2.4.0"
 
-      - name: Run actionlint
+      - name: Run jactionlint
         if: steps.setup-tool.outcome == 'success'
         run: |
-          actionlint -config-file ./configs/actionlint.yaml .github/workflows/*.yml
+          jactionlint --config-file ./configs/jactionlint.yaml .github/workflows/*.yml
 ```
 
 ---
@@ -107,13 +107,13 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Install actionlint
-        id: setup-actionlint
+      - name: Install jactionlint
+        id: setup-jactionlint
         if: steps.checkout.outcome == 'success'
         uses: aglabo/ci-platform/.github/actions/ca-setup-tool@<SHA> # vX.Y.Z
         with:
-          repo: rhysd/actionlint
-          tool-version: "1.7.12"
+          repo: jdx/jactionlint
+          tool-version: "2.4.0"
 
       - name: Setup agla-dev-tools
         id: setup-repo
@@ -124,9 +124,9 @@ jobs:
           path: ./tools/agla-dev-tools
           ref: a88f3bf1ecda478ad8ec2e907139bd058ce5ee56 # v0.1.0
 
-      - name: Run actionlint
-        if: steps.setup-actionlint.outcome == 'success'
-        run: actionlint -config-file ./configs/actionlint.yaml .github/workflows/*.yml
+      - name: Run jactionlint
+        if: steps.setup-jactionlint.outcome == 'success'
+        run: jactionlint --config-file ./configs/jactionlint.yaml .github/workflows/*.yml
 
       - name: Run ls-lint
         if: steps.setup-repo.outcome == 'success'
