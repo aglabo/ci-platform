@@ -1,0 +1,24 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/jdx/jactionlint/main/schema/jactionlint-config.json
+# src: ./configs/jactionlint.yaml
+# @(#) : jactionlint configuration file
+#
+# Copyright (c) 2026- atsushifx <https://github.com/atsushifx>
+#
+# This software is released under the MIT License.
+# https://opensource.org/licenses/MIT
+
+# Profile
+profile: default
+
+# Online
+online: false
+
+# Set the level of a rule by its ID: "error" (fails the run), "warn", "info" or
+# "off". A rule with options takes a mapping.
+rules:
+  missing-timeout: warn # lower the level of a rule the profile enables
+  require-shell: error
+  unpinned-uses: error
+  max-run-lines:
+    level: warn
+    max: 120
