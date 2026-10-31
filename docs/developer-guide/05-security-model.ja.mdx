@@ -35,18 +35,18 @@ GitHub Actions のすべてのワークフロー・アクションは、必要�
 
 ## 🛡️ シークレット検出の多層構造
 
-| ツール     | 実行タイミング | 対象                            | 役割                               |
-| ---------- | -------------- | ------------------------------- | ---------------------------------- |
-| gitleaks   | ローカル       | コミット前の差分                | コミット前のシークレット漏洩を阻止 |
-| secretlint | ローカル       | コミット前のファイル            | 認証情報パターンの検出・阻止       |
-| gitleaks   | CI             | リポジトリ全体 (全コミット履歴) | ローカルを通過した漏洩を CI で捕捉 |
+| ツール      | 実行タイミング | 対象                            | 役割                               |
+| ----------- | -------------- | ------------------------------- | ---------------------------------- |
+| betterleaks | ローカル       | コミット前の差分                | コミット前のシークレット漏洩を阻止 |
+| secretlint  | ローカル       | コミット前のファイル            | 認証情報パターンの検出・阻止       |
+| betterleaks | CI             | リポジトリ全体 (全コミット履歴) | ローカルを通過した漏洩を CI で捕捉 |
 
-**ローカル検出 (gitleaks + secretlint)**:
+**ローカル検出 (betterleaks + secretlint)**:
 
 lefthook の `pre-commit` フックで実行されます。
 開発者がコミットを作成する前にシークレットを検出し、コミット自体を拒否します。
 
-**CI 検出 (gitleaks)**:
+**CI 検出 (betterleaks)**:
 
 GitHub Actions で実行されます。
 リポジトリ全体の履歴をスキャンし、ローカル検出をすり抜けた漏洩を捕捉します。
@@ -67,14 +67,14 @@ GitHub Actions で実行されます。
 
 `validate-environment` は CI 実行時に権限設定を動的に検証します。
 
-{/* markdownlint-disable line-length */}
+{/*markdownlint-disable line-length*/}
 
 | 検証項目                 | 内容                                                      |
 | ------------------------ | --------------------------------------------------------- |
 | `contents: write` の検出 | 書き込み権限が設定されている場合に警告・停止              |
 | `id-token: write` の検出 | OIDC トークン発行権限が不要な場面で使われていないかを確認 |
 
-{/* markdownlint-enable line-length */}
+{/*markdownlint-enable line-length*/}
 
 ---
 
@@ -82,20 +82,20 @@ GitHub Actions で実行されます。
 
 ### ローカルレイヤー (Git Hooks)
 
-| 施策                   | ツール     | タイミング |
-| ---------------------- | ---------- | ---------- |
-| シークレット検出       | gitleaks   | pre-commit |
-| 認証情報パターン検出   | secretlint | pre-commit |
-| コミットメッセージ検証 | commitlint | commit-msg |
+| 施策                   | ツール      | タイミング |
+| ---------------------- | ----------- | ---------- |
+| シークレット検出       | betterleaks | pre-commit |
+| 認証情報パターン検出   | secretlint  | pre-commit |
+| コミットメッセージ検証 | commitlint  | commit-msg |
 
 ### CI レイヤー (GitHub Actions)
 
 | 施策                   | ツール               | タイミング       |
 | ---------------------- | -------------------- | ---------------- |
 | 環境検証ゲート         | validate-environment | パイプライン先頭 |
-| ワークフロー構文検証   | actionlint           | Push / PR        |
+| ワークフロー構文検証   | jactionlint          | Push / PR        |
 | 権限ポリシー違反検出   | ghalint              | Push / PR        |
-| リポジトリ全体スキャン | gitleaks             | Push / PR        |
+| リポジトリ全体スキャン | betterleaks          | Push / PR        |
 
 ---
 
@@ -103,14 +103,14 @@ GitHub Actions で実行されます。
 
 以下のファイルはセキュリティポリシーを定義しています。変更時は必ず理由を明記してください。
 
-| ファイル                         | 内容                            | 変更禁止事項                       |
-| -------------------------------- | ------------------------------- | ---------------------------------- |
-| `configs/gitleaks.toml`          | gitleaks のシークレット検出設定 | 除外設定 (allowlist) の追加        |
-| `configs/secretlint.config.yaml` | secretlint の認証情報検出設定   | 除外設定の追加・検出ルールの無効化 |
+| ファイル                         | 内容                               | 変更禁止事項                       |
+| -------------------------------- | ---------------------------------- | ---------------------------------- |
+| `configs/betterleaks.toml`       | betterleaks のシークレット検出設定 | 除外設定 (allowlist) の追加        |
+| `configs/secretlint.config.yaml` | secretlint の認証情報検出設定      | 除外設定の追加・検出ルールの無効化 |
 
 **なぜ保護するか**:
 
-除外設定を安易に追加すると、実際のシークレット漏洩が発生するリスクがあります。
+除外設定を安易に追加すると、実際のシークレット漏洩につながるリスクがあります。
 変更が必要な場合は、PR に変更理由・影響範囲・代替手段を明記してレビューを受けてください。
 
 ---
@@ -119,10 +119,10 @@ GitHub Actions で実行されます。
 
 新しいセキュリティルールを追加する手順です。
 
-**gitleaks への新しい検出ルール追加**:
+**betterleaks への新しい検出ルール追加**:
 
-1. `configs/gitleaks.toml` に `[[rules]]` エントリを追加する
-2. ローカルで `gitleaks detect --source . --verbose` を実行して検証する
+1. `configs/betterleaks.toml` に `[[rules]]` エントリを追加する
+2. ローカルで `betterleaks git . --config ./configs/betterleaks.toml --verbose` を実行して検証する
 3. テスト用のサンプルデータで誤検知がないことを確認する
 
 **secretlint への新しい検出ルール追加**:
