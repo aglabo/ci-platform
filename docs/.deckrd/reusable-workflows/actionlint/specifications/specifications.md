@@ -1,10 +1,11 @@
 ---
 title: "Design Specification: Actionlint Reusable Workflow"
-based-on: requirements.md v1.5
+based-on: requirements.md v1.6.0
+version: 1.2.0
 status: Draft
 ---
 
-<!-- cspell::words rhysd -->
+<!-- cspell:words jactionlint jdx -->
 <!-- textlint-disable
   ja-technical-writing/sentence-length,
   ja-technical-writing/max-comma
@@ -53,7 +54,7 @@ Each unit SHALL have a single behavioral responsibility:
 
 | Assumption                    | Description                                                                                              |
 | ----------------------------- | -------------------------------------------------------------------------------------------------------- |
-| Hosted runner compatibility   | The workflow runs on a Linux hosted runner compatible with actionlint and local composite actions.       |
+| Hosted runner compatibility   | The workflow runs on a Linux hosted runner compatible with jactionlint and local composite actions.      |
 | Read-only repository access   | The workflow requires repository read access only.                                                       |
 | External configuration source | Linter configuration is obtained from the fixed shared repository `aglabo/.github`, not from the caller. |
 | Fixed checkout path           | The configuration source is always checked out into the `shared/` directory.                             |
@@ -77,8 +78,8 @@ Each unit SHALL have a single behavioral responsibility:
 | report-upload   | lint-execute failed              | Lint report artifact is uploaded                                  | Non-fatal; workflow is already failed at lint-execute  |
 
 <!-- impl-note: Local env-validation composite action inputs: architecture=amd64, actions-type=read, require-github-hosted=false. -->
-<!-- impl-note: Local setup-tool composite action inputs: repo=rhysd/actionlint, tool-version=${{ inputs.actionlint-version }}. -->
-<!-- impl-note: Configuration checkout path: shared/. Required linter config: shared/configs/actionlint.yaml (default). -->
+<!-- impl-note: Local setup-tool composite action inputs: repo=jdx/jactionlint, tool-version=${{ inputs.version }}. -->
+<!-- impl-note: Configuration checkout path: shared/. Required linter config: shared/configs/jactionlint.yaml (default). -->
 
 #### Unit Interaction Map
 
@@ -118,8 +119,8 @@ Each unit SHALL have a single behavioral responsibility:
 
 ```text
 Caller Inputs
-  | actionlint-version
-  | config-file
+  | version
+  | config
   v
 +----------------+
 | trigger-inputs |
@@ -176,20 +177,20 @@ Caller Inputs
 
 ### 2.5 Behavioral Design Decisions
 
-| ID     | Decision                                                                                               | Rationale                                                                                   | Affected Rules | Status   |
-| ------ | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------- | -------------- | -------- |
-| DD-001 | The workflow SHALL resolve missing linter version input to the default stable version `1.7.12`.        | Callers should be able to use the workflow without specifying a version.                    | R-001          | Accepted |
-| DD-002 | The workflow SHALL resolve missing config-file input to `./shared/configs/actionlint.yaml`.            | The default path provides organization-wide linter policy from the fixed config repository. | R-002          | Accepted |
-| DD-003 | Environment validation SHALL run before installation and linting.                                      | Invalid runtime conditions should stop the workflow before side effects or lint work occur. | R-003, R-004   | Accepted |
-| DD-004 | Tool installation SHALL be gated by successful environment validation.                                 | Installation should occur only in a validated environment.                                  | R-005, R-006   | Accepted |
-| DD-005 | Configuration checkout SHALL be gated by successful tool installation.                                 | Configuration should be retrieved only when linting can proceed.                            | R-007, R-008   | Accepted |
-| DD-006 | Lint execution SHALL be gated by completed configuration checkout.                                     | The linter requires the shared configuration source.                                        | R-009, R-010   | Accepted |
-| DD-007 | Linter non-zero exit SHALL fail the workflow immediately.                                              | Lint errors are blocking quality gate failures.                                             | R-011          | Accepted |
-| DD-008 | Workflow permissions SHALL be limited to read-only repository content access.                          | The workflow does not require mutation privileges.                                          | R-012          | Accepted |
-| DD-009 | The configuration repository SHALL be fixed to `aglabo/.github` and not caller-configurable.           | Centralizing config management prevents per-caller policy divergence.                       | R-007          | Accepted |
-| DD-010 | The config-file path SHALL be caller-overridable with a default of `./shared/configs/actionlint.yaml`. | Allows callers to reference a different config within the checked-out `shared/` directory.  | R-002, R-009   | Accepted |
-| DD-011 | The job timeout SHALL be fixed at 10 minutes and not caller-configurable.                              | Lint jobs are expected to complete quickly; a fixed timeout prevents runaway jobs.          | R-013          | Accepted |
-| DD-012 | The lint report SHALL be uploaded as an artifact on failure only.                                      | Preserves error details for investigation; avoids artifact storage on clean runs.           | R-017, R-018   | Accepted |
+| ID     | Decision                                                                                           | Rationale                                                                                   | Affected Rules | Status   |
+| ------ | -------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- | -------------- | -------- |
+| DD-001 | The workflow SHALL resolve missing linter version input to the default stable version `2.4.0`.     | Callers should be able to use the workflow without specifying a version.                    | R-001          | Accepted |
+| DD-002 | The workflow SHALL resolve missing config input to `./shared/configs/jactionlint.yaml`.            | The default path provides organization-wide linter policy from the fixed config repository. | R-002          | Accepted |
+| DD-003 | Environment validation SHALL run before installation and linting.                                  | Invalid runtime conditions should stop the workflow before side effects or lint work occur. | R-003, R-004   | Accepted |
+| DD-004 | Tool installation SHALL be gated by successful environment validation.                             | Installation should occur only in a validated environment.                                  | R-005, R-006   | Accepted |
+| DD-005 | Configuration checkout SHALL be gated by successful tool installation.                             | Configuration should be retrieved only when linting can proceed.                            | R-007, R-008   | Accepted |
+| DD-006 | Lint execution SHALL be gated by completed configuration checkout.                                 | The linter requires the shared configuration source.                                        | R-009, R-010   | Accepted |
+| DD-007 | Linter non-zero exit SHALL fail the workflow immediately.                                          | Lint errors are blocking quality gate failures.                                             | R-011          | Accepted |
+| DD-008 | Workflow permissions SHALL be limited to read-only repository content access.                      | The workflow does not require mutation privileges.                                          | R-012          | Accepted |
+| DD-009 | The configuration repository SHALL be fixed to `aglabo/.github` and not caller-configurable.       | Centralizing config management prevents per-caller policy divergence.                       | R-007          | Accepted |
+| DD-010 | The config path SHALL be caller-overridable with a default of `./shared/configs/jactionlint.yaml`. | Allows callers to reference a different config within the checked-out `shared/` directory.  | R-002, R-009   | Accepted |
+| DD-011 | The job timeout SHALL be fixed at 10 minutes and not caller-configurable.                          | Lint jobs are expected to complete quickly; a fixed timeout prevents runaway jobs.          | R-013          | Accepted |
+| DD-012 | The lint report SHALL be uploaded as an artifact on failure only.                                  | Preserves error details for investigation; avoids artifact storage on clean runs.           | R-017, R-018   | Accepted |
 
 ### 2.6 Related Decision Records
 
@@ -222,13 +223,13 @@ A design decision SHOULD be promoted to a decision record when any of the follow
 
 ### 3.1 Input Domain
 
-| Input              | Required | Default                            | Constraints                                                                          | Behavior                                      |
-| ------------------ | -------- | ---------------------------------- | ------------------------------------------------------------------------------------ | --------------------------------------------- |
-| actionlint-version | No       | `1.7.12`                           | SHALL use semantic version format `X.Y.Z` when explicitly supplied                   | Determines the linter version to install      |
-| config-file        | No       | `./shared/configs/actionlint.yaml` | SHALL be a valid path within the `shared/` directory after config-checkout completes | Determines the linter configuration file path |
+| Input   | Required | Default                             | Constraints                                                                          | Behavior                                      |
+| ------- | -------- | ----------------------------------- | ------------------------------------------------------------------------------------ | --------------------------------------------- |
+| version | No       | `2.4.0`                             | SHALL use semantic version format `X.Y.Z` when explicitly supplied                   | Determines the linter version to install      |
+| config  | No       | `./shared/configs/jactionlint.yaml` | SHALL be a valid path within the `shared/` directory after config-checkout completes | Determines the linter configuration file path |
 
-<!-- impl-note: actionlint-version maps to setup-tool tool-version and must satisfy X.Y.Z format. -->
-<!-- impl-note: config-file default is ./shared/configs/actionlint.yaml. The configuration source is always aglabo/.github checked out into shared/. -->
+<!-- impl-note: version maps to setup-tool tool-version and must satisfy X.Y.Z format. -->
+<!-- impl-note: config default is ./shared/configs/jactionlint.yaml. The configuration source is always aglabo/.github checked out into shared/. -->
 <!-- impl-note: target-checkout uses persist-credentials: false. -->
 
 ### 3.2 Output Semantics
@@ -242,7 +243,7 @@ The observable result SHALL be one of:
 | Success | All units completed successfully and the linter exited with status `0`.                        |
 | Failure | Environment validation, tool installation, configuration checkout, or linter execution failed. |
 
-On failure caused by lint errors, the workflow SHALL produce a text report artifact named `actionlint-report` at `.github/report/actionlint-report.txt`.
+On failure caused by lint errors, the workflow SHALL produce a text report artifact named `jactionlint-report` at `.github/report/jactionlint-report.txt`.
 
 ### 3.3 Step Execution Semantics
 
@@ -257,10 +258,10 @@ Each executable unit after input resolution SHALL be conditioned on the previous
 The lint execution unit SHALL fail fast. It MUST NOT ignore a non-zero linter exit status and MUST NOT continue on lint failure.
 
 <!-- impl-note: Step gating pattern: if: steps.<id>.outcome == 'success'. -->
-<!-- impl-note: Linter command: actionlint -config-file ${{ inputs.config-file }} 2>&1 | tee .github/report/actionlint-report.txt; exit ${PIPESTATUS[0]} -->
+<!-- impl-note: Linter command: jactionlint --config-file "${CONFIG_FILE}" 2>&1 | tee .github/report/jactionlint-report.txt; exit "${PIPESTATUS[0]}". CONFIG_FILE is set in step env from ${{ inputs.config }}. -->
 <!-- impl-note: prepare-report step: mkdir -p .github/report -->
 <!-- impl-note: report-upload step: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0 # v6.0.3 -->
-<!-- impl-note: report-upload step: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1, if: failure() && steps.lint-execute.outcome == 'failure', name: actionlint-report, path: .github/report/actionlint-report.txt, retention-days: 30 -->
+<!-- impl-note: report-upload step: actions/upload-artifact@v7.0.2, if: failure() && steps.lint-execute.outcome == 'failure', name: jactionlint-report, path: .github/report/jactionlint-report.txt, retention-days: 30 -->
 <!-- impl-note: target-checkout and config-checkout both use actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0 # v6.0.3 -->
 <!-- impl-note: config-checkout: repository: aglabo/.github, path: shared, fetch-depth: 1, persist-credentials: false -->
 <!-- impl-note: job timeout-minutes: 10 (fixed) -->
@@ -273,8 +274,8 @@ The lint execution unit SHALL fail fast. It MUST NOT ignore a non-zero linter ex
 
 | Rule ID | Step            | Condition                                                | Outcome                                                                                                                           |
 | ------- | --------------- | -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| R-001   | trigger-inputs  | `actionlint-version` is omitted                          | The workflow SHALL resolve the default linter version `1.7.12`.                                                                   |
-| R-002   | trigger-inputs  | `config-file` is omitted                                 | The workflow SHALL resolve the default configuration file path `./shared/configs/actionlint.yaml`.                                |
+| R-001   | trigger-inputs  | `version` is omitted                                     | The workflow SHALL resolve the default linter version `2.4.0`.                                                                    |
+| R-002   | trigger-inputs  | `config` is omitted                                      | The workflow SHALL resolve the default configuration file path `./shared/configs/jactionlint.yaml`.                               |
 | R-003   | env-validation  | Workflow execution has started                           | The workflow SHALL validate the runner and action environment before installation or linting.                                     |
 | R-004   | env-validation  | Environment validation reports an error status           | The workflow SHALL block tool installation, configuration checkout, and lint execution.                                           |
 | R-005   | tool-install    | Environment validation succeeded                         | The workflow SHALL install the requested linter version into the executable search path.                                          |
@@ -289,8 +290,8 @@ The lint execution unit SHALL fail fast. It MUST NOT ignore a non-zero linter ex
 | R-014   | workflow        | A downstream unit is evaluated after an upstream failure | The downstream unit SHALL be skipped unless explicitly covered by fail-fast lint behavior.                                        |
 | R-015   | target-checkout | Checkout is performed                                    | The workflow SHALL set `persist-credentials: false` on the target repository checkout.                                            |
 | R-016   | prepare-report  | lint-execute is about to run                             | The workflow SHALL create the `.github/report/` directory before executing the linter.                                            |
-| R-017   | lint-execute    | Linter runs                                              | The workflow SHALL write lint results to `.github/report/actionlint-report.txt`.                                                  |
-| R-018   | report-upload   | lint-execute exits with non-zero status                  | The workflow SHALL upload `.github/report/actionlint-report.txt` as artifact `actionlint-report` on failure only.                 |
+| R-017   | lint-execute    | Linter runs                                              | The workflow SHALL write lint results to `.github/report/jactionlint-report.txt`.                                                 |
+| R-018   | report-upload   | lint-execute exits with non-zero status                  | The workflow SHALL upload `.github/report/jactionlint-report.txt` as artifact `jactionlint-report` on failure only.               |
 | R-019   | report-upload   | lint-execute exits with status `0`                       | The workflow MUST NOT upload any artifact.                                                                                        |
 | R-020   | target-checkout | Checkout is performed                                    | The workflow SHALL declare step ID `target-checkout` explicitly on the first checkout step.                                       |
 | R-021   | trigger-inputs  | Inputs are declared                                      | Each workflow input SHALL include a non-empty `description` field.                                                                |
@@ -300,51 +301,51 @@ The lint execution unit SHALL fail fast. It MUST NOT ignore a non-zero linter ex
 
 ## 5. Edge Cases
 
-| Input / Condition                           | Behavior                                                             | REQ                  | Rationale                                                             |
-| ------------------------------------------- | -------------------------------------------------------------------- | -------------------- | --------------------------------------------------------------------- |
-| `actionlint-version` omitted                | The workflow SHALL use the default linter version `1.7.12`.          | REQ-F-002            | Callers should not need to know the current approved version.         |
-| `config-file` omitted                       | The workflow SHALL use `./shared/configs/actionlint.yaml`.           | REQ-F-003b           | Organization-wide policy should apply by default.                     |
-| `config-file` points to a non-existent path | Linter execution SHALL fail and the workflow SHALL fail immediately. | REQ-F-004            | Missing configuration is a blocking lint setup error.                 |
-| Explicit linter version is not available    | Tool installation SHALL fail the job.                                | REQ-C-003, REQ-C-004 | Invalid or unavailable versions cannot produce reliable lint results. |
-| Configuration source is inaccessible        | Configuration checkout SHALL fail the job.                           | REQ-F-003            | A lint run without configuration is not valid.                        |
-| Linter detects a syntax error               | Lint execution SHALL fail fast; report SHALL be uploaded.            | REQ-F-004, REQ-F-006 | Lint errors are blocking quality gate failures.                       |
-| Linter detects no errors                    | Workflow SHALL succeed; no artifact SHALL be uploaded.               | REQ-F-006            | Avoids unnecessary artifact storage on clean runs.                    |
-| Environment validation reports an error     | All downstream units SHALL be blocked.                               | REQ-F-001            | Invalid execution environments should stop before install or lint.    |
-| Caller expects workflow outputs             | No outputs SHALL be produced.                                        | Function Decisions   | The workflow communicates only by job status.                         |
-| `.github/report/` directory does not exist  | The workflow SHALL create it before running the linter.              | REQ-F-005            | Ensures the report output path exists before the linter writes to it. |
+| Input / Condition                          | Behavior                                                             | REQ                  | Rationale                                                             |
+| ------------------------------------------ | -------------------------------------------------------------------- | -------------------- | --------------------------------------------------------------------- |
+| `version` omitted                          | The workflow SHALL use the default linter version `2.4.0`.           | REQ-F-002            | Callers should not need to know the current approved version.         |
+| `config` omitted                           | The workflow SHALL use `./shared/configs/jactionlint.yaml`.          | REQ-F-003b           | Organization-wide policy should apply by default.                     |
+| `config` points to a non-existent path     | Linter execution SHALL fail and the workflow SHALL fail immediately. | REQ-F-004            | Missing configuration is a blocking lint setup error.                 |
+| Explicit linter version is not available   | Tool installation SHALL fail the job.                                | REQ-C-003, REQ-C-004 | Invalid or unavailable versions cannot produce reliable lint results. |
+| Configuration source is inaccessible       | Configuration checkout SHALL fail the job.                           | REQ-F-003            | A lint run without configuration is not valid.                        |
+| Linter detects a syntax error              | Lint execution SHALL fail fast; report SHALL be uploaded.            | REQ-F-004, REQ-F-006 | Lint errors are blocking quality gate failures.                       |
+| Linter detects no errors                   | Workflow SHALL succeed; no artifact SHALL be uploaded.               | REQ-F-006            | Avoids unnecessary artifact storage on clean runs.                    |
+| Environment validation reports an error    | All downstream units SHALL be blocked.                               | REQ-F-001            | Invalid execution environments should stop before install or lint.    |
+| Caller expects workflow outputs            | No outputs SHALL be produced.                                        | Function Decisions   | The workflow communicates only by job status.                         |
+| `.github/report/` directory does not exist | The workflow SHALL create it before running the linter.              | REQ-F-005            | Ensures the report output path exists before the linter writes to it. |
 
 ---
 
 ## 6. Requirements Traceability
 
-| REQ ID     | Rule IDs                   | Notes                                                                                                    |
-| ---------- | -------------------------- | -------------------------------------------------------------------------------------------------------- |
-| REQ-F-001  | R-003, R-004, R-014        | Environment validation runs before install and lint and blocks downstream failure paths.                 |
-| REQ-F-002  | R-001, R-005, R-006        | Linter installation uses the resolved version and fails the job on installation error.                   |
-| REQ-F-003  | R-007, R-008               | Configuration checkout is fixed to `aglabo/.github` into `shared/` with fetch-depth 1.                   |
-| REQ-F-003b | R-002, R-009, R-010        | Lint execution uses the resolved config-file path; fails on absent or unusable configuration.            |
-| REQ-F-004  | R-009, R-010, R-011        | Lint execution uses shared configuration and fails immediately on non-zero exit.                         |
-| REQ-F-005  | R-016, R-017               | Report directory is created before lint; lint results written to `.github/report/actionlint-report.txt`. |
-| REQ-F-006  | R-018, R-019               | Report uploaded as artifact on failure only; no upload on success.                                       |
-| REQ-F-007  | R-003 (workflow)           | `workflow_call` trigger only.                                                                            |
-| REQ-F-008  | R-015                      | `persist-credentials: false` on all checkout steps.                                                      |
-| REQ-F-009  | R-013                      | Job timeout fixed at 10 minutes.                                                                         |
-| REQ-NF-001 | R-003, R-005, R-007, R-009 | Each unit is represented by a separate named workflow step.                                              |
-| REQ-NF-002 | R-012                      | Permissions limited to read-only repository contents access.                                             |
-| REQ-NF-003 | R-001, R-005               | Linter version comes from input resolution.                                                              |
-| REQ-NF-004 | R-018                      | Lint report artifact enables error investigation without CI log access.                                  |
-| REQ-NF-005 | R-007, R-009               | Configuration location and source are deterministic.                                                     |
-| REQ-C-001  | R-003                      | Runner compatibility is validated before downstream execution.                                           |
-| REQ-C-002  | R-012                      | Read-only contents permission at workflow and job level.                                                 |
-| REQ-C-003  | R-001                      | `actionlint-version` input uses `X.Y.Z` semantic version format.                                         |
-| REQ-C-004  | R-003, R-005               | Local composite actions provide validation and installation behavior.                                    |
-| REQ-C-005  | R-002, R-007, R-009        | `config-file` default resolves to `./shared/configs/actionlint.yaml`.                                    |
-| REQ-C-006  | R-014                      | Step gating uses `steps.<id>.outcome == 'success'` pattern.                                              |
-| REQ-C-007  | R-015                      | `persist-credentials: false` on all `actions/checkout` steps.                                            |
-| REQ-C-008  | R-013                      | Job `timeout-minutes` fixed at 10.                                                                       |
-| REQ-NF-001 | R-020                      | Each step SHALL declare an explicit step ID.                                                             |
-| (implicit) | R-021                      | Each input SHALL include a description for maintainability.                                              |
-| (implicit) | R-022                      | The workflow SHALL declare a name for observability in the Actions UI.                                   |
+| REQ ID     | Rule IDs                   | Notes                                                                                                     |
+| ---------- | -------------------------- | --------------------------------------------------------------------------------------------------------- |
+| REQ-F-001  | R-003, R-004, R-014        | Environment validation runs before install and lint and blocks downstream failure paths.                  |
+| REQ-F-002  | R-001, R-005, R-006        | Linter installation uses the resolved version and fails the job on installation error.                    |
+| REQ-F-003  | R-007, R-008               | Configuration checkout is fixed to `aglabo/.github` into `shared/` with fetch-depth 1.                    |
+| REQ-F-003b | R-002, R-009, R-010        | Lint execution uses the resolved config path; fails on absent or unusable configuration.                  |
+| REQ-F-004  | R-009, R-010, R-011        | Lint execution uses shared configuration and fails immediately on non-zero exit.                          |
+| REQ-F-005  | R-016, R-017               | Report directory is created before lint; lint results written to `.github/report/jactionlint-report.txt`. |
+| REQ-F-006  | R-018, R-019               | Report uploaded as artifact on failure only; no upload on success.                                        |
+| REQ-F-007  | R-003 (workflow)           | `workflow_call` trigger only.                                                                             |
+| REQ-F-008  | R-015                      | `persist-credentials: false` on all checkout steps.                                                       |
+| REQ-F-009  | R-013                      | Job timeout fixed at 10 minutes.                                                                          |
+| REQ-NF-001 | R-003, R-005, R-007, R-009 | Each unit is represented by a separate named workflow step.                                               |
+| REQ-NF-002 | R-012                      | Permissions limited to read-only repository contents access.                                              |
+| REQ-NF-003 | R-001, R-005               | Linter version comes from input resolution.                                                               |
+| REQ-NF-004 | R-018                      | Lint report artifact enables error investigation without CI log access.                                   |
+| REQ-NF-005 | R-007, R-009               | Configuration location and source are deterministic.                                                      |
+| REQ-C-001  | R-003                      | Runner compatibility is validated before downstream execution.                                            |
+| REQ-C-002  | R-012                      | Read-only contents permission at workflow and job level.                                                  |
+| REQ-C-003  | R-001                      | `version` input uses `X.Y.Z` semantic version format.                                                     |
+| REQ-C-004  | R-003, R-005               | Local composite actions provide validation and installation behavior.                                     |
+| REQ-C-005  | R-002, R-007, R-009        | `config` default resolves to `./shared/configs/jactionlint.yaml`.                                         |
+| REQ-C-006  | R-014                      | Step gating uses `steps.<id>.outcome == 'success'` pattern.                                               |
+| REQ-C-007  | R-015                      | `persist-credentials: false` on all `actions/checkout` steps.                                             |
+| REQ-C-008  | R-013                      | Job `timeout-minutes` fixed at 10.                                                                        |
+| REQ-NF-001 | R-020                      | Each step SHALL declare an explicit step ID.                                                              |
+| (implicit) | R-021                      | Each input SHALL include a description for maintainability.                                               |
+| (implicit) | R-022                      | The workflow SHALL declare a name for observability in the Actions UI.                                    |
 
 ---
 
@@ -358,7 +359,8 @@ The lint execution unit SHALL fail fast. It MUST NOT ignore a non-zero linter ex
 
 ## 8. Change History
 
-| Date       | Version | Change                                                                                  |
-| ---------- | ------- | --------------------------------------------------------------------------------------- |
-| 2026-06-12 | 1.1.0   | Add R-020 (step ID), R-021 (input description), R-022 (workflow name) from tasks review |
-| 2026-06-12 | 1.0.0   | Initial specification                                                                   |
+| Date       | Version | Change                                                                                                                                                                                                                           |
+| ---------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-11-01 | 1.2.0   | Update references for the jactionlint migration (jdx/jactionlint, inputs version / config, default config ./shared/configs/jactionlint.yaml, report jactionlint-report); lint command reads the config path from env CONFIG_FILE |
+| 2026-06-12 | 1.1.0   | Add R-020 (step ID), R-021 (input description), R-022 (workflow name) from tasks review                                                                                                                                          |
+| 2026-06-12 | 1.0.0   | Initial specification                                                                                                                                                                                                            |
