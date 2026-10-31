@@ -251,7 +251,7 @@ source: specifications.md
 - [x] **T-04-01-04**: Verify the job runs on `ubuntu-slim`
   - Target: `jobs.*.runs-on`
   - Scenario: Given the job runner is configured
-  - Expected: Then `runs-on: ubuntu-slim` (project-configured self-hosted runner label per configs/actionlint.yaml)
+  - Expected: Then `runs-on: ubuntu-slim` (GitHub-hosted runner label; jactionlint accepts it without a self-hosted-runner setting)
   - `yq`: `.jobs | to_entries | .[0].value."runs-on" == "ubuntu-slim"`
 
 ---
