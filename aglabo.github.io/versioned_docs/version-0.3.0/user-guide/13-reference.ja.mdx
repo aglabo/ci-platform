@@ -11,7 +11,7 @@ tags:
   - outputs
 ---
 
-<!-- markdownlint-disable line-length -->
+{/*markdownlint-disable line-length*/}
 
 > このアクションは **Linux ランナー専用** です (`ubuntu-latest`、`ubuntu-22.04` など) 。
 > Windows・macOS はサポートしていません。
@@ -165,14 +165,14 @@ GitHub ホステッドランナーか否かを `RUNNER_ENVIRONMENT` 環境変数
 各検証は `runner` → `permissions` → `apps` の順で実行されます。
 いずれかが `error` を返した場合、アクションは即時に非ゼロの終了コードで終了します (`fail-fast`)。後続の検証ステップは実行されません。
 
-| 出力名                | 値                  | 説明                                 |
-| --------------------- | ------------------- | ------------------------------------ |
-| `runner-status`       | `success` / `error` | ランナー検証の結果                   |
-| `runner-message`      | 文字列              | ランナー検証の詳細メッセージ         |
-| `permissions-status`  | `success` / `error` | パーミッション検証の結果             |
-| `permissions-message` | 文字列              | パーミッション検証の詳細メッセージ   |
-| `apps-status`         | `success` / `error` | アプリケーション検証の結果           |
-| `apps-message`        | 文字列              | アプリケーション検証の詳細メッセージ |
+| 出力名                | 値                  | 説明                               |
+| --------------------- | ------------------- | ---------------------------------- |
+| `runner-status`       | `success` / `error` | ランナー検証の結果                 |
+| `runner-message`      | 文字列              | ランナー検証の詳細メッセージ       |
+| `permissions-status`  | `success` / `error` | パーミッション検証の結果           |
+| `permissions-message` | 文字列              | パーミッション検証の詳細メッセージ |
+| `apps-status`         | `success` / `error` | アプリ検証の結果                   |
+| `apps-message`        | 文字列              | アプリ検証の詳細メッセージ         |
 
 ### 📖 出力値の参照方法
 
