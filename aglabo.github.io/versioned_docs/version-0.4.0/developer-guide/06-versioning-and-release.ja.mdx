@@ -88,14 +88,14 @@ BREAKING CHANGE: required-tools input が必須になりました。
 
 リリースは次の手順で行います。
 
-1. **テスト実行**: `bash ./runners/run-shellspec.sh all` で全テストが PASS することを確認する
-2. **CI 検証**: ローカルで `actionlint`・`ghalint`・`gitleaks` を実行して問題がないことを確認する
-3. **CHANGELOG 更新**: `CHANGELOG.md` に変更内容・影響範囲を記載する
-4. **リリースノート更新**: `Release-Note.md` を今回のバージョンの内容に更新する
-5. **バージョン同期**: `package.json` の `version` をこれから付けるタグに合わせて更新する
-6. **バージョンタグ**: `git tag v0.X.Y` でタグを作成する
-7. **自己参照 SHA 更新**: ワークフロー内の `aglabo/ci-platform` 参照をタグ対象コミットの SHA に更新し、別コミットとして記録する
-8. **GitHub リリース**: GitHub Releases にリリースノートを作成する
+1. `bash ./runners/run-shellspec.sh all` でテストを実行し、全テストが PASS することを確認する
+2. CI と同じ検証として、ローカルで `actionlint`・`ghalint`・`gitleaks` を実行して問題がないことを確認する
+3. `CHANGELOG.md` に変更内容・影響範囲を記載する
+4. リリースノート `Release-Note.md` を今回のバージョンの内容に更新する
+5. `package.json` の `version` をこれから付けるタグに合わせて更新する
+6. `git tag v0.X.Y` でバージョンタグを作成する
+7. ワークフロー内の `aglabo/ci-platform` 参照をタグ対象コミットの SHA に更新し、別コミットとして記録する
+8. GitHub Releases にリリースノートを作成する
 
 :::note
 
@@ -110,7 +110,7 @@ BREAKING CHANGE: required-tools input が必須になりました。
 
 利用者がワークフローで ci-platform を参照する方法と推奨度の一覧です。
 
-{/* textlint-disable ja-technical-writing/ja-no-successive-word */}
+{/*textlint-disable ja-technical-writing/ja-no-successive-word*/}
 
 | 参照方法       | 例         | 推奨度     | 備考                                         |
 | -------------- | ---------- | ---------- | -------------------------------------------- |
@@ -119,7 +119,7 @@ BREAKING CHANGE: required-tools input が必須になりました。
 | コミット SHA   | `@abc1234` | ★★☆ 許容   | 完全固定だがメンテナンスが煩雑               |
 | ブランチ名     | `@main`    | ★☆☆ 非推奨 | 最新コミットを追従するため予期しない変更あり |
 
-{/* textlint-enable */}
+{/*textlint-enable*/}
 
 ```yaml
 # 推奨: バージョンタグ固定
