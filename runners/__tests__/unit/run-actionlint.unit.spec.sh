@@ -8,9 +8,11 @@ Include "${SHELLSPEC_PROJECT_ROOT}/runners/run-actionlint.sh"
 # ─── Internal Helpers
 
 # Creates the fixture directory (_TEST_DIR), the stub argument log (_STUB_LOG),
-# and resets the stub exit code (_STUB_RC) to 0.
+# resets the stub exit code (_STUB_RC) to 0,
+# and points PROJECT_ROOT at _TEST_DIR so no repository config is found.
 _setup_env() {
   _TEST_DIR=$(mktemp -d)
+  PROJECT_ROOT="${_TEST_DIR}"
   _STUB_LOG=$(mktemp)
   _STUB_RC=0
 }
@@ -126,6 +128,26 @@ Describe 'Given: boundary values for config resolution and arguments'
         The status should equal 0
         The lines of contents of file "${_STUB_LOG}" should equal 3
         The line 3 of contents of file "${_STUB_LOG}" should equal "my flow.yml"
+      End
+    End
+  End
+End
+
+Describe 'Given: a repository config exists under PROJECT_ROOT'
+  BeforeEach '_setup_env'
+  AfterEach '_cleanup_env'
+  Describe 'When: main is called'
+    Describe 'Then: Task T-02-05 - the repository config takes priority'
+      It "[Normal] T-02-05-01: <tmp>/configs/jactionlint.yaml exists -> --config-file <tmp>/configs/jactionlint.yaml"
+        mkdir -p "${_TEST_DIR}/configs"
+        : > "${_TEST_DIR}/configs/jactionlint.yaml"
+        XDG_CONFIG_HOME="${_TEST_DIR}/xdg"
+        When call main a.yml
+        The status should equal 0
+        The lines of contents of file "${_STUB_LOG}" should equal 3
+        The line 1 of contents of file "${_STUB_LOG}" should equal "--config-file"
+        The line 2 of contents of file "${_STUB_LOG}" should equal "${_TEST_DIR}/configs/jactionlint.yaml"
+        The line 3 of contents of file "${_STUB_LOG}" should equal "a.yml"
       End
     End
   End

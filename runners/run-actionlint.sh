@@ -7,6 +7,8 @@
 # This software is released under the MIT License.
 # https://opensource.org/licenses/MIT
 
+# shellcheck disable=SC1091
+
 set -euo pipefail
 
 # Init directory variables
@@ -21,7 +23,7 @@ set -euo pipefail
 # @exitcode Exit code of jactionlint
 main() {
   local globalConfig="${XDG_CONFIG_HOME:-${HOME}/.config}"
-  local localConfig="./configs/jactionlint.yaml"
+  local localConfig="${PROJECT_ROOT}/configs/jactionlint.yaml"
   local configFile="${globalConfig}/jactionlint/jactionlint.yaml"
 
   # prefer the repository config, fall back to the global config
