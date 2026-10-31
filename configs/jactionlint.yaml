@@ -22,3 +22,11 @@ rules:
   max-run-lines:
     level: warn
     max: 120
+
+# Allow full version tags (vX.Y.Z) instead of SHA pinning
+# (same scope as configs/ghalint.yaml excludes).
+# Other refs (e.g. @v7, @main) and other owners are still reported by unpinned-uses.
+ignores:
+  - rule: unpinned-uses
+    uses: /^(actions|pnpm|aglabo\/ci-platform\/\.github\/(actions|workflows))\/[^@]+@v[0-9]+\.[0-9]+\.[0-9]+$/
+    reason: full version tags are allowed (#171)
