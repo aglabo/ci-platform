@@ -67,14 +67,14 @@ GitHub Actions で実行されます。
 
 `validate-environment` は CI 実行時に権限設定を動的に検証します。
 
-{/* markdownlint-disable line-length */}
+{/*markdownlint-disable line-length*/}
 
 | 検証項目                 | 内容                                                      |
 | ------------------------ | --------------------------------------------------------- |
 | `contents: write` の検出 | 書き込み権限が設定されている場合に警告・停止              |
 | `id-token: write` の検出 | OIDC トークン発行権限が不要な場面で使われていないかを確認 |
 
-{/* markdownlint-enable line-length */}
+{/*markdownlint-enable line-length*/}
 
 ---
 
@@ -110,7 +110,7 @@ GitHub Actions で実行されます。
 
 **なぜ保護するか**:
 
-除外設定を安易に追加すると、実際のシークレット漏洩が発生するリスクがあります。
+除外設定を安易に追加すると、実際のシークレット漏洩につながるリスクがあります。
 変更が必要な場合は、PR に変更理由・影響範囲・代替手段を明記してレビューを受けてください。
 
 ---
