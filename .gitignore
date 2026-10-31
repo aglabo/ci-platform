@@ -68,6 +68,7 @@
 !/docs/
 !/docs/**/
 !/docs/**/*.md
+!/docs/**/*.mdx
 
 # Website (allowlist details: aglabo.github.io/.gitignore)
 !/aglabo.github.io/
@@ -96,7 +97,7 @@
 # allow all gitignore
 !**/.gitignore
 
-### Reposiroy Specific
+### Repository Specific
 # Root
 
 # Ignore deckrd docs, works
@@ -137,6 +138,7 @@ thumbs.db
 **/*.swp
 **/*.lock
 
+
 #   session files
 **/*session.json
 **/*session
@@ -151,3 +153,7 @@ thumbs.db
 #   node
 **/node_modules/
 **/.pnpm-store/
+
+
+# Allow workflow lockfiles
+!.github/workflows/*.lock
