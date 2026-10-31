@@ -9,7 +9,7 @@ tags:
   - security
 ---
 
-{/* markdownlint-disable line-length */}
+{/*markdownlint-disable line-length*/}
 
 ## セキュリティモデル
 
@@ -69,14 +69,14 @@ GitHub Actions で実行されます。
 
 `validate-environment` は CI 実行時に権限設定を動的に検証します。
 
-{/* markdownlint-disable line-length MD060 */}
+{/*markdownlint-disable line-length MD060*/}
 
 | 検証項目                 | 内容                                                      |
 | ------------------------ | --------------------------------------------------------- |
 | `contents: write` の検出 | 書き込み権限が設定されている場合に警告・停止              |
 | `id-token: write` の検出 | OIDC トークン発行権限が不要な場面で使われていないかを確認 |
 
-{/* markdownlint-enable line-length MD060 */}
+{/*markdownlint-enable line-length MD060*/}
 
 ---
 
@@ -99,7 +99,7 @@ GitHub Actions で実行されます。
 | 権限ポリシー違反検出   | ghalint              | Push / PR        |
 | リポジトリ全体スキャン | gitleaks             | Push / PR        |
 
-{/* textlint-enable */}
+{/*textlint-enable*/}
 
 ---
 
@@ -112,14 +112,14 @@ GitHub Actions で実行されます。
 | `configs/gitleaks.toml`          | gitleaks のシークレット検出設定 | 除外設定 (allowlist) の追加        |
 | `configs/secretlint.config.yaml` | secretlint の認証情報検出設定   | 除外設定の追加・検出ルールの無効化 |
 
-{/* textlint-disable ja-technical-writing/no-doubled-joshi */}
+{/*textlint-disable ja-technical-writing/no-doubled-joshi*/}
 
 **なぜ保護するか**:
 
-除外設定を安易に追加すると、実際のシークレット漏洩が発生するリスクがあります。
+除外設定を安易に追加すると、実際のシークレット漏洩につながるリスクがあります。
 変更が必要な場合は、PR に変更理由・影響範囲・代替手段を明記してレビューを受けてください。
 
-{/* textlint-enable */}
+{/*textlint-enable*/}
 
 ---
 
