@@ -41,14 +41,14 @@ jobs:
     steps:
       - name: Checkout repository
         id: checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        uses: actions/checkout@v7.0.1
         with:
           persist-credentials: false
 
       - name: Validate environment
         id: validate-env
         if: steps.checkout.outcome == 'success'
-        uses: ./.github/actions/ca-validate-environment
+        uses: $/.github/actions/ca-validate-environment
         with:
           actions-type: read
 
@@ -63,14 +63,14 @@ jobs:
     steps:
       - name: Checkout repository
         id: checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        uses: actions/checkout@v7.0.1
         with:
           persist-credentials: false
 
       - name: Test ca-setup-tool
         id: test-setup-tool
         if: steps.checkout.outcome == 'success'
-        uses: ./.github/actions/ca-setup-tool
+        uses: $/.github/actions/ca-setup-tool
         with:
           repo: rhysd/actionlint
           tool-version: "1.7.12"
@@ -94,14 +94,14 @@ jobs:
     steps:
       - name: Checkout repository
         id: checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        uses: actions/checkout@v7.0.1
         with:
           persist-credentials: false
 
       - name: Test ca-setup-repo
         id: test-setup-repo
         if: steps.checkout.outcome == 'success'
-        uses: ./.github/actions/ca-setup-repo
+        uses: $/.github/actions/ca-setup-repo
         with:
           repo: aglabo/agla-dev-tools
           path: ./tools/agla-dev-tools
@@ -126,7 +126,7 @@ jobs:
     steps:
       - name: Checkout repository
         id: checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -137,7 +137,7 @@ jobs:
         if: >-
           steps.checkout.outcome == 'success'
           && github.event_name == 'pull_request'
-        uses: ./.github/actions/ca-get-changed-files
+        uses: $/.github/actions/ca-get-changed-files
 
       # temporary commit cases apply only to events other than push / pull_request
       - name: Prepare test diff (add temporary commit)
@@ -158,26 +158,26 @@ jobs:
       - name: Test ca-get-changed-files (no pattern)
         id: test-no-pattern
         if: steps.prepare-diff.outcome == 'success'
-        uses: ./.github/actions/ca-get-changed-files
+        uses: $/.github/actions/ca-get-changed-files
 
       - name: Test ca-get-changed-files (pattern=temp/**)
         id: test-pattern-temp
         if: steps.prepare-diff.outcome == 'success'
-        uses: ./.github/actions/ca-get-changed-files
+        uses: $/.github/actions/ca-get-changed-files
         with:
           pattern: "temp/**"
 
       - name: Test ca-get-changed-files (pattern=**/*.txt)
         id: test-pattern-txt
         if: steps.prepare-diff.outcome == 'success'
-        uses: ./.github/actions/ca-get-changed-files
+        uses: $/.github/actions/ca-get-changed-files
         with:
           pattern: "**/*.txt"
 
       - name: Test ca-get-changed-files (pattern=*.yml)
         id: test-pattern-yml
         if: steps.prepare-diff.outcome == 'success'
-        uses: ./.github/actions/ca-get-changed-files
+        uses: $/.github/actions/ca-get-changed-files
         with:
           pattern: "*.yml"
 
@@ -186,7 +186,7 @@ jobs:
         id: test-invalid-commit-count
         if: steps.checkout.outcome == 'success'
         continue-on-error: true
-        uses: ./.github/actions/ca-get-changed-files
+        uses: $/.github/actions/ca-get-changed-files
         with:
           commit-count: "0"
 
@@ -194,7 +194,7 @@ jobs:
         id: test-invalid-pattern
         if: steps.checkout.outcome == 'success'
         continue-on-error: true
-        uses: ./.github/actions/ca-get-changed-files
+        uses: $/.github/actions/ca-get-changed-files
         with:
           pattern: "!"
 
@@ -291,7 +291,7 @@ jobs:
     steps:
       - name: Checkout repository
         id: checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -314,7 +314,7 @@ jobs:
       - name: Test _ca-resolve-sha (override)
         id: test-override
         if: steps.prepare-history.outcome == 'success'
-        uses: ./.github/actions/_ca-resolve-sha
+        uses: $/.github/actions/_ca-resolve-sha
         with:
           before-sha: ${{ steps.prepare-history.outputs.head-2 }}
           after-sha: ${{ steps.prepare-history.outputs.head }}
@@ -326,7 +326,7 @@ jobs:
           steps.prepare-history.outcome == 'success'
           && github.event_name != 'push'
           && github.event_name != 'pull_request'
-        uses: ./.github/actions/_ca-resolve-sha
+        uses: $/.github/actions/_ca-resolve-sha
 
       - name: Test _ca-resolve-sha (commit-count=2)
         id: test-head-n-2
@@ -334,7 +334,7 @@ jobs:
           steps.prepare-history.outcome == 'success'
           && github.event_name != 'push'
           && github.event_name != 'pull_request'
-        uses: ./.github/actions/_ca-resolve-sha
+        uses: $/.github/actions/_ca-resolve-sha
         with:
           commit-count: "2"
 
@@ -346,7 +346,7 @@ jobs:
           && github.event_name != 'push'
           && github.event_name != 'pull_request'
           && fromJSON(steps.prepare-history.outputs.history-count) <= 1000
-        uses: ./.github/actions/_ca-resolve-sha
+        uses: $/.github/actions/_ca-resolve-sha
         with:
           commit-count: ${{ steps.prepare-history.outputs.history-count }}
 
@@ -355,7 +355,7 @@ jobs:
         id: test-invalid-zero
         if: steps.prepare-history.outcome == 'success'
         continue-on-error: true
-        uses: ./.github/actions/_ca-resolve-sha
+        uses: $/.github/actions/_ca-resolve-sha
         with:
           commit-count: "0"
 
@@ -363,7 +363,7 @@ jobs:
         id: test-invalid-nan
         if: steps.prepare-history.outcome == 'success'
         continue-on-error: true
-        uses: ./.github/actions/_ca-resolve-sha
+        uses: $/.github/actions/_ca-resolve-sha
         with:
           commit-count: "abc"
 
