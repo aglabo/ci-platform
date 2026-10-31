@@ -11,7 +11,7 @@ GitHub Actions と Git Hooks を統合した品質管理テンプレートを提
 **コア機能**:
 
 - ローカル品質管理: lefthook (betterleaks/secretlint/commitlint/AI コミットメッセージ)
-- CI/CD 基盤: GitHub Actions 再利用可能ワークフロー (actionlint/ghalint/betterleaks)
+- CI/CD 基盤: GitHub Actions 再利用可能ワークフロー (jactionlint/ghalint/betterleaks)
 - ドキュメント品質: textlint/markdownlint/dprint
 - テストフレームワーク: ShellSpec (Bash)
 
@@ -48,7 +48,7 @@ GitHub Actions と Git Hooks を統合した品質管理テンプレートを提
 
 **コア**: GitHub Actions (再利用可能ワークフロー), lefthook (Git Hook 統合), ShellSpec (Bash テスト)
 
-**品質ツール**: actionlint, ghalint, betterleaks, secretlint, textlint, markdownlint, dprint, commitlint
+**品質ツール**: jactionlint, ghalint, betterleaks, secretlint, textlint, markdownlint, dprint, commitlint
 
 **ディレクトリ構成**:
 
@@ -111,8 +111,9 @@ pnpm test:sh unit                         # pnpm 経由 (種別を引数で渡�
 pnpm test:sh:all                          # pnpm 経由 (全テスト)
 
 # ドキュメント検証
-pnpm run lint:text                        # textlint 検証
-pnpm run lint:text -- --fix               # 自動修正
+pnpm run lint:text <files...>             # textlint 検証 (対象ファイル必須)
+pnpm run lint:text -- --fix <files...>    # 自動修正
+pnpm run lint:markdown <files...>         # markdownlint 検証 (glob 指定可)
 dprint fmt                                # フォーマット
 
 # CI 検証 (ローカル)
