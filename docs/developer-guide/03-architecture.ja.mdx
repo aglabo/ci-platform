@@ -22,11 +22,11 @@ ci-platform は 3 つのレイヤーで構成されています。
 graph TB
     subgraph local["ローカルレイヤー (Git Hooks)"]
         lh["lefthook"]
-        gl["gitleaks"]
+        bl["betterleaks"]
         sl["secretlint"]
         cl["commitlint"]
         ai["AI コミットメッセージ"]
-        lh --> gl
+        lh --> bl
         lh --> sl
         lh --> cl
         lh --> ai
@@ -34,12 +34,12 @@ graph TB
 
     subgraph ci["CI レイヤー (GitHub Actions)"]
         subgraph ca["Composite Actions"]
-            ve["validate-environment"]
+            ve["ca-validate-environment"]
         end
-        subgraph rw["Reusable Workflows (予定)"]
-            al["scan-actionlint"]
-            gh["scan-ghalint"]
-            gs["scan-gitleaks"]
+        subgraph rw["Reusable Workflows"]
+            al["ru-qa-actionlint"]
+            gh["ru-qa-ghalint"]
+            bs["ru-scan-betterleaks"]
         end
     end
 
@@ -60,30 +60,30 @@ graph TB
 ci-platform/
 ├── .github/
 │   ├── actions/
-│   │   └── validate-environment/   # Composite Action
+│   │   └── ca-validate-environment/  # Composite Action
 │   │       └── action.yml
 │   └── workflows/
-│       ├── ci-scan-secrets.yml     # 機密情報スキャン
-│       └── ci-workflows-qa.yml     # ワークフロー QA
-├── configs/                        # 品質ツール設定
-│   ├── actionlint.yaml
+│       ├── ci-scan-secrets.yml       # 機密情報スキャン
+│       └── ci-workflows-qa.yml       # ワークフロー QA
+├── configs/                          # 品質ツール設定
+│   ├── jactionlint.yaml
 │   ├── ghalint.yaml
-│   ├── gitleaks.toml
+│   ├── betterleaks.toml
 │   ├── secretlint.config.yaml
 │   ├── .markdownlint.yaml
 │   └── textlintrc.yaml
-├── scripts/                        # 開発スクリプト
-│   ├── setup-dev-env.sh            # 開発環境セットアップ
-│   ├── prepare-commit-msg.sh       # AI コミットメッセージ生成
-│   └── __tests__/                  # ShellSpec テスト
-├── runners/                        # 品質ツール実行ラッパー
-│   ├── run-shellspec.sh            # ShellSpec 実行ラッパー
-│   ├── run-shellcheck.sh           # ShellCheck 実行ラッパー
-│   └── libs/                       # ランナー共通ライブラリ
-├── docs/                           # Docusaurus ドキュメント
+├── scripts/                          # 開発スクリプト
+│   ├── setup-dev-env.sh              # 開発環境セットアップ
+│   ├── prepare-commit-msg.sh         # AI コミットメッセージ生成
+│   └── __tests__/                    # ShellSpec テスト
+├── runners/                          # 品質ツール実行ラッパー
+│   ├── run-shellspec.sh              # ShellSpec 実行ラッパー
+│   ├── run-shellcheck.sh             # ShellCheck 実行ラッパー
+│   └── libs/                         # ランナー共通ライブラリ
+├── docs/                             # Docusaurus ドキュメント
 │   ├── user-guide/
 │   └── developer-guide/
-├── lefthook.yml                    # Git Hooks 定義
+├── lefthook.yml                      # Git Hooks 定義
 └── package.json
 ```
 
@@ -104,19 +104,19 @@ sequenceDiagram
     gh->>sec: ワークフロー起動
     gh->>qa: ワークフロー起動
 
-    sec->>sec: gitleaks
+    sec->>sec: betterleaks
     Note right of sec: シークレットスキャン
 
-    qa->>qa: actionlint
+    qa->>qa: jactionlint
     Note right of qa: ワークフロー構文検証
 
     qa->>qa: ghalint
     Note right of qa: ポリシー違反検出
 ```
 
-### validate-environment の役割
+### ca-validate-environment の役割
 
-`validate-environment` は CI パイプラインの **強制停止ゲート** です。
+`ca-validate-environment` は CI パイプラインの **強制停止ゲート** です。
 次の 3 つを検証し、いずれかが失敗した場合は即座に後続ジョブを停止します。
 
 {/*markdownlint-disable line-length MD060*/}
@@ -139,14 +139,14 @@ lefthook が Git イベントに応じて品質チェックを自動実行しま
 sequenceDiagram
     participant dev as 開発者
     participant lh as lefthook
-    participant gl as gitleaks
+    participant bl as betterleaks
     participant sl as secretlint
     participant cl as commitlint
 
     dev->>lh: git commit
-    lh->>gl: pre-commit: シークレット検出
+    lh->>bl: pre-commit: シークレット検出
     lh->>sl: pre-commit: 認証情報パターン検出
-    gl-->>lh: OK / NG
+    bl-->>lh: OK / NG
     sl-->>lh: OK / NG
 
     alt NG あり
@@ -168,9 +168,9 @@ sequenceDiagram
 
 | 設定ファイル                     | 参照コンポーネント              |
 | -------------------------------- | ------------------------------- |
-| `configs/gitleaks.toml`          | gitleaks (CI + Git Hooks)       |
+| `configs/betterleaks.toml`       | betterleaks (CI + Git Hooks)    |
 | `configs/secretlint.config.yaml` | secretlint (Git Hooks)          |
-| `configs/actionlint.yaml`        | actionlint (CI)                 |
+| `configs/jactionlint.yaml`       | jactionlint (CI)                |
 | `configs/ghalint.yaml`           | ghalint (CI)                    |
 | `configs/textlintrc.yaml`        | textlint (ドキュメント品質)     |
 | `configs/.markdownlint.yaml`     | markdownlint (ドキュメント品質) |
