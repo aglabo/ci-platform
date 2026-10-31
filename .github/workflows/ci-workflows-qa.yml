@@ -43,3 +43,5 @@ jobs:
     permissions:
       contents: read
     uses: aglabo/ci-platform/.github/workflows/ru-qa-ghalint.yml@v0.4.1
+    with:
+      config: "./configs/ghalint.yaml"
