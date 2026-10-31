@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
-# get-filelist.lib.sh — file list and argument normalization library
-# Provides path normalization, glob-to-regex conversion, and file list retrieval
+# src: runners/libs/get-filelist.lib.sh
+# @(#) : get-filelist.lib.sh — file list and argument normalization library
+#
+# Copyright (c) 2026- atsushifx <https://github.com/atsushifx>
+#
+# This software is released under the MIT License.
+# https://opensource.org/licenses/MIT
 
 # Guard against double sourcing
 [[ -n "${_GET_FILELIST_SH:-}" ]] && return 0
