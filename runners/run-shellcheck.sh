@@ -7,7 +7,6 @@
 # This software is released under the MIT License.
 # https://opensource.org/licenses/MIT
 
-
 set -euo pipefail
 
 # Initialize variables and change to the project root directory
