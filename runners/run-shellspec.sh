@@ -7,16 +7,16 @@
 # This software is released under the MIT License.
 # https://opensource.org/licenses/MIT
 
-# shellcheck disable=SC1091
-
 set -euo pipefail
 
-# Initialize directory variables
+## read libraries
+# shellcheck source=runners/libs/init-vars.lib.sh disable=SC1091
 . "$(dirname "${BASH_SOURCE[0]}")/libs/init-vars.lib.sh"
 
-# include using wsl library
+# shellcheck source=runners/libs/wsl.lib.sh disable=SC1091
 . "${SCRIPT_ROOT}/libs/wsl.lib.sh"
 
+## initialize variables
 # Main ShellSpec entry point. The path is relative to PROJECT_ROOT, so it also works as-is on the WSL side
 readonly EXEC_SCRIPT='runners/exec/shellspec-exec.sh'
 

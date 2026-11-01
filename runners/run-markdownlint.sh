@@ -7,16 +7,14 @@
 # This software is released under the MIT License.
 # https://opensource.org/licenses/MIT
 
-# shellcheck disable=SC1091
-
 set -euo pipefail
 
 # Init variables
-# shellcheck source=runners/libs/init-vars.lib.sh
+# shellcheck source=runners/libs/init-vars.lib.sh disable=SC1091
 . "$(dirname "${BASH_SOURCE[0]}")/libs/init-vars.lib.sh"
 
 # load utility library
-# shellcheck source=runners/libs/utils.lib.sh
+# shellcheck source=runners/libs/utils.lib.sh disable=SC1091
 . "${SCRIPT_ROOT}/libs/utils.lib.sh"
 
 # @description Run markdownlint with the checked-in config,

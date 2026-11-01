@@ -7,13 +7,14 @@
 # This software is released under the MIT License.
 # https://opensource.org/licenses/MIT
 
-# shellcheck disable=SC1091
 
 set -euo pipefail
 
-# Initialize directory variables
+## read libraries
+# shellcheck disable=SC1091
 . "$(dirname "${BASH_SOURCE[0]}")/libs/init-vars.lib.sh"
 
+## Functions
 main() {
   local mode="list"
   while [[ $# -gt 0 ]]; do
