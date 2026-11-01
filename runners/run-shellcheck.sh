@@ -11,7 +11,7 @@
 
 set -euo pipefail
 
-# shellcheck source=runners/libs/init-vars.lib.sh
+# Initialize variables and change to the project root directory
 . "$(dirname "${BASH_SOURCE[0]}")/libs/init-vars.lib.sh"
 cd "${SCRIPT_ROOT}/.."
 
@@ -39,13 +39,14 @@ main() {
     targets=(".")
   fi
   targets=("${targets[@]//\\//}")
+  # Unit test spec files (*.spec.sh) are skipped, both in directory scans and when given explicitly
   local -a files=()
   for target in "${targets[@]}"; do
     if [[ -d $target ]]; then
       while IFS= read -r -d '' f; do
         files+=("$f")
-      done < <(find "$target" -path "*/.tools/*" -prune -o -path "*/node_modules/*" -prune -o -name "*.sh" -print0)
-    else
+      done < <(find "$target" -mindepth 1 \( -name node_modules -o -name .tools \) -prune -o -name "*.sh" ! -name "*.spec.sh" -print0)
+    elif [[ $target != *.spec.sh ]]; then
       files+=("$target")
     fi
   done

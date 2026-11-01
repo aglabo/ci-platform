@@ -1,18 +1,22 @@
 #!/usr/bin/env bash
-# src: runners/docs/lint
-# @(#) : docs linter runner (markdownlint + textlint)
+# src: runners/run-textlint.sh
+# @(#) : textlint runner
 #
 # Copyright (c) 2026- atsushifx <https://github.com/atsushifx>
 #
 # This software is released under the MIT License.
 # https://opensource.org/licenses/MIT
 
+# shellcheck disable=SC1091
+
 set -euo pipefail
 
 # Init variables
+# shellcheck source=runners/libs/init-vars.lib.sh
 . "$(dirname "${BASH_SOURCE[0]}")/libs/init-vars.lib.sh"
 
-# load utilty library
+# load utility library
+# shellcheck source=runners/libs/utils.lib.sh
 . "${SCRIPT_ROOT}/libs/utils.lib.sh"
 
 # @description Run textlint with the checked-in config,
@@ -20,13 +24,16 @@ set -euo pipefail
 # @arg $@ string Paths to lint
 # @exitcode 0 All checks passed
 # @exitcode 1 Lint error
+# @exitcode 78 (EXIT_CONFIG_NOT_FOUND) Config file not found
 main() {
   local -a targets=("$@")
-  local globalConfig="${XDG_CONFIG_HOME:-${HOME}/.config}"
+  local configFile
+  configFile="$(require_config_file 'textlintrc.yaml' 'configs/textlintrc.yaml')" || return $?
 
-  textlint --config "${globalConfig}/linters/textlint/textlintrc.yaml" --cache --cache-location .cache/textlint/textlintcache "${targets[@]+"${targets[@]}"}"
+  textlint --config "$configFile" --cache --cache-location .cache/textlint/textlintcache "${targets[@]+"${targets[@]}"}"
 }
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
   main "$@"
+  exit $?
 fi
