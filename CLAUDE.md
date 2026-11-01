@@ -99,7 +99,7 @@ rm /w/temp/tmp.XXXXXXXXXX
 
 ```bash
 # 開発環境セットアップ
-bash ./scripts/setup-dev-env.sh           # lefthook + ShellSpec インストール
+bash ./scripts/setup-dev-env.sh           # lefthook + ShellSpec + agla-dev-tools/agla-doc-tools インストール
 
 # テスト実行 (shellspec 直接呼び出し禁止、run-shellspec.sh 経由のみ)
 # 引数は「テスト種別 / リポジトリ相対の spec ファイル」のいずれか
