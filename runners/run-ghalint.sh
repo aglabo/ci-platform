@@ -7,14 +7,14 @@
 # This software is released under the MIT License.
 # https://opensource.org/licenses/MIT
 
-# shellcheck disable=SC1091
-
 set -euo pipefail
 
 # Init variables
+# shellcheck source=runners/libs/init-vars.lib.sh disable=SC1091
 . "$(dirname "${BASH_SOURCE[0]}")/libs/init-vars.lib.sh"
 
-# load utilty library
+# load utility library
+# shellcheck source=runners/libs/utils.lib.sh disable=SC1091
 . "${SCRIPT_ROOT}/libs/utils.lib.sh"
 
 # @description Run ghalint (run|act) with the checked-in config,
@@ -22,7 +22,8 @@ set -euo pipefail
 # @arg $1 string Subcommand: run (workflows) or act (actions)
 # @arg $@ string Remaining arguments forwarded to ghalint
 # @exitcode 0 All checks passed
-# @exitcode 1 Lint error, invalid subcommand, or missing config file
+# @exitcode 1 Lint error or invalid subcommand
+# @exitcode 78 (EXIT_CONFIG_NOT_FOUND) Config file not found
 main() {
   local subcommand="${1:-}"
 
@@ -38,9 +39,9 @@ main() {
 
   local -a args=("$@")
   local configFile
-  configFile="$(resolve_config_file 'linters/ghalint/ghalint.yaml' 'configs/ghalint.yaml')" || return 1
+  configFile="$(require_config_file 'ghalint.yaml' 'configs/ghalint.yaml')" || return $?
 
-  pnpm exec ghalint "$subcommand" --config "$configFile" "${args[@]+"${args[@]}"}"
+  ghalint "$subcommand" --config "$configFile" "${args[@]+"${args[@]}"}"
 }
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then

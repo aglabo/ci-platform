@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# src: runners/docs/lint
-# @(#) : docs linter runner (markdownlint + textlint)
+# src: runners/run-markdownlint.sh
+# @(#) : markdownlint runner
 #
 # Copyright (c) 2026- atsushifx <https://github.com/atsushifx>
 #
@@ -10,9 +10,11 @@
 set -euo pipefail
 
 # Init variables
+# shellcheck source=runners/libs/init-vars.lib.sh disable=SC1091
 . "$(dirname "${BASH_SOURCE[0]}")/libs/init-vars.lib.sh"
 
-# load utilty library
+# load utility library
+# shellcheck source=runners/libs/utils.lib.sh disable=SC1091
 . "${SCRIPT_ROOT}/libs/utils.lib.sh"
 
 # @description Run markdownlint with the checked-in config,
@@ -20,13 +22,16 @@ set -euo pipefail
 # @arg $@ string Paths to lint
 # @exitcode 0 All checks passed
 # @exitcode 1 Lint error
+# @exitcode 78 (EXIT_CONFIG_NOT_FOUND) Config file not found
 main() {
   local -a targets=("$@")
-  local globalConfig="${XDG_CONFIG_HOME:-${HOME}/.config}"
+  local configFile
+  configFile="$(require_config_file '.markdownlint-cli2.yaml' 'configs/.markdownlint-cli2.yaml')" || return $?
 
-  markdownlint --config "${globalConfig}/linters/markdownlint/.markdownlint-cli2.yaml" "${targets[@]+"${targets[@]}"}"
+  markdownlint --config "${configFile}" "${targets[@]+"${targets[@]}"}"
 }
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
   main "$@"
+  exit $?
 fi
