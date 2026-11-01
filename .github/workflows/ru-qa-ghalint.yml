@@ -21,7 +21,7 @@ on:
       version:
         description: "Version of ghalint to install"
         required: false
-        default: "1.5.7"
+        default: "1.6.0"
         type: string
       config:
         description: "Path to the ghalint configuration file"
@@ -39,21 +39,21 @@ jobs:
     steps:
       - name: Checkout target repository
         id: target-checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        uses: actions/checkout@v7.0.1
         with:
           persist-credentials: false
 
       - name: Validate environment
         id: env-validation
         if: steps.target-checkout.outcome == 'success'
-        uses: aglabo/ci-platform/.github/actions/ca-validate-environment@4e2b135f93916b2971f26a070a1084afa9b12a79 # v0.4.1
+        uses: aglabo/ci-platform/.github/actions/ca-validate-environment@v0.4.1
         with:
           actions-type: read
 
       - name: Install ghalint
         id: tool-install
         if: steps.env-validation.outcome == 'success'
-        uses: aglabo/ci-platform/.github/actions/ca-setup-tool@4e2b135f93916b2971f26a070a1084afa9b12a79 # v0.4.1
+        uses: aglabo/ci-platform/.github/actions/ca-setup-tool@v0.4.1
         with:
           repo: suzuki-shunsuke/ghalint
           tool-version: ${{ inputs.version }}
@@ -61,7 +61,7 @@ jobs:
       - name: Checkout ghalint config
         id: config-checkout
         if: steps.tool-install.outcome == 'success'
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        uses: actions/checkout@v7.0.1
         with:
           repository: aglabo/.github
           path: shared
@@ -85,7 +85,7 @@ jobs:
       - name: Upload ghalint report
         id: report-upload
         if: failure() && steps.lint-execute.outcome == 'failure'
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: ghalint-report
           path: .github/report/ghalint-report.txt
