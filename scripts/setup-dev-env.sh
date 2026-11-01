@@ -207,6 +207,8 @@ main() {
 }
 
 # Skip execution when this script is sourced
-if [ "${BASH_SOURCE:-$0}" != "$0" ]; then return 0; fi
+if [[ "${BASH_SOURCE[0]}" != "$0" ]]; then
+  return 0
+fi
 
 main "$@"
