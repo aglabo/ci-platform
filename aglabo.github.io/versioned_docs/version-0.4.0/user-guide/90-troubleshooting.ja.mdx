@@ -9,7 +9,7 @@ tags:
   - errors
 ---
 
-<!-- markdownlint-disable line-length -->
+{/*markdownlint-disable line-length*/}
 
 ## 🔍 トラブルシューティング
 
@@ -17,15 +17,15 @@ tags:
 エラーは GitHub Actions のログに `::error::` 形式で出力されます。
 
 > `validate-environment` は実行基盤の整合性を検証するゲートです。
-> アプリケーションロジックやビルドの正当性は検証対象外です。
+> アプリのロジックやビルドの正当性は検証対象外です。
 
 ---
 
 ## ✅ 最初に確認すべき 3 点
 
-1. **`permissions` が明示されているか** — `contents: read` 以上が必要
-2. **Linux ランナーを使用しているか** — `runs-on: ubuntu-latest` など
-3. **`additional-apps` の書式が正しいか** — 2 フィールド (`cmd|name`) または 4 フィールド (`cmd|name|extractor|version`) 形式
+1. `permissions` が明示されているか (`contents: read` 以上が必要)
+2. Linux ランナーを使用しているか (`runs-on: ubuntu-latest` など)
+3. `additional-apps` の書式が正しいか (2 フィールド `cmd|name` または 4 フィールド `cmd|name|extractor|version` 形式)
 
 ---
 
@@ -185,7 +185,7 @@ permissions:
 
 ---
 
-## 📦 アプリケーション関連のエラー
+## 📦 アプリ関連のエラー
 
 ### `<アプリ名>` is not installed
 

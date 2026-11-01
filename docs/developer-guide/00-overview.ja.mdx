@@ -71,16 +71,16 @@ Gate パターンの詳細は [ゲートパターン](./02-gate-pattern.ja.mdx) 
 
 | コンポーネント | 種別            | 状態       | 役割                                 |
 | -------------- | --------------- | ---------- | ------------------------------------ |
-| gitleaks       | Caller Workflow | **提供中** | リポジトリ全体のシークレットスキャン |
+| betterleaks    | Caller Workflow | **提供中** | リポジトリ全体のシークレットスキャン |
 
 ### Policy Layer — ワークフロー品質の統制
 
 GitHub Actions ワークフローの構文・ポリシーを検証します。
 
-| コンポーネント | 種別              | 状態 | 役割                                  |
-| -------------- | ----------------- | ---- | ------------------------------------- |
-| actionlint     | Reusable Workflow | 予定 | GitHub Actions ワークフローの構文検証 |
-| ghalint        | Reusable Workflow | 予定 | GitHub Actions ポリシー違反の検出     |
+| コンポーネント | 種別              | 状態       | 役割                                  |
+| -------------- | ----------------- | ---------- | ------------------------------------- |
+| jactionlint    | Reusable Workflow | **提供中** | GitHub Actions ワークフローの構文検証 |
+| ghalint        | Reusable Workflow | **提供中** | GitHub Actions ポリシー違反の検出     |
 
 ---
 
@@ -118,7 +118,7 @@ ci-platform を **利用するだけ** の場合は [ユーザーガイド](../u
 
 | レイヤー                                        | 技術・ツール                                       |
 | ----------------------------------------------- | -------------------------------------------------- |
-| **Runtime Layer** (GitHub Actions 実行時)       | GitHub Actions, actionlint, ghalint, gitleaks      |
+| **Runtime Layer** (GitHub Actions 実行時)       | GitHub Actions, jactionlint, ghalint, betterleaks  |
 | **Dev Layer** (開発者・コントリビューター向け)  | lefthook, secretlint, commitlint, ShellSpec (Bash) |
 | **Docs Layer** (開発者・コントリビューター向け) | textlint, markdownlint, dprint                     |
 
@@ -127,15 +127,15 @@ ci-platform を **利用するだけ** の場合は [ユーザーガイド](../u
 ```text
 ci-platform/
 ├── .github/
-│   ├── actions/                    # Gate Layer: Composite Actions
-│   │   └── validate-environment/   # CI 実行環境の事前検証ゲート
-│   └── workflows/                  # Security / Policy Layer: Caller Workflows
-│       ├── ci-scan-secrets.yml     # 機密情報スキャン
-│       └── ci-workflows-qa.yml     # ワークフロー QA (actionlint / ghalint)
-├── configs/                        # 各レイヤーの品質ツール設定
-├── scripts/                        # Dev Layer: テスト実行・環境セットアップ
-│   └── __tests__/                  # ShellSpec テスト (開発者向け)
-└── docs/                           # ドキュメント (Docusaurus)
+│   ├── actions/                      # Gate Layer: Composite Actions
+│   │   └── ca-validate-environment/  # CI 実行環境の事前検証ゲート
+│   └── workflows/                    # Security / Policy Layer: Caller Workflows
+│       ├── ci-scan-secrets.yml       # 機密情報スキャン
+│       └── ci-workflows-qa.yml       # ワークフロー QA (jactionlint / ghalint)
+├── configs/                          # 各レイヤーの品質ツール設定
+├── scripts/                          # Dev Layer: テスト実行・環境セットアップ
+│   └── __tests__/                    # ShellSpec テスト (開発者向け)
+└── docs/                             # ドキュメント (Docusaurus)
 ```
 
 ---
