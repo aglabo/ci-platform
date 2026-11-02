@@ -27,7 +27,7 @@ on:
       config-repo:
         description: "Repository that contains the betterleaks config"
         required: false
-        default: "aglabo/.github"
+        default: "aglabo/global-configs"
         type: string
       fetch-depth:
         description: "Git history depth to fetch (0 for full history)"
@@ -69,7 +69,7 @@ jobs:
         uses: actions/checkout@v7.0.1
         with:
           repository: ${{ inputs.config-repo }}
-          path: shared
+          path: global/configs
           persist-credentials: false
 
       - name: Prepare report directory
@@ -83,7 +83,7 @@ jobs:
         run: |
           set +e
           betterleaks git . \
-            --config shared/configs/betterleaks.toml \
+            --config global/configs/betterleaks.toml \
             --report-path=.github/report/betterleaks-report.json \
             --exit-code=1 \
             --verbose

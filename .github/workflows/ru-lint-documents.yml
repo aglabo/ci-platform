@@ -1,0 +1,217 @@
+# src: ./.github/workflows/ru-lint-documents.yml
+# @(#) : Reusable workflow for linting changed Markdown files with textlint and markdownlint
+#
+# Copyright (c) 2026- atsushifx <https://github.com/atsushifx>
+#
+# This software is released under the MIT License.
+# https://opensource.org/licenses/MIT
+
+name: "Reusable: Lint Documents"
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+on:
+  workflow_call:
+    inputs:
+      pattern:
+        description: "Glob patterns of files to lint, one per line (! excludes)"
+        required: false
+        default: |
+          **/*.md
+          **/*.mdx
+        type: string
+      commit-count:
+        description: "Number of commits (HEAD~N) used for events other than push / pull_request"
+        required: false
+        default: "1"
+        type: string
+      doc-tools-version:
+        description: "Version (git ref) of aglabo/agla-doc-tools that provides textlint and markdownlint"
+        required: false
+        default: "v0.3.0"
+        type: string
+      textlint-config:
+        description: "Path to the textlint configuration file"
+        required: false
+        default: "./global/configs/textlintrc.yaml"
+        type: string
+      markdownlint-config:
+        description: "Path to the markdownlint-cli2 configuration file"
+        required: false
+        default: "./global/configs/.markdownlint-cli2.yaml"
+        type: string
+
+jobs:
+  get-changed-files:
+    name: Get Changed Markdown Files
+    runs-on: ubuntu-slim
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    outputs:
+      files: ${{ steps.changed-files.outputs.files }}
+      count: ${{ steps.changed-files.outputs.count }}
+    steps:
+      - name: Checkout target repository
+        id: target-checkout
+        uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Validate environment
+        id: env-validation
+        if: steps.target-checkout.outcome == 'success'
+        uses: aglabo/ci-platform/.github/actions/ca-validate-environment@v0.5.0
+        with:
+          actions-type: read
+
+      - name: Get changed files
+        id: changed-files
+        if: steps.env-validation.outcome == 'success'
+        uses: aglabo/ci-platform/.github/actions/ca-get-changed-files@v0.5.0
+        with:
+          commit-count: ${{ inputs.commit-count }}
+          pattern: ${{ inputs.pattern }}
+
+  qa-textlint:
+    name: Textlint Document QA
+    needs: get-changed-files
+    if: needs.get-changed-files.outputs.count != '0'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout target repository
+        id: target-checkout
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Validate environment
+        id: env-validation
+        if: steps.target-checkout.outcome == 'success'
+        uses: aglabo/ci-platform/.github/actions/ca-validate-environment@v0.5.0
+        with:
+          actions-type: read
+
+      - name: Setup agla-doc-tools
+        id: tool-install
+        if: steps.env-validation.outcome == 'success'
+        uses: aglabo/ci-platform/.github/actions/ca-setup-repo@v0.5.0
+        with:
+          repo: aglabo/agla-doc-tools
+          path: ./.tools/agla-doc-tools
+          ref: ${{ inputs.doc-tools-version }}
+
+      - name: Checkout textlint config
+        id: config-checkout
+        if: steps.tool-install.outcome == 'success'
+        uses: actions/checkout@v7.0.1
+        with:
+          repository: aglabo/global-configs
+          path: global/configs
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Prepare report directory
+        id: prepare-report
+        if: steps.config-checkout.outcome == 'success'
+        run: mkdir -p .github/report
+
+      - name: Run textlint
+        id: lint-execute
+        if: steps.prepare-report.outcome == 'success'
+        env:
+          CONFIG_FILE: ${{ inputs.textlint-config }}
+          CHANGED_FILES: ${{ needs.get-changed-files.outputs.files }}
+        run: |
+          mapfile -t targets <<< "${CHANGED_FILES}"
+          ignore_file=".textlintignore"
+          [[ -f "${ignore_file}" ]] || ignore_file="global/configs/.textlintignore"
+          textlint --version
+          textlint --config "${CONFIG_FILE}" --ignore-path "${ignore_file}" -- "${targets[@]}" 2>&1 \
+            | tee .github/report/textlint-report.txt
+          exit "${PIPESTATUS[0]}"
+
+      - name: Upload textlint report
+        id: report-upload
+        if: failure() && steps.lint-execute.outcome == 'failure'
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: textlint-report
+          path: .github/report/textlint-report.txt
+          retention-days: 30
+
+  qa-markdownlint:
+    name: Markdownlint Document QA
+    needs: get-changed-files
+    if: needs.get-changed-files.outputs.count != '0'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout target repository
+        id: target-checkout
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Validate environment
+        id: env-validation
+        if: steps.target-checkout.outcome == 'success'
+        uses: aglabo/ci-platform/.github/actions/ca-validate-environment@v0.5.0
+        with:
+          actions-type: read
+
+      - name: Setup agla-doc-tools
+        id: tool-install
+        if: steps.env-validation.outcome == 'success'
+        uses: aglabo/ci-platform/.github/actions/ca-setup-repo@v0.5.0
+        with:
+          repo: aglabo/agla-doc-tools
+          path: ./.tools/agla-doc-tools
+          ref: ${{ inputs.doc-tools-version }}
+
+      - name: Checkout markdownlint config
+        id: config-checkout
+        if: steps.tool-install.outcome == 'success'
+        uses: actions/checkout@v7.0.1
+        with:
+          repository: aglabo/global-configs
+          path: global/configs
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Prepare report directory
+        id: prepare-report
+        if: steps.config-checkout.outcome == 'success'
+        run: mkdir -p .github/report
+
+      - name: Run markdownlint
+        id: lint-execute
+        if: steps.prepare-report.outcome == 'success'
+        env:
+          CONFIG_FILE: ${{ inputs.markdownlint-config }}
+          CHANGED_FILES: ${{ needs.get-changed-files.outputs.files }}
+        run: |
+          mapfile -t targets <<< "${CHANGED_FILES}"
+          markdownlint --config "${CONFIG_FILE}" -- "${targets[@]}" 2>&1 \
+            | tee .github/report/markdownlint-report.txt
+          exit "${PIPESTATUS[0]}"
+
+      - name: Upload markdownlint report
+        id: report-upload
+        if: failure() && steps.lint-execute.outcome == 'failure'
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: markdownlint-report
+          path: .github/report/markdownlint-report.txt
+          retention-days: 30

@@ -26,7 +26,7 @@ on:
       config:
         description: "Path to the ghalint configuration file"
         required: false
-        default: "./shared/configs/ghalint.yaml"
+        default: "./global/configs/ghalint.yaml"
         type: string
 
 jobs:
@@ -63,8 +63,8 @@ jobs:
         if: steps.tool-install.outcome == 'success'
         uses: actions/checkout@v7.0.1
         with:
-          repository: aglabo/.github
-          path: shared
+          repository: aglabo/global-configs
+          path: global/configs
           fetch-depth: 1
           persist-credentials: false
 

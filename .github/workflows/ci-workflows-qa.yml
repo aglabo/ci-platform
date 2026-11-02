@@ -36,7 +36,7 @@ jobs:
     name: Actionlint
     permissions:
       contents: read
-    uses: aglabo/ci-platform/.github/workflows/ru-qa-actionlint.yml@v0.5.0
+    uses: ./.github/workflows/ru-qa-actionlint.yml
     with:
       config: "./configs/jactionlint.yaml"
 
@@ -44,6 +44,12 @@ jobs:
     name: Ghalint
     permissions:
       contents: read
-    uses: aglabo/ci-platform/.github/workflows/ru-qa-ghalint.yml@v0.5.0
+    uses: ./.github/workflows/ru-qa-ghalint.yml
     with:
       config: "./configs/ghalint.yaml"
+
+  actions-lock:
+    name: Actions Lock
+    permissions:
+      contents: read
+    uses: ./.github/workflows/ru-qa-actions-lock.yml

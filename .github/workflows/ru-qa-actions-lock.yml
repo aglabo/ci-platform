@@ -1,0 +1,84 @@
+# src: ./.github/workflows/ru-qa-actions-lock.yml
+# @(#) : Reusable workflow for GitHub Actions lockfile verification with gh actions-lock
+#
+# Copyright (c) 2026- atsushifx <https://github.com/atsushifx>
+#
+# This software is released under the MIT License.
+# https://opensource.org/licenses/MIT
+
+name: "Reusable: QA by gh actions-lock"
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: "Version of gh-actions-lock extension to install"
+        required: false
+        default: "v0.4.0"
+        type: string
+
+jobs:
+  qa-actions-lock:
+    name: Actions Lock Verify
+    runs-on: ubuntu-slim
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout target repository
+        id: target-checkout
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Validate environment
+        id: env-validation
+        if: steps.target-checkout.outcome == 'success'
+        uses: aglabo/ci-platform/.github/actions/ca-validate-environment@v0.5.0
+        with:
+          actions-type: read
+
+      - name: Install gh actions-lock
+        id: tool-install
+        if: steps.env-validation.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXT_VERSION: ${{ inputs.version }}
+        run: gh extension install github/gh-actions-lock --pin "${EXT_VERSION}"
+
+      - name: Show gh actions-lock version
+        id: tool-version
+        if: steps.tool-install.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh actions-lock --version
+
+      - name: Prepare report directory
+        id: prepare-report
+        if: steps.tool-version.outcome == 'success'
+        run: mkdir -p .github/report
+
+      - name: Run gh actions-lock verify
+        id: lock-verify
+        if: steps.prepare-report.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh actions-lock --verify --no-interactive 2>&1 | tee .github/report/actions-lock-report.txt
+          exit "${PIPESTATUS[0]}"
+
+      - name: Upload gh actions-lock report
+        id: report-upload
+        if: failure() && steps.lock-verify.outcome == 'failure'
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: actions-lock-report
+          path: .github/report/actions-lock-report.txt
+          retention-days: 30
