@@ -1,12 +1,13 @@
 ---
-title: "ci-platform Release Notes v0.4.1"
-version: "0.4.1"
-date: 2026-10-27
+title: "ci-platform Release Notes v0.5.0"
+version: "0.5.0"
+date: 2026-11-02
 tags:
   - release
   - documentation
 summary: >
-  This release updates the default tool versions used by the workflows and setup action
+  This release adds a composite action to get changed files and improves
+  action reference management in the ci-platform workflows
 ---
 
 ## ci-platform v0.5.0 - 2026-11-02
