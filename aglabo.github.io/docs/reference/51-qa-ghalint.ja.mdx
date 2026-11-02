@@ -1,0 +1,109 @@
+---
+title: qa-ghalint
+description: ru-qa-ghalint ワークフローの入力パラメーター・動作・制約事項リファレンス
+id: qa-ghalint
+slug: qa-ghalint
+sidebar_position: 51
+tags:
+  - qa-ghalint
+  - reference
+  - reusable-workflow
+  - inputs
+---
+
+> このワークフローは **Linux ランナー専用** です (ジョブは `ubuntu-slim` で実行されます) 。
+> Windows・macOS はサポートしていません。
+
+## リファレンス
+
+このページでは、`ru-qa-ghalint` ワークフローの入力パラメーター・動作・制約事項を説明します。
+`ru-qa-ghalint` は ghalint で呼び出し元リポジトリの GitHub Actions ワークフローのポリシー違反を検出します。
+
+---
+
+## ワークフロー基本情報
+
+`jobs:` から以下のように参照します。
+
+```yaml
+jobs:
+  qa-ghalint:
+    permissions:
+      contents: read
+    uses: aglabo/ci-platform/.github/workflows/ru-qa-ghalint.yml@v0.6.0
+```
+
+> 実際に使用する際には最新バージョンのタグを指定し、`gh actions-lock` でロックファイルを更新してください。
+
+## 入力パラメーター
+
+| パラメーター | 型     | 必須   | デフォルト                      | 説明                                  |
+| ------------ | ------ | ------ | ------------------------------- | ------------------------------------- |
+| `version`    | string | いいえ | `1.6.0`                         | インストールする ghalint のバージョン |
+| `config`     | string | いいえ | `./global/configs/ghalint.yaml` | ghalint の設定ファイルのパス          |
+
+### `version`
+
+インストールする ghalint のバージョンを指定します。
+ghalint は [setup-tool](./20-setup-tool.ja.mdx) で `suzuki-shunsuke/ghalint` の GitHub Releases から取得します。
+
+```yaml
+with:
+  version: "1.6.0"
+```
+
+### `config`
+
+ghalint の設定ファイルのパスを指定します。
+既定では [aglabo/global-configs](https://github.com/aglabo/global-configs) を `global/configs` に checkout します。
+その中の `ghalint.yaml` を使用します。
+
+```yaml
+with:
+  config: ./.github/ghalint.yaml
+```
+
+補足:
+
+- 呼び出し元リポジトリ内のファイルを指定する場合は、リポジトリルートからの相対パスで指定します。
+
+---
+
+## 動作
+
+ジョブ `qa-ghalint` で、以下のステップを順に実行します。
+各ステップは前のステップが成功した場合のみ実行されます。
+
+1. 呼び出し元リポジトリを checkout します (`persist-credentials: false`)。
+2. [validate-environment](./10-validate-environment.ja.mdx) でランナー環境を検証します (`actions-type: read`)。
+3. [setup-tool](./20-setup-tool.ja.mdx) で ghalint をインストールします。
+4. `aglabo/global-configs` を `global/configs` に checkout します。
+5. `ghalint run --config <config>` を実行し、結果を `.github/report/ghalint-report.txt` に保存します。
+6. ghalint が失敗した場合は、レポートを artifact `ghalint-report` としてアップロードします (保持期間 30 日)。
+
+## 必要な権限
+
+| 権限       | 値     | 用途                        |
+| ---------- | ------ | --------------------------- |
+| `contents` | `read` | リポジトリと設定の checkout |
+
+---
+
+## 制約事項
+
+| 制約         | 内容                                                                                                                           |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------ |
+| OS           | Linux ランナー専用 (`ubuntu-slim`)                                                                                             |
+| タイムアウト | ジョブ全体で 10 分                                                                                                             |
+| 検証対象     | `ghalint run` のみ実行する (`.github/workflows/` のワークフローが対象)。Composite Action を検証する `ghalint act` は実行しない |
+| 設定ファイル | `aglabo/global-configs` は `config` の値にかかわらず checkout される                                                           |
+| レポート     | 失敗時のみアップロードされる                                                                                                   |
+
+---
+
+## 関連ドキュメント
+
+- [プラットフォーム概要](../user-guide/00-platform-overview.ja.mdx): Reusable Workflow と Composite Action の役割
+- [qa-actionlint リファレンス](./50-qa-actionlint.ja.mdx): jactionlint によるワークフロー検証
+- [qa-actions-lock リファレンス](./52-qa-actions-lock.ja.mdx): Action ロックファイルの検証
+- [setup-tool リファレンス](./20-setup-tool.ja.mdx): ghalint のインストールに使用するアクション

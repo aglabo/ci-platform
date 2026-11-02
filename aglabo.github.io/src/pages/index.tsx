@@ -25,6 +25,14 @@ function HomepageSidebar() {
             </Link>
           </li>
         </ul>
+        <div className={styles.sidebarCategory}>リファレンス</div>
+        <ul className={styles.sidebarItems}>
+          <li className={styles.sidebarItem}>
+            <Link className={styles.sidebarLink} to="/next/reference">
+              Reference
+            </Link>
+          </li>
+        </ul>
       </nav>
     </aside>
   );
@@ -50,6 +58,11 @@ function HomepageContent() {
               className="button button--secondary button--lg"
               to="/developer-guide">
               Developer Guide
+            </Link>
+            <Link
+              className="button button--secondary button--lg"
+              to="/next/reference">
+              Reference
             </Link>
           </div>
         </div>

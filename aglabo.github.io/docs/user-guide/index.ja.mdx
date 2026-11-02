@@ -9,8 +9,6 @@ tags:
   - setup
 ---
 
-{/*markdownlint-disable line-length*/}
-
 ## ci-platform ユーザーガイド
 
 > CI を「安全な前提条件」から始めるためのゲート。
@@ -38,6 +36,9 @@ CI の入口ゲートとして機能し、ランナー環境・権限・ツー�
 | Composite Action | validate-environment | GitHub Actions ランナーの OS・パーミッション・ツールを検証します            |
 | Composite Action | setup-tool           | GitHub Releases からバイナリツールをダウンロード・インストールします        |
 | Composite Action | setup-repo           | GitHub リポジトリを checkout して pnpm install し bin/ を PATH に追加します |
+| Composite Action | get-changed-files    | トリガーイベントで変更されたファイルを取得し、glob パターンで絞り込みます   |
+
+各アクションの入力・出力・制約事項は [リファレンス](../reference/index.ja.mdx) を参照してください。
 
 ## 📚 ドキュメント構成
 
@@ -55,16 +56,14 @@ CI の入口ゲートとして機能し、ランナー環境・権限・ツー�
 | 10   | [Validate Environment概要](10-about-validate-environment.ja.mdx) | Validate Environmentの機能・仕組み (What / How)    |
 | 11   | [クイックスタート](11-quickstart.ja.mdx)                         | 最小構成での利用手順                               |
 | 12   | [基本シナリオ](12-basic-scenarios.ja.mdx)                        | 典型的な利用例 (read / commit / PR パーミッション) |
-| 13   | [リファレンス](13-reference.ja.mdx)                              | 入出力パラメータ、設定値のリファレンス             |
 
 ### setup-tool / setup-repo 関連
 
-| 番号 | ファイル名                                                      | 内容                                                       |
-| ---- | --------------------------------------------------------------- | ---------------------------------------------------------- |
-| 20   | [setup-tool / setup-repo 概要](20-about-setup-tool-repo.ja.mdx) | 両アクションの機能・使い分け（What / How）                 |
-| 21   | [クイックスタート](21-quickstart.ja.mdx)                        | 最小構成での利用手順                                       |
-| 22   | [基本シナリオ](22-basic-scenarios.ja.mdx)                       | 典型的な利用例（actionlint / agla-dev-tools / 組み合わせ） |
-| 23   | [リファレンス](23-reference.ja.mdx)                             | 入力パラメータ・制約事項の詳細                             |
+| 番号 | ファイル名                                                      | 内容                                                              |
+| ---- | --------------------------------------------------------------- | ----------------------------------------------------------------- |
+| 20   | [setup-tool / setup-repo 概要](20-about-setup-tool-repo.ja.mdx) | 両アクションの機能・使い分け（What / How）                        |
+| 21   | [クイックスタート](21-quickstart.ja.mdx)                        | 最小構成での利用手順                                              |
+| 22   | [基本シナリオ](22-basic-scenarios.ja.mdx)                       | 典型的な利用例（actionlint / agla-dev-tools / 組み合わせ）        |
 
 ### その他
 

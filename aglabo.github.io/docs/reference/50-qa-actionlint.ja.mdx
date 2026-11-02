@@ -1,0 +1,108 @@
+---
+title: qa-actionlint
+description: ru-qa-actionlint ワークフローの入力パラメーター・動作・制約事項リファレンス
+id: qa-actionlint
+slug: qa-actionlint
+sidebar_position: 50
+tags:
+  - qa-actionlint
+  - reference
+  - reusable-workflow
+  - inputs
+---
+
+> このワークフローは **Linux ランナー専用** です (ジョブは `ubuntu-slim` で実行されます) 。
+> Windows・macOS はサポートしていません。
+
+## リファレンス
+
+このページでは、`ru-qa-actionlint` ワークフローの入力パラメーター・動作・制約事項を説明します。
+`ru-qa-actionlint` は jactionlint で呼び出し元リポジトリの GitHub Actions ワークフローを検証します。
+
+---
+
+## ワークフロー基本情報
+
+`jobs:` から以下のように参照します。
+
+```yaml
+jobs:
+  qa-actionlint:
+    permissions:
+      contents: read
+    uses: aglabo/ci-platform/.github/workflows/ru-qa-actionlint.yml@v0.6.0
+```
+
+> 実際に使用する際には最新バージョンのタグを指定し、`gh actions-lock` でロックファイルを更新してください。
+
+## 入力パラメーター
+
+| パラメーター | 型     | 必須   | デフォルト                          | 説明                                      |
+| ------------ | ------ | ------ | ----------------------------------- | ----------------------------------------- |
+| `version`    | string | いいえ | `2.4.0`                             | インストールする jactionlint のバージョン |
+| `config`     | string | いいえ | `./global/configs/jactionlint.yaml` | jactionlint の設定ファイルのパス          |
+
+### `version`
+
+インストールする jactionlint のバージョンを指定します。
+jactionlint は [setup-tool](./20-setup-tool.ja.mdx) で `jdx/jactionlint` の GitHub Releases から取得します。
+
+```yaml
+with:
+  version: "2.4.0"
+```
+
+### `config`
+
+jactionlint の設定ファイルのパスを指定します。
+既定では [aglabo/global-configs](https://github.com/aglabo/global-configs) を `global/configs` に checkout します。
+その中の `jactionlint.yaml` を使用します。
+
+```yaml
+with:
+  config: ./.github/jactionlint.yaml
+```
+
+補足:
+
+- 呼び出し元リポジトリ内のファイルを指定する場合は、リポジトリルートからの相対パスで指定します。
+
+---
+
+## 動作
+
+ジョブ `qa-actionlint` で、以下のステップを順に実行します。
+各ステップは前のステップが成功した場合のみ実行されます。
+
+1. 呼び出し元リポジトリを checkout します (`persist-credentials: false`)。
+2. [validate-environment](./10-validate-environment.ja.mdx) でランナー環境を検証します (`actions-type: read`)。
+3. [setup-tool](./20-setup-tool.ja.mdx) で jactionlint をインストールします。
+4. `aglabo/global-configs` を `global/configs` に checkout します。
+5. `jactionlint --config-file <config>` を実行し、結果を `.github/report/jactionlint-report.txt` に保存します。
+6. jactionlint が失敗した場合は、レポートを artifact `jactionlint-report` としてアップロードします (保持期間 30 日)。
+
+## 必要な権限
+
+| 権限       | 値     | 用途                        |
+| ---------- | ------ | --------------------------- |
+| `contents` | `read` | リポジトリと設定の checkout |
+
+---
+
+## 制約事項
+
+| 制約         | 内容                                                                 |
+| ------------ | -------------------------------------------------------------------- |
+| OS           | Linux ランナー専用 (`ubuntu-slim`)                                   |
+| タイムアウト | ジョブ全体で 10 分                                                   |
+| 設定ファイル | `aglabo/global-configs` は `config` の値にかかわらず checkout される |
+| レポート     | 失敗時のみアップロードされる                                         |
+
+---
+
+## 関連ドキュメント
+
+- [プラットフォーム概要](../user-guide/00-platform-overview.ja.mdx): Reusable Workflow と Composite Action の役割
+- [qa-ghalint リファレンス](./51-qa-ghalint.ja.mdx): ghalint によるポリシー検証
+- [qa-actions-lock リファレンス](./52-qa-actions-lock.ja.mdx): Action ロックファイルの検証
+- [setup-tool リファレンス](./20-setup-tool.ja.mdx): jactionlint のインストールに使用するアクション

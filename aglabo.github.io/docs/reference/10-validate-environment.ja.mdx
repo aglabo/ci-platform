@@ -1,9 +1,9 @@
 ---
-title: リファレンス - validate-environment
+title: validate-environment
 description: validate-environment アクションの入力・出力・書式リファレンス
-id: validate-environment-reference
-slug: validate-environment-reference
-sidebar_position: 13
+id: validate-environment
+slug: validate-environment
+sidebar_position: 10
 tags:
   - validate-environment
   - reference
@@ -11,18 +11,16 @@ tags:
   - outputs
 ---
 
-{/*markdownlint-disable line-length*/}
-
 > このアクションは **Linux ランナー専用** です (`ubuntu-latest`、`ubuntu-22.04` など) 。
 > Windows・macOS はサポートしていません。
 
-## 📖 リファレンス
+## リファレンス
 
 このページでは、`validate-environment` アクションの入力パラメーター・出力値・書式仕様を網羅的に説明します。
 
 ---
 
-## 🔧 アクション基本情報
+## アクション基本情報
 
 ワークフローから以下のように参照します。
 
@@ -32,7 +30,7 @@ tags:
 
 > 実際に使用する際には最新バージョンのタグを指定し、`gh actions-lock` でロックファイルを更新してください。
 
-## 📥 入力パラメーター
+## 入力パラメーター
 
 | パラメーター            | 型     | 必須   | デフォルト            | 説明                                                                      |
 | ----------------------- | ------ | ------ | --------------------- | ------------------------------------------------------------------------- |
@@ -42,7 +40,7 @@ tags:
 | `require-github-hosted` | string | いいえ | `false`               | `true` にすると GitHub ホステッドランナー以外をエラーにする               |
 | `github-token`          | string | いいえ | `${{ github.token }}` | GitHub API アクセス用トークン。PAT を使う場合は `secrets.<MY_PAT>` を渡す |
 
-### 🏗️ `architecture`
+### `architecture`
 
 `architecture` には正規化後の名前 (`amd64` または `arm64`) を指定します。
 スクリプトが `uname -m` の出力を自動的に正規化するため、ランナー側の表記に依存しません。
@@ -59,7 +57,7 @@ tags:
 
 ---
 
-### ⚙️ `actions-type`
+### `actions-type`
 
 `actions-type` に応じて、GitHub トークンが必要な権限を持つかを検証します。
 
@@ -70,7 +68,7 @@ tags:
 | `pr`                | `contents: write` + `pull-requests: write` | トークンの存在確認 + PR 作成権限プローブ                       |
 | `any`               | 制限なし (permissions を検証しない)        | トークンの存在確認のみ (権限プローブなし)                      |
 
-### 📋 `additional-apps`
+### `additional-apps`
 
 `additional-apps` はパイプ (`|`) 区切りの 4 フィールド形式で記述します。
 
@@ -106,7 +104,7 @@ cmd|app_name|version_extractor|min_version
   なお、`regex:PATTERN` の PATTERN では半角スペース (0x20) は使用できます。
 - 安全のため、表示名には、改行コード、タブを含めることはできません。
 
-#### 🔍 バージョン抽出方式
+#### バージョン抽出方式
 
 `version_extractor` は、`--version` で出力されたバージョン出力から、指定した型式でバージョン番号を取得します。
 取得には、以下の 3 種類の方式を指定できます。
@@ -143,7 +141,7 @@ additional-apps: |
   curl|curl|auto|7.0
 ```
 
-### 🔒 `require-github-hosted`
+### `require-github-hosted`
 
 GitHub ホステッドランナーか否かを `RUNNER_ENVIRONMENT` 環境変数で判定します。
 
@@ -159,7 +157,7 @@ GitHub ホステッドランナーか否かを `RUNNER_ENVIRONMENT` 環境変数
 
 ---
 
-## 📤 出力値
+## 出力値
 
 各検証の結果は `status` と `message` のペアで出力されます。
 各検証は `runner` → `permissions` → `apps` の順で実行されます。
@@ -174,7 +172,7 @@ GitHub ホステッドランナーか否かを `RUNNER_ENVIRONMENT` 環境変数
 | `apps-status`         | `success` / `error` | アプリ検証の結果                   |
 | `apps-message`        | 文字列              | アプリ検証の詳細メッセージ         |
 
-### 📖 出力値の参照方法
+### 出力値の参照方法
 
 出力値は `steps.<id>.outputs.<name>` の形式で参照します。
 
@@ -193,7 +191,7 @@ steps:
       echo "Apps: ${{ steps.validate.outputs.apps-status }}"
 ```
 
-## 🔒 制約事項
+## 制約事項
 
 | 制約           | 内容                                                                                                                                                       | 備考                     |
 | -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------ |
@@ -205,8 +203,8 @@ steps:
 
 ---
 
-## 📚 関連ドキュメント
+## 関連ドキュメント
 
-- [Validate Environment 概要](./10-about-validate-environment.ja.mdx): アクションの概要と検証内容
-- [クイックスタート](./11-quickstart.ja.mdx): 最小構成での利用手順
-- [利用シナリオ](./12-basic-scenarios.ja.mdx): 典型的な利用例
+- [Validate Environment 概要](../user-guide/10-about-validate-environment.ja.mdx): アクションの概要と検証内容
+- [クイックスタート](../user-guide/11-quickstart.ja.mdx): 最小構成での利用手順
+- [利用シナリオ](../user-guide/12-basic-scenarios.ja.mdx): 典型的な利用例

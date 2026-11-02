@@ -1,0 +1,136 @@
+---
+title: scan-betterleaks
+description: ru-scan-betterleaks ワークフローの入力パラメーター・動作・制約事項リファレンス
+id: scan-betterleaks
+slug: scan-betterleaks
+sidebar_position: 60
+tags:
+  - scan-betterleaks
+  - reference
+  - reusable-workflow
+  - inputs
+---
+
+> このワークフローは **Linux ランナー専用** です (ジョブは `ubuntu-slim` で実行されます) 。
+> Windows・macOS はサポートしていません。
+
+## リファレンス
+
+このページでは、`ru-scan-betterleaks` ワークフローの入力パラメーター・動作・制約事項を説明します。
+`ru-scan-betterleaks` は betterleaks で呼び出し元リポジトリの Git 履歴を走査し、機密情報の混入を検出します。
+
+---
+
+## ワークフロー基本情報
+
+`jobs:` から以下のように参照します。
+
+```yaml
+jobs:
+  scan-betterleaks:
+    permissions:
+      contents: read
+    uses: aglabo/ci-platform/.github/workflows/ru-scan-betterleaks.yml@v0.6.0
+```
+
+> 実際に使用する際には最新バージョンのタグを指定し、`gh actions-lock` でロックファイルを更新してください。
+
+## 入力パラメーター
+
+| パラメーター  | 型     | 必須   | デフォルト                          | 説明                                            |
+| ------------- | ------ | ------ | ----------------------------------- | ----------------------------------------------- |
+| `version`     | string | いいえ | `1.9.0`                             | インストールする betterleaks のバージョン       |
+| `config-repo` | string | いいえ | `aglabo/global-configs`             | `global/configs` に checkout する設定リポジトリ |
+| `config`      | string | いいえ | `./global/configs/betterleaks.toml` | betterleaks の設定ファイルのパス                |
+| `fetch-depth` | number | いいえ | `50`                                | 取得する Git 履歴の深さ (`0` で全履歴)          |
+
+### `version`
+
+インストールする betterleaks のバージョンを指定します。
+betterleaks は [setup-tool](./20-setup-tool.ja.mdx) で `betterleaks/betterleaks` の GitHub Releases から取得します。
+
+```yaml
+with:
+  version: "1.9.0"
+```
+
+### `config-repo`
+
+betterleaks の設定ファイルを含むリポジトリを `owner/repo` 形式で指定します。
+指定したリポジトリは `global/configs` に checkout されます。
+
+```yaml
+with:
+  config-repo: my-org/my-configs
+```
+
+補足:
+
+- checkout には `github.token` を使用します。プライベートリポジトリを指定する場合は、呼び出し元から読み取れる必要があります。
+
+### `config`
+
+betterleaks の設定ファイルのパスを指定します。
+既定では `config-repo` のルートにある `betterleaks.toml` を使用します。
+
+```yaml
+with:
+  config: ./configs/betterleaks.toml
+```
+
+補足:
+
+- 呼び出し元リポジトリ内のファイルを指定する場合は、リポジトリルートからの相対パスで指定します。
+- `config-repo` 内の別の場所にあるファイルは、`./global/configs/<path>` の形式で指定します。
+
+### `fetch-depth`
+
+走査対象とする Git 履歴の深さを指定します。`0` を指定すると全履歴を取得して走査します。
+
+```yaml
+with:
+  fetch-depth: 0
+```
+
+補足:
+
+- 型は `number` です。文字列ではなく数値で指定します。
+
+---
+
+## 動作
+
+ジョブ `scan-betterleaks` で、以下のステップを順に実行します。
+
+1. 呼び出し元リポジトリを `fetch-depth` の深さで checkout します (`persist-credentials: false`)。
+2. [validate-environment](./10-validate-environment.ja.mdx) でランナー環境を検証します (`actions-type: read`)。
+3. 検証が成功した場合、[setup-tool](./20-setup-tool.ja.mdx) で betterleaks をインストールします。
+4. `config-repo` を `global/configs` に checkout します。
+5. `betterleaks git . --config <config>` で Git 履歴を走査します。結果は JSON 形式で `.github/report/betterleaks-report.json` に保存します。
+6. 機密情報を検出した場合 (終了コード `0` 以外) は、レポートを artifact `betterleaks-report` としてアップロードします (保持期間 30 日)。
+
+## 必要な権限
+
+| 権限       | 値     | 用途                        |
+| ---------- | ------ | --------------------------- |
+| `contents` | `read` | リポジトリと設定の checkout |
+
+---
+
+## 制約事項
+
+| 制約         | 内容                                                                                            |
+| ------------ | ----------------------------------------------------------------------------------------------- |
+| OS           | Linux ランナー専用 (`ubuntu-slim`)                                                              |
+| タイムアウト | ジョブ全体で 10 分                                                                              |
+| 設定ファイル | `config-repo` は `config` の値にかかわらず checkout される                                      |
+| 走査範囲     | checkout した履歴のみ。既定 (`50`) では直近 50 コミットまで                                     |
+| レポート     | 検出時のみアップロードされる。レポートには検出箇所が含まれるため、artifact の公開範囲に注意する |
+
+---
+
+## 関連ドキュメント
+
+- [プラットフォーム概要](../user-guide/00-platform-overview.ja.mdx): Reusable Workflow と Composite Action の役割
+- [setup-tool リファレンス](./20-setup-tool.ja.mdx): betterleaks のインストールに使用するアクション
+- [validate-environment リファレンス](./10-validate-environment.ja.mdx): ランナー環境の検証

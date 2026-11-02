@@ -10,8 +10,6 @@ tags:
   - git-hooks
 ---
 
-{/*markdownlint-disable line-length*/}
-
 ## 🏗️ ci-platform とは
 
 `ci-platform` は、**複数の OSS リポジトリにわたる CI/CD を統制・管理するための基盤** です。
@@ -126,18 +124,21 @@ graph TB
     subgraph platform["aglabo/ci-platform"]
         subgraph ca["Composite Actions  ✅ 提供中"]
             ve["validate-environment"]
+            st["setup-tool"]
+            sr["setup-repo"]
+            cf["get-changed-files"]
         end
         subgraph ru["Reusable Workflows  ✅ 提供中"]
             al["ru-qa-actionlint"]
             gh["ru-qa-ghalint"]
+            al2["ru-qa-actions-lock"]
             bl["ru-scan-betterleaks"]
+            ld["ru-lint-documents"]
         end
     end
 
-    wf -->|"steps: uses:"| ve
-    wf -->|"jobs: uses:"| al
-    wf -->|"jobs: uses:"| gh
-    wf -->|"jobs: uses:"| bl
+    wf -->|"steps: uses:"| ca
+    wf -->|"jobs: uses:"| ru
 ```
 
 ---

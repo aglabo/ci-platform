@@ -25,9 +25,14 @@ on:
         default: "1.9.0"
         type: string
       config-repo:
-        description: "Repository that contains the betterleaks config"
+        description: "Repository checked out to global/configs for the betterleaks config"
         required: false
         default: "aglabo/global-configs"
+        type: string
+      config:
+        description: "Path to the betterleaks configuration file"
+        required: false
+        default: "./global/configs/betterleaks.toml"
         type: string
       fetch-depth:
         description: "Git history depth to fetch (0 for full history)"
@@ -44,6 +49,7 @@ jobs:
       contents: read
     steps:
       - name: Checkout target repository
+        id: target-checkout
         uses: actions/checkout@v7.0.1
         with:
           fetch-depth: ${{ inputs.fetch-depth }}
@@ -51,6 +57,7 @@ jobs:
 
       - name: Validate environment
         id: env-validation
+        if: steps.target-checkout.outcome == 'success'
         uses: aglabo/ci-platform/.github/actions/ca-validate-environment@v0.6.0
         with:
           actions-type: read
@@ -80,10 +87,12 @@ jobs:
       - name: Run betterleaks scan
         id: scan-execute
         if: steps.prepare-report.outcome == 'success'
+        env:
+          CONFIG_FILE: ${{ inputs.config }}
         run: |
           set +e
           betterleaks git . \
-            --config global/configs/betterleaks.toml \
+            --config "${CONFIG_FILE}" \
             --report-path=.github/report/betterleaks-report.json \
             --exit-code=1 \
             --verbose

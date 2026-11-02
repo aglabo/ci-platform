@@ -1,0 +1,141 @@
+---
+title: setup-repo
+description: setup-repo アクションの入力パラメーター・動作・制約事項リファレンス
+id: setup-repo
+slug: setup-repo
+sidebar_position: 21
+tags:
+  - setup-repo
+  - reference
+  - inputs
+---
+
+> このアクションは **Linux ランナー専用** です (`ubuntu-latest`、`ubuntu-22.04` など) 。
+> Windows・macOS はサポートしていません。
+
+## リファレンス
+
+このページでは、`setup-repo` アクションの入力パラメーター・動作・制約事項を説明します。
+`setup-repo` は GitHub リポジトリを checkout して `pnpm install` を実行し、`bin/` を `PATH` に追加します。
+
+---
+
+## アクション基本情報
+
+ワークフローから以下のように参照します。
+
+```yaml
+- uses: aglabo/ci-platform/.github/actions/ca-setup-repo@v0.6.0
+```
+
+> 実際に使用する際には最新バージョンのタグを指定し、`gh actions-lock` でロックファイルを更新してください。
+
+## 入力パラメーター
+
+| パラメーター   | 型     | 必須   | デフォルト | 説明                                     |
+| -------------- | ------ | ------ | ---------- | ---------------------------------------- |
+| `repo`         | string | はい   | —          | GitHub リポジトリ (`owner/repo` 形式)    |
+| `path`         | string | はい   | —          | ローカルチェックアウトパス (`./` 始まり) |
+| `ref`          | string | はい   | —          | Git ref (タグ・ブランチ・SHA)            |
+| `node-version` | string | いいえ | `24`       | Node.js バージョン                       |
+| `pnpm-version` | string | いいえ | `12.15.0`  | pnpm バージョン                          |
+
+### `repo`
+
+`owner/repo` 形式で指定します。pnpm ワークスペースと `bin/` ディレクトリを持つリポジトリである必要があります。
+
+```yaml
+with:
+  repo: aglabo/agla-dev-tools
+```
+
+### `path`
+
+チェックアウト先のパスを `./` 始まりで指定します。
+
+```yaml
+with:
+  path: ./tools/agla-dev-tools
+```
+
+補足:
+
+- `./` で始まらないパス (絶対パスを含む) はエラーになります。
+- `..` を含むパス (例: `./tools/../x`) はエラーになります。
+
+### `ref`
+
+チェックアウトする Git ref を指定します。タグ・ブランチ・SHA のいずれかを指定できます。
+再現性のため、SHA または固定タグを推奨します。SHA を使う場合はタグをコメントで残してください。
+
+```yaml
+with:
+  ref: a88f3bf1ecda478ad8ec2e907139bd058ce5ee56 # v0.1.0
+```
+
+補足:
+
+- 空文字列や空白だけの値はエラーになります。
+
+### `node-version` / `pnpm-version`
+
+`pnpm install` で使用する Node.js と pnpm のバージョンを指定します。省略時はそれぞれ `24` / `12.15.0` が使われます。
+
+```yaml
+with:
+  node-version: "24"
+  pnpm-version: "12.15.0"
+```
+
+補足:
+
+- `pnpm/action-setup` は呼び出し元の `package.json` の `packageManager` も読みます。
+  呼び出し元が別の pnpm バージョンを使う場合は、`pnpm-version` をそのバージョンに合わせてください。
+
+---
+
+## 動作
+
+1. `repo`・`path`・`ref` を検証します。
+2. `path` に既存の checkout があるかを判定します (下記)。
+3. `actions/checkout` でリポジトリを `path` に checkout します (`persist-credentials: false`)。
+4. pnpm と Node.js をセットアップします。
+5. 新しい checkout の場合は、`pnpm-lock.yaml` と `bin/` の存在を確認し、`pnpm install --frozen-lockfile` を実行します。
+6. `node_modules/.bin/` と `bin/` の実行ファイルを確認し、`<path>/bin` を `PATH` に追加します。
+
+### 既存の checkout の扱い
+
+| `path` の状態                                          | 動作                                       |
+| ------------------------------------------------------ | ------------------------------------------ |
+| 存在しない                                             | 新規に checkout してインストールする       |
+| 存在し、`.repo` に記録されたリポジトリが `repo` と一致 | 構造の検証と `pnpm install` をスキップする |
+| 存在するが `.repo` がない                              | エラー                                     |
+| 存在し、`.repo` のリポジトリが `repo` と異なる         | エラー                                     |
+| `<path>/.repo.lock` がすでに存在する                   | エラー (同じ `path` への同時実行を防ぐ)    |
+
+### `bin/` の実行ファイル
+
+- `bin/` 直下の、拡張子のないファイルと `.sh` ファイルを実行ファイルの候補とします。候補が 1 つもない場合はエラーになります。
+- shebang (`#!`) で始まる候補には実行権限を付与します。
+- 実行権限のない候補が残っている場合はエラーになります。
+
+---
+
+## 制約事項
+
+| 制約                   | 内容                                                                       |
+| ---------------------- | -------------------------------------------------------------------------- |
+| OS                     | Linux ランナー専用 (`ubuntu-latest` など)                                  |
+| `path`                 | `./` 始まりのパスのみ有効。絶対パスや `..` を含むパスはエラー              |
+| リポジトリ構造         | `pnpm-lock.yaml` と `bin/` ディレクトリが必須                              |
+| パッケージインストール | `pnpm install --frozen-lockfile` で実行 (lockfile がないとエラー)          |
+| 既存チェックアウト     | 同じリポジトリの checkout が `path` にある場合、インストールをスキップする |
+
+---
+
+## 関連ドキュメント
+
+- [setup-tool / setup-repo 概要](../user-guide/20-about-setup-tool-repo.ja.mdx): 両アクションの設計目標・使い分け
+- [クイックスタート](../user-guide/21-quickstart.ja.mdx): 最小構成での利用手順
+- [基本シナリオ](../user-guide/22-basic-scenarios.ja.mdx): 典型的な利用例
+- [setup-tool リファレンス](./20-setup-tool.ja.mdx): GitHub Releases からツールをセットアップする場合
