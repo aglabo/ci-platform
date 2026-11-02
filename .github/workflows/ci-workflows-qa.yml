@@ -36,7 +36,7 @@ jobs:
     name: Actionlint
     permissions:
       contents: read
-    uses: aglabo/ci-platform/.github/workflows/ru-qa-actionlint.yml@v0.4.1
+    uses: aglabo/ci-platform/.github/workflows/ru-qa-actionlint.yml@v0.5.0
     with:
       config: "./configs/jactionlint.yaml"
 
@@ -44,6 +44,6 @@ jobs:
     name: Ghalint
     permissions:
       contents: read
-    uses: aglabo/ci-platform/.github/workflows/ru-qa-ghalint.yml@v0.4.1
+    uses: aglabo/ci-platform/.github/workflows/ru-qa-ghalint.yml@v0.5.0
     with:
       config: "./configs/ghalint.yaml"
