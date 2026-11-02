@@ -34,7 +34,7 @@
     "**/module/**",
     "**/dist/**",
     //
-    "**lock.*",
+    "**/pnpm-lock.yaml",
     // Documents
     "CONTRIBUTING**.md",
     "CODE_OF_CONDUCT**.md",
