@@ -80,9 +80,12 @@ inputs:
 
 ---
 
-## 📁 設定の分離 (configs/ ディレクトリ)
+## 📁 設定の分離 (configs/ と global-configs)
 
-ツール設定はすべて `configs/` ディレクトリに集約します。
+ローカルで使うツール設定は `configs/` ディレクトリに置きます。
+jactionlint / ghalint / textlint / markdownlint の `runners/` ラッパーは `configs/` を優先します。
+`configs/` にない場合は `global-configs` の設定を使用します。
+CI の再利用可能ワークフローは、`aglabo/global-configs` の `global/configs/` を参照します。
 
 {/*markdownlint-disable line-length MD060*/}
 
@@ -92,9 +95,17 @@ inputs:
 | `configs/ghalint.yaml`           | ghalint ポリシー設定             |
 | `configs/betterleaks.toml`       | betterleaks シークレット検出設定 |
 | `configs/secretlint.config.yaml` | secretlint 設定                  |
-| `configs/.markdownlint.yaml`     | markdownlint ルール設定          |
+| `configs/textlintrc.yaml`        | textlint ルール設定              |
 
 {/*markdownlint-enable line-length MD060*/}
+
+markdownlint の設定は `configs/` に置きません。
+`global-configs` の `.markdownlint-cli2.yaml` を使用します。
+ローカルでは `runners/run-markdownlint.sh` が設定ファイルを次の順に探します。
+
+1. `configs/.markdownlint-cli2.yaml`
+2. `$XDG_CONFIG_HOME/global-configs/.markdownlint-cli2.yaml`
+3. `~/.config/global-configs/.markdownlint-cli2.yaml`
 
 **分離の目的**:
 
@@ -115,11 +126,11 @@ ci-platform のスクリプト変更はすべてテストが先行します。
 テストは `<script_dir>/__tests__/<tier>/<name>.<tier>.spec.sh` に配置します。
 
 ```bash
-scripts/
-├── setup-dev-env.sh
+.github/actions/ca-get-changed-files/scripts/
+├── get-changed-files.sh
 └── __tests__/
-    └── unit/
-        └── setup-dev-env.unit.spec.sh
+    └── functional/
+        └── get-changed-files.functional.spec.sh
 ```
 
 **ティア定義**:
