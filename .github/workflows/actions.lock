@@ -7,6 +7,7 @@ workflows:
         - 'actions/checkout@v7.0.1'
         - 'actions/setup-node@v7.1.0'
         - 'pnpm/action-setup@v6.1.0'
+    '.github/workflows/ci-docs-qa.yml': []
     '.github/workflows/ci-publish-docs.yml':
         - 'actions/cache@v6.1.0'
         - 'actions/checkout@v7.0.1'
@@ -17,7 +18,15 @@ workflows:
         - 'pnpm/action-setup@v6.1.0'
     '.github/workflows/ci-scan-secrets.yml': []
     '.github/workflows/ci-workflows-qa.yml': []
+    '.github/workflows/ru-lint-documents.yml':
+        - 'actions/checkout@v7.0.1'
+        - 'actions/upload-artifact@v7.0.2'
+        - 'aglabo/ci-platform@v0.5.0'
     '.github/workflows/ru-qa-actionlint.yml':
+        - 'actions/checkout@v7.0.1'
+        - 'actions/upload-artifact@v7.0.2'
+        - 'aglabo/ci-platform@v0.5.0'
+    '.github/workflows/ru-qa-actions-lock.yml':
         - 'actions/checkout@v7.0.1'
         - 'actions/upload-artifact@v7.0.2'
         - 'aglabo/ci-platform@v0.5.0'
@@ -72,6 +81,10 @@ dependencies:
         commit: 'sha1-af5e34e039d0f420e4d8c3aedc3cf5dd396b9ddd'
         owner_id: 211574028
         repo_id: 1154660752
+        uses:
+            - 'actions/checkout@v7.0.1'
+            - 'actions/setup-node@v7.1.0'
+            - 'pnpm/action-setup@v6.1.0'
     'pnpm/action-setup@v6.1.0':
         ref: 'v6.1.0'
         commit: 'sha1-ea17c68df8912ef543352723c149a84f56e3d413'
