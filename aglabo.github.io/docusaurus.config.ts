@@ -42,16 +42,15 @@ const config: Config = {
       'classic',
       {
         docs: {
-          path: '../docs',
+          path: './docs',
           routeBasePath: '/',
           sidebarPath: './sidebars.ts',
-          // Docusaurus defaults + Deckrd design documents (docs/.deckrd)
+          // Docusaurus defaults
           exclude: [
             '**/_*.{js,jsx,ts,tsx,md,mdx}',
             '**/_*/**',
             '**/*.test.{js,jsx,ts,tsx}',
             '**/__tests__/**',
-            '**/.deckrd/**',
           ],
           includeCurrentVersion: true,
           versions: {

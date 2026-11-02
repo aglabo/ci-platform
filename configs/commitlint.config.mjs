@@ -1,4 +1,4 @@
-// src: configs/commitlint.config.js
+// src: configs/commitlint.config.mjs
 // @(#) : commitlint basic configuration
 //
 // Copyright (c) 2025- atsushifx <http://github.com/atsushifx>
