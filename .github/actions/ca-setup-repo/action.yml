@@ -1,7 +1,7 @@
-# src: ./.github/actions/setup-tool-repo/action.yml
+# src: ./.github/actions/ca-setup-repo/action.yml
 # @(#) : composite GitHub Action to setup a tool repository with pnpm install
 
-name: "setup-tool-repo"
+name: "setup-repo"
 description: "Setup a tool repository: validate, checkout, pnpm install, and add bin/ to PATH"
 
 inputs:
