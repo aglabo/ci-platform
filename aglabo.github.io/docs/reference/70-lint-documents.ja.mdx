@@ -1,0 +1,153 @@
+---
+title: lint-documents
+description: ru-lint-documents ワークフローの入力パラメーター・動作・制約事項リファレンス
+id: lint-documents
+slug: lint-documents
+sidebar_position: 70
+tags:
+  - lint-documents
+  - reference
+  - reusable-workflow
+  - inputs
+---
+
+> このワークフローは **Linux ランナー専用** です (ジョブは `ubuntu-slim` と `ubuntu-latest` で実行されます) 。
+> Windows・macOS はサポートしていません。
+
+## リファレンス
+
+このページでは、`ru-lint-documents` ワークフローの入力パラメーター・動作・制約事項を説明します。
+`ru-lint-documents` はトリガーイベントで変更された Markdown ファイルを取得し、textlint と markdownlint で検証します。
+
+---
+
+## ワークフロー基本情報
+
+`jobs:` から以下のように参照します。
+
+```yaml
+jobs:
+  lint-documents:
+    permissions:
+      contents: read
+    uses: aglabo/ci-platform/.github/workflows/ru-lint-documents.yml@v0.6.0
+```
+
+> 実際に使用する際には最新バージョンのタグを指定し、`gh actions-lock` でロックファイルを更新してください。
+
+## 入力パラメーター
+
+| パラメーター          | 型     | 必須   | デフォルト                                 | 説明                                                                   |
+| --------------------- | ------ | ------ | ------------------------------------------ | ---------------------------------------------------------------------- |
+| `pattern`             | string | いいえ | `**/*.md` と `**/*.mdx`                    | 検証対象の glob パターン (1 行に 1 つ、`!` で除外)                     |
+| `commit-count`        | string | いいえ | `1`                                        | push / pull_request 以外のイベントで比較するコミット数 (`HEAD~N`)      |
+| `doc-tools-version`   | string | いいえ | `v0.3.0`                                   | textlint と markdownlint を提供する `aglabo/agla-doc-tools` の Git ref |
+| `textlint-config`     | string | いいえ | `./global/configs/textlintrc.yaml`         | textlint の設定ファイルのパス                                          |
+| `markdownlint-config` | string | いいえ | `./global/configs/.markdownlint-cli2.yaml` | markdownlint-cli2 の設定ファイルのパス                                 |
+
+### `pattern`
+
+検証対象とするファイルの glob パターンを、1 行に 1 つずつ指定します。`!` で始まるパターンは除外を表します。
+書式の詳細は [get-changed-files](./30-get-changed-files.ja.mdx) を参照してください。
+
+```yaml
+with:
+  pattern: |
+    docs/**/*.md
+    !docs/archive/**
+```
+
+### `commit-count`
+
+push / pull_request 以外のイベント (`workflow_dispatch` など) で、`HEAD~N` との差分を取るコミット数を指定します。
+push / pull_request では、イベントの比較範囲が使われるためこの値は使用しません。
+
+```yaml
+with:
+  commit-count: "5"
+```
+
+補足:
+
+- 型は `string` です。数値も引用符で囲んで指定します。
+
+### `doc-tools-version`
+
+textlint と markdownlint を提供する [aglabo/agla-doc-tools](https://github.com/aglabo/agla-doc-tools) の Git ref を指定します。
+再現性のため、固定タグまたは SHA を推奨します。
+
+```yaml
+with:
+  doc-tools-version: v0.3.0
+```
+
+### `textlint-config` / `markdownlint-config`
+
+textlint と markdownlint-cli2 の設定ファイルのパスを指定します。
+既定では [aglabo/global-configs](https://github.com/aglabo/global-configs) を `global/configs` に checkout し、その中の設定を使用します。
+
+```yaml
+with:
+  textlint-config: ./.textlintrc.yaml
+  markdownlint-config: ./.markdownlint-cli2.yaml
+```
+
+---
+
+## 動作
+
+3 つのジョブで構成されます。`qa-textlint` と `qa-markdownlint` は `get-changed-files` の完了後に並列で実行されます。
+各ジョブ内のステップは、前のステップが成功した場合のみ実行されます。
+
+### `get-changed-files` (`ubuntu-slim`、10 分)
+
+1. 呼び出し元リポジトリを全履歴で checkout します (`fetch-depth: 0`)。
+2. [validate-environment](./10-validate-environment.ja.mdx) でランナー環境を検証します。
+3. [get-changed-files](./30-get-changed-files.ja.mdx) で変更ファイルを取得し、`pattern` で絞り込みます。
+
+### `qa-textlint` / `qa-markdownlint` (`ubuntu-latest`、15 分)
+
+変更ファイルが 0 件の場合、両ジョブはスキップされます。
+
+1. 呼び出し元リポジトリを checkout します (`persist-credentials: false`)。
+2. [validate-environment](./10-validate-environment.ja.mdx) でランナー環境を検証します。
+3. [setup-repo](./21-setup-repo.ja.mdx) で `aglabo/agla-doc-tools` を `./.tools/agla-doc-tools` にセットアップします。
+4. `aglabo/global-configs` を `global/configs` に checkout します。
+5. 変更ファイルに対して lint を実行し、結果を `.github/report/` に保存します。
+6. lint が失敗した場合は、レポートを artifact としてアップロードします (保持期間 30 日)。
+
+| ジョブ            | 実行コマンド                                                 | artifact              |
+| ----------------- | ------------------------------------------------------------ | --------------------- |
+| `qa-textlint`     | `textlint --config <textlint-config> --ignore-path <ignore>` | `textlint-report`     |
+| `qa-markdownlint` | `markdownlint --config <markdownlint-config>`                | `markdownlint-report` |
+
+### textlint の除外ファイル
+
+呼び出し元リポジトリのルートに `.textlintignore` がある場合はそれを使用し、ない場合は `global/configs/.textlintignore` を使用します。
+
+## 必要な権限
+
+| 権限       | 値     | 用途                                |
+| ---------- | ------ | ----------------------------------- |
+| `contents` | `read` | リポジトリ・ツール・設定の checkout |
+
+---
+
+## 制約事項
+
+| 制約         | 内容                                                               |
+| ------------ | ------------------------------------------------------------------ |
+| OS           | Linux ランナー専用 (`ubuntu-slim` / `ubuntu-latest`)               |
+| 検証対象     | トリガーイベントで変更され、`pattern` に一致したファイルのみ       |
+| 変更なし     | 対象ファイルが 0 件の場合、lint ジョブはスキップされる (成功扱い)  |
+| ツール       | `aglabo/agla-doc-tools` の textlint・markdownlint を使用する       |
+| 設定ファイル | `aglabo/global-configs` は設定パスの値にかかわらず checkout される |
+| レポート     | 失敗時のみアップロードされる                                       |
+
+---
+
+## 関連ドキュメント
+
+- [プラットフォーム概要](../user-guide/00-platform-overview.ja.mdx): Reusable Workflow と Composite Action の役割
+- [get-changed-files リファレンス](./30-get-changed-files.ja.mdx): 変更ファイルの取得と glob 書式
+- [setup-repo リファレンス](./21-setup-repo.ja.mdx): agla-doc-tools のセットアップに使用するアクション
