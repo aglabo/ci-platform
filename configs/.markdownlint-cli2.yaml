@@ -19,7 +19,13 @@ ignores:
   - ".tools/**"
   - "temp/**"
   - "tmp/**"
-  - "aglabo.github.io/**"
+  # docs site: lint only aglabo.github.io/docs/
+  - "aglabo.github.io/*.md"
+  - "aglabo.github.io/build/**"
+  - "aglabo.github.io/node_modules/**"
+  - "aglabo.github.io/src/**"
+  - "aglabo.github.io/static/**"
+  - "aglabo.github.io/versioned_docs/**"
   - ".github/**"
   - ".vscode/**"
 
