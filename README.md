@@ -53,11 +53,15 @@ Example: `aglabo/ci-platform/.github/actions/<action>@v0.5.0`
 
 ### Reusable Workflows
 
-| Workflow                  | Description                                       |
-| ------------------------- | ------------------------------------------------- |
-| `ru-qa-actionlint.yml`    | Lints GitHub Actions workflows with jactionlint   |
-| `ru-qa-ghalint.yml`       | Lints GitHub Actions workflows with ghalint       |
-| `ru-scan-betterleaks.yml` | Scans the repository for secrets with betterleaks |
+| Workflow                  | Description                                                  |
+| ------------------------- | ------------------------------------------------------------ |
+| `ru-lint-documents.yml`   | Lints changed Markdown files with textlint and markdownlint  |
+| `ru-qa-actionlint.yml`    | Lints GitHub Actions workflows with jactionlint              |
+| `ru-qa-actions-lock.yml`  | Verifies the workflow action lockfile with `gh actions-lock` |
+| `ru-qa-ghalint.yml`       | Lints GitHub Actions workflows with ghalint                  |
+| `ru-scan-betterleaks.yml` | Scans the repository for secrets with betterleaks            |
+
+By default, the lint workflows use configs from [aglabo/global-configs](https://github.com/aglabo/global-configs).
 
 ### Example: `ca-get-changed-files`
 
