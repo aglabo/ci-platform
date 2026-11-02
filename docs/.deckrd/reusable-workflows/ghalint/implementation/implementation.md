@@ -1,7 +1,7 @@
 ---
 title: "Implementation Plan: Ghalint Reusable Workflow"
 based-on: specifications.md v1.1.0
-version: 1.1.0
+version: 1.1.1
 status: Draft
 ---
 
@@ -58,11 +58,11 @@ status: Draft
   - `actions/checkout@v7.0.1`
   - `persist-credentials: false`
 - Step 2 `env-validation`: 実行環境を検証します
-  - `aglabo/ci-platform/.github/actions/ca-validate-environment@v0.5.0`
+  - `aglabo/ci-platform/.github/actions/ca-validate-environment@v0.6.0`
   - `actions-type: read`
   - 条件: `steps.target-checkout.outcome == 'success'`
 - Step 3 `tool-install`: ghalint をインストールします
-  - `aglabo/ci-platform/.github/actions/ca-setup-tool@v0.5.0`
+  - `aglabo/ci-platform/.github/actions/ca-setup-tool@v0.6.0`
   - `repo: suzuki-shunsuke/ghalint`
   - `tool-version: ${{ inputs.version }}`
   - 条件: `steps.env-validation.outcome == 'success'`
@@ -112,5 +112,6 @@ status: Draft
 
 | Date       | Version | Description                                                                                                                                                                                                                                                                                                                                                                             |
 | ---------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 2026-06-13 | 1.0.0   | Initial implementation plan                                                                                                                                                                                                                                                                                                                                                             |
+| 2026-11-03 | 1.1.1   | ca-* Composite Action の参照を @v0.5.0 から @v0.6.0 に更新                                                                                                                                                                                                                                                                                                                              |
 | 2026-11-03 | 1.1.0   | 設定リポジトリを aglabo/global-configs に変更 (チェックアウト先 global/configs、config 既定値 ./global/configs/ghalint.yaml)、実装に合わせて参照を更新 (ru-qa-ghalint.yml、入力 version / config、env CONFIG_FILE、ca-* Composite Action @v0.5.0、バージョンタグ固定)、版番号を 3 部構成に修正、Open Questions を解決済みに更新、caller は with: なしで global-configs の既定設定を使用 |
+| 2026-06-13 | 1.0.0   | Initial implementation plan                                                                                                                                                                                                                                                                                                                                                             |

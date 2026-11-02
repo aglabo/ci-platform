@@ -133,16 +133,16 @@ source: specifications.md
   - Expected: `steps[0].id == 'target-checkout'`
   - `yq: yq '.jobs.qa-actionlint.steps[0].id' .github/workflows/ru-qa-actionlint.yml`
 
-- [x] **T-02-01-02**: `env-validation` が `aglabo/ci-platform/.github/actions/ca-validate-environment@v0.5.0` を使用し、`if: steps.target-checkout.outcome == 'success'` でゲートされること
+- [x] **T-02-01-02**: `env-validation` が `aglabo/ci-platform/.github/actions/ca-validate-environment@v0.6.0` を使用し、`if: steps.target-checkout.outcome == 'success'` でゲートされること
   - Target: `ru-qa-actionlint.yml` step `env-validation`
   - Scenario: Given `ru-qa-actionlint.yml` が存在する、When `env-validation` ステップを検査する
-  - Expected: `uses: aglabo/ci-platform/.github/actions/ca-validate-environment@v0.5.0`、`with.actions-type: read`、`if: steps.target-checkout.outcome == 'success'`
+  - Expected: `uses: aglabo/ci-platform/.github/actions/ca-validate-environment@v0.6.0`、`with.actions-type: read`、`if: steps.target-checkout.outcome == 'success'`
   - `yq: yq '.jobs.qa-actionlint.steps[] | select(.id == "env-validation")' .github/workflows/ru-qa-actionlint.yml`
 
-- [x] **T-02-01-03**: `tool-install` が `aglabo/ci-platform/.github/actions/ca-setup-tool@v0.5.0` を使用し、`repo: jdx/jactionlint`、`if: steps.env-validation.outcome == 'success'` でゲートされること
+- [x] **T-02-01-03**: `tool-install` が `aglabo/ci-platform/.github/actions/ca-setup-tool@v0.6.0` を使用し、`repo: jdx/jactionlint`、`if: steps.env-validation.outcome == 'success'` でゲートされること
   - Target: `ru-qa-actionlint.yml` step `tool-install`
   - Scenario: Given `ru-qa-actionlint.yml` が存在する、When `tool-install` ステップを検査する
-  - Expected: `uses: aglabo/ci-platform/.github/actions/ca-setup-tool@v0.5.0`、`with.repo: jdx/jactionlint`、`if: steps.env-validation.outcome == 'success'`
+  - Expected: `uses: aglabo/ci-platform/.github/actions/ca-setup-tool@v0.6.0`、`with.repo: jdx/jactionlint`、`if: steps.env-validation.outcome == 'success'`
   - `yq: yq '.jobs.qa-actionlint.steps[] | select(.id == "tool-install")' .github/workflows/ru-qa-actionlint.yml`
 
 - [x] **T-02-01-03b**: `tool-install` が `tool-version: ${{ inputs.version }}` を渡すこと

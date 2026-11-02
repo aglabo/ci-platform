@@ -43,11 +43,11 @@ jobs:
       # checkout より前に配置して環境不整合を最初に検知する
       - name: Validate environment
         id: validate
-        uses: aglabo/ci-platform/.github/actions/ca-validate-environment@ff5ff3dd020860b4a95bc97c1121af0c24f02aa1 # v0.4.0
-      # SHA は Dependabot または Renovate で自動更新できます
+        uses: aglabo/ci-platform/.github/actions/ca-validate-environment@v0.6.0
+      # 参照を更新したら gh actions-lock でロックファイルを更新します
 
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7.0.1
 
       - name: Show results
         run: |

@@ -122,13 +122,13 @@ source: specifications.md
 - [x] **T-02-01-02**: Verify `env-validation` step runs second with no gate condition
   - Target: `steps.env-validation`
   - Scenario: Given `target-checkout` completed, When the second step is evaluated
-  - Expected: Then step with `id: env-validation` uses `aglabo/ci-platform/.github/actions/ca-validate-environment@v0.5.0`, sets `with.actions-type: read`, has no `if` condition, and appears at index 1 in the step list
+  - Expected: Then step with `id: env-validation` uses `aglabo/ci-platform/.github/actions/ca-validate-environment@v0.6.0`, sets `with.actions-type: read`, has no `if` condition, and appears at index 1 in the step list
   - `yq`: `.jobs[].steps[1].id == "env-validation"` and `(.jobs[].steps[1].if // null) == null`
 
 - [x] **T-02-01-03**: Verify `tool-install` uses the `ca-setup-tool` action with correct inputs and gate
   - Target: `steps.tool-install`
   - Scenario: Given `env-validation` completed
-  - Expected: Then step `tool-install` uses `aglabo/ci-platform/.github/actions/ca-setup-tool@v0.5.0`, sets `with.repo: betterleaks/betterleaks`, `with.tool-version: ${{ inputs.version }}`, and has `if: steps.env-validation.outcome == 'success'`
+  - Expected: Then step `tool-install` uses `aglabo/ci-platform/.github/actions/ca-setup-tool@v0.6.0`, sets `with.repo: betterleaks/betterleaks`, `with.tool-version: ${{ inputs.version }}`, and has `if: steps.env-validation.outcome == 'success'`
   - `yq`: `(.jobs[].steps[] | select(.id=="tool-install")).with.repo == "betterleaks/betterleaks" and (.jobs[].steps[] | select(.id=="tool-install")).if == "steps.env-validation.outcome == 'success'"`
 
 - [x] **T-02-01-04**: Verify `config-checkout` checks out `config-repo` (default branch) into `global/configs/`

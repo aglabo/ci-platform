@@ -1,7 +1,7 @@
 ---
 title: "Design Specification: Betterleaks Reusable Workflow"
-version: 1.4.0
-based-on: requirements.md v1.6.0
+version: 1.4.1
+based-on: requirements.md v1.6.1
 status: Draft
 ---
 
@@ -69,8 +69,8 @@ Each unit SHALL have a single behavioral responsibility:
 | config-checkout | Tool installation succeeded      | Central scanner configuration source is available locally       | SHALL fail the job when the source cannot be retrieved |
 | scan-execute    | Configuration checkout completed | Scanner exits successfully                                      | SHALL fail immediately on non-zero scanner exit        |
 
-<!-- impl-note: env-validation uses aglabo/ci-platform/.github/actions/ca-validate-environment@v0.5.0 with actions-type=read (architecture and require-github-hosted keep the action defaults amd64 and false). -->
-<!-- impl-note: tool-install uses aglabo/ci-platform/.github/actions/ca-setup-tool@v0.5.0, which installs betterleaks/betterleaks into ${RUNNER_TEMP}/bin and appends that directory to GITHUB_PATH. -->
+<!-- impl-note: env-validation uses aglabo/ci-platform/.github/actions/ca-validate-environment@v0.6.0 with actions-type=read (architecture and require-github-hosted keep the action defaults amd64 and false). -->
+<!-- impl-note: tool-install uses aglabo/ci-platform/.github/actions/ca-setup-tool@v0.6.0, which installs betterleaks/betterleaks into ${RUNNER_TEMP}/bin and appends that directory to GITHUB_PATH. -->
 <!-- impl-note: Configuration checkout implementation path: global/configs. Required scanner config: global/configs/betterleaks.toml. -->
 
 #### Unit Interaction Map
@@ -310,6 +310,7 @@ The scanner execution unit SHALL fail fast. It MUST NOT ignore a non-zero scanne
 
 | Date       | Version | Change                                                                                                                                                                 |
 | ---------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-11-03 | 1.4.1   | Update ca-* composite action references from @v0.5.0 to @v0.6.0                                                                                                        |
 | 2026-11-03 | 1.4.0   | Change config-repo default to aglabo/global-configs (checkout path global/configs); align version input, step order, trigger, and actions with ru-scan-betterleaks.yml |
 | 2026-06-12 | 1.3.0   | Add fetch-depth input (R-015/R-016), report output (R-017/R-018), upload on failure (R-019/R-020/R-021)                                                                |
 | 2026-06-12 | 1.2.0   | Set default betterleaks version to `1.4.1`                                                                                                                             |

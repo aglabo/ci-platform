@@ -33,7 +33,7 @@ ci-platform は Composite Action と Reusable Workflow を提供しています�
 
 ```yaml
 steps:
-  - uses: aglabo/ci-platform/.github/actions/<action-name>@<SHA> # vX.Y.Z
+  - uses: aglabo/ci-platform/.github/actions/<action-name>@vX.Y.Z
 ```
 
 ### Reusable Workflow
@@ -43,24 +43,24 @@ steps:
 ```yaml
 jobs:
   scan:
-    uses: aglabo/ci-platform/.github/workflows/<workflow-name>.yml@<SHA> # vX.Y.Z
+    uses: aglabo/ci-platform/.github/workflows/<workflow-name>.yml@vX.Y.Z
 ```
 
 ---
 
-## 🔒 バージョン固定: SHA 固定を使う理由
+## 🔒 バージョン固定: バージョンタグとロックファイル
 
-`@` の後ろにバージョンを指定します。**SHA 固定 + タグコメント形式を強く推奨します。**
+`@` の後ろにバージョンを指定します。**バージョンタグで参照し、ロックファイルで SHA を固定する形式を推奨します。**
 
-| 指定方法           | 例                                                   | 特徴                                         |
-| ------------------ | ---------------------------------------------------- | -------------------------------------------- |
-| SHA + タグコメント | `@ff5ff3dd020860b4a95bc97c1121af0c24f02aa1 # v0.4.0` | 最も厳密。改ざん耐性が高い (推奨)            |
-| タグ               | `@v0.1.0`                                            | リリース済みバージョンを固定する             |
-| ブランチ名         | `@main`                                              | 常に最新。破壊的変更の影響を受ける恐れがある |
+| 指定方法           | 例                | 特徴                                                                      |
+| ------------------ | ----------------- | ------------------------------------------------------------------------- |
+| バージョンタグ     | `@v0.6.0`         | リリース済みバージョンを固定する。ロックファイルと組み合わせて使う (推奨) |
+| SHA + タグコメント | `@<SHA> # v0.6.0` | コミットを直接固定する。参照の更新に手間がかかる                          |
+| ブランチ名         | `@main`           | 常に最新。破壊的変更の影響を受ける恐れがある                              |
 
-タグ (`@v0.1.0`) だけでは参照先のコミットを書き換えられるリスクを排除できません。
-SHA 固定により、参照先の内容を変更されても CI への影響をゼロに抑えられます。
-本番ワークフローでは SHA 固定 + タグコメント形式を推奨します。
+タグ (`@v0.6.0`) だけでは参照先のコミットを書き換えられるリスクを排除できません。
+`gh actions-lock` でロックファイル `.github/workflows/actions.lock` を生成し、タグが指すコミットの SHA を記録してください。
+`ru-qa-actions-lock.yml` でロックファイルを検証すると、タグの書き換えを検出できます。
 `@main` の使用は推奨しません。
 
 ---
@@ -82,11 +82,11 @@ jobs:
 
     steps:
       - name: Validate environment
-        uses: aglabo/ci-platform/.github/actions/ca-validate-environment@ff5ff3dd020860b4a95bc97c1121af0c24f02aa1 # v0.4.0
+        uses: aglabo/ci-platform/.github/actions/ca-validate-environment@v0.6.0
         with:
           actions-type: read
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.1
 ```
 
 `actions-type` は `permissions` の `actions:` 設定と整合する値を指定します。
@@ -121,12 +121,12 @@ jobs:
   lint-workflow:
     permissions:
       contents: read
-    uses: aglabo/ci-platform/.github/workflows/ru-qa-actionlint.yml@<SHA> # v0.6.0
+    uses: aglabo/ci-platform/.github/workflows/ru-qa-actionlint.yml@v0.6.0
 
   scan-secrets:
     permissions:
       contents: read
-    uses: aglabo/ci-platform/.github/workflows/ru-scan-betterleaks.yml@<SHA> # v0.6.0
+    uses: aglabo/ci-platform/.github/workflows/ru-scan-betterleaks.yml@v0.6.0
 ```
 
 現在の実装状況の詳細は [ci-platform とは](./00-platform-overview.ja.mdx#️-現在の実装状況) を参照してください。
@@ -150,13 +150,13 @@ jobs:
   lint-workflow:
     permissions:
       contents: read
-    uses: aglabo/ci-platform/.github/workflows/ru-qa-actionlint.yml@<SHA> # v0.6.0
+    uses: aglabo/ci-platform/.github/workflows/ru-qa-actionlint.yml@v0.6.0
 
   # Reusable Workflow: シークレットスキャン
   scan-secrets:
     permissions:
       contents: read
-    uses: aglabo/ci-platform/.github/workflows/ru-scan-betterleaks.yml@<SHA> # v0.6.0
+    uses: aglabo/ci-platform/.github/workflows/ru-scan-betterleaks.yml@v0.6.0
 
   # Composite Action: 実行環境検証 + ビルド
   build:
@@ -165,16 +165,16 @@ jobs:
       contents: read
     steps:
       - name: Validate environment
-        uses: aglabo/ci-platform/.github/actions/ca-validate-environment@ff5ff3dd020860b4a95bc97c1121af0c24f02aa1 # v0.4.0
+        uses: aglabo/ci-platform/.github/actions/ca-validate-environment@v0.6.0
         with:
           actions-type: read
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.1
 
       # 以降に通常のビルドステップを追加
 ```
 
-> `<SHA>` は参照するリリースのコミット SHA に置き換えてください。SHA は最新の値に更新してから使用してください。
+> 参照を追加・更新したら、`gh actions-lock` でロックファイル (`.github/workflows/actions.lock`) を更新してください。
 
 さらに詳細な使い方 (複数ジョブの組み合わせ・段階導入パターンなど) は [利用シナリオ](./12-basic-scenarios.ja.mdx) を参照してください。
 
@@ -182,12 +182,12 @@ jobs:
 
 ## ⚠️ よくあるミス
 
-| ミス                              | 症状                                                          | 対処                                          |
-| --------------------------------- | ------------------------------------------------------------- | --------------------------------------------- |
-| SHA とタグを混在させる            | `@v0.1.0` のみ指定 → タグ書き換えで別コードが動く可能性がある | SHA 固定 + タグコメント形式に統一する         |
-| `permissions:` を未設定のまま使う | validate-environment が権限不足を検出してジョブが即終了する   | `permissions: contents: read` を明示する      |
-| 非 Linux ランナーで実行する       | macOS・Windows ランナーでは最初のステップで失敗する           | `runs-on: ubuntu-latest` を指定する           |
-| `checkout` より後に配置する       | 不正コードをチェックアウト後に検証が走り意味が薄れる          | `validate-environment` を最初のステップに置く |
+| ミス                              | 症状                                                          | 対処                                               |
+| --------------------------------- | ------------------------------------------------------------- | -------------------------------------------------- |
+| ロックファイルを使わない          | `@v0.6.0` のみ指定 → タグ書き換えで別コードが動く可能性がある | `gh actions-lock` でロックファイルを生成・検証する |
+| `permissions:` を未設定のまま使う | validate-environment が権限不足を検出してジョブが即終了する   | `permissions: contents: read` を明示する           |
+| 非 Linux ランナーで実行する       | macOS・Windows ランナーでは最初のステップで失敗する           | `runs-on: ubuntu-latest` を指定する                |
+| `checkout` より後に配置する       | 不正コードをチェックアウト後に検証が走り意味が薄れる          | `validate-environment` を最初のステップに置く      |
 
 ### 実際のエラー例
 

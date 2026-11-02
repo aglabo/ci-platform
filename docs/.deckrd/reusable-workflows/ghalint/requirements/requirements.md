@@ -2,7 +2,7 @@
 title: "Requirements: Ghalint Reusable Workflow"
 module: "reusable-workflows/ghalint"
 status: Draft
-version: 1.1.0
+version: 1.1.1
 created: "2026-06-13"
 ---
 
@@ -40,7 +40,7 @@ reusable workflow (`ru-qa-ghalint.yml`) を ci-platform リポジトリ内に作
 ## 2. Context
 
 - Target Environment: GitHub Actions (ubuntu-slim GitHub ホストランナー)
-- Related Components: `ci-workflows-qa.yml`, `aglabo/ci-platform/.github/actions/ca-validate-environment@v0.5.0`, `aglabo/ci-platform/.github/actions/ca-setup-tool@v0.5.0`, `aglabo/global-configs`（設定リポジトリ）, `configs/ghalint.yaml`
+- Related Components: `ci-workflows-qa.yml`, `aglabo/ci-platform/.github/actions/ca-validate-environment@v0.6.0`, `aglabo/ci-platform/.github/actions/ca-setup-tool@v0.6.0`, `aglabo/global-configs`（設定リポジトリ）, `configs/ghalint.yaml`
 - Assumptions: `ca-setup-tool` composite action が `suzuki-shunsuke/ghalint` の GitHub Releases からバイナリを取得できる
 
 ### System Context Diagram
@@ -255,7 +255,7 @@ The implementation SHOULD follow the same 7-step pattern as `ru-qa-actionlint.ym
 
 ### REQ-NF-003: Maintainability
 
-The workflow SHOULD use explicit version tags (e.g. `@v7.0.1`, `@v0.5.0`) for all `uses:` references.
+The workflow SHOULD use explicit version tags (e.g. `@v7.0.1`, `@v0.6.0`) for all `uses:` references.
 The `timeout-minutes: 10` MUST be set at job level.
 
 ### REQ-NF-004: Traceability
@@ -364,5 +364,6 @@ Scenario: Report artifact not uploaded on success
 
 | Date       | Version | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | ---------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 2026-06-13 | 1.0.0   | Initial release                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| 2026-11-03 | 1.1.1   | ca-* Composite Action の参照を @v0.5.0 から @v0.6.0 に更新                                                                                                                                                                                                                                                                                                                                                                                                           |
 | 2026-11-03 | 1.1.0   | 設定リポジトリを aglabo/global-configs に変更 (チェックアウト先 global/configs、config 既定値 ./global/configs/ghalint.yaml)、実装に合わせて参照を更新 (ru-qa-ghalint.yml、入力 version / config、ca-* Composite Action @v0.5.0、バージョンタグ固定)、frontmatter の版番号を 3 部構成に修正、ubuntu-slim を GitHub ホストランナーに訂正、Open Questions (既定版 1.6.0、ghalint.yaml の存在) を解決済みに更新、caller は with: なしで global-configs の既定設定を使用 |
+| 2026-06-13 | 1.0.0   | Initial release                                                                                                                                                                                                                                                                                                                                                                                                                                                      |

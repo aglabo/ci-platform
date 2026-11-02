@@ -31,10 +31,10 @@ CI 設定を各リポジトリへコピーして運用していると、次の�
 - GitHub Actions のセキュリティポリシー (権限・ランナー・シークレット) を組織全体で強制したい
 - ワークフロー設定のドリフトとサプライチェーンリスクを構造的に排除したい
 
-GitHub Actions の Composite Action と Reusable Workflow を SHA 固定で参照するだけで利用できます。
+GitHub Actions の Composite Action と Reusable Workflow をバージョンタグで参照するだけで利用できます。
 
 ```yaml
-- uses: aglabo/ci-platform/.github/actions/ca-validate-environment@ff5ff3dd020860b4a95bc97c1121af0c24f02aa1 # v0.4.0
+- uses: aglabo/ci-platform/.github/actions/ca-validate-environment@v0.6.0
 ```
 
 > **クイックスタートはこちら** → [最小構成で今すぐ導入](./11-quickstart.ja.mdx)
@@ -43,12 +43,12 @@ GitHub Actions の Composite Action と Reusable Workflow を SHA 固定で参�
 
 ## 🎯 解決する問題
 
-| 問題                                               | ci-platform のアプローチ                            |
-| -------------------------------------------------- | --------------------------------------------------- |
-| CI 設定を各リポジトリにコピーしていて管理が分散    | Actions/Workflows を外部リポジトリに集約して参照    |
-| パーミッション不足・ランナー不正が CI 実行後に判明 | `validate-environment` でジョブ冒頭に fail-fast     |
-| サプライチェーン攻撃への耐性が不明確               | SHA 固定 + タグコメントを標準的な参照方式として採用 |
-| シークレット漏洩を CI で検知したい                 | betterleaks Reusable Workflow によるスキャン        |
+| 問題                                               | ci-platform のアプローチ                                    |
+| -------------------------------------------------- | ----------------------------------------------------------- |
+| CI 設定を各リポジトリにコピーしていて管理が分散    | Actions/Workflows を外部リポジトリに集約して参照            |
+| パーミッション不足・ランナー不正が CI 実行後に判明 | `validate-environment` でジョブ冒頭に fail-fast             |
+| サプライチェーン攻撃への耐性が不明確               | バージョンタグ + ロックファイルを標準的な参照方式として採用 |
+| シークレット漏洩を CI で検知したい                 | betterleaks Reusable Workflow によるスキャン                |
 
 > **典型的なリスクシナリオ**:
 >
@@ -95,19 +95,19 @@ ci-platform は次の 2 層でリポジトリを保護します。
 この組み合わせにより、「実行前の即時検出」と「組織全体の一貫した適用」を同時に達成します。
 
 ```plaintext
-┌─────────────────────────────────────────────────────────────────┐
-│ 利用者のワークフロー                                            │
-│                                                                 │
-│  jobs:                                                          │
-│    lint:                                                        │
-│      uses: aglabo/ci-platform/.../ru-qa-actionlint.yml@SHA      │
-│          ← Reusable (ワークフロー全体へのポリシー強制)          │
-│                                                                 │
-│    build:                                                       │
-│      steps:                                                     │
-│        - uses: aglabo/ci-platform/.../validate-environment@SHA  │
-│          ← Composite (ジョブ内 fail-fast ゲート)                │
-└─────────────────────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────────────┐
+│ 利用者のワークフロー                                              │
+│                                                                   │
+│  jobs:                                                            │
+│    lint:                                                          │
+│      uses: aglabo/ci-platform/.../ru-qa-actionlint.yml@vX.Y.Z     │
+│          ← Reusable (ワークフロー全体へのポリシー強制)            │
+│                                                                   │
+│    build:                                                         │
+│      steps:                                                       │
+│        - uses: aglabo/ci-platform/.../validate-environment@vX.Y.Z │
+│          ← Composite (ジョブ内 fail-fast ゲート)                  │
+└───────────────────────────────────────────────────────────────────┘
 ```
 
 | 種別              | 参照場所 | スコープ     | 目的                    |
@@ -142,20 +142,21 @@ graph TB
 
 ---
 
-## 🔒 SHA 固定による参照
+## 🔒 バージョンタグとロックファイルによる参照
 
-ci-platform では **SHA 固定 + タグコメント** を標準的な参照方式として採用しています。
+ci-platform では **バージョンタグ + ロックファイル** を標準的な参照方式として採用しています。
 
 ```yaml
-# 推奨: SHA 固定でサプライチェーン攻撃への耐性を確保
-- uses: aglabo/ci-platform/.github/actions/ca-validate-environment@ff5ff3dd020860b4a95bc97c1121af0c24f02aa1 # v0.4.0
+# 推奨: バージョンタグで参照し、ロックファイルで SHA を固定する
+- uses: aglabo/ci-platform/.github/actions/ca-validate-environment@v0.6.0
 ```
 
-タグ (`@v0.1.0`) だけでは参照先のコミットが後から書き換えられるリスクを排除できません。
-SHA 固定により、参照先の内容が変更されても CI への影響をゼロに抑えられます。
+タグ (`@v0.6.0`) だけでは参照先のコミットが後から書き換えられるリスクを排除できません。
+`gh actions-lock` でロックファイル `.github/workflows/actions.lock` を生成し、タグが指すコミットの SHA を記録します。
+`ru-qa-actions-lock.yml` でロックファイルを検証すると、タグの書き換えを検出できます。
 
-> **SHA の更新戦略**: Dependabot または Renovate の `github-actions` エコシステム設定で
-> SHA を自動更新できます。タグコメント (`# v0.1.0`) が付いていれば PR で差分を確認できます。
+> **参照の更新戦略**: Dependabot の `github-actions` エコシステム設定でタグを自動更新できます。
+> 参照を更新したら `gh actions-lock` でロックファイルを更新し、PR で差分を確認します。
 
 ---
 
@@ -171,11 +172,11 @@ SHA 固定により、参照先の内容が変更されても CI への影響を
 
 ### 設計原則
 
-| 原則                    | 内容                                                                                   | 具体例                                                                     |
-| ----------------------- | -------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| Immutable reference     | SHA 固定により、参照先コミットが変わらない限り CI は影響を受けない                     | `@ff5ff3dd...` のようにフル SHA で固定する                                 |
-| Centralized enforcement | セキュリティポリシーを単一リポジトリで一元管理し、各リポジトリ間の設定のずれを防ぎます | `permissions:` ポリシーを ci-platform 側で定義し、全リポジトリから参照する |
-| Fail early, fail loudly | `validate-environment` がジョブ冒頭でポリシー違反を即検出・即終了する                  | ランナー OS が `ubuntu` でなければ最初のステップで即 `exit 1`              |
+| 原則                    | 内容                                                                                    | 具体例                                                                     |
+| ----------------------- | --------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| Immutable reference     | ロックファイルに記録した SHA により、参照先コミットが変わらない限り CI は影響を受けない | `@v0.6.0` で参照し、`actions.lock` で SHA を固定する                       |
+| Centralized enforcement | セキュリティポリシーを単一リポジトリで一元管理し、各リポジトリ間の設定のずれを防ぎます  | `permissions:` ポリシーを ci-platform 側で定義し、全リポジトリから参照する |
+| Fail early, fail loudly | `validate-environment` がジョブ冒頭でポリシー違反を即検出・即終了する                   | ランナー OS が `ubuntu` でなければ最初のステップで即 `exit 1`              |
 
 ### このプラットフォームが扱わないもの
 
@@ -188,7 +189,7 @@ SHA 固定により、参照先の内容が変更されても CI への影響を
 GitHub `.github` リポジトリでも Org 共通設定は可能ですが、`ci-platform` は意図的に独立したリポジトリとして管理しています。
 
 - バージョン管理の独立性: CI 基盤の変更が全リポジトリに波及するタイミングを明示的に制御できる
-- SHA 固定による改ざん耐性: 参照元コミットが変わらない限り、利用者の CI は影響を受けない
+- ロックファイルによる改ざん検知: 参照先のタグが書き換えられても、ロックファイルの検証で検出できる
 - 段階的な拡張: Composite Action から Reusable Workflow へ、スコープを拡大しながら展開できる
 
 各リポジトリは独自のジョブを自由に追加できます。ci-platform は CI の「禁止」ではなく「境界の定義」です。
@@ -207,7 +208,7 @@ jobs:
   scan-secrets:
     permissions:
       contents: read
-    uses: aglabo/ci-platform/.github/workflows/ru-scan-betterleaks.yml@<SHA> # v0.6.0
+    uses: aglabo/ci-platform/.github/workflows/ru-scan-betterleaks.yml@v0.6.0
 ```
 
 **段階導入パターン**:
@@ -216,7 +217,7 @@ jobs:
 2. 拡大フェーズ: Reusable Workflow を新規ジョブとして追加します (既存ジョブは変更しません)
 3. 標準化フェーズ: 全ジョブに `validate-environment` を配置し、ポリシー適用を完了させます
 
-> Breaking Change 対応: SHA 固定または版タグで参照を固定しているため、
+> Breaking Change 対応: バージョンタグで参照を固定しているため、
 > アップグレードは任意のタイミングで実施できます。
 
 ---

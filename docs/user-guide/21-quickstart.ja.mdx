@@ -39,14 +39,14 @@ jobs:
     steps:
       - name: Checkout
         id: checkout
-        uses: actions/checkout@<SHA> # vX.Y.Z
+        uses: actions/checkout@vX.Y.Z
         with:
           persist-credentials: false
 
       - name: Install actionlint
         id: setup-tool
         if: steps.checkout.outcome == 'success'
-        uses: aglabo/ci-platform/.github/actions/ca-setup-tool@<SHA> # vX.Y.Z
+        uses: aglabo/ci-platform/.github/actions/ca-setup-tool@vX.Y.Z
         with:
           repo: rhysd/actionlint
           tool-version: "1.7.12"
@@ -74,14 +74,14 @@ jobs:
     steps:
       - name: Checkout
         id: checkout
-        uses: actions/checkout@<SHA> # vX.Y.Z
+        uses: actions/checkout@vX.Y.Z
         with:
           persist-credentials: false
 
       - name: Setup agla-dev-tools
         id: setup-repo
         if: steps.checkout.outcome == 'success'
-        uses: aglabo/ci-platform/.github/actions/ca-setup-repo@<SHA> # vX.Y.Z
+        uses: aglabo/ci-platform/.github/actions/ca-setup-repo@vX.Y.Z
         with:
           repo: aglabo/agla-dev-tools
           path: ./tools/agla-dev-tools
@@ -98,13 +98,13 @@ jobs:
 
 ## 共通の注意点
 
-### SHA 固定参照を推奨
+### バージョンタグ + ロックファイルを推奨
 
-セキュリティのため、アクション参照は SHA で固定することを推奨します。
-タグ（`vX.Y.Z`）をコメントとして残しておくと可読性を保てます。
+セキュリティのため、アクションはバージョンタグ（`vX.Y.Z`）で参照し、
+`gh actions-lock` で生成するロックファイルで SHA を固定することを推奨します。
 
 ```yaml
-uses: aglabo/ci-platform/.github/actions/ca-setup-tool@<SHA> # vX.Y.Z
+uses: aglabo/ci-platform/.github/actions/ca-setup-tool@vX.Y.Z
 ```
 
 ### `if: steps.<id>.outcome == 'success'` パターン

@@ -1,7 +1,7 @@
 ---
 title: "Implementation Plan: Betterleaks Reusable Workflow"
-version: 1.3.0
-based-on: specifications.md v1.4.0
+version: 1.3.1
+based-on: specifications.md v1.4.1
 status: Draft
 ---
 
@@ -86,13 +86,13 @@ The workflow will enforce read-only repository access with `contents: read` at b
   - Do not add an `if` condition to this first step.
 
 - Add step ID `env-validation` after the target checkout:
-  - Use the composite action `aglabo/ci-platform/.github/actions/ca-validate-environment@v0.5.0`.
+  - Use the composite action `aglabo/ci-platform/.github/actions/ca-validate-environment@v0.6.0`.
   - Set `with.actions-type: read`.
   - Do not add an `if` condition to this step.
   - Exposes `steps.env-validation.outputs.runner-status`.
 
 - Add step ID `tool-install` after `env-validation`:
-  - Use the composite action `aglabo/ci-platform/.github/actions/ca-setup-tool@v0.5.0`.
+  - Use the composite action `aglabo/ci-platform/.github/actions/ca-setup-tool@v0.6.0`.
   - Set `with.repo: betterleaks/betterleaks`.
   - Set `with.tool-version: ${{ inputs.version }}`.
   - Add `if: steps.env-validation.outcome == 'success'`.
@@ -150,6 +150,7 @@ The workflow will enforce read-only repository access with `contents: read` at b
 
 | Date       | Version | Description                                                                                                                                                                       |
 | ---------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-11-03 | 1.3.1   | Update ca-* composite action references from @v0.5.0 to @v0.6.0                                                                                                                   |
 | 2026-11-03 | 1.3.0   | Change config-repo default to aglabo/global-configs (checkout path global/configs); align file name, version input, step order, trigger, and actions with ru-scan-betterleaks.yml |
 | 2026-06-12 | 1.2.0   | Add fetch-depth input, prepare-report step, report output, upload-report on failure                                                                                               |
 | 2026-06-12 | 1.1.0   | Set default betterleaks version to `1.4.1`                                                                                                                                        |
