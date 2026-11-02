@@ -28,7 +28,7 @@ function HomepageSidebar() {
         <div className={styles.sidebarCategory}>リファレンス</div>
         <ul className={styles.sidebarItems}>
           <li className={styles.sidebarItem}>
-            <Link className={styles.sidebarLink} to="/next/reference">
+            <Link className={styles.sidebarLink} to="/reference">
               Reference
             </Link>
           </li>
@@ -61,7 +61,7 @@ function HomepageContent() {
             </Link>
             <Link
               className="button button--secondary button--lg"
-              to="/next/reference">
+              to="/reference">
               Reference
             </Link>
           </div>
