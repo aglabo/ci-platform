@@ -1,0 +1,39 @@
+# src: ./.github/workflows/ci-docs-qa.yml
+# @(#) : Caller workflow for document QA of changed Markdown files
+#
+# Copyright (c) 2026- atsushifx <https://github.com/atsushifx>
+#
+# This software is released under the MIT License.
+# https://opensource.org/licenses/MIT
+
+name: "CI: Documents QA"
+
+# Minimal permissions following security best practices
+permissions:
+  contents: read
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - releases
+
+  pull_request:
+    branches:
+      - main
+      - master
+      - releases
+
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-caller-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-documents:
+    name: Lint Documents
+    permissions:
+      contents: read
+    uses: ./.github/workflows/ru-lint-documents.yml
