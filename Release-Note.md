@@ -1,38 +1,46 @@
 ---
-title: "ci-platform Release Notes v0.5.0"
-version: "0.5.0"
-date: 2026-11-02
+title: "ci-platform Release Notes v0.6.0"
+version: "0.6.0"
+date: 2026-11-03
 tags:
   - release
   - documentation
 summary: >
-  This release adds a composite action to get changed files and improves
-  action reference management in the ci-platform workflows
+  This release adds reusable workflows for document linting and action lock
+  verification, and switches the default lint configuration to aglabo/global-configs
 ---
 
-## ci-platform v0.5.0 - 2026-11-02
+## ci-platform v0.6.0 - 2026-11-03
 
-変更ファイルを取得する Composite Action を追加しました。イベントに応じた差分の取得、
-コミット数の指定、パターンによる絞り込みに対応します。
-あわせて、ci-platform のワークフローで使用する GitHub Actions の参照管理を改善しました。
+Markdown ドキュメントの lint と、Action ロックファイルを検証する再利用可能ワークフローを追加しました。
+あわせて、lint とシークレットスキャンの再利用可能ワークフローが、既定で `aglabo/global-configs` の設定を使用するようになりました。
 
 ## 主な変更
 
-### 変更ファイルを取得する Composite Action を追加
+### ドキュメント lint 用の再利用可能ワークフローを追加
 
-- `ca-get-changed-files` を追加しました。GitHub Actions のイベントに応じた差分範囲から
-  変更ファイルを取得し、ファイル一覧と件数を後続のステップへ出力します。
-- `commit-count` 入力を追加し、差分取得に使うコミット数を指定できます。
-- パターンを指定して、取得したファイルを絞り込めます。
+- `ru-lint-documents.yml` を追加しました。変更された Markdown ファイルに対して textlint と markdownlint を実行し、
+  失敗時はレポートを出力します。
+- `pattern` 入力で対象ファイルを絞り込めます。push / pull_request 以外のイベントでは、`commit-count` 入力で差分の範囲を指定できます。
 
-### GitHub Actions の参照管理を改善
+### Action ロックファイルの検証用ワークフローを追加
 
-- ci-platform のワークフローで使用する Action の参照をバージョンタグに更新しました。
-- `.github/workflows/actions.lock` を追加し、ワークフローごとの参照、解決先コミット、リポジトリ情報を記録します。
+- `ru-qa-actions-lock.yml` を追加しました。`.github/workflows/actions.lock` とワークフローの Action 参照が一致しているかを検証し、
+  失敗時はレポートをアップロードします。
+
+### lint 設定の取得元を `aglabo/global-configs` に変更
+
+- lint とシークレットスキャンの再利用可能ワークフローは、既定で `aglabo/global-configs` の設定を使用します。
+  対象は `ru-qa-actionlint.yml`、`ru-qa-ghalint.yml`、`ru-scan-betterleaks.yml` です。
+- 既定の設定ファイルのパスが `./shared/configs/` から `./global/configs/` に変わりました。
+
+## 移行時の注意
+
+- `config` 入力に `./shared/configs/...` を明示的に指定している場合は、`./global/configs/...` に変更してください。
+- `ru-scan-betterleaks.yml` で `config-repo` を指定していない場合は、設定の取得元が変わります。
+  変更前は `aglabo/.github`、変更後は `aglabo/global-configs` です。
 
 ## 開発者向けの改善
 
-- ローカルの lint runner は、リポジトリ内の設定を優先して使用します。設定が見つからない場合は、
-  探索した場所を含むエラーを表示します。
-- ShellCheck と shfmt の対象指定、および複数の ShellSpec ファイル・glob の処理を改善しました。
-- GitHub Actions の入力サイズ検証とエラー出力に共通ライブラリを導入しました。
+- ドキュメント QA ワークフロー (`ci-docs-qa.yml`) を追加し、ワークフローの QA で Action ロックファイルを検証するようにしました。
+- Dependabot で GitHub Actions の更新を毎日確認するようにしました。

@@ -1,21 +1,73 @@
 ---
 title: "ci-platform Change Log"
-version: "0.5.0"
-date: 2026-11-02
+version: "0.6.0"
+date: 2026-11-03
 tags:
   - release
-  - composite-actions
+  - reusable-workflows
   - ci-platform
 summary: >
-  v0.5.0 adds changed-file and file-filtering actions, shared GitHub Actions
-  libraries, and a workflow action lockfile. It also improves lint runners,
-  development tooling, and CI coverage.
+  v0.6.0 adds reusable workflows for document linting and action lock
+  verification, plus a documents QA workflow. Lint and secret-scan workflows
+  now use aglabo/global-configs settings by default, and Dependabot checks
+  GitHub Actions updates.
 ---
 
 <!-- textlint-disable
   ja-technical-writing/sentence-length,
   ja-technical-writing/max-comma
   -->
+
+## [0.6.0] - 2026-11-03
+
+### Overview
+
+This release adds reusable workflows for document linting and action lock
+verification, and adds a documents QA workflow.
+
+Lint and secret-scan workflows now use the shared configurations from
+aglabo/global-configs by default. CI workflows call the local reusable
+workflows, and Dependabot now checks GitHub Actions updates.
+
+### Added
+
+#### Reusable Workflows
+
+- `ru-lint-documents.yml`: Added textlint and markdownlint checks for changed
+  Markdown files, with failure reports.
+- `ru-qa-actions-lock.yml`: Added action lock verification that uploads a report
+  on failure.
+
+#### CI Workflows
+
+- `ci-docs-qa.yml`: Added a documents QA workflow. Its `workflow_dispatch` event
+  accepts a `commit-count` input (default `1`), which must be an integer from 1 to 1000.
+
+#### Repository Configuration
+
+- `.github/dependabot.yml`: Added daily GitHub Actions update checks with a
+  7-day cooldown.
+
+### Changed
+
+#### GitHub Actions
+
+- `ru-qa-actionlint.yml`, `ru-qa-ghalint.yml`, `ru-scan-betterleaks.yml`: Changed
+  the default configuration to the shared aglabo/global-configs settings.
+- `ci-scan-secrets.yml`, `ci-workflows-qa.yml`: Changed to call the local
+  reusable workflows instead of the published ci-platform workflows.
+- `ci-workflows-qa.yml`: Added action lock verification.
+- Updated ci-platform workflow references from v0.4.1 to v0.5.0.
+- `.github/workflows/actions.lock`: Added locks for the actions used by the new
+  workflows and their reusable workflow dependencies.
+
+#### Documentation
+
+- `README.md`, `README.ja.md`: Added `ru-lint-documents.yml` and
+  `ru-qa-actions-lock.yml` to the reusable workflow list, and documented that the
+  lint workflows use aglabo/global-configs settings by default.
+
+---
 
 ## [0.5.0] - 2026-11-02
 
