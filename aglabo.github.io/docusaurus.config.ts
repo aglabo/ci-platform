@@ -42,7 +42,7 @@ const config: Config = {
       'classic',
       {
         docs: {
-          path: '../docs',
+          path: './docs',
           routeBasePath: '/',
           sidebarPath: './sidebars.ts',
           // Docusaurus defaults + Deckrd design documents (docs/.deckrd)
