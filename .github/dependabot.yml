@@ -5,7 +5,9 @@
 
 version: 2
 updates:
-  - package-ecosystem: "github-actions" # for Workflows lockfile
-    directory: "/" # Location of package manifests
-    schedule:
-      interval: "weekly"
+  - package-ecosystem: "github-actions" # for Workflows lockfile
+    directory: "/" # Location of package manifests
+    cooldown:
+      default-days: 7
+    schedule:
+      interval: "daily"
