@@ -33,14 +33,14 @@ jobs:
     steps:
       - name: Checkout repository
         id: checkout
-        uses: actions/checkout@<SHA> # vX.Y.Z
+        uses: actions/checkout@vX.Y.Z
         with:
           persist-credentials: false
 
       - name: Install jactionlint
         id: setup-tool
         if: steps.checkout.outcome == 'success'
-        uses: aglabo/ci-platform/.github/actions/ca-setup-tool@<SHA> # vX.Y.Z
+        uses: aglabo/ci-platform/.github/actions/ca-setup-tool@vX.Y.Z
         with:
           repo: jdx/jactionlint
           tool-version: "2.4.0"
@@ -68,14 +68,14 @@ jobs:
     steps:
       - name: Checkout repository
         id: checkout
-        uses: actions/checkout@<SHA> # vX.Y.Z
+        uses: actions/checkout@vX.Y.Z
         with:
           persist-credentials: false
 
       - name: Setup agla-dev-tools
         id: setup-repo
         if: steps.checkout.outcome == 'success'
-        uses: aglabo/ci-platform/.github/actions/ca-setup-repo@<SHA> # vX.Y.Z
+        uses: aglabo/ci-platform/.github/actions/ca-setup-repo@vX.Y.Z
         with:
           repo: aglabo/agla-dev-tools
           path: ./tools/agla-dev-tools
@@ -103,14 +103,14 @@ jobs:
     steps:
       - name: Checkout repository
         id: checkout
-        uses: actions/checkout@<SHA> # vX.Y.Z
+        uses: actions/checkout@vX.Y.Z
         with:
           persist-credentials: false
 
       - name: Install jactionlint
         id: setup-jactionlint
         if: steps.checkout.outcome == 'success'
-        uses: aglabo/ci-platform/.github/actions/ca-setup-tool@<SHA> # vX.Y.Z
+        uses: aglabo/ci-platform/.github/actions/ca-setup-tool@vX.Y.Z
         with:
           repo: jdx/jactionlint
           tool-version: "2.4.0"
@@ -118,7 +118,7 @@ jobs:
       - name: Setup agla-dev-tools
         id: setup-repo
         if: steps.checkout.outcome == 'success'
-        uses: aglabo/ci-platform/.github/actions/ca-setup-repo@<SHA> # vX.Y.Z
+        uses: aglabo/ci-platform/.github/actions/ca-setup-repo@vX.Y.Z
         with:
           repo: aglabo/agla-dev-tools
           path: ./tools/agla-dev-tools
@@ -152,14 +152,14 @@ jobs:
     steps:
       - name: Checkout repository
         id: checkout
-        uses: actions/checkout@<SHA> # vX.Y.Z
+        uses: actions/checkout@vX.Y.Z
         with:
           persist-credentials: false
 
       - name: Install ghalint
         id: setup-tool
         if: steps.checkout.outcome == 'success'
-        uses: aglabo/ci-platform/.github/actions/ca-setup-tool@<SHA> # vX.Y.Z
+        uses: aglabo/ci-platform/.github/actions/ca-setup-tool@vX.Y.Z
         with:
           repo: suzuki-shunsuke/ghalint
           tool-version: "1.3.2"
