@@ -40,7 +40,7 @@ It comes with best practices and essential tools pre-configured.
 ## Public Actions and Workflows
 
 Reference the public components by release tag.
-Example: `aglabo/ci-platform/.github/actions/<action>@v0.5.0`
+Example: `aglabo/ci-platform/.github/actions/<action>@v0.6.0`
 
 ### Composite Actions
 
@@ -53,15 +53,15 @@ Example: `aglabo/ci-platform/.github/actions/<action>@v0.5.0`
 
 ### Reusable Workflows
 
-| Workflow                  | Description                                                  |
-| ------------------------- | ------------------------------------------------------------ |
-| `ru-lint-documents.yml`   | Lints changed Markdown files with textlint and markdownlint  |
-| `ru-qa-actionlint.yml`    | Lints GitHub Actions workflows with jactionlint              |
-| `ru-qa-actions-lock.yml`  | Verifies the workflow action lockfile with `gh actions-lock` |
-| `ru-qa-ghalint.yml`       | Lints GitHub Actions workflows with ghalint                  |
-| `ru-scan-betterleaks.yml` | Scans the repository for secrets with betterleaks            |
+| Workflow                                 | Description                                                  |
+| ---------------------------------------- | ------------------------------------------------------------ |
+| `ru-lint-documents.yml` (new in v0.6.0)  | Lints changed Markdown files with textlint and markdownlint  |
+| `ru-qa-actionlint.yml`                   | Lints GitHub Actions workflows with jactionlint              |
+| `ru-qa-actions-lock.yml` (new in v0.6.0) | Verifies the workflow action lockfile with `gh actions-lock` |
+| `ru-qa-ghalint.yml`                      | Lints GitHub Actions workflows with ghalint                  |
+| `ru-scan-betterleaks.yml`                | Scans the repository for secrets with betterleaks            |
 
-By default, the lint workflows use configs from [aglabo/global-configs](https://github.com/aglabo/global-configs).
+By default, the lint and secret-scan workflows use configs from [aglabo/global-configs](https://github.com/aglabo/global-configs).
 
 ### Example: `ca-get-changed-files`
 
@@ -71,7 +71,7 @@ steps:
     with:
       fetch-depth: 0 # required
   - id: changed
-    uses: aglabo/ci-platform/.github/actions/ca-get-changed-files@v0.5.0
+    uses: aglabo/ci-platform/.github/actions/ca-get-changed-files@v0.6.0
     with:
       pattern: |
         **/*.md
