@@ -1,8 +1,8 @@
 ---
 title: "Design Specification: Ghalint Reusable Workflow"
-based-on: requirements.md v1.0
+based-on: requirements.md v1.1.0
 status: Draft
-version: 1.0.0
+version: 1.1.0
 created: "2026-06-13"
 ---
 
@@ -12,14 +12,14 @@ created: "2026-06-13"
 
 ### 1.1 Purpose
 
-本文書は、`ci-qa-ghalint.yml` reusable workflow の振る舞い仕様を定義します。
+本文書は、`ru-qa-ghalint.yml` reusable workflow の振る舞い仕様を定義します。
 ghalint によるワークフローポリシー検証を 7 ステップのシーケンシャル実行として記述します。
 あわせて、`ci-workflows-qa.yml` における外部依存の置き換え動作も対象に含めます。
 
 ### 1.2 Scope
 
-本仕様は `ci-qa-ghalint.yml` の **振る舞いルールと分類セマンティクス** を定義します。
-実装の詳細（YAML フィールドの具体的な値、アクションバージョンの SHA 等）は明示的にスコープ外とします。
+本仕様は `ru-qa-ghalint.yml` の **振る舞いルールと分類セマンティクス** を定義します。
+実装の詳細（YAML フィールドの具体的な値、アクションのバージョンタグ等）は明示的にスコープ外とします。
 
 ---
 
@@ -33,10 +33,10 @@ ghalint によるワークフローポリシー検証を 7 ステップのシー
 
 ### 2.2 Design Assumptions
 
-- 実行環境は Linux ベースのセルフホストランナーです
-- `setup-tool` composite action は指定リポジトリの GitHub Releases からバイナリを取得できます
-- `validate-environment` composite action は `actions-type: read` で正常に動作します
-- `aglabo/.github` リポジトリは `workflow_call` 実行時にアクセスできます
+- 実行環境は Linux ベースの GitHub ホストランナー (`ubuntu-slim`) です
+- `ca-setup-tool` composite action は指定リポジトリの GitHub Releases からバイナリを取得できます
+- `ca-validate-environment` composite action は `actions-type: read` で正常に動作します
+- `aglabo/global-configs` リポジトリは `workflow_call` 実行時にアクセスできます
 
 ### 2.3 External Design Summary
 
@@ -80,7 +80,7 @@ ghalint によるワークフローポリシー検証を 7 ステップのシー
                            |
                            v
                     +----------------+
-                    | config-checkout| <-- [aglabo/.github repository]
+                    | config-checkout| <-- [aglabo/global-configs repository]
                     +----------------+
                            |
                            v
@@ -106,7 +106,7 @@ ghalint によるワークフローポリシー検証を 7 ステップのシー
 [target-repo]        --> [target-checkout] --> [workspace/source]
 [workspace/source]   --> [env-validation]  --> [env-status]
 [ghalint-releases]   --> [tool-install]    --> [ghalint-binary-in-PATH]
-[aglabo/.github]     --> [config-checkout] --> [./shared/configs/ghalint.yaml]
+[global-configs]     --> [config-checkout] --> [./global/configs/ghalint.yaml]
 [ghalint-binary]     --> [lint-execute]    --> [ghalint-report.txt, exit-code]
 [exit-code: failure] --> [report-upload]   --> [artifact: ghalint-report]
 ```
@@ -118,17 +118,17 @@ ghalint によるワークフローポリシー検証を 7 ステップのシー
 - ghalint ポリシーの追加・変更 ← REQ: Out of Scope
 - ghalint 以外の QA ツール（actionlint, betterleaks）の変更 ← REQ: Out of Scope
 - `workflow_dispatch` による手動トリガーのサポート ← REQ: Out of Scope
-- セルフホストランナー以外の環境サポート ← REQ: Out of Scope
+- `ubuntu-slim` 以外のランナー環境サポート ← REQ: Out of Scope
 
 ### 2.5 Behavioral Design Decisions
 
-| ID    | Decision                                                            | Rationale                                                                | Affected Rules | Status |
-| ----- | ------------------------------------------------------------------- | ------------------------------------------------------------------------ | -------------- | ------ |
-| DD-01 | 外部依存を排除しローカル reusable workflow として実装します         | 外部リポジトリの可用性リスクを排除し、バージョン管理を一元化します       | R-001〜R-009   | Active |
-| DD-02 | 設定は `aglabo/.github` からチェックアウトします（actionlint 踏襲） | 設定の一元管理と `config-file` 入力による上書き可能性を両立します        | R-006, R-007   | Active |
-| DD-03 | 入力パラメータは `ghalint-version` と `config-file` の 2 つとします | 呼び出し側がバージョンと設定パスを制御できる最小限のインターフェースです | R-002          | Active |
-| DD-04 | ステップ間条件は `steps.<id>.outcome == 'success'` パターンとします | プロジェクト既存ワークフロー（actionlint）との一貫性を維持します         | R-001〜R-008   | Active |
-| DD-05 | 失敗時のみレポートをアーティファクトとしてアップロードします        | 成功時のストレージ消費を抑制し、エラー確認の利便性を確保します           | R-009          | Active |
+| ID    | Decision                                                            | Rationale                                                                                                                          | Affected Rules | Status |
+| ----- | ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | -------------- | ------ |
+| DD-01 | 外部依存を排除しローカル reusable workflow として実装します         | 外部リポジトリの可用性リスクを排除し、バージョン管理を一元化します                                                                 | R-001〜R-009   | Active |
+| DD-02 | 設定は `aglabo/global-configs` からチェックアウトします             | 一元管理用の設定リポジトリが `aglabo/global-configs` に移ったため、そこから取得します。`config` 入力による上書き可能性も維持します | R-006, R-007   | Active |
+| DD-03 | 入力パラメータは `version` と `config` の 2 つとします              | 呼び出し側がバージョンと設定パスを制御できる最小限のインターフェースです                                                           | R-002          | Active |
+| DD-04 | ステップ間条件は `steps.<id>.outcome == 'success'` パターンとします | プロジェクト既存ワークフロー（actionlint）との一貫性を維持します                                                                   | R-001〜R-008   | Active |
+| DD-05 | 失敗時のみレポートをアーティファクトとしてアップロードします        | 成功時のストレージ消費を抑制し、エラー確認の利便性を確保します                                                                     | R-009          | Active |
 
 ### 2.6 Related Decision Records
 
@@ -147,8 +147,8 @@ DD-01（外部依存排除）と DD-02（設定リポジトリ固定）は、他
 
 ### 3.1 Input Domain
 
-- `ghalint-version`: バージョン文字列（X.Y.Z 形式）です。省略時はデフォルト値を使用します。
-- `config-file`: 設定ファイルのパス文字列です。省略時は `./shared/configs/ghalint.yaml` を使用します。
+- `version`: バージョン文字列（X.Y.Z 形式）です。省略時はデフォルト値を使用します。
+- `config`: 設定ファイルのパス文字列です。省略時は `./global/configs/ghalint.yaml` を使用します。
 - トリガー: `workflow_call` のみです。他のトリガーは受け付けません。
 
 ### 3.2 Output Semantics
@@ -163,10 +163,10 @@ DD-01（外部依存排除）と DD-02（設定リポジトリ固定）は、他
 
 #### trigger-inputs
 
-- `ghalint-version` が指定された場合、その値をそのまま使用します
-- `ghalint-version` が省略された場合、事前定義されたデフォルトバージョンを使用します
-- `config-file` が指定された場合、その値をそのまま使用します
-- `config-file` が省略された場合、`./shared/configs/ghalint.yaml` を使用します
+- `version` が指定された場合、その値をそのまま使用します
+- `version` が省略された場合、事前定義されたデフォルトバージョンを使用します
+- `config` が指定された場合、その値をそのまま使用します
+- `config` が省略された場合、`./global/configs/ghalint.yaml` を使用します
 - この処理は失敗しません。入力の省略はデフォルト値で補完します
 
 #### target-checkout
@@ -190,9 +190,9 @@ DD-01（外部依存排除）と DD-02（設定リポジトリ固定）は、他
 #### config-checkout
 
 - tool-install が成功した場合のみ実行します
-- `aglabo/.github` リポジトリを浅いチェックアウト（履歴 1 件）で取得します
+- `aglabo/global-configs` リポジトリを浅いチェックアウト（履歴 1 件）で取得します
 - 認証情報がワークスペースに残留しないよう保護した状態でチェックアウトします
-- チェックアウト後、`./shared/` 配下に設定ファイルが配置された状態になります
+- チェックアウト後、`./global/configs/` 配下に設定ファイルが配置された状態になります
 - チェックアウトに失敗した場合、prepare-report 以降の全ステップをブロックします
 
 #### prepare-report
@@ -226,10 +226,10 @@ Evaluation MUST follow this order:
 | Rule ID | Step | Condition                                   | Outcome                                              |
 | ------- | ---: | ------------------------------------------- | ---------------------------------------------------- |
 | R-001   |    1 | workflow_call で呼び出された                | trigger-inputs を実行し入力値を解決します            |
-| R-002   |    2 | ghalint-version が指定された                | 指定バージョンを使用します                           |
-| R-002a  |    2 | ghalint-version が省略された                | デフォルトバージョンを使用します                     |
-| R-003   |    3 | config-file が指定された                    | 指定パスを使用します                                 |
-| R-003a  |    3 | config-file が省略された                    | `./shared/configs/ghalint.yaml` を使用します         |
+| R-002   |    2 | version が指定された                        | 指定バージョンを使用します                           |
+| R-002a  |    2 | version が省略された                        | デフォルトバージョンを使用します                     |
+| R-003   |    3 | config が指定された                         | 指定パスを使用します                                 |
+| R-003a  |    3 | config が省略された                         | `./global/configs/ghalint.yaml` を使用します         |
 | R-004   |    4 | target-checkout が成功した                  | env-validation を実行します                          |
 | R-004a  |    4 | target-checkout が失敗した                  | 後続全ステップをブロックしジョブを失敗させます       |
 | R-005   |    5 | env-validation が成功した                   | tool-install を実行します                            |
@@ -249,15 +249,15 @@ No reordering is permitted.
 
 ## 5. Edge Cases
 
-| Scenario                                                 | 振る舞い                                               | REQ       | Rationale                                             |
-| -------------------------------------------------------- | ------------------------------------------------------ | --------- | ----------------------------------------------------- |
-| `config-file` に存在しないパスを指定                     | lint-execute が失敗し report-upload が実行されます     | REQ-F-007 | ghalint は設定ファイル不在時に非ゼロ終了します        |
-| `ghalint-version` に存在しないバージョンを指定           | tool-install が失敗し後続がブロックされます            | REQ-F-005 | setup-tool は Releases に存在しない版を取得できません |
-| `aglabo/.github` に `shared/configs/ghalint.yaml` が不在 | lint-execute が失敗し report-upload が実行されます     | REQ-F-006 | Open Question — 存在確認が必要です                    |
-| `.github/report/` が既に存在する状態で再実行             | prepare-report が正常終了し lint-execute へ進みます    | REQ-F-007 | ディレクトリ作成は冪等です                            |
-| ポリシー違反がゼロ件                                     | lint-execute が exit code 0 で終了しジョブが成功します | REQ-F-007 | 正常系です                                            |
-| ポリシー違反が 1 件以上                                  | lint-execute が非ゼロで終了しジョブが失敗します        | REQ-F-007 | 違反を CI 失敗として確実に伝播させます                |
-| report-upload 自体が失敗                                 | ジョブはすでに失敗状態であり追加エラーを記録します     | REQ-F-008 | 非致命的な後処理です                                  |
+| Scenario                                         | 振る舞い                                               | REQ       | Rationale                                                   |
+| ------------------------------------------------ | ------------------------------------------------------ | --------- | ----------------------------------------------------------- |
+| `config` に存在しないパスを指定                  | lint-execute が失敗し report-upload が実行されます     | REQ-F-007 | ghalint は設定ファイル不在時に非ゼロ終了します              |
+| `version` に存在しないバージョンを指定           | tool-install が失敗し後続がブロックされます            | REQ-F-005 | ca-setup-tool は Releases に存在しない版を取得できません    |
+| `aglabo/global-configs` に `ghalint.yaml` が不在 | lint-execute が失敗し report-upload が実行されます     | REQ-F-006 | 通常は発生しません (リポジトリ直下に存在することを確認済み) |
+| `.github/report/` が既に存在する状態で再実行     | prepare-report が正常終了し lint-execute へ進みます    | REQ-F-007 | ディレクトリ作成は冪等です                                  |
+| ポリシー違反がゼロ件                             | lint-execute が exit code 0 で終了しジョブが成功します | REQ-F-007 | 正常系です                                                  |
+| ポリシー違反が 1 件以上                          | lint-execute が非ゼロで終了しジョブが失敗します        | REQ-F-007 | 違反を CI 失敗として確実に伝播させます                      |
+| report-upload 自体が失敗                         | ジョブはすでに失敗状態であり追加エラーを記録します     | REQ-F-008 | 非致命的な後処理です                                        |
 
 ---
 
@@ -276,28 +276,29 @@ No reordering is permitted.
 | REQ-F-009      | DD-01                        | ci-workflows-qa.yml の外部依存をローカルに置き換えます（実装フェーズで扱います） |
 | REQ-NF-001     | Section 3.3 全 Unit          | 全チェックアウトで認証情報を保護し、最小権限を適用します                         |
 | REQ-NF-002     | Section 2.3                  | actionlint の 7 ステップパターンに準拠します                                     |
-| REQ-NF-003     | Section 2.5 DD-04            | SHA ピンとタイムアウト設定は実装フェーズで扱います                               |
+| REQ-NF-003     | Section 2.5 DD-04            | バージョンタグ固定とタイムアウト設定は実装フェーズで扱います                     |
 | REQ-NF-004     | Section 2.3 Unit 名          | ステップ ID 命名規則は actionlint と統一します                                   |
 | REQ-C-001      | Section 2.2                  | ubuntu-slim ランナーを前提とします                                               |
 | REQ-C-002      | Section 2.5 DD-04            | `steps.<id>.outcome == 'success'` パターンのみを使用します                       |
 | REQ-C-003      | R-001                        | workflow_call トリガーのみを使用します                                           |
-| REQ-C-004      | Section 3.3 config-checkout  | aglabo/.github を設定ソースとして使用します                                      |
+| REQ-C-004      | Section 3.3 config-checkout  | aglabo/global-configs を設定ソースとして使用します                               |
 
 ---
 
 ## 7. Open Questions
 
-> **Status**: INCOMPLETE
+> **Status**: RESOLVED
 
-| # | Question                                                                             | Source    | Impact                                                       |
-| - | ------------------------------------------------------------------------------------ | --------- | ------------------------------------------------------------ |
-| 1 | ghalint のデフォルトバージョン番号は何ですか（`suzuki-shunsuke/ghalint` 最新安定版） | REQ-F-005 | trigger-inputs のデフォルト値が未確定です                    |
-| 2 | `aglabo/.github` リポジトリに `shared/configs/ghalint.yaml` が存在しますか           | REQ-F-006 | 存在しない場合、config-checkout ステップの設計変更が必要です |
+| # | Question                                                                             | Source    | Impact                                           |
+| - | ------------------------------------------------------------------------------------ | --------- | ------------------------------------------------ |
+| 1 | ghalint のデフォルトバージョン番号は何ですか（`suzuki-shunsuke/ghalint` 最新安定版） | REQ-F-005 | Resolved: `1.6.0` (現行実装の既定値)             |
+| 2 | `aglabo/global-configs` リポジトリに `ghalint.yaml` が存在しますか                   | REQ-F-006 | Resolved: リポジトリ直下に存在することを確認済み |
 
 ---
 
 ## 8. Change History
 
-| Date       | Version | Description           |
-| ---------- | ------- | --------------------- |
-| 2026-06-13 | 1.0.0   | Initial specification |
+| Date       | Version | Description                                                                                                                                                                                                                                                                                           |
+| ---------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-06-13 | 1.0.0   | Initial specification                                                                                                                                                                                                                                                                                 |
+| 2026-11-03 | 1.1.0   | 設定リポジトリを aglabo/global-configs に変更 (チェックアウト先 global/configs、config 既定値 ./global/configs/ghalint.yaml)、実装に合わせて参照を更新 (ru-qa-ghalint.yml、入力 version / config、ca-* Composite Action)、ubuntu-slim を GitHub ホストランナーに訂正、Open Questions を解決済みに更新 |

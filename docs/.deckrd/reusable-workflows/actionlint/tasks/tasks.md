@@ -45,10 +45,10 @@ source: specifications.md
   - Expected: `required: false`、`type: string`、`default: "2.4.0"` がすべて設定されている
   - `yq: yq '.on.workflow_call.inputs.version' .github/workflows/ru-qa-actionlint.yml`
 
-- [x] **T-01-01-02**: `config` が `required: false`、`type: string`、`default: "./shared/configs/jactionlint.yaml"` で宣言されていること
+- [x] **T-01-01-02**: `config` が `required: false`、`type: string`、`default: "./global/configs/jactionlint.yaml"` で宣言されていること
   - Target: `ru-qa-actionlint.yml` `.on.workflow_call.inputs.config`
   - Scenario: Given `ru-qa-actionlint.yml` が存在する、When inputs を検査する
-  - Expected: `required: false`、`type: string`、`default: "./shared/configs/jactionlint.yaml"` がすべて設定されている
+  - Expected: `required: false`、`type: string`、`default: "./global/configs/jactionlint.yaml"` がすべて設定されている
   - `yq: yq '.on.workflow_call.inputs.config' .github/workflows/ru-qa-actionlint.yml`
 
 - [x] **T-01-01-03**: top-level permissions が `contents: read` のみであること
@@ -133,16 +133,16 @@ source: specifications.md
   - Expected: `steps[0].id == 'target-checkout'`
   - `yq: yq '.jobs.qa-actionlint.steps[0].id' .github/workflows/ru-qa-actionlint.yml`
 
-- [x] **T-02-01-02**: `env-validation` が `./.github/actions/validate-environment` を使用し、`if: steps.target-checkout.outcome == 'success'` でゲートされること
+- [x] **T-02-01-02**: `env-validation` が `aglabo/ci-platform/.github/actions/ca-validate-environment@v0.5.0` を使用し、`if: steps.target-checkout.outcome == 'success'` でゲートされること
   - Target: `ru-qa-actionlint.yml` step `env-validation`
   - Scenario: Given `ru-qa-actionlint.yml` が存在する、When `env-validation` ステップを検査する
-  - Expected: `uses: ./.github/actions/validate-environment`、`with.actions-type: read`、`if: steps.target-checkout.outcome == 'success'`
+  - Expected: `uses: aglabo/ci-platform/.github/actions/ca-validate-environment@v0.5.0`、`with.actions-type: read`、`if: steps.target-checkout.outcome == 'success'`
   - `yq: yq '.jobs.qa-actionlint.steps[] | select(.id == "env-validation")' .github/workflows/ru-qa-actionlint.yml`
 
-- [x] **T-02-01-03**: `tool-install` が `aglabo/ci-platform/.github/actions/ca-setup-tool@v0.4.1` を使用し、`repo: jdx/jactionlint`、`if: steps.env-validation.outcome == 'success'` でゲートされること
+- [x] **T-02-01-03**: `tool-install` が `aglabo/ci-platform/.github/actions/ca-setup-tool@v0.5.0` を使用し、`repo: jdx/jactionlint`、`if: steps.env-validation.outcome == 'success'` でゲートされること
   - Target: `ru-qa-actionlint.yml` step `tool-install`
   - Scenario: Given `ru-qa-actionlint.yml` が存在する、When `tool-install` ステップを検査する
-  - Expected: `uses: aglabo/ci-platform/.github/actions/ca-setup-tool@v0.4.1`、`with.repo: jdx/jactionlint`、`if: steps.env-validation.outcome == 'success'`
+  - Expected: `uses: aglabo/ci-platform/.github/actions/ca-setup-tool@v0.5.0`、`with.repo: jdx/jactionlint`、`if: steps.env-validation.outcome == 'success'`
   - `yq: yq '.jobs.qa-actionlint.steps[] | select(.id == "tool-install")' .github/workflows/ru-qa-actionlint.yml`
 
 - [x] **T-02-01-03b**: `tool-install` が `tool-version: ${{ inputs.version }}` を渡すこと
@@ -151,10 +151,10 @@ source: specifications.md
   - Expected: `with.tool-version == '${{ inputs.version }}'`
   - `yq: yq '.jobs.qa-actionlint.steps[] | select(.id == "tool-install") | .with.tool-version' .github/workflows/ru-qa-actionlint.yml`
 
-- [x] **T-02-01-04**: `config-checkout` が `actions/checkout` を使用し、`repository: aglabo/.github`、`path: shared`、`fetch-depth: 1`、`persist-credentials: false`、`if: steps.tool-install.outcome == 'success'` を持つこと
+- [x] **T-02-01-04**: `config-checkout` が `actions/checkout` を使用し、`repository: aglabo/global-configs`、`path: global/configs`、`fetch-depth: 1`、`persist-credentials: false`、`if: steps.tool-install.outcome == 'success'` を持つこと
   - Target: `ru-qa-actionlint.yml` step `config-checkout`
   - Scenario: Given `ru-qa-actionlint.yml` が存在する、When `config-checkout` ステップを検査する
-  - Expected: `with.repository: aglabo/.github`、`with.path: shared`、`with.fetch-depth: 1`、`with.persist-credentials: false`、`if: steps.tool-install.outcome == 'success'`
+  - Expected: `with.repository: aglabo/global-configs`、`with.path: global/configs`、`with.fetch-depth: 1`、`with.persist-credentials: false`、`if: steps.tool-install.outcome == 'success'`
   - `yq: yq '.jobs.qa-actionlint.steps[] | select(.id == "config-checkout")' .github/workflows/ru-qa-actionlint.yml`
 
 - [x] **T-02-01-05**: `lint-execute` が `jactionlint --config-file` コマンドを実行し、`if: steps.prepare-report.outcome == 'success'` でゲートされること
@@ -217,7 +217,7 @@ source: specifications.md
 
 - [x] **T-03-01-02**: `config-checkout` に `continue-on-error` がなく、アクセス不能な config-repo でジョブが失敗すること
   - Target: `ru-qa-actionlint.yml` step `config-checkout`
-  - Scenario: Given `aglabo/.github` にアクセスできない、When `config-checkout` を実行する
+  - Scenario: Given `aglabo/global-configs` にアクセスできない、When `config-checkout` を実行する
   - Expected: `continue-on-error` が存在せず、ステップ失敗がジョブ全体の失敗につながる
   - `yq: yq '.jobs.qa-actionlint.steps[] | select(.id == "config-checkout") | .continue-on-error' .github/workflows/ru-qa-actionlint.yml`
 
@@ -243,10 +243,10 @@ source: specifications.md
   - Expected: `default == "2.4.0"`
   - `yq: yq '.on.workflow_call.inputs.version.default' .github/workflows/ru-qa-actionlint.yml`
 
-- [x] **T-03-02-02**: `config` のデフォルトが `"./shared/configs/jactionlint.yaml"` であること
+- [x] **T-03-02-02**: `config` のデフォルトが `"./global/configs/jactionlint.yaml"` であること
   - Target: `ru-qa-actionlint.yml` `.on.workflow_call.inputs.config.default`
   - Scenario: Given inputs を省略して呼び出す、When デフォルト値を検査する
-  - Expected: `default == "./shared/configs/jactionlint.yaml"`
+  - Expected: `default == "./global/configs/jactionlint.yaml"`
   - `yq: yq '.on.workflow_call.inputs.config.default' .github/workflows/ru-qa-actionlint.yml`
 
 - [x] **T-03-02-03**: workflow および job レベルで outputs が存在しないこと
@@ -295,10 +295,10 @@ source: specifications.md
 
 #### T-05-01: config-checkout is fixed and config is caller-overridable
 
-- [x] **T-05-01-01**: `config-checkout` の `repository` が `aglabo/.github` に固定されていること（入力パラメータではない）
+- [x] **T-05-01-01**: `config-checkout` の `repository` が `aglabo/global-configs` に固定されていること（入力パラメータではない）
   - Target: `ru-qa-actionlint.yml` step `config-checkout`
   - Scenario: Given `ru-qa-actionlint.yml` が存在する、When `config-checkout` の `repository` を検査する
-  - Expected: `with.repository: aglabo/.github`（リテラル値、`${{ inputs.* }}` 参照でない）
+  - Expected: `with.repository: aglabo/global-configs`（リテラル値、`${{ inputs.* }}` 参照でない）
   - `yq: yq '.jobs.qa-actionlint.steps[] | select(.id == "config-checkout") | .with.repository' .github/workflows/ru-qa-actionlint.yml`
 
 - [x] **T-05-01-02**: `config-checkout` の `fetch-depth` が `1` であること
