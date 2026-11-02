@@ -58,6 +58,10 @@ const config: Config = {
               label: 'Next',
               badge: true,
             },
+            '0.6.0': {
+              label: 'v0.6.0',
+              badge: true,
+            },
             '0.4.0': {
               label: 'v0.4.0',
               badge: true,
@@ -98,7 +102,8 @@ const config: Config = {
           label: 'Developer Guide',
         },
         {
-          to: '/next/reference',
+          type: 'docSidebar',
+          sidebarId: 'reference',
           position: 'left',
           label: 'Reference',
         },
@@ -129,7 +134,7 @@ const config: Config = {
             },
             {
               label: 'Reference',
-              to: '/next/reference',
+              to: '/reference',
             },
           ],
         },
