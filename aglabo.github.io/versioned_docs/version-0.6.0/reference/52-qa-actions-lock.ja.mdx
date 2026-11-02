@@ -1,0 +1,97 @@
+---
+title: qa-actions-lock
+description: ru-qa-actions-lock ワークフローの入力パラメーター・動作・制約事項リファレンス
+id: qa-actions-lock
+slug: qa-actions-lock
+sidebar_position: 52
+tags:
+  - qa-actions-lock
+  - reference
+  - reusable-workflow
+  - inputs
+---
+
+> このワークフローは **Linux ランナー専用** です (ジョブは `ubuntu-slim` で実行されます) 。
+> Windows・macOS はサポートしていません。
+
+## リファレンス
+
+このページでは、`ru-qa-actions-lock` ワークフローの入力パラメーター・動作・制約事項を説明します。
+`ru-qa-actions-lock` は `gh actions-lock` で、呼び出し元リポジトリの Action ロックファイルが参照中のタグと一致しているかを検証します。
+タグが別のコミットに書き換えられた場合は、検証が失敗します。
+
+---
+
+## ワークフロー基本情報
+
+`jobs:` から以下のように参照します。
+
+```yaml
+jobs:
+  qa-actions-lock:
+    permissions:
+      contents: read
+    uses: aglabo/ci-platform/.github/workflows/ru-qa-actions-lock.yml@v0.6.0
+```
+
+> 実際に使用する際には最新バージョンのタグを指定し、`gh actions-lock` でロックファイルを更新してください。
+
+## 入力パラメーター
+
+| パラメーター | 型     | 必須   | デフォルト | 説明                                              |
+| ------------ | ------ | ------ | ---------- | ------------------------------------------------- |
+| `version`    | string | いいえ | `v0.4.0`   | インストールする gh-actions-lock 拡張のバージョン |
+
+### `version`
+
+インストールする gh CLI 拡張 `github/gh-actions-lock` のバージョンを指定します。
+指定したバージョンは `gh extension install --pin` に渡されます。
+
+```yaml
+with:
+  version: "v0.4.0"
+```
+
+補足:
+
+- 先頭の `v` を含むタグ名で指定します。
+
+---
+
+## 動作
+
+ジョブ `qa-actions-lock` で、以下のステップを順に実行します。
+各ステップは前のステップが成功した場合のみ実行されます。
+
+1. 呼び出し元リポジトリを checkout します (`persist-credentials: false`)。
+2. [validate-environment](./10-validate-environment.ja.mdx) でランナー環境を検証します (`actions-type: read`)。
+3. `gh extension install github/gh-actions-lock --pin <version>` で拡張をインストールします。
+4. `gh actions-lock --version` でバージョンを表示します。
+5. `gh actions-lock --verify --no-interactive` を実行し、結果を `.github/report/actions-lock-report.txt` に保存します。
+6. 検証が失敗した場合は、レポートを artifact `actions-lock-report` としてアップロードします (保持期間 30 日)。
+
+## 必要な権限
+
+| 権限       | 値     | 用途                                                         |
+| ---------- | ------ | ------------------------------------------------------------ |
+| `contents` | `read` | リポジトリの checkout、`github.token` による拡張の取得と検証 |
+
+---
+
+## 制約事項
+
+| 制約           | 内容                                                                         |
+| -------------- | ---------------------------------------------------------------------------- |
+| OS             | Linux ランナー専用 (`ubuntu-slim`)                                           |
+| タイムアウト   | ジョブ全体で 10 分                                                           |
+| ロックファイル | 呼び出し元リポジトリに `.github/workflows/actions.lock` が必要               |
+| 対話           | `--no-interactive` で実行するため、ロックファイルの更新は行わない (検証のみ) |
+| レポート       | 失敗時のみアップロードされる                                                 |
+
+---
+
+## 関連ドキュメント
+
+- [プラットフォーム概要](../user-guide/00-platform-overview.ja.mdx): ロックファイルによる参照の固定
+- [qa-actionlint リファレンス](./50-qa-actionlint.ja.mdx): jactionlint によるワークフロー検証
+- [qa-ghalint リファレンス](./51-qa-ghalint.ja.mdx): ghalint によるポリシー検証

@@ -1,0 +1,91 @@
+---
+title: リファレンス
+description: ci-platform の Composite Actions と Reusable Workflows のリファレンス
+slug: /reference
+sidebar_position: 1
+tags:
+  - ci-platform
+  - composite-actions
+  - reusable-workflows
+  - reference
+---
+
+## ci-platform リファレンス
+
+ci-platform が公開する Composite Actions と Reusable Workflows の入力パラメーター・出力値・制約事項をまとめたリファレンスです。
+使い方の流れは [ユーザーガイド](../user-guide/index.ja.mdx) を参照してください。
+
+> 現時点では Linux ランナー専用です (`ubuntu-latest` など) 。
+> Windows と macOS はサポートしていません。
+
+## ドキュメント構成
+
+アクションとワークフローは機能ごとのグループに分け、グループごとに 10 単位でページ番号を割り当てています。
+Composite Actions は 10〜30番台、Reusable Workflows は 50番台以降です。
+
+### 環境検証 (10番台)
+
+| 番号 | アクション                                             | 内容                                                  |
+| ---- | ------------------------------------------------------ | ----------------------------------------------------- |
+| 10   | [validate-environment](10-validate-environment.ja.mdx) | ランナーの OS・アーキテクチャ・権限・ツールを検証する |
+
+### セットアップ (20番台)
+
+| 番号 | アクション                         | 内容                                                                      |
+| ---- | ---------------------------------- | ------------------------------------------------------------------------- |
+| 20   | [setup-tool](20-setup-tool.ja.mdx) | GitHub Releases からツールをダウンロード・検証・インストールする          |
+| 21   | [setup-repo](21-setup-repo.ja.mdx) | リポジトリを checkout して `pnpm install` し、`bin/` を `PATH` に追加する |
+
+### 変更ファイル取得 (30番台)
+
+| 番号 | アクション                                       | 内容                                                                  |
+| ---- | ------------------------------------------------ | --------------------------------------------------------------------- |
+| 30   | [get-changed-files](30-get-changed-files.ja.mdx) | トリガーイベントで変更されたファイルを取得し、glob パターンで絞り込む |
+
+### ワークフロー QA (50番台)
+
+| 番号 | ワークフロー                                 | 内容                                                 |
+| ---- | -------------------------------------------- | ---------------------------------------------------- |
+| 50   | [qa-actionlint](50-qa-actionlint.ja.mdx)     | jactionlint で GitHub Actions ワークフローを検証する |
+| 51   | [qa-ghalint](51-qa-ghalint.ja.mdx)           | ghalint で GitHub Actions のポリシー違反を検出する   |
+| 52   | [qa-actions-lock](52-qa-actions-lock.ja.mdx) | `gh actions-lock` で Action ロックファイルを検証する |
+
+### シークレットスキャン (60番台)
+
+| 番号 | ワークフロー                                   | 内容                                        |
+| ---- | ---------------------------------------------- | ------------------------------------------- |
+| 60   | [scan-betterleaks](60-scan-betterleaks.ja.mdx) | betterleaks で Git 履歴の機密情報を検出する |
+
+### ドキュメント QA (70番台)
+
+| 番号 | ワークフロー                               | 内容                                                             |
+| ---- | ------------------------------------------ | ---------------------------------------------------------------- |
+| 70   | [lint-documents](70-lint-documents.ja.mdx) | 変更された Markdown ファイルを textlint・markdownlint で検証する |
+
+## 参照方法
+
+公開アクションは、リリースタグを指定して `steps:` から参照します。
+
+```yaml
+- uses: aglabo/ci-platform/.github/actions/<action>@v0.6.0
+```
+
+`<action>` には `ca-validate-environment`・`ca-setup-tool`・`ca-setup-repo`・`ca-get-changed-files` のいずれかを指定します。
+
+Reusable Workflow は、リリースタグを指定して `jobs:` から参照します。
+
+```yaml
+jobs:
+  <job-id>:
+    permissions:
+      contents: read
+    uses: aglabo/ci-platform/.github/workflows/<workflow>.yml@v0.6.0
+```
+
+`<workflow>` には、以下のいずれかを指定します。
+
+- `ru-qa-actionlint`
+- `ru-qa-ghalint`
+- `ru-qa-actions-lock`
+- `ru-scan-betterleaks`
+- `ru-lint-documents`
