@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # src: .github/actions/ca-setup-repo/scripts/__tests__/integration/setup-repo.integration.spec.sh
-# @(#) : ShellSpec integration tests for setup-tool-repo composite action
+# @(#) : ShellSpec integration tests for ca-setup-repo composite action
 # shellcheck shell=bash
 
 # cspell:words mytool agla

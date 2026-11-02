@@ -1,20 +1,81 @@
 ---
 title: "ci-platform Change Log"
-version: "0.4.1"
-date: 2026-10-27
+version: "0.5.0"
+date: 2026-11-02
 tags:
   - release
   - composite-actions
   - ci-platform
 summary: >
-  v0.4.1 updates the default Node.js and pnpm versions in the setup action,
-  and upgrades jactionlint and ghalint in the GitHub Actions workflows.
+  v0.5.0 adds changed-file and file-filtering actions, shared GitHub Actions
+  libraries, and a workflow action lockfile. It also improves lint runners,
+  development tooling, and CI coverage.
 ---
 
 <!-- textlint-disable
   ja-technical-writing/sentence-length,
   ja-technical-writing/max-comma
   -->
+
+## [0.5.0] - 2026-11-02
+
+### Overview
+
+This release adds actions for listing changed files and filtering file lists,
+and introduces shared libraries for GitHub Actions scripts.
+
+It also standardizes lint runner configuration lookup, records workflow action
+versions in a lockfile, and expands action and CI test coverage.
+
+### Added
+
+#### Composite Actions
+
+- `ca-get-changed-files`: Added an action to list changed files and expose the
+  results for use by later workflow steps.
+- `filter-files`: Added a script and composite action to filter file lists with
+  ordered patterns.
+
+#### Shared Libraries
+
+- Added shared error reporting and byte-limit validation for GitHub Actions scripts.
+- Added shared constants for input-size and changed-file limits.
+- Added shared output-path validation.
+
+### Fixed
+
+- Lint runners now prefer repository configuration files and report missing
+  configuration files consistently.
+- `run-shellcheck.sh`: Excluded ShellSpec files from directory scans and explicit
+  file selections.
+- `run-shfmt.sh`: Applied ignore rules to explicit targets.
+- ShellSpec execution now resolves multiple spec-file and glob arguments in order.
+
+### Changed
+
+#### GitHub Actions
+
+- Added `.github/workflows/actions.lock` to record each workflow's action refs,
+  commit IDs, and repository identities.
+- Updated workflow and setup-action references to version tags.
+- Configured `ghalint` and `jactionlint` to allow selected version tags.
+
+#### Development Environment
+
+- Standardized global lint configuration lookup and diagnostics across runners.
+- Added separate workflow-lint and Git history secret-scan commands.
+- Configured workspace ShellCheck settings and updated development and CI instructions.
+
+#### Tests and Documentation
+
+- Added action configuration, functional, and validation edge-case tests for
+  changed-file listing and file filtering.
+- Expanded CI coverage for push and pull request events, pattern matching, and failures.
+- Updated design documents, implementation plans, and developer guides for the
+  new actions, shared libraries, and lint configuration.
+- Standardized shell test headers and removed obsolete runner and setup-script tests.
+
+---
 
 ## [0.4.1] - 2026-10-27
 
