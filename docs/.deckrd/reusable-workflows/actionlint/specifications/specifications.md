@@ -1,7 +1,7 @@
 ---
 title: "Design Specification: Actionlint Reusable Workflow"
-based-on: requirements.md v1.7.0
-version: 1.3.0
+based-on: requirements.md v1.7.1
+version: 1.3.1
 status: Draft
 ---
 
@@ -77,8 +77,8 @@ Each unit SHALL have a single behavioral responsibility:
 | lint-execute    | Configuration checkout completed | Linter exits and report file is written                           | SHALL fail immediately on non-zero linter exit         |
 | report-upload   | lint-execute failed              | Lint report artifact is uploaded                                  | Non-fatal; workflow is already failed at lint-execute  |
 
-<!-- impl-note: env-validation uses aglabo/ci-platform/.github/actions/ca-validate-environment@v0.5.0 with actions-type=read (other inputs use their defaults). -->
-<!-- impl-note: tool-install uses aglabo/ci-platform/.github/actions/ca-setup-tool@v0.5.0 with repo=jdx/jactionlint, tool-version=${{ inputs.version }}. -->
+<!-- impl-note: env-validation uses aglabo/ci-platform/.github/actions/ca-validate-environment@v0.6.0 with actions-type=read (other inputs use their defaults). -->
+<!-- impl-note: tool-install uses aglabo/ci-platform/.github/actions/ca-setup-tool@v0.6.0 with repo=jdx/jactionlint, tool-version=${{ inputs.version }}. -->
 <!-- impl-note: Configuration checkout path: global/configs/. Required linter config: global/configs/jactionlint.yaml (default). -->
 
 #### Unit Interaction Map
@@ -359,6 +359,7 @@ The lint execution unit SHALL fail fast. It MUST NOT ignore a non-zero linter ex
 
 | Date       | Version | Change                                                                                                                                                                                                                                                              |
 | ---------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-11-03 | 1.3.1   | Update ca-* composite action references from @v0.5.0 to @v0.6.0                                                                                                                                                                                                     |
 | 2026-11-03 | 1.3.0   | Change the configuration repository to aglabo/global-configs (checkout path global/configs, config default ./global/configs/jactionlint.yaml); update composite action references to ca-validate-environment / ca-setup-tool @v0.5.0 and actions/checkout to v7.0.1 |
 | 2026-11-01 | 1.2.0   | Update references for the jactionlint migration (jdx/jactionlint, inputs version / config, default config ./shared/configs/jactionlint.yaml, report jactionlint-report); lint command reads the config path from env CONFIG_FILE                                    |
 | 2026-06-12 | 1.1.0   | Add R-020 (step ID), R-021 (input description), R-022 (workflow name) from tasks review                                                                                                                                                                             |

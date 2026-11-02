@@ -1,7 +1,7 @@
 ---
 title: "Implementation Plan: Actionlint Reusable Workflow"
-based-on: specifications.md v1.3.0
-version: 1.2.0
+based-on: specifications.md v1.3.1
+version: 1.2.1
 status: Draft
 ---
 
@@ -82,12 +82,12 @@ the external `aglabo/.github` actionlint job with a call to the new local reusab
   - Do not add an `if` condition to this first step.
 
 - Add step ID `env-validation` after `target-checkout`:
-  - Use the validate-environment composite action `aglabo/ci-platform/.github/actions/ca-validate-environment@v0.5.0`.
+  - Use the validate-environment composite action `aglabo/ci-platform/.github/actions/ca-validate-environment@v0.6.0`.
   - Set `with.actions-type: read`.
   - Add `if: steps.target-checkout.outcome == 'success'`.
 
 - Add step ID `tool-install` after `env-validation`:
-  - Use the setup-tool composite action `aglabo/ci-platform/.github/actions/ca-setup-tool@v0.5.0`.
+  - Use the setup-tool composite action `aglabo/ci-platform/.github/actions/ca-setup-tool@v0.6.0`.
   - Set `with.repo: jdx/jactionlint`.
   - Set `with.tool-version: ${{ inputs.version }}`.
   - Add `if: steps.env-validation.outcome == 'success'`.
@@ -170,6 +170,7 @@ the external `aglabo/.github` actionlint job with a call to the new local reusab
 
 | Date       | Version | Description                                                                                                                                                                                                                                                                                                                               |
 | ---------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-11-03 | 1.2.1   | Update ca-* composite action references from @v0.5.0 to @v0.6.0                                                                                                                                                                                                                                                                           |
 | 2026-11-03 | 1.2.0   | Change the configuration repository to aglabo/global-configs (checkout path global/configs, config default ./global/configs/jactionlint.yaml); update action references (ca-validate-environment / ca-setup-tool @v0.5.0, actions/checkout@v7.0.1) and the caller config override; caller uses the global-configs default without `with:` |
 | 2026-11-01 | 1.1.0   | Update references for the jactionlint migration (jdx/jactionlint, inputs version / config, ru-qa-actionlint.yml); lint command reads the config path from env CONFIG_FILE                                                                                                                                                                 |
 | 2026-06-12 | 1.0.0   | Initial implementation plan                                                                                                                                                                                                                                                                                                               |

@@ -2,7 +2,7 @@
 title: "Requirements: Betterleaks Reusable Workflow"
 module: "reusable-workflows/betterleaks"
 status: Draft
-version: 1.6.0
+version: 1.6.1
 created: "2026-06-12"
 ---
 
@@ -55,8 +55,8 @@ Callers invoke the workflow through `workflow_call`. The workflow validates the 
 - Target Environment: GitHub Actions (ubuntu-slim runner)
 - Related Components:
   - `reusable-workflows/betterleaks`
-  - `ca-validate-environment` composite action (`aglabo/ci-platform/.github/actions/ca-validate-environment@v0.5.0`)
-  - `ca-setup-tool` composite action (`aglabo/ci-platform/.github/actions/ca-setup-tool@v0.5.0`)
+  - `ca-validate-environment` composite action (`aglabo/ci-platform/.github/actions/ca-validate-environment@v0.6.0`)
+  - `ca-setup-tool` composite action (`aglabo/ci-platform/.github/actions/ca-setup-tool@v0.6.0`)
   - `aglabo/global-configs` repository
   - `global/configs/betterleaks.toml`
   - betterleaks CLI
@@ -88,13 +88,13 @@ Callers invoke the workflow through `workflow_call`. The workflow validates the 
                          |
                          v
      +---------------------------------------+
-     | ca-validate-environment action v0.5.0 |
+     | ca-validate-environment action v0.6.0 |
      | validates runner, permissions, apps   |
      +-------------------+-------------------+
                          |
                          v
      +---------------------------------------+
-     | ca-setup-tool action v0.5.0           |
+     | ca-setup-tool action v0.6.0           |
      | installs configured betterleaks       |
      +-------------------+-------------------+
                          |
@@ -349,7 +349,7 @@ The default betterleaks version SHALL be `1.9.0`. This version meets the central
 
 ### REQ-C-005: Repository Actions Only
 
-For environment validation and tool installation, the workflow MUST use this repository's composite actions (`aglabo/ci-platform/.github/actions/ca-validate-environment@v0.5.0` and `aglabo/ci-platform/.github/actions/ca-setup-tool@v0.5.0`) instead of the external `aglabo/.github` reusable workflow `r1.1.2`.
+For environment validation and tool installation, the workflow MUST use this repository's composite actions (`aglabo/ci-platform/.github/actions/ca-validate-environment@v0.6.0` and `aglabo/ci-platform/.github/actions/ca-setup-tool@v0.6.0`) instead of the external `aglabo/.github` reusable workflow `r1.1.2`.
 
 ### REQ-C-006: Configuration Source
 
@@ -429,6 +429,7 @@ Scenario: Environment Validation Failure Blocks Scan
 
 | Date       | Version | Description                                                                                                                                                        |
 | ---------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 2026-11-03 | 1.6.1   | Update ca-* composite action references from @v0.5.0 to @v0.6.0                                                                                                    |
 | 2026-11-03 | 1.6.0   | Change config-repo default to aglabo/global-configs (checkout path global/configs); align version input, runner, trigger, and actions with ru-scan-betterleaks.yml |
 | 2026-06-12 | 1.5.0   | Add fetch-depth input (REQ-F-001b), scan report output (REQ-F-007), report upload on failure (REQ-F-008)                                                           |
 | 2026-06-12 | 1.4.0   | Change config-repo checkout: path=shared/ (default branch), config=shared/configs/betterleaks.toml                                                                 |
