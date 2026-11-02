@@ -25,7 +25,7 @@ tags:
 
 ## 🔗 コンポーネントの参照方法
 
-ci-platform は Composite Action を提供中です。Reusable Workflow は現在 `aglabo/.github` リポジトリから提供されており、将来、`ci-platform` へ集約予定です。
+ci-platform は Composite Action と Reusable Workflow を提供しています。
 
 ### Composite Action
 
@@ -39,12 +39,11 @@ steps:
 ### Reusable Workflow
 
 ワークフローの `jobs` から `uses:` キーで参照します。
-Reusable Workflow は現在 `aglabo/.github` リポジトリから提供されており、将来、`ci-platform` へ集約予定です。
 
 ```yaml
 jobs:
   scan:
-    uses: aglabo/.github/.github/workflows/<workflow-name>.yml@r1.1.2
+    uses: aglabo/ci-platform/.github/workflows/<workflow-name>.yml@<SHA> # vX.Y.Z
 ```
 
 ---
@@ -106,8 +105,8 @@ jobs:
 
 ## 🔄 Reusable Workflow の使い方
 
-actionlint・ghalint・gitleaks の Reusable Workflow は現在 `aglabo/.github` リポジトリから提供されています。
-将来的に `ci-platform` リポジトリへ集約予定です。
+jactionlint・ghalint・betterleaks などの Reusable Workflow を `ci-platform` リポジトリから提供しています。
+lint とシークレットスキャンのワークフローは、既定で [aglabo/global-configs](https://github.com/aglabo/global-configs) の設定を使用します。
 
 | 種類              | スコープ     | 責務                    |
 | ----------------- | ------------ | ----------------------- |
@@ -120,10 +119,14 @@ Composite Action はジョブ内の設定ミスを早期に遮断し、Reusable 
 ```yaml
 jobs:
   lint-workflow:
-    uses: aglabo/.github/.github/workflows/ci-common-lint-actionlint.yml@r1.1.2
+    permissions:
+      contents: read
+    uses: aglabo/ci-platform/.github/workflows/ru-qa-actionlint.yml@<SHA> # v0.6.0
 
   scan-secrets:
-    uses: aglabo/.github/.github/workflows/ci-common-scan-gitleaks.yml@r1.1.2
+    permissions:
+      contents: read
+    uses: aglabo/ci-platform/.github/workflows/ru-scan-betterleaks.yml@<SHA> # v0.6.0
 ```
 
 現在の実装状況の詳細は [ci-platform とは](./00-platform-overview.ja.mdx#️-現在の実装状況) を参照してください。
@@ -145,11 +148,15 @@ on:
 jobs:
   # Reusable Workflow: ワークフロー構文検証
   lint-workflow:
-    uses: aglabo/.github/.github/workflows/ci-common-lint-actionlint.yml@r1.1.2
+    permissions:
+      contents: read
+    uses: aglabo/ci-platform/.github/workflows/ru-qa-actionlint.yml@<SHA> # v0.6.0
 
   # Reusable Workflow: シークレットスキャン
   scan-secrets:
-    uses: aglabo/.github/.github/workflows/ci-common-scan-gitleaks.yml@r1.1.2
+    permissions:
+      contents: read
+    uses: aglabo/ci-platform/.github/workflows/ru-scan-betterleaks.yml@<SHA> # v0.6.0
 
   # Composite Action: 実行環境検証 + ビルド
   build:
@@ -167,7 +174,7 @@ jobs:
       # 以降に通常のビルドステップを追加
 ```
 
-> SHA は最新の値に更新してから使用してください。
+> `<SHA>` は参照するリリースのコミット SHA に置き換えてください。SHA は最新の値に更新してから使用してください。
 
 さらに詳細な使い方 (複数ジョブの組み合わせ・段階導入パターンなど) は [利用シナリオ](./12-basic-scenarios.ja.mdx) を参照してください。
 

@@ -39,7 +39,7 @@
 ## 公開アクション / ワークフロー
 
 公開コンポーネントは、リリースタグを指定して参照します。
-例: `aglabo/ci-platform/.github/actions/<action>@v0.5.0`
+例: `aglabo/ci-platform/.github/actions/<action>@v0.6.0`
 
 ### Composite Actions
 
@@ -52,15 +52,15 @@
 
 ### 再利用可能ワークフロー
 
-| ワークフロー              | 説明                                                                 |
-| ------------------------- | -------------------------------------------------------------------- |
-| `ru-lint-documents.yml`   | 変更された Markdown ファイルを textlint と markdownlint で検証する   |
-| `ru-qa-actionlint.yml`    | jactionlint で GitHub Actions ワークフローを検証する                 |
-| `ru-qa-actions-lock.yml`  | `gh actions-lock` でワークフローのアクションロックファイルを検証する |
-| `ru-qa-ghalint.yml`       | ghalint で GitHub Actions ワークフローを検証する                     |
-| `ru-scan-betterleaks.yml` | betterleaks でリポジトリのシークレット混入を検出する                 |
+| ワークフロー                             | 説明                                                                 |
+| ---------------------------------------- | -------------------------------------------------------------------- |
+| `ru-lint-documents.yml` (v0.6.0 で追加)  | 変更された Markdown ファイルを textlint と markdownlint で検証する   |
+| `ru-qa-actionlint.yml`                   | jactionlint で GitHub Actions ワークフローを検証する                 |
+| `ru-qa-actions-lock.yml` (v0.6.0 で追加) | `gh actions-lock` でワークフローのアクションロックファイルを検証する |
+| `ru-qa-ghalint.yml`                      | ghalint で GitHub Actions ワークフローを検証する                     |
+| `ru-scan-betterleaks.yml`                | betterleaks でリポジトリのシークレット混入を検出する                 |
 
-lint 系ワークフローは、設定ファイルのパスを入力で指定しない場合、[aglabo/global-configs](https://github.com/aglabo/global-configs) の既定設定を使います。
+lint とシークレットスキャンのワークフローは、設定を入力で指定しない場合、[aglabo/global-configs](https://github.com/aglabo/global-configs) の既定設定を使います。
 
 ### 使用例: `ca-get-changed-files`
 
@@ -70,7 +70,7 @@ steps:
     with:
       fetch-depth: 0 # 必須
   - id: changed
-    uses: aglabo/ci-platform/.github/actions/ca-get-changed-files@v0.5.0
+    uses: aglabo/ci-platform/.github/actions/ca-get-changed-files@v0.6.0
     with:
       pattern: |
         **/*.md

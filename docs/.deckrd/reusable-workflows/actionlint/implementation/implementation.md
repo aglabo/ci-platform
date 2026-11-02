@@ -1,7 +1,7 @@
 ---
 title: "Implementation Plan: Actionlint Reusable Workflow"
-based-on: specifications.md v1.2.0
-version: 1.1.0
+based-on: specifications.md v1.3.0
+version: 1.2.0
 status: Draft
 ---
 
@@ -22,7 +22,7 @@ The workflow implements the following behavioral units in sequence:
 - `target-checkout-step` (persist-credentials: false)
 - `env-validation-step`
 - `tool-install-step`
-- `config-checkout-step` (fixed to aglabo/.github, fetch-depth: 1)
+- `config-checkout-step` (fixed to aglabo/global-configs, path: global/configs, fetch-depth: 1)
 - `prepare-report-step`
 - `lint-execute-step` (with report output via tee)
 - `report-upload-step` (on failure only)
@@ -72,30 +72,30 @@ the external `aglabo/.github` actionlint job with a call to the new local reusab
 - Add input `config`:
   - Set `required: false`.
   - Set `type: string`.
-  - Set `default: "./shared/configs/jactionlint.yaml"`.
+  - Set `default: "./global/configs/jactionlint.yaml"`.
   - Reference as `${{ inputs.config }}`.
 
 - Add step ID `target-checkout` as the first step:
-  - Use `actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0 # v6.0.3`.
+  - Use `actions/checkout@v7.0.1`.
   - Do not set `path` (checks out caller repository to workspace root).
   - Set `with.persist-credentials: false`.
   - Do not add an `if` condition to this first step.
 
 - Add step ID `env-validation` after `target-checkout`:
-  - Use the local validate-environment composite action at path `./.github/actions/validate-environment`.
+  - Use the validate-environment composite action `aglabo/ci-platform/.github/actions/ca-validate-environment@v0.5.0`.
   - Set `with.actions-type: read`.
   - Add `if: steps.target-checkout.outcome == 'success'`.
 
 - Add step ID `tool-install` after `env-validation`:
-  - Use the setup-tool composite action `aglabo/ci-platform/.github/actions/ca-setup-tool@v0.4.1`.
+  - Use the setup-tool composite action `aglabo/ci-platform/.github/actions/ca-setup-tool@v0.5.0`.
   - Set `with.repo: jdx/jactionlint`.
   - Set `with.tool-version: ${{ inputs.version }}`.
   - Add `if: steps.env-validation.outcome == 'success'`.
 
 - Add step ID `config-checkout` after `tool-install`:
-  - Use `actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0 # v6.0.3`.
-  - Set `with.repository: aglabo/.github` (fixed, not an input).
-  - Set `with.path: shared`.
+  - Use `actions/checkout@v7.0.1`.
+  - Set `with.repository: aglabo/global-configs` (fixed, not an input).
+  - Set `with.path: global/configs`.
   - Set `with.fetch-depth: 1`.
   - Set `with.persist-credentials: false`.
   - Add `if: steps.tool-install.outcome == 'success'`.
@@ -135,7 +135,7 @@ the external `aglabo/.github` actionlint job with a call to the new local reusab
   - Checks out the caller repository with `persist-credentials: false`.
   - Validates the environment for read-only actions usage.
   - Installs jactionlint from `jdx/jactionlint` using the configured version (default: `2.4.0`).
-  - Checks out `aglabo/.github` (fixed) with `fetch-depth: 1` into `shared/`.
+  - Checks out `aglabo/global-configs` (fixed) with `fetch-depth: 1` into `global/configs/`.
   - Creates `.github/report/` directory before linting.
   - Runs jactionlint with the resolved `config` and
     writes output to `.github/report/jactionlint-report.txt`.
@@ -156,7 +156,7 @@ the external `aglabo/.github` actionlint job with a call to the new local reusab
   - Replace `uses: aglabo/.github/.github/workflows/ci-common-lint-actionlint.yml@<hash> # r1.1.2`
     with `uses: ./.github/workflows/ru-qa-actionlint.yml`.
   - Remove the external commit hash pin (no longer needed for a local reference).
-  - Do not add a `with:` block (use all default input values).
+  - Do not add a `with:` block; the caller uses the global-configs default (`./global/configs/jactionlint.yaml`).
   - Retain `permissions: contents: read` at the job level.
 
 - Expected behavior after this commit:
@@ -168,7 +168,8 @@ the external `aglabo/.github` actionlint job with a call to the new local reusab
 
 ## 3. Change History
 
-| Date       | Version | Description                                                                                                                                                               |
-| ---------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 2026-11-01 | 1.1.0   | Update references for the jactionlint migration (jdx/jactionlint, inputs version / config, ru-qa-actionlint.yml); lint command reads the config path from env CONFIG_FILE |
-| 2026-06-12 | 1.0.0   | Initial implementation plan                                                                                                                                               |
+| Date       | Version | Description                                                                                                                                                                                                                                                                                                                               |
+| ---------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-11-03 | 1.2.0   | Change the configuration repository to aglabo/global-configs (checkout path global/configs, config default ./global/configs/jactionlint.yaml); update action references (ca-validate-environment / ca-setup-tool @v0.5.0, actions/checkout@v7.0.1) and the caller config override; caller uses the global-configs default without `with:` |
+| 2026-11-01 | 1.1.0   | Update references for the jactionlint migration (jdx/jactionlint, inputs version / config, ru-qa-actionlint.yml); lint command reads the config path from env CONFIG_FILE                                                                                                                                                                 |
+| 2026-06-12 | 1.0.0   | Initial implementation plan                                                                                                                                                                                                                                                                                                               |

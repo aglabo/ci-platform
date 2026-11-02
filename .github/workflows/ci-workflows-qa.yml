@@ -37,16 +37,12 @@ jobs:
     permissions:
       contents: read
     uses: ./.github/workflows/ru-qa-actionlint.yml
-    with:
-      config: "./configs/jactionlint.yaml"
 
   ghalint:
     name: Ghalint
     permissions:
       contents: read
     uses: ./.github/workflows/ru-qa-ghalint.yml
-    with:
-      config: "./configs/ghalint.yaml"
 
   actions-lock:
     name: Actions Lock

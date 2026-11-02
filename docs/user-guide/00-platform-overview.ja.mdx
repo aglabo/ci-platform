@@ -48,7 +48,7 @@ GitHub Actions の Composite Action と Reusable Workflow を SHA 固定で参�
 | CI 設定を各リポジトリにコピーしていて管理が分散    | Actions/Workflows を外部リポジトリに集約して参照    |
 | パーミッション不足・ランナー不正が CI 実行後に判明 | `validate-environment` でジョブ冒頭に fail-fast     |
 | サプライチェーン攻撃への耐性が不明確               | SHA 固定 + タグコメントを標準的な参照方式として採用 |
-| シークレット漏洩を CI で検知したい                 | gitleaks Reusable Workflow による全コードスキャン   |
+| シークレット漏洩を CI で検知したい                 | betterleaks Reusable Workflow によるスキャン        |
 
 > **典型的なリスクシナリオ**:
 >
@@ -70,17 +70,20 @@ GitHub Actions の Composite Action と Reusable Workflow を SHA 固定で参�
 
 Composite Action は `steps:` から参照します。ジョブ内で fail-fast として機能します。
 
-### Reusable Workflow (`aglabo/.github`)
+### Reusable Workflow (`aglabo/ci-platform`)
 
-| コンポーネント | 役割                                  | 参照パス (`@r1.1.2`)                                             |
-| -------------- | ------------------------------------- | ---------------------------------------------------------------- |
-| actionlint     | GitHub Actions ワークフローの構文検証 | `aglabo/.github/.github/workflows/ci-common-lint-actionlint.yml` |
-| ghalint        | GitHub Actions のポリシー違反検出     | `aglabo/.github/.github/workflows/ci-common-lint-ghalint.yml`    |
-| gitleaks       | リポジトリ全体の機密情報スキャン      | `aglabo/.github/.github/workflows/ci-common-scan-gitleaks.yml`   |
+| コンポーネント            | 役割                                                  |
+| ------------------------- | ----------------------------------------------------- |
+| `ru-qa-actionlint.yml`    | jactionlint による GitHub Actions ワークフローの検証  |
+| `ru-qa-ghalint.yml`       | ghalint による GitHub Actions のポリシー違反検出      |
+| `ru-qa-actions-lock.yml`  | `gh actions-lock` による Action ロックファイルの検証  |
+| `ru-scan-betterleaks.yml` | betterleaks によるリポジトリの機密情報スキャン        |
+| `ru-lint-documents.yml`   | 変更された Markdown ファイルの textlint・markdownlint |
 
-Reusable Workflow は `jobs:` から参照します。複数ジョブ・複数リポジトリにわたるポリシーを強制します。
+Reusable Workflow は `jobs:` から `aglabo/ci-platform/.github/workflows/<workflow-name>.yml` の形式で参照します。
+複数ジョブ・複数リポジトリにわたるポリシーを強制します。
 
-> Reusable Workflow は現在 `aglabo/.github` リポジトリから提供されており、将来的に `ci-platform` へ集約予定です。
+> lint とシークレットスキャンのワークフローは、既定で [aglabo/global-configs](https://github.com/aglabo/global-configs) の設定を使用します。
 
 ### 二層防御モデル
 
@@ -97,7 +100,8 @@ ci-platform は次の 2 層でリポジトリを保護します。
 │                                                                 │
 │  jobs:                                                          │
 │    lint:                                                        │
-│      uses: aglabo/.github/...actionlint.yml@r1.1.2  ← Reusable  │
+│      uses: aglabo/ci-platform/.../ru-qa-actionlint.yml@SHA      │
+│          ← Reusable (ワークフロー全体へのポリシー強制)          │
 │                                                                 │
 │    build:                                                       │
 │      steps:                                                     │
@@ -123,18 +127,17 @@ graph TB
         subgraph ca["Composite Actions  ✅ 提供中"]
             ve["validate-environment"]
         end
-    end
-
-    subgraph aglabo_github["aglabo/.github  ✅ 提供中 (ci-platform へ集約予定)"]
-        al["actionlint  @r1.1.2"]
-        gh["ghalint  @r1.1.2"]
-        gl["gitleaks  @r1.1.2"]
+        subgraph ru["Reusable Workflows  ✅ 提供中"]
+            al["ru-qa-actionlint"]
+            gh["ru-qa-ghalint"]
+            bl["ru-scan-betterleaks"]
+        end
     end
 
     wf -->|"steps: uses:"| ve
     wf -->|"jobs: uses:"| al
     wf -->|"jobs: uses:"| gh
-    wf -->|"jobs: uses:"| gl
+    wf -->|"jobs: uses:"| bl
 ```
 
 ---
@@ -194,16 +197,17 @@ GitHub `.github` リポジトリでも Org 共通設定は可能ですが、`ci-
 
 ## 🗺️ 現在の実装状況
 
-**v0.1.x**: `validate-environment` Composite Action を提供中。
+**v0.6.x**: Composite Action と Reusable Workflow を `ci-platform` リポジトリから提供中。
 
-actionlint・ghalint・gitleaks の Reusable Workflow は `aglabo/.github` リポジトリ (`@r1.1.2`) から提供されています。
-ci-platform 自身の CI でも使用しており、将来的に `ci-platform` リポジトリへ集約予定です。
+Reusable Workflow は ci-platform 自身の CI でも使用しています。
 
 ```yaml
 # Reusable Workflow の利用例
 jobs:
   scan-secrets:
-    uses: aglabo/.github/.github/workflows/ci-common-scan-gitleaks.yml@r1.1.2
+    permissions:
+      contents: read
+    uses: aglabo/ci-platform/.github/workflows/ru-scan-betterleaks.yml@<SHA> # v0.6.0
 ```
 
 **段階導入パターン**:

@@ -13,7 +13,7 @@ source: specifications.md
 
 > This document contains implementation tasks derived from specifications.
 > Each task corresponds to a single unit test case (it() block).
-> Test method: static YAML analysis via `actionlint` (CI) and `yq` attribute inspection (local developer verification only — `yq` is NOT used inside the reusable workflow itself).
+> Test method: static YAML analysis via `jactionlint` (CI) and `yq` attribute inspection (local developer verification only — `yq` is NOT used inside the reusable workflow itself).
 > The `yq:` lines in each task are implementation hints for the developer writing the test, not workflow steps.
 
 ---
@@ -37,17 +37,17 @@ source: specifications.md
 
 #### T-01-01: Inputs and triggers are correctly defined
 
-- [x] **T-01-01-01**: Verify `betterleaks-version` input for `workflow_call` has correct default and is optional
-  - Target: `on.workflow_call.inputs.betterleaks-version`
+- [x] **T-01-01-01**: Verify `version` input for `workflow_call` has correct default and is optional
+  - Target: `on.workflow_call.inputs.version`
   - Scenario: Given the reusable workflow is defined, When `workflow_call` inputs are inspected
-  - Expected: Then `required: false` and `default: "1.4.1"`
-  - `yq`: `.on.workflow_call.inputs."betterleaks-version".required == false and .on.workflow_call.inputs."betterleaks-version".default == "1.4.1"`
+  - Expected: Then `required: false` and `default: "1.9.0"`
+  - `yq`: `.on.workflow_call.inputs.version.required == false and .on.workflow_call.inputs.version.default == "1.9.0"`
 
-- [x] **T-01-01-02**: Verify `config-repo` input for `workflow_call` defaults to `aglabo/.github`
+- [x] **T-01-01-02**: Verify `config-repo` input for `workflow_call` defaults to `aglabo/global-configs`
   - Target: `on.workflow_call.inputs.config-repo`
   - Scenario: Given the reusable workflow is defined, When `workflow_call` inputs are inspected
-  - Expected: Then `required: false` and `default: aglabo/.github`
-  - `yq`: `.on.workflow_call.inputs."config-repo".required == false and .on.workflow_call.inputs."config-repo".default == "aglabo/.github"`
+  - Expected: Then `required: false` and `default: aglabo/global-configs`
+  - `yq`: `.on.workflow_call.inputs."config-repo".required == false and .on.workflow_call.inputs."config-repo".default == "aglabo/global-configs"`
 
 - [x] **T-01-01-02b**: Verify `fetch-depth` input for `workflow_call` defaults to `50` and is optional
   - Target: `on.workflow_call.inputs.fetch-depth`
@@ -55,11 +55,11 @@ source: specifications.md
   - Expected: Then `required: false`, `default: 50`, `type: number`
   - `yq`: `.on.workflow_call.inputs."fetch-depth".required == false and .on.workflow_call.inputs."fetch-depth".default == 50`
 
-- [x] **T-01-01-04**: Verify `betterleaks-version` and `config-repo` inputs declare `type: string` for `workflow_call`
+- [x] **T-01-01-04**: Verify `version` and `config-repo` inputs declare `type: string` for `workflow_call`
   - Target: `on.workflow_call.inputs`
   - Scenario: Given inputs are defined for `workflow_call`
-  - Expected: Then `betterleaks-version` and `config-repo` have `type: string` under `workflow_call`
-  - `yq`: `.on.workflow_call.inputs."betterleaks-version".type == "string" and .on.workflow_call.inputs."config-repo".type == "string"`
+  - Expected: Then `version` and `config-repo` have `type: string` under `workflow_call`
+  - `yq`: `.on.workflow_call.inputs.version.type == "string" and .on.workflow_call.inputs."config-repo".type == "string"`
 
 - [x] **T-01-01-05**: Verify top-level permissions grant only `contents: read`
   - Target: `permissions.contents`
@@ -93,11 +93,11 @@ source: specifications.md
 
 #### T-01-03: Input defaults are explicitly declared
 
-- [x] **T-01-03-01**: Verify `betterleaks-version` and `config-repo` have non-empty defaults under both triggers
-  - Target: `on.workflow_call.inputs`, `on.workflow_dispatch.inputs`
-  - Scenario: Given no value is supplied by a caller or manual dispatcher
-  - Expected: Then `betterleaks-version` default is `"1.4.1"` and `config-repo` default is `"aglabo/.github"` under both `workflow_call` and `workflow_dispatch`
-  - `yq`: `.on.workflow_call.inputs."betterleaks-version".default == "1.4.1" and .on.workflow_dispatch.inputs."betterleaks-version".default == "1.4.1"`
+- [x] **T-01-03-01**: Verify `version` and `config-repo` have non-empty defaults under `workflow_call`
+  - Target: `on.workflow_call.inputs`
+  - Scenario: Given no value is supplied by a caller
+  - Expected: Then `version` default is `"1.9.0"` and `config-repo` default is `"aglabo/global-configs"` under `workflow_call` (the workflow defines no `workflow_dispatch` trigger)
+  - `yq`: `.on.workflow_call.inputs.version.default == "1.9.0" and .on.workflow_call.inputs."config-repo".default == "aglabo/global-configs"`
 
 ---
 
@@ -122,26 +122,26 @@ source: specifications.md
 - [x] **T-02-01-02**: Verify `env-validation` step runs second with no gate condition
   - Target: `steps.env-validation`
   - Scenario: Given `target-checkout` completed, When the second step is evaluated
-  - Expected: Then step with `id: env-validation` uses `.github/actions/validate-environment`, sets `with.actions-type: read`, has no `if` condition, and appears at index 1 in the step list
+  - Expected: Then step with `id: env-validation` uses `aglabo/ci-platform/.github/actions/ca-validate-environment@v0.5.0`, sets `with.actions-type: read`, has no `if` condition, and appears at index 1 in the step list
   - `yq`: `.jobs[].steps[1].id == "env-validation"` and `(.jobs[].steps[1].if // null) == null`
 
-- [x] **T-02-01-03**: Verify `tool-install` uses local `setup-tool` action with correct inputs and gate
+- [x] **T-02-01-03**: Verify `tool-install` uses the `ca-setup-tool` action with correct inputs and gate
   - Target: `steps.tool-install`
   - Scenario: Given `env-validation` completed
-  - Expected: Then step `tool-install` uses `.github/actions/setup-tool`, sets `with.repo: betterleaks/betterleaks`, `with.tool-version: ${{ inputs.betterleaks-version }}`, and has `if: steps.env-validation.outcome == 'success'`
+  - Expected: Then step `tool-install` uses `aglabo/ci-platform/.github/actions/ca-setup-tool@v0.5.0`, sets `with.repo: betterleaks/betterleaks`, `with.tool-version: ${{ inputs.version }}`, and has `if: steps.env-validation.outcome == 'success'`
   - `yq`: `(.jobs[].steps[] | select(.id=="tool-install")).with.repo == "betterleaks/betterleaks" and (.jobs[].steps[] | select(.id=="tool-install")).if == "steps.env-validation.outcome == 'success'"`
 
-- [x] **T-02-01-04**: Verify `config-checkout` checks out `config-repo` (default branch) into `shared/`
+- [x] **T-02-01-04**: Verify `config-checkout` checks out `config-repo` (default branch) into `global/configs/`
   - Target: `steps.config-checkout`
   - Scenario: Given `tool-install` completed
-  - Expected: Then step `config-checkout` uses `actions/checkout`, sets `with.repository: ${{ inputs.config-repo }}`, `with.path: shared`, does NOT set `with.ref`, and has `if: steps.tool-install.outcome == 'success'`
-  - `yq`: `(.jobs[].steps[] | select(.id=="config-checkout")).with.path == "shared" and (.jobs[].steps[] | select(.id=="config-checkout")).with.repository == "${{ inputs.config-repo }}" and ((.jobs[].steps[] | select(.id=="config-checkout")).with.ref // null) == null`
+  - Expected: Then step `config-checkout` uses `actions/checkout`, sets `with.repository: ${{ inputs.config-repo }}`, `with.path: global/configs`, does NOT set `with.ref`, and has `if: steps.tool-install.outcome == 'success'`
+  - `yq`: `(.jobs[].steps[] | select(.id=="config-checkout")).with.path == "global/configs" and (.jobs[].steps[] | select(.id=="config-checkout")).with.repository == "${{ inputs.config-repo }}" and ((.jobs[].steps[] | select(.id=="config-checkout")).with.ref // null) == null`
 
 - [x] **T-02-01-05**: Verify `scan-execute` runs the correct betterleaks command and is gated on `prepare-report`
   - Target: `steps.scan-execute`
   - Scenario: Given `prepare-report` completed
-  - Expected: Then step `scan-execute` has `if: steps.prepare-report.outcome == 'success'` and its `run` field contains `betterleaks git . --config shared/configs/betterleaks.toml`
-  - `yq`: `(.jobs[].steps[] | select(.id=="scan-execute")).run | test("betterleaks git \\. --config shared/configs/betterleaks.toml")`
+  - Expected: Then step `scan-execute` has `if: steps.prepare-report.outcome == 'success'` and its `run` field contains `betterleaks git . --config global/configs/betterleaks.toml`
+  - `yq`: `(.jobs[].steps[] | select(.id=="scan-execute")).run | test("betterleaks git \\. --config global/configs/betterleaks.toml")`
 
 - [x] **T-02-01-06**: Verify step execution order is target-checkout → env-validation → tool-install → config-checkout → prepare-report → scan-execute
   - Target: `jobs.*.steps[*]`
@@ -197,25 +197,25 @@ source: specifications.md
 
 - [x] **T-03-01-03**: Verify scan command hardcodes the config path so absent config fails fast
   - Target: `steps.scan-execute.run`
-  - Scenario: Given `shared/configs/betterleaks.toml` is absent
+  - Scenario: Given `global/configs/betterleaks.toml` is absent
   - Expected: Then the run command references the exact config path without fallback, causing betterleaks to fail when the file is missing
-  - `yq`: `(.jobs[].steps[] | select(.id=="scan-execute")).run | test("--config shared/configs/betterleaks\\.toml")`
+  - `yq`: `(.jobs[].steps[] | select(.id=="scan-execute")).run | test("--config global/configs/betterleaks\\.toml")`
 
 ### [エッジケース] Edge Cases
 
 #### T-03-02: Edge inputs and output suppression
 
-- [x] **T-03-02-01**: Verify `betterleaks-version` default is non-empty (stable version is declared)
-  - Target: `on.workflow_call.inputs.betterleaks-version.default`
-  - Scenario: Given `betterleaks-version` is omitted by the caller
-  - Expected: Then `default == "1.4.1"`
-  - `yq`: `.on.workflow_call.inputs."betterleaks-version".default == "1.4.1"`
+- [x] **T-03-02-01**: Verify `version` default is non-empty (stable version is declared)
+  - Target: `on.workflow_call.inputs.version.default`
+  - Scenario: Given `version` is omitted by the caller
+  - Expected: Then `default == "1.9.0"`
+  - `yq`: `.on.workflow_call.inputs.version.default == "1.9.0"`
 
-- [x] **T-03-02-02**: Verify `config-repo` default is exactly `aglabo/.github`
+- [x] **T-03-02-02**: Verify `config-repo` default is exactly `aglabo/global-configs`
   - Target: `on.workflow_call.inputs.config-repo.default`
   - Scenario: Given `config-repo` is omitted by the caller
-  - Expected: Then `default == "aglabo/.github"`
-  - `yq`: `.on.workflow_call.inputs."config-repo".default == "aglabo/.github"`
+  - Expected: Then `default == "aglabo/global-configs"`
+  - `yq`: `.on.workflow_call.inputs."config-repo".default == "aglabo/global-configs"`
 
 - [x] **T-03-02-03**: Verify no outputs exist at workflow or job level (fail-fast only, no status outputs)
   - Target: `on.workflow_call.outputs`, `jobs.*.outputs`
@@ -229,12 +229,12 @@ source: specifications.md
 
 ### [正常] Normal Cases
 
-#### T-04-01: actionlint and structural invariants
+#### T-04-01: jactionlint and structural invariants
 
-- [x] **T-04-01-01**: `actionlint` passes with no errors
-  - Target: `.github/workflows/ci-scan-betterleaks.yml`
+- [x] **T-04-01-01**: `jactionlint` passes with no errors
+  - Target: `.github/workflows/ru-scan-betterleaks.yml`
   - Scenario: Given the workflow YAML is created
-  - Expected: Then `actionlint .github/workflows/ci-scan-betterleaks.yml` exits 0 with no error output
+  - Expected: Then `jactionlint .github/workflows/ru-scan-betterleaks.yml` exits 0 with no error output
 
 - [x] **T-04-01-02**: Verify the workflow has exactly one job containing all required step IDs
   - Target: `jobs`, `jobs.*.steps[*].id`
@@ -269,16 +269,16 @@ source: specifications.md
   - `yq`: `.on.workflow_call.inputs."fetch-depth".default == 50 and .on.workflow_call.inputs."fetch-depth".required == false`
 
 - [x] **T-05-01-02**: Verify `target-checkout` passes `fetch-depth: ${{ inputs.fetch-depth }}`
-  - Target: `steps.target-checkout.with.fetch-depth`
+  - Target: `steps` (index 0, target checkout; no step `id`) `.with.fetch-depth`
   - Scenario: Given the workflow runs with a fetch-depth input
   - Expected: Then `with.fetch-depth` equals `${{ inputs.fetch-depth }}`
-  - `yq`: `(.jobs[].steps[] | select(.id=="target-checkout")).with."fetch-depth" == "${{ inputs.fetch-depth }}"`
+  - `yq`: `.jobs[].steps[0].with."fetch-depth" == "${{ inputs.fetch-depth }}"`
 
 - [x] **T-05-01-03**: Verify `target-checkout` sets `persist-credentials: false`
-  - Target: `steps.target-checkout.with.persist-credentials`
+  - Target: `steps` (index 0, target checkout; no step `id`) `.with.persist-credentials`
   - Scenario: Given the target repository is checked out
   - Expected: Then `with.persist-credentials: false`
-  - `yq`: `(.jobs[].steps[] | select(.id=="target-checkout")).with."persist-credentials" == false`
+  - `yq`: `.jobs[].steps[0].with."persist-credentials" == false`
 
 #### T-05-02: Report preparation and scan output
 

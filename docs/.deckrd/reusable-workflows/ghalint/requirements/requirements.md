@@ -2,7 +2,7 @@
 title: "Requirements: Ghalint Reusable Workflow"
 module: "reusable-workflows/ghalint"
 status: Draft
-version: 1.0
+version: 1.1.0
 created: "2026-06-13"
 ---
 
@@ -18,16 +18,16 @@ created: "2026-06-13"
 ### 1.1 Purpose
 
 本文書は、GitHub Actions ワークフローポリシー検証ツール ghalint を実行するための
-reusable workflow (`ci-qa-ghalint.yml`) を ci-platform リポジトリ内に作成し、
+reusable workflow (`ru-qa-ghalint.yml`) を ci-platform リポジトリ内に作成し、
 `ci-workflows-qa.yml` における外部リポジトリ (`aglabo/.github`) への依存を
 ローカル reusable workflow 呼び出しに置き換えることを目的とする。
 
 ### 1.2 Scope
 
-- `ci-qa-ghalint.yml`: `workflow_call` トリガーをもつ ghalint 専用 reusable workflow の作成
+- `ru-qa-ghalint.yml`: `workflow_call` トリガーをもつ ghalint 専用 reusable workflow の作成
 - `ci-workflows-qa.yml`: 外部 ghalint workflow 呼び出しをローカル呼び出しに置き換え
-- 設定ファイルは `aglabo/.github` リポジトリから `./shared/` にチェックアウトして使用
-- 入力パラメータ: `ghalint-version`（バージョン固定）、`config-file`（設定パス指定）
+- 設定ファイルは `aglabo/global-configs` リポジトリから `./global/configs/` にチェックアウトして使用
+- 入力パラメータ: `version`（バージョン固定、既定値 `1.6.0`）、`config`（設定パス指定、既定値 `./global/configs/ghalint.yaml`）
 - 失敗時のみレポートをアーティファクトとしてアップロード
 
 **Out of Scope**:
@@ -35,34 +35,34 @@ reusable workflow (`ci-qa-ghalint.yml`) を ci-platform リポジトリ内に作
 - ghalint の新規ポリシー追加や `configs/ghalint.yaml` の設定変更
 - ghalint 以外の QA ツール（actionlint, betterleaks）の変更
 - `workflow_dispatch` による手動トリガーのサポート
-- セルフホストランナー以外の環境サポート
+- `ubuntu-slim` 以外のランナー環境サポート
 
 ## 2. Context
 
-- Target Environment: GitHub Actions (ubuntu-slim セルフホストランナー)
-- Related Components: `ci-workflows-qa.yml`, `.github/actions/validate-environment`, `.github/actions/setup-tool`, `aglabo/.github`（設定リポジトリ）, `configs/ghalint.yaml`
-- Assumptions: `setup-tool` composite action が `suzuki-shunsuke/ghalint` の GitHub Releases からバイナリを取得できる
+- Target Environment: GitHub Actions (ubuntu-slim GitHub ホストランナー)
+- Related Components: `ci-workflows-qa.yml`, `aglabo/ci-platform/.github/actions/ca-validate-environment@v0.5.0`, `aglabo/ci-platform/.github/actions/ca-setup-tool@v0.5.0`, `aglabo/global-configs`（設定リポジトリ）, `configs/ghalint.yaml`
+- Assumptions: `ca-setup-tool` composite action が `suzuki-shunsuke/ghalint` の GitHub Releases からバイナリを取得できる
 
 ### System Context Diagram
 
 ```text
 [ci-workflows-qa.yml]  -->  +-----------------------------+  -->  [ghalint binary]
-                            |   ci-qa-ghalint.yml         |
-[aglabo/.github]       -->  |   (reusable workflow)       |  -->  [.github/report/]
+                            |   ru-qa-ghalint.yml         |
+[aglabo/global-configs] --> |   (reusable workflow)       |  -->  [.github/report/]
                             +-----------------------------+
                                          |
-                            [configs/ghalint.yaml (shared)]
+                            [./global/configs/ghalint.yaml]
 ```
 
 ## 3. Design Decisions (Summary)
 
-| ID    | Decision                                                      | Linked Record            |
-| ----- | ------------------------------------------------------------- | ------------------------ |
-| DR-01 | 外部依存を排除しローカル reusable workflow として実装         | decision-record.md#DR-01 |
-| DR-02 | 設定は `aglabo/.github` からチェックアウト（actionlint 踏襲） | decision-record.md#DR-02 |
-| DR-03 | 入力パラメータは `ghalint-version` と `config-file` の 2 つ   | decision-record.md#DR-03 |
-| DR-04 | ステップ間条件は `steps.<id>.outcome == 'success'` パターン   | decision-record.md#DR-04 |
-| DR-05 | 失敗時のみレポートをアーティファクトアップロード              | decision-record.md#DR-05 |
+| ID    | Decision                                                                    | Linked Record            |
+| ----- | --------------------------------------------------------------------------- | ------------------------ |
+| DR-01 | 外部依存を排除しローカル reusable workflow として実装                       | decision-record.md#DR-01 |
+| DR-02 | 設定は一元管理用の設定リポジトリ `aglabo/global-configs` からチェックアウト | decision-record.md#DR-02 |
+| DR-03 | 入力パラメータは `version` と `config` の 2 つ                              | decision-record.md#DR-03 |
+| DR-04 | ステップ間条件は `steps.<id>.outcome == 'success'` パターン                 | decision-record.md#DR-04 |
+| DR-05 | 失敗時のみレポートをアーティファクトアップロード                            | decision-record.md#DR-05 |
 
 ## 4. Functional Requirements
 
@@ -71,7 +71,7 @@ reusable workflow (`ci-qa-ghalint.yml`) を ci-platform リポジトリ内に作
 - EARS Type: feature-based (WHERE)
 
 ```text
-GIVEN a caller workflow invokes ci-qa-ghalint.yml
+GIVEN a caller workflow invokes ru-qa-ghalint.yml
   WHERE the workflow defines on.workflow_call
 THEN the system SHALL accept the invocation and execute the ghalint job.
 ```
@@ -91,9 +91,9 @@ THEN the system SHALL accept the invocation and execute the ghalint job.
 ```text
 GIVEN the workflow is invoked via workflow_call
   WHEN input parameters are provided or omitted
-THEN the system SHALL resolve ghalint-version to the provided value or the default version,
-     and SHALL resolve config-file to the provided path or the default path
-     (./shared/configs/ghalint.yaml).
+THEN the system SHALL resolve version to the provided value or the default version,
+     and SHALL resolve config to the provided path or the default path
+     (./global/configs/ghalint.yaml).
 ```
 
 **Rationale**: バージョンと設定パスを呼び出し側から上書き可能にし、デフォルト値で運用できるようにする。
@@ -130,7 +130,7 @@ THEN the system SHALL checkout the target repository with persist-credentials: f
 ```text
 GIVEN the target repository checkout succeeds
   WHEN the env-validation step is reached
-THEN the system SHALL execute validate-environment composite action,
+THEN the system SHALL execute ca-validate-environment composite action,
      and SHALL block subsequent steps if validation fails.
 ```
 
@@ -149,11 +149,11 @@ THEN the system SHALL execute validate-environment composite action,
 ```text
 GIVEN the environment validation succeeds
   WHEN the tool-install step is reached
-THEN the system SHALL install ghalint binary via setup-tool composite action
-     using suzuki-shunsuke/ghalint repository and the resolved ghalint-version.
+THEN the system SHALL install ghalint binary via ca-setup-tool composite action
+     using suzuki-shunsuke/ghalint repository and the resolved version.
 ```
 
-**Rationale**: `setup-tool` action を使うことで、他ツール（actionlint, betterleaks）と一貫したインストール方式を維持する。
+**Rationale**: `ca-setup-tool` action を使うことで、他ツール（actionlint, betterleaks）と一貫したインストール方式を維持する。
 
 **Acceptance Criteria**:
 
@@ -168,17 +168,17 @@ THEN the system SHALL install ghalint binary via setup-tool composite action
 ```text
 GIVEN the tool installation succeeds
   WHEN the config-checkout step is reached
-THEN the system SHALL checkout aglabo/.github repository into ./shared/
+THEN the system SHALL checkout aglabo/global-configs repository into ./global/configs/
      with fetch-depth: 1 and persist-credentials: false.
 ```
 
-**Rationale**: 設定を外部リポジトリ `aglabo/.github` で一元管理し、ローカルの `config-file` 入力で上書き可能にする。
+**Rationale**: 設定を一元管理用の設定リポジトリ `aglabo/global-configs` で管理し、ローカルの `config` 入力で上書き可能にする。
 
 **Acceptance Criteria**:
 
 | AC ID  | Scenario                                         |
 | ------ | ------------------------------------------------ |
-| AC-007 | `./shared/configs/ghalint.yaml` が配置されること |
+| AC-007 | `./global/configs/ghalint.yaml` が配置されること |
 
 ### REQ-F-007: Lint Execution
 
@@ -187,7 +187,7 @@ THEN the system SHALL checkout aglabo/.github repository into ./shared/
 ```text
 GIVEN the config repository checkout succeeds
   WHEN the lint-execute step is reached
-THEN the system SHALL execute ghalint with the resolved config-file path,
+THEN the system SHALL execute ghalint with the resolved config path,
      SHALL output results to .github/report/ghalint-report.txt,
      and SHALL exit with a non-zero code if any policy violation is detected.
 ```
@@ -226,13 +226,14 @@ THEN the system SHALL upload .github/report/ghalint-report.txt as artifact
 - EARS Type: event-driven (WHEN)
 
 ```text
-GIVEN ci-qa-ghalint.yml is created and validated
+GIVEN ru-qa-ghalint.yml is created and validated
   WHEN ci-workflows-qa.yml is updated
 THEN the system SHALL replace the external aglabo/.github ghalint workflow call
-     with a local call to ./.github/workflows/ci-qa-ghalint.yml.
+     with a local call to ./.github/workflows/ru-qa-ghalint.yml.
 ```
 
 **Rationale**: 外部リポジトリへの依存を排除し、ghalint workflow をリポジトリ内で完結して管理する。
+`ci-workflows-qa.yml` は `with:` を指定せず、global-configs の既定設定で呼び出す。
 
 **Acceptance Criteria**:
 
@@ -249,24 +250,24 @@ Implementation MUST set `permissions: contents: read` at both workflow and job l
 
 ### REQ-NF-002: Consistency
 
-The implementation SHOULD follow the same 7-step pattern as `ci-qa-actionlint.yml`
+The implementation SHOULD follow the same 7-step pattern as `ru-qa-actionlint.yml`
 (target-checkout → env-validation → tool-install → config-checkout → prepare-report → lint-execute → report-upload).
 
 ### REQ-NF-003: Maintainability
 
-The workflow SHOULD use explicit SHA-pinned action versions for all `uses:` references.
+The workflow SHOULD use explicit version tags (e.g. `@v7.0.1`, `@v0.5.0`) for all `uses:` references.
 The `timeout-minutes: 10` MUST be set at job level.
 
 ### REQ-NF-004: Traceability
 
-Step IDs MUST follow the naming convention established in `ci-qa-actionlint.yml`:
+Step IDs MUST follow the naming convention established in `ru-qa-actionlint.yml`:
 `target-checkout`, `env-validation`, `tool-install`, `config-checkout`, `prepare-report`, `lint-execute`, `report-upload`.
 
 ## 6. Constraints
 
 ### REQ-C-001: Runner
 
-The job MUST run on `ubuntu-slim` (self-hosted runner).
+The job MUST run on `ubuntu-slim` (GitHub-hosted runner).
 
 ### REQ-C-002: Step Condition Pattern
 
@@ -280,8 +281,8 @@ The workflow MUST support `workflow_call` trigger only.
 
 ### REQ-C-004: ghalint Config Source
 
-The default configuration MUST be sourced from `aglabo/.github` repository,
-checked out into `./shared/`. The `config-file` input MAY override the path.
+The default configuration MUST be sourced from `aglabo/global-configs` repository,
+checked out into `./global/configs/`. The `config` input MAY override the path.
 
 ## 7. User Stories
 
@@ -297,7 +298,7 @@ checked out into `./shared/`. The `config-file` input MAY override the path.
 # AC-001: Normal invocation from caller workflow
 # Requirement: REQ-F-001
 Scenario: Normal invocation from caller workflow
-  Given ci-workflows-qa.yml calls ci-qa-ghalint.yml via workflow_call
+  Given ci-workflows-qa.yml calls ru-qa-ghalint.yml via workflow_call
   When  the ghalint job executes
   Then  all 7 steps complete in sequence without error
 
@@ -305,14 +306,14 @@ Scenario: Normal invocation from caller workflow
 # Requirement: REQ-F-007
 Scenario: Lint passes when no policy violations exist
   Given all workflow files conform to ghalint policies
-  When  ghalint executes with the resolved config-file
+  When  ghalint executes with the resolved config
   Then  ghalint exits with code 0 and the job succeeds
 
 # AC-009: Lint fails when policy violations exist
 # Requirement: REQ-F-007
 Scenario: Lint fails when policy violations exist
   Given at least one workflow file violates a ghalint policy
-  When  ghalint executes with the resolved config-file
+  When  ghalint executes with the resolved config
   Then  ghalint exits with a non-zero code and the job fails
 
 # AC-010: Report artifact uploaded on failure
@@ -354,13 +355,14 @@ Scenario: Report artifact not uploaded on success
 
 ## 10. Open Questions
 
-| Question                                                                           | Type    | Impact Area         | Owner |
-| ---------------------------------------------------------------------------------- | ------- | ------------------- | ----- |
-| ghalint のデフォルトバージョン番号（`suzuki-shunsuke/ghalint` 最新安定版）は何か？ | Version | REQ-F-005           | TBD   |
-| `aglabo/.github` の `shared/configs/ghalint.yaml` が存在するか確認が必要           | Config  | REQ-F-006, REQ-C-04 | TBD   |
+| Question                                                                           | Type    | Impact Area          | Owner                                            |
+| ---------------------------------------------------------------------------------- | ------- | -------------------- | ------------------------------------------------ |
+| ghalint のデフォルトバージョン番号（`suzuki-shunsuke/ghalint` 最新安定版）は何か？ | Version | REQ-F-005            | Resolved: `1.6.0` (現行実装の既定値)             |
+| `aglabo/global-configs` に `ghalint.yaml` が存在するか確認が必要                   | Config  | REQ-F-006, REQ-C-004 | Resolved: リポジトリ直下に存在することを確認済み |
 
 ## 11. Change History
 
-| Date       | Version | Description     |
-| ---------- | ------- | --------------- |
-| 2026-06-13 | 1.0.0   | Initial release |
+| Date       | Version | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| ---------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-06-13 | 1.0.0   | Initial release                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| 2026-11-03 | 1.1.0   | 設定リポジトリを aglabo/global-configs に変更 (チェックアウト先 global/configs、config 既定値 ./global/configs/ghalint.yaml)、実装に合わせて参照を更新 (ru-qa-ghalint.yml、入力 version / config、ca-* Composite Action @v0.5.0、バージョンタグ固定)、frontmatter の版番号を 3 部構成に修正、ubuntu-slim を GitHub ホストランナーに訂正、Open Questions (既定版 1.6.0、ghalint.yaml の存在) を解決済みに更新、caller は with: なしで global-configs の既定設定を使用 |
