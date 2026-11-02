@@ -72,7 +72,9 @@ steps:
         **/*.md
         !docs/**
   - if: steps.changed.outputs.count != '0'
-    run: echo "${{ steps.changed.outputs.files }}"
+    env:
+      CHANGED_FILES: ${{ steps.changed.outputs.files }}
+    run: printf '%s\n' "$CHANGED_FILES"
 ```
 
 ## ライセンス
