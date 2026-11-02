@@ -98,6 +98,11 @@ const config: Config = {
           label: 'Developer Guide',
         },
         {
+          to: '/next/reference',
+          position: 'left',
+          label: 'Reference',
+        },
+        {
           type: 'docsVersionDropdown',
           position: 'right',
         },
@@ -121,6 +126,10 @@ const config: Config = {
             {
               label: 'Developer Guide',
               to: '/developer-guide',
+            },
+            {
+              label: 'Reference',
+              to: '/next/reference',
             },
           ],
         },
