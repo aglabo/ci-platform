@@ -28,7 +28,7 @@ on:
       config:
         description: "Path to the jactionlint configuration file"
         required: false
-        default: "./shared/configs/jactionlint.yaml"
+        default: "./global/configs/jactionlint.yaml"
         type: string
 
 jobs:
@@ -65,8 +65,8 @@ jobs:
         if: steps.tool-install.outcome == 'success'
         uses: actions/checkout@v7.0.1
         with:
-          repository: aglabo/.github
-          path: shared
+          repository: aglabo/global-configs
+          path: global/configs
           fetch-depth: 1
           persist-credentials: false
 
