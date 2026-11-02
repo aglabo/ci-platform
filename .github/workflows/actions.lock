@@ -13,22 +13,22 @@ workflows:
         - 'actions/deploy-pages@v5.0.1'
         - 'actions/setup-node@v7.1.0'
         - 'actions/upload-pages-artifact@v5.0.0'
-        - 'aglabo/ci-platform@v0.4.1'
+        - 'aglabo/ci-platform@v0.5.0'
         - 'pnpm/action-setup@v6.1.0'
     '.github/workflows/ci-scan-secrets.yml': []
     '.github/workflows/ci-workflows-qa.yml': []
     '.github/workflows/ru-qa-actionlint.yml':
         - 'actions/checkout@v7.0.1'
         - 'actions/upload-artifact@v7.0.2'
-        - 'aglabo/ci-platform@v0.4.1'
+        - 'aglabo/ci-platform@v0.5.0'
     '.github/workflows/ru-qa-ghalint.yml':
         - 'actions/checkout@v7.0.1'
         - 'actions/upload-artifact@v7.0.2'
-        - 'aglabo/ci-platform@v0.4.1'
+        - 'aglabo/ci-platform@v0.5.0'
     '.github/workflows/ru-scan-betterleaks.yml':
         - 'actions/checkout@v7.0.1'
         - 'actions/upload-artifact@v7.0.2'
-        - 'aglabo/ci-platform@v0.4.1'
+        - 'aglabo/ci-platform@v0.5.0'
 dependencies:
     'actions/cache@v6.1.0':
         ref: 'v6.1.0'
@@ -67,9 +67,9 @@ dependencies:
         repo_id: 496012378
         uses:
             - 'actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f'
-    'aglabo/ci-platform@v0.4.1':
-        ref: 'v0.4.1'
-        commit: 'sha1-458fc4860722549ddfbb56b57bb5d8141a405ada'
+    'aglabo/ci-platform@v0.5.0':
+        ref: 'v0.5.0'
+        commit: 'sha1-af5e34e039d0f420e4d8c3aedc3cf5dd396b9ddd'
         owner_id: 211574028
         repo_id: 1154660752
     'pnpm/action-setup@v6.1.0':
