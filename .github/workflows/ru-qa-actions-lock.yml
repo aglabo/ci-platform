@@ -41,7 +41,7 @@ jobs:
       - name: Validate environment
         id: env-validation
         if: steps.target-checkout.outcome == 'success'
-        uses: aglabo/ci-platform/.github/actions/ca-validate-environment@v0.5.0
+        uses: aglabo/ci-platform/.github/actions/ca-validate-environment@v0.6.0
         with:
           actions-type: read
 
