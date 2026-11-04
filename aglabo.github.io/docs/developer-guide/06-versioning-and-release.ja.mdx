@@ -97,11 +97,17 @@ BREAKING CHANGE: required-tools input が必須になりました。
 5. リリースノート `Release-Note.md` を今回のバージョンの内容に更新する
 6. `package.json` の `version` をこれから付けるタグに合わせて更新する
 7. `git tag v0.X.Y` でバージョンタグを作成し、`git push origin v0.X.Y` でプッシュする
-8. 次のコマンドで GitHub Release を公開する
+8. 次のコマンドで GitHub Release を公開する。
+   `Release-Note.md` 先頭の YAML フロントマターはリリース本文で区切り線や見出しとして表示されるため、除去した本文を一時ファイルに書き出して渡す
 
    ```bash
-   gh release create v0.X.Y --verify-tag --title v0.X.Y --notes-file Release-Note.md
+   awk 'NR==1 && /^---$/ {fm=1; next} fm && /^---$/ {fm=0; next} !fm' Release-Note.md \
+     | sed '/./,$!d' > release-notes.tmp.md
+   gh release create v0.X.Y --verify-tag --title v0.X.Y --notes-file release-notes.tmp.md
+   rm release-notes.tmp.md
    ```
+
+   `gh release create` の前に、一時ファイルの先頭が本文の見出しになっていることを確認する
 
 9. `gh release view v0.X.Y --json isImmutable` の結果が `"isImmutable": true` であることを確認する
 10. ワークフロー内の `aglabo/ci-platform` 参照を新しいタグに更新し、`gh actions-lock` でロックファイルを更新して、別コミットとして記録する
