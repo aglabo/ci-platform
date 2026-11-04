@@ -88,21 +88,33 @@ BREAKING CHANGE: required-tools input が必須になりました。
 
 リリースは次の手順で行います。
 
-1. `bash ./runners/run-shellspec.sh all` でテストを実行し、全テストが PASS することを確認する
-2. CI と同じ検証として、ローカルで `jactionlint`・`ghalint`・`betterleaks` を実行して問題がないことを確認する
-3. `CHANGELOG.md` に変更内容・影響範囲を記載する
-4. リリースノート `Release-Note.md` を今回のバージョンの内容に更新する
-5. `package.json` の `version` をこれから付けるタグに合わせて更新する
-6. `git tag v0.X.Y` でバージョンタグを作成する
-7. ワークフロー内の `aglabo/ci-platform` 参照を新しいタグに更新し、`gh actions-lock` でロックファイルを更新して、別コミットとして記録する
+1. リポジトリ設定で次の 2 点が有効になっていることを確認する
+   - Settings → General → Releases の Immutable releases
+   - `v*` タグの更新 (force-push) と削除を禁止する Tag ruleset
+2. `bash ./runners/run-shellspec.sh all` でテストを実行し、全テストが PASS することを確認する
+3. CI と同じ検証として、ローカルで `jactionlint`・`ghalint`・`betterleaks` を実行して問題がないことを確認する
+4. `CHANGELOG.md` に変更内容・影響範囲を記載する
+5. リリースノート `Release-Note.md` を今回のバージョンの内容に更新する
+6. `package.json` の `version` をこれから付けるタグに合わせて更新する
+7. `git tag v0.X.Y` でバージョンタグを作成し、`git push origin v0.X.Y` でプッシュする
+8. 次のコマンドで GitHub Release を公開する
+
+   ```bash
+   gh release create v0.X.Y --verify-tag --title v0.X.Y --notes-file Release-Note.md
+   ```
+
+9. `gh release view v0.X.Y --json isImmutable` の結果が `"isImmutable": true` であることを確認する
+10. ワークフロー内の `aglabo/ci-platform` 参照を新しいタグに更新し、`gh actions-lock` でロックファイルを更新して、別コミットとして記録する
 
 :::note
 
-リリースノートは `Release-Note.md` と `CHANGELOG.md` で公開し、GitHub Releases は作成しません。
+リリースノートは `Release-Note.md` と `CHANGELOG.md` に記載し、同じ内容で GitHub Release を immutable として公開します。
+immutable として公開したリリースは、タグの付け替えや削除ができません。
+タグを付け間違えた場合は、修正した内容を新しい PATCH バージョンとしてリリースします。
 
 `package.json` は `private: true` のため npm には公開されませんが、
 バージョン情報の食い違いを防ぐためタグと同期させます。
-手順 7 のロックファイルにはタグ対象コミットの SHA が記録されるため、その更新コミット自身をタグに含めることはできません。
+手順 10 のロックファイルにはタグ対象コミットの SHA が記録されるため、その更新コミット自身をタグに含めることはできません。
 タグ作成後に別コミットとして実施します。
 
 :::
