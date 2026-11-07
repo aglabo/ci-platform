@@ -119,23 +119,3 @@ format_config_not_found() {
 
   echo "config file not found: ${__local_config} (local), ${__global_desc} (global)"
 }
-
-#
-# @description Resolve a tool config file with resolve_config_file(),
-#              reporting the not-found message when no file is found
-# @arg $1 string Config file path relative to the global config directory
-# @arg $2 string Local config file path relative to PROJECT_ROOT
-# @stdout Path to the config file; nothing when no file is found
-# @stderr "Error: <not-found message>" when no file is found
-# @exitcode 0 Config file found
-# @exitcode 78 (EXIT_CONFIG_NOT_FOUND) Config file not found
-#
-require_config_file() {
-  local __status=0
-
-  resolve_config_file "$1" "$2" || __status=$?
-  if [[ $__status -ne 0 ]]; then
-    echo "Error: $(format_config_not_found "$__status" "$1" "$2")" >&2
-    return "$EXIT_CONFIG_NOT_FOUND"
-  fi
-}
