@@ -21,7 +21,7 @@ on:
       version:
         description: "Version of gh-actions-lock extension to install"
         required: false
-        default: "v0.4.0"
+        default: "v0.4.1"
         type: string
 
 jobs:

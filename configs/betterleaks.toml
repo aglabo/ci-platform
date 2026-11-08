@@ -9,4 +9,4 @@
 title = "BetterLeaks config"
 
 minVersion = "v8.25.0" #  gitleaks min version
-betterleaksMinVersion = "v1.0.0"
+betterleaksMinVersion = "v1.10.0"
