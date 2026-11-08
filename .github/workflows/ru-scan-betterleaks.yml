@@ -22,7 +22,7 @@ on:
       version:
         description: "Version of betterleaks to install"
         required: false
-        default: "1.9.0"
+        default: "1.10.0"
         type: string
       config-repo:
         description: "Repository checked out to global/configs for the betterleaks config"
