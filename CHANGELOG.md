@@ -1,22 +1,66 @@
 ---
 title: "ci-platform Change Log"
-version: "0.6.0"
-date: 2026-11-03
+version: "0.6.1"
+date: 2026-11-08
 tags:
   - release
   - reusable-workflows
   - ci-platform
 summary: >
-  v0.6.0 adds reusable workflows for document linting and action lock
-  verification, plus a documents QA workflow. Lint and secret-scan workflows
-  now use aglabo/global-configs settings by default, and Dependabot checks
-  GitHub Actions updates.
+  v0.6.1 updates the ci-platform action references in the reusable workflows
+  from v0.5.0 to v0.6.0, updates pnpm/action-setup and the default betterleaks
+  version, and adds a config input to the betterleaks secret-scan workflow.
 ---
 
 <!-- textlint-disable
   ja-technical-writing/sentence-length,
   ja-technical-writing/max-comma
   -->
+
+## [0.6.1] - 2026-11-08
+
+### Overview
+
+This release updates the action references and tool versions used by the
+reusable workflows.
+
+The v0.6.0 reusable workflows still call the v0.5.0 composite actions.
+v0.6.0 is an immutable release and cannot be changed, so this release ships
+the updated references.
+
+### Added
+
+#### Reusable Workflows
+
+- `ru-scan-betterleaks.yml`: Added the `config` input to set the path of the
+  betterleaks configuration file. The default is
+  `./global/configs/betterleaks.toml`, the same path as before.
+
+### Changed
+
+#### GitHub Actions
+
+- Updated ci-platform composite action references in the reusable workflows
+  from v0.5.0 to v0.6.0.
+- Updated `pnpm/action-setup` from v6.1.0 to v6.1.1 in `ca-setup-repo` and
+  `ci-publish-docs.yml`.
+- `ru-scan-betterleaks.yml`: Updated the default betterleaks version from 1.9.0
+  to 1.10.0. Set `version: "1.9.0"` to keep the previous version.
+- `ru-scan-betterleaks.yml`: Later steps now run only when the checkout succeeds.
+- `.github/workflows/actions.lock`: Updated the locks for the new action versions.
+
+#### Development
+
+- `runners/`: Moved diagnostic output from the helper scripts to the entry-point
+  scripts.
+
+#### Documentation
+
+- `README.md`, `README.ja.md`: Updated usage examples to v0.6.1.
+- Added the action and workflow reference section and the v0.6.0 versioned docs
+  to the documentation site.
+
+---
 
 ## [0.6.0] - 2026-11-03
 
