@@ -40,7 +40,7 @@ It comes with best practices and essential tools pre-configured.
 ## Public Actions and Workflows
 
 Reference the public components by release tag.
-Example: `aglabo/ci-platform/.github/actions/<action>@v0.6.0`
+Example: `aglabo/ci-platform/.github/actions/<action>@v0.6.1`
 
 ### Composite Actions
 
@@ -71,7 +71,7 @@ steps:
     with:
       fetch-depth: 0 # required
   - id: changed
-    uses: aglabo/ci-platform/.github/actions/ca-get-changed-files@v0.6.0
+    uses: aglabo/ci-platform/.github/actions/ca-get-changed-files@v0.6.1
     with:
       pattern: |
         **/*.md
