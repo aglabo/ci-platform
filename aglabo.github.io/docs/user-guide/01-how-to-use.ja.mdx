@@ -59,6 +59,9 @@ jobs:
 タグ (`@v0.6.0`) だけでは参照先のコミットを書き換えられるリスクを排除できません。
 `gh actions-lock` でロックファイル `.github/workflows/actions.lock` を生成し、タグが指すコミットの SHA を記録してください。
 `ru-qa-actions-lock.yml` でロックファイルを検証すると、タグの書き換えを検出できます。
+
+ci-platform の `v*` リリースは GitHub の immutable release として公開し、バージョンタグの付け替えと削除を ruleset で禁止しています。
+そのため、ロックファイルに記録した ci-platform の SHA は、リリース後も変わりません。
 `@main` の使用は推奨しません。
 
 ---
