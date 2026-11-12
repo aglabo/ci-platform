@@ -1,9 +1,9 @@
 ---
 title: "Decision Records: ca-get-changed-files"
-based-on: requirements.md v2.2.0
+based-on: requirements.md v2.3.0
 module: "composite-action/get-changed-files"
 status: approved
-version: 2.2.0
+version: 2.2.1
 created: "2026-10-29"
 ---
 
@@ -14,8 +14,9 @@ created: "2026-10-29"
 
 ### Context
 
-現行の Action は、`filter.lib.sh` の `resolve_sha_for_event` / `resolve_before_sha` で SHA を解決している。
-push と pull_request 以外のイベントは `Unsupported event` で失敗し、force push や履歴不足にも対応していない。
+改訂前の Action は、SHA を `filter.lib.sh` の `resolve_sha_for_event` / `resolve_before_sha` で解決している。
+この解決は、push と pull_request 以外のイベントで `Unsupported event` として失敗する。
+force push や履歴不足にも対応していない。
 同じ規則は内部 Action `_ca-resolve-sha` (#135) に切り出され、これらのケースにも対応している。
 
 ### Decision
@@ -24,7 +25,7 @@ SHA の解決は `_ca-resolve-sha` のスクリプトで行い、本 Action の�
 
 ### Alternatives Considered
 
-- 現行の `resolve_sha_for_event` を残し、その他イベントの分岐だけを足す。規則が 2 か所に分かれるため不採用。
+- 改訂前の `resolve_sha_for_event` を残し、その他イベントの分岐だけを足す。規則が 2 か所に分かれるため不採用。
 
 ### Rationale
 
@@ -36,14 +37,16 @@ SHA 解決の規則と入力検証を 1 か所にまとめ、イベントへの�
   - すべてのイベントで動作する
   - force push、新規ブランチ、履歴不足を `_ca-resolve-sha` の規則で扱える
 - Negative:
-  - push のブランチ削除・タグの push がエラーになる (`_ca-resolve-sha` REQ-F-020)。現行はタグの作成を受け付けていた
+  - push のブランチ削除・タグの push がエラーになる (`_ca-resolve-sha` REQ-F-020)。改訂前はタグの作成を受け付けていた
 
 ### Related
 
-- REQ-F-001
-- REQ-F-002
-- REQ-F-008
-- REQ-C-008
+- requirements/requirements.md: REQ-F-001
+- requirements/requirements.md: REQ-F-002
+- requirements/requirements.md: REQ-F-008
+- requirements/requirements.md: REQ-C-008
+- GitHub Issue: #134
+- GitHub Issue: #135
 
 ---
 
@@ -54,7 +57,8 @@ SHA 解決の規則と入力検証を 1 か所にまとめ、イベントへの�
 
 ### Context
 
-現行の `pattern` は `git diff` に渡す git pathspec であり、1 つしか指定できず、除外もできない。
+改訂前の `pattern` は、`git diff` に渡す git pathspec として扱われる。
+`pattern` には 1 つしか指定できず、除外もできない。
 glob の照合と出力の書き出しは、内部 Action `_ca-filter-files` (#136) が提供している。
 
 ### Decision
@@ -80,10 +84,12 @@ glob の照合と出力の書き出しは、内部 Action `_ca-filter-files` (#1
 
 ### Related
 
-- REQ-F-003
-- REQ-F-004
-- REQ-F-005
-- REQ-F-008
+- requirements/requirements.md: REQ-F-003
+- requirements/requirements.md: REQ-F-004
+- requirements/requirements.md: REQ-F-005
+- requirements/requirements.md: REQ-F-008
+- GitHub Issue: #134
+- GitHub Issue: #136
 
 ---
 
@@ -94,7 +100,8 @@ glob の照合と出力の書き出しは、内部 Action `_ca-filter-files` (#1
 
 ### Context
 
-`_ca-resolve-sha` は、`ca-get-changed-files` の置き換えを単純にするため、オーバーライド入力 `before-sha` / `after-sha` を持つ (`_ca-resolve-sha` DR-07)。
+`_ca-resolve-sha` は、オーバーライド入力 `before-sha` / `after-sha` を持つ (`_ca-resolve-sha` DR-07)。
+この入力は、`ca-get-changed-files` の置き換えを単純化する目的で設けた。
 一方 Issue #134 は、本 Action の入力を `commit-count` 1 つにすることを求めている。
 
 ### Decision
@@ -108,7 +115,8 @@ glob の照合と出力の書き出しは、内部 Action `_ca-filter-files` (#1
 
 ### Rationale
 
-呼び出し元は SHA を組み立てずに済み、入力は数値 1 つになる。現在の呼び出し元はテストジョブだけであり、移行の影響が小さい。
+呼び出し元は SHA を組み立てずに済み、入力は数値 1 つになる。
+決定時点 (2026-10) の呼び出し元は、テストジョブだけだった。このため、移行の影響が小さい。
 
 ### Consequences
 
@@ -120,10 +128,11 @@ glob の照合と出力の書き出しは、内部 Action `_ca-filter-files` (#1
 
 ### Related
 
-- REQ-F-001
-- REQ-F-002
-- REQ-C-005
-- REQ-C-008
+- requirements/requirements.md: REQ-F-001
+- requirements/requirements.md: REQ-F-002
+- requirements/requirements.md: REQ-C-005
+- requirements/requirements.md: REQ-C-008
+- GitHub Issue: #134
 
 ---
 
@@ -134,7 +143,7 @@ glob の照合と出力の書き出しは、内部 Action `_ca-filter-files` (#1
 
 ### Context
 
-`_ca-filter-files` の入力名は複数形の `patterns` とし、本 Action の既存の入力名は `pattern` となっている。
+本 Action の既存の入力名 `pattern` は、内部 Action `_ca-filter-files` の入力名 `patterns` (複数形) と異なる。
 
 ### Decision
 
@@ -157,8 +166,9 @@ glob の照合と出力の書き出しは、内部 Action `_ca-filter-files` (#1
 
 ### Related
 
-- REQ-F-004
-- REQ-C-005
+- requirements/requirements.md: REQ-F-004
+- requirements/requirements.md: REQ-C-005
+- GitHub Issue: #134
 
 ---
 
@@ -185,7 +195,8 @@ Composite Action の中の `uses: ./.github/actions/_ca-*` は、呼び出し元
 ### Alternatives Considered
 
 - `uses: aglabo/ci-platform/.github/actions/_ca-resolve-sha@<sha> # vX.Y.Z` で自己参照する。
-  内部 Action の契約をそのまま使えるが、リリースごとに pin を更新する必要があり、PR 中は古い版でテストされるため不採用。
+  内部 Action の契約をそのまま使える。
+  しかし、リリースごとに pin の更新が要り、PR 中は古い版でテストされるため不採用。
 
 ### Rationale
 
@@ -196,13 +207,14 @@ Composite Action の中の `uses: ./.github/actions/_ca-*` は、呼び出し元
 - Positive:
   - pin の更新が不要で、PR 中も同じ版の内部スクリプトでテストできる
 - Negative:
-  - env の対応付けを、内部 Action と本 Action の 2 か所で書くことになる。食い違いの検査方法は spec で定める
+  - env の対応付けを、内部 Action と本 Action の 2 か所で書くことになる。食い違いは静的検査で検出する (DR-12)
   - 内部 Action のディレクトリ構成 (`scripts/` の位置) に依存する
 
 ### Related
 
-- REQ-F-007
-- REQ-C-001
+- requirements/requirements.md: REQ-F-007
+- requirements/requirements.md: REQ-C-001
+- GitHub Issue: #134
 
 ---
 
@@ -235,12 +247,13 @@ Composite Action の中の `uses: ./.github/actions/_ca-*` は、呼び出し元
 - Positive:
   - 非 ASCII 文字を含むパスを扱える
 - Negative:
-  - `"` や `\` を含むパスがあると、差分を取得できずエラー終了する
+  - `"`・`\`・制御文字を含むパスがあると、差分を取得できずエラー終了する
 
 ### Related
 
-- REQ-F-003
-- REQ-F-006
+- requirements/requirements.md: REQ-F-003
+- requirements/requirements.md: REQ-F-006
+- GitHub Issue: #134
 
 ---
 
@@ -265,6 +278,8 @@ Composite Action の中の `uses: ./.github/actions/_ca-*` は、呼び出し元
 ### Rationale
 
 出力の経路と入力の検査を 1 つにそろえる。上限は GitHub の PR の差分の最大ファイル数 (3000) に合わせてあり、通常の利用では超えない。
+120000 バイトは、`_ca-filter-files` の上限 (`_ca-filter-files` REQ-F-018、DR-16) にそろえる。
+この値は、環境変数 1 つ分の上限 (約 131072 バイト) に余裕を残す。
 
 ### Consequences
 
@@ -275,8 +290,9 @@ Composite Action の中の `uses: ./.github/actions/_ca-*` は、呼び出し元
 
 ### Related
 
-- REQ-F-004
-- REQ-F-006
+- requirements/requirements.md: REQ-F-004
+- requirements/requirements.md: REQ-F-006
+- GitHub Issue: #134
 
 ---
 
@@ -311,8 +327,9 @@ Issue #134 は、出力 `files` / `count` を変えないことを Non-Goals と
 
 ### Related
 
-- REQ-F-005
-- REQ-NF-002
+- requirements/requirements.md: REQ-F-005
+- requirements/requirements.md: REQ-NF-002
+- GitHub Issue: #134
 
 ---
 
@@ -328,12 +345,16 @@ REQ-F-008 は 3 つの関数の削除を求め、ファイル自体の削除は�
 
 ### Decision
 
-`scripts/_libs/filter.lib.sh` とそのテスト (`scripts/_libs/__tests__/unit/filter.unit.spec.sh`) を削除しなければならない (MUST)。
+次の 2 つのファイルを削除しなければならない (MUST)。
+
+- `scripts/_libs/filter.lib.sh`
+- `scripts/_libs/__tests__/unit/filter.unit.spec.sh` (`filter.lib.sh` のテスト)
 
 ### Alternatives Considered
 
 - Option A: 空のライブラリとして残す。読み込む側が残り、AC-016 の検査対象 (定義の不在) とファイルの存在が食い違うため不採用。
-- Option B: 新しい関数の置き場として `filter.lib.sh` を再利用する。名前が中身 (変更ファイルの取得) と合わないため不採用。新しい関数は `get-changed-files.lib.sh` に置く (spec)。
+- Option B: 新しい関数の置き場として `filter.lib.sh` を再利用する。名前が中身 (変更ファイルの取得) と合わないため不採用。
+  新しい関数は `get-changed-files.lib.sh` に置く (specifications-diff.md §3.1 Input Domain)。
 
 ### Rationale
 
@@ -344,12 +365,12 @@ REQ-F-008 は 3 つの関数の削除を求め、ファイル自体の削除は�
 - Positive:
   - 旧ロジックの痕跡がファイル単位で無くなり、AC-016 を単純に検査できる
 - Negative:
-  - 旧テストの ID (`T-rsv-*`・`T-rsl-*`・`T-wrt-*`) が失われる (DD-IDX-03 で `T-GCF-*` に置き換える)
+  - `filter.unit.spec.sh` にあった旧テストの ID (`T-rsv-*`・`T-rsl-*`・`T-wrt-*`) が失われる (DD-IDX-03 で `T-GCF-*` に置き換える)
 
 ### Related
 
-- REQ-F-008
-- AC-016
+- requirements/requirements.md: REQ-F-008
+- requirements/requirements.md: AC-016
 
 ---
 
@@ -376,7 +397,7 @@ REQ-C-003 に次を加える。呼び出し元は、対象リポジトリを作�
 
 ### Rationale
 
-partial clone の禁止と同じく、checkout の方法に関する前提であり、呼び出し元が守れる。
+作業ディレクトリへの checkout は、partial clone の禁止 (REQ-C-003) と同じく checkout の方法に関する前提であり、呼び出し元が守れる。
 
 ### Consequences
 
@@ -387,8 +408,8 @@ partial clone の禁止と同じく、checkout の方法に関する前提であ
 
 ### Related
 
-- REQ-C-003
-- AC-017
+- requirements/requirements.md: REQ-C-003
+- requirements/requirements.md: AC-017
 
 ---
 
@@ -399,12 +420,12 @@ partial clone の禁止と同じく、checkout の方法に関する前提であ
 
 ### Context
 
-`pattern` が環境変数 1 つ分の上限を超えると、filter-files の step が起動できず `::error::` が出ない。
+`pattern` が環境変数 1 つ分の上限を超えると、絞り込みの段 (filter-files の step) が起動できず `::error::` が出ない。
 UTF-8 として不正なパスは、ランナーが step 出力を読むときに置き換えられ、`_ca-filter-files` で検出できないことがある。
 
 ### Decision
 
-両者は Assumptions に残し、本 Action では検査しない。
+`pattern` のサイズと非 UTF-8 のパスの 2 つは、requirements の Assumptions に残し、本 Action では検査しない。
 
 ### Alternatives Considered
 
@@ -424,8 +445,8 @@ UTF-8 として不正なパスは、ランナーが step 出力を読むとき�
 
 ### Related
 
-- REQ-F-004
-- REQ-F-006
+- requirements/requirements.md: REQ-F-004
+- requirements/requirements.md: REQ-F-006
 
 ---
 
@@ -436,16 +457,27 @@ UTF-8 として不正なパスは、ランナーが step 出力を読むとき�
 
 ### Context
 
-本 Action は、`_ca-resolve-sha`・本 Action のスクリプト・`_ca-filter-files` の 3 つのスクリプトを順に実行する (DR-05)。
+本 Action は、次の 3 つのスクリプトを順に実行する (DR-05)。
+
+- `_ca-resolve-sha` のスクリプト
+- 本 Action のスクリプト
+- `_ca-filter-files` のスクリプト
+
 内部スクリプトはどちらも `main` と `emit_outputs` を定義するため、同じプロセスで読み込めない。
 内部 Action の `action.yml` が行う env の対応付けは、本 Action の `action.yml` にも書く (DR-05 の Negative)。
 
 ### Decision
 
-本 Action は 3 つの step (`resolve-sha`・`get-changed-files`・`filter-files`) で構成し、段間の値は step 出力と env で受け渡さなければならない (MUST)。
-各 step の env の名前と式が、内部 Action の `action.yml` の step env と一致することを、静的検査 (GACT) で確かめなければならない (MUST)。
+本 Action は 3 つの step (`resolve-sha`・`get-changed-files`・`filter-files`) で構成しなければならない (MUST)。
+段間の値は、step 出力と env で受け渡さなければならない (MUST)。
+各 step の env の名前と式が、内部 Action の `action.yml` の step env と一致することを確かめなければならない (MUST)。
+確かめる手段は、静的検査 (GACT: `action.yml` と配下を静的に検査するテスト) とする。
 ただし、値の出どころが本 Action で変わる env は、名前だけを比べる。
-対象は `INPUT_BEFORE_SHA`・`INPUT_AFTER_SHA` (空文字列を明示)、`INPUT_FILES` (前の step の出力)、`INPUT_PATTERNS` (入力 `pattern`) とする。
+対象は次の env とする。
+
+- `INPUT_BEFORE_SHA`・`INPUT_AFTER_SHA` (空文字列を明示)
+- `INPUT_FILES` (前の step の出力)
+- `INPUT_PATTERNS` (入力 `pattern`)
 
 ### Alternatives Considered
 
@@ -467,11 +499,11 @@ step ごとに出力ファイルが分かれ、内部スクリプトの出力の
 
 ### Related
 
-- DR-05
-- DD-ACT-01
-- DD-ACT-03
-- R-ACT-010
-- R-ACT-040
+- decision-records.md: DR-05
+- specifications/specifications-action.md: DD-ACT-01
+- specifications/specifications-action.md: DD-ACT-03
+- specifications/specifications-action.md: R-ACT-010
+- specifications/specifications-action.md: R-ACT-040
 
 ---
 
@@ -482,8 +514,8 @@ step ごとに出力ファイルが分かれ、内部スクリプトの出力の
 
 ### Context
 
-変更ファイルの一覧は、環境変数 `INPUT_FILES` で絞り込みの段に渡す (DR-12)。
-環境変数 1 つ分の上限 (約 131072 バイト) を超えると、絞り込みの段は起動できず、`::error::` が出ないまま失敗する。
+変更ファイルの一覧が環境変数 1 つ分の上限 (約 131072 バイト) を超えると、絞り込みの段は起動できず、`::error::` が出ないまま失敗する。
+一覧は、環境変数 `INPUT_FILES` で絞り込みの段に渡すためである (DR-12)。
 
 ### Decision
 
@@ -508,10 +540,10 @@ step ごとに出力ファイルが分かれ、内部スクリプトの出力の
 
 ### Related
 
-- DR-07
-- DD-DIF-02
-- R-DIF-003
-- REQ-F-006
+- decision-records.md: DR-07
+- specifications/specifications-diff.md: DD-DIF-02
+- specifications/specifications-diff.md: R-DIF-003
+- requirements/requirements.md: REQ-F-006
 
 ---
 
@@ -528,10 +560,20 @@ step ごとに出力ファイルが分かれ、内部スクリプトの出力の
 
 ### Decision
 
-本 Action のスクリプトが出すエラーは、`::error::<対象>: <問題> (got: '<値>')` の形式とし、問題の文言は spec に定めた英語の文字列としなければならない (MUST)。
-文言は `_ca-filter-files` と同じものを使う。
-対象の文言は `exceeds the limit of 120000 bytes`・`is not a writable file`・`failed to write`・`value must not be empty` とする。
-内部スクリプトのエラーは書き換えずに出さなければならない (MUST)。`git diff` の失敗時は、git の標準エラー出力をそのまま出し、その後に `::error::` を 1 行出す。
+本 Action のスクリプトが出すエラーは、`::error::<対象>: <問題> (got: '<値>')` の形式としなければならない (MUST)。
+問題の文言は、specifications-diff.md §4 Decision Rules の「エラーの文言」の表に定めた英語の文字列としなければならない (MUST)。
+次の 4 つの文言は `_ca-filter-files` と同じものを使う。
+
+- `exceeds the limit of 120000 bytes`
+- `is not a writable file`
+- `failed to write`
+- `value must not be empty`
+
+本 Action だけの文言 (`failed to list changed files`) もある。
+その文言は、specifications-diff.md §4 Decision Rules の「エラーの文言」の表に定める。
+
+内部スクリプトのエラーは書き換えずに出さなければならない (MUST)。
+`git diff` の失敗時は、git の標準エラー出力をそのまま出し、その後に `::error::` を 1 行出す。
 
 ### Alternatives Considered
 
@@ -553,10 +595,10 @@ step ごとに出力ファイルが分かれ、内部スクリプトの出力の
 
 ### Related
 
-- DD-IDX-01
-- DD-IDX-02
-- R-DIF-002
-- REQ-F-006
+- specifications/specifications-index.md: DD-IDX-01
+- specifications/specifications-index.md: DD-IDX-02
+- specifications/specifications-diff.md: R-DIF-002
+- requirements/requirements.md: REQ-F-006
 
 ---
 
@@ -567,22 +609,38 @@ step ごとに出力ファイルが分かれ、内部スクリプトの出力の
 
 ### Context
 
-LCF・MAINF・RUNF は、`git diff` の結果を実 git リポジトリで検証する (REQ-NF-001)。
-大量のパス (120000 / 120001 バイト、3001 件) と、`"`・`\`・タブを含むパス、シンボリックリンクの fixture が要る。
-作業ツリーにファイルを作る方式は、NTFS の禁止文字・パス長・ファイル作成の速度の制約を受ける。
+次の 3 種類のテストは、`git diff` の結果を実 git リポジトリで検証する (REQ-NF-001)。
+
+- LCF: `list_changed_files` のテスト
+- MAINF: `scripts/get-changed-files.sh` の `main` の functional テスト
+- RUNF: 3 つのスクリプトを `action.yml` と同じ順で実行する functional テスト
+
+これらのテストには、次の fixture が要る。
+
+- 大量のパス (120000 / 120001 バイト、3001 件)
+- `"`・`\`・タブを含むパス
+- シンボリックリンク
+
+作業ツリーにファイルを作る方式は、次の制約を受ける。
+
+- Windows のファイルシステム (NTFS) の禁止文字
+- パス長
+- ファイル作成の速度
+
 3001 行や 120000 バイトの期待値は、テストの中に直接書くと読めない。
 
 ### Decision
 
 大量のパスと特殊文字のパスの fixture は、作業ツリーにファイルを作らずにコミットする。
 `git hash-object -w` の blob を `git update-index` で index に直接登録しなければならない (MUST)。
-これらのケースは、`GF_TMP_ROOT` の直下 (リポジトリの外) に置いた `paths.txt` と `expected.txt` を使い、実際の出力を `expected.txt` と `diff` で比べて検証する。
+これらのケースは、`GF_TMP_ROOT` の直下 (リポジトリの外) に置いた `paths.txt` と `expected.txt` を使う。
+実際の出力は、`expected.txt` と `diff` で比べて検証する。
 git をスタブにしてはならない (MUST NOT)。所要時間はテストの合否に使わず、`GCF_FIXTURE_TIMING` が設定されたときだけ記録する。
 実 git fixture は `_ca-resolve-sha` の `git-fixture.sh` を読み取り専用で使う。
 
 ### Alternatives Considered
 
-- Option A: すべてのケースで作業ツリーにファイルを作る。WSL 以外で特殊文字のパスが作れず、3001 件の作成が遅いため不採用。
+- Option A: すべてのケースで作業ツリーにファイルを作る。WSL (Windows Subsystem for Linux) 以外で特殊文字のパスが作れず、3001 件の作成が遅いため不採用。
 - Option B: git をスタブにし、`paths.txt` を `git diff` の出力として返す。git の引用表記 (AC-010 / AC-011) を検証できず、REQ-NF-001 を満たさない。
   RUNF では resolve-sha も実 git を使うため不採用。
 - Option C: 所要時間に閾値を設けてアサーションする。実行環境で大きく変わり、不安定なテストになるため不採用。
@@ -604,11 +662,11 @@ git をスタブにしてはならない (MUST NOT)。所要時間はテスト�
 
 ### Related
 
-- REQ-NF-001
-- AC-010
-- AC-011
-- AC-012
-- DD-IDX-03
+- requirements/requirements.md: REQ-NF-001
+- requirements/requirements.md: AC-010
+- requirements/requirements.md: AC-011
+- requirements/requirements.md: AC-012
+- specifications/specifications-index.md: DD-IDX-03
 
 ---
 
@@ -619,19 +677,36 @@ git をスタブにしてはならない (MUST NOT)。所要時間はテスト�
 
 ### Context
 
-RUNF は、3 つのスクリプトを action.yml と同じ順で実行するが、action.yml を読まずに env を自前で組み立てる。
-RUNF で「呼び出し元の env が使われない」ことを確かめても、テスト自身が渡した値を確かめるだけになり、action.yml の値が変わっても失敗しない。
-本 Action と内部 Action の上限・下限は 8 つある (一覧のバイト数、件数、pattern の行数とバイト数、commit-count の範囲、履歴の長さ、変更ファイルの件数の下限)。
+RUNF (3 つのスクリプトを action.yml と同じ順で実行する functional テスト) は、action.yml の値が変わっても失敗しない。
+理由は、RUNF が action.yml を読まずに env を自前で組み立てることにある。
+RUNF で「呼び出し元の env が使われない」ことを確かめても、テスト自身が渡した値を確かめるだけになる。
+
+本 Action と内部 Action の上限・下限の対象は次のとおり。
+
+- 一覧のバイト数
+- 件数
+- pattern の行数とバイト数
+- commit-count の範囲
+- 履歴の長さ
+- 変更ファイルの件数の下限
 
 ### Decision
 
-action.yml の値 (env の対応付け、step の構成、入出力) は、静的検査 (GACT) で検証しなければならない (MUST)。RUNF に、action.yml の値に依存するケースを置いてはならない (MUST NOT)。
+action.yml の値は、静的検査 (GACT: action.yml と配下を静的に検査するテスト) で検証しなければならない (MUST)。
+対象の値は次のとおり。
+
+- env の対応付け
+- step の構成
+- 入出力
+
+RUNF に、action.yml の値に依存するケースを置いてはならない (MUST NOT)。
 すべての上限・下限は、受け付ける端の値 (`=`) と、最初に拒否される値 (上限は `>`、下限は `<`) の 2 つで検証しなければならない (MUST)。
 境界と Task ID の対応は、tasks.md の「Boundary Check」の表で管理する。
 
 ### Alternatives Considered
 
-- Option A: RUNF が action.yml を読んで env を組み立てる。action.yml の変更を RUNF でも検出できるが、YAML を解釈するヘルパーが要り、RUNF の失敗の原因が分かりにくくなるため不採用。
+- Option A: RUNF が action.yml を読んで env を組み立てる。action.yml の変更を RUNF でも検出できる。
+  しかし、YAML を解釈するヘルパーが要り、RUNF の失敗の原因が分かりにくくなるため不採用。
 - Option B: 境界ごとに 3 点 (`<`・`=`・`>`) を取る。受け付ける側の内側の点 (上限なら `max-1`) は `=` と同じ経路を通るだけで、fixture の作成時間だけが増えるため不採用。
 
 ### Rationale
@@ -649,20 +724,23 @@ action.yml の値 (env の対応付け、step の構成、入出力) は、静�
 
 ### Related
 
-- DR-12
-- DR-15
-- DD-ACT-02
-- AC-012
-- AC-018
+- decision-records.md: DR-12
+- decision-records.md: DR-15
+- specifications/specifications-action.md: DD-ACT-02
+- requirements/requirements.md: AC-012
+- requirements/requirements.md: AC-018
+
+---
 
 ## Change History
 
-| Date       | Version | Description                                                                                                                                                                                    |
-| ---------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 2026-10-29 | 1.0.0   | Initial release: DR-01..DR-08 for Issue #134 requirements                                                                                                                                      |
-| 2026-10-29 | 1.1.0   | Add DR-09 (delete filter.lib.sh), DR-10 (checkout to the workspace is a caller obligation), DR-11 (pattern size and non-UTF-8 paths stay assumptions) from req harden review                   |
-| 2026-10-30 | 1.2.0   | Add DR-12 (three steps, static env check), DR-13 (byte limit also in the diff stage), DR-14 (error format and wording, pass-through of internal errors and git stderr) from spec harden review |
-| 2026-10-30 | 1.2.1   | Clarify DR-12: env compared by name only where the value source differs (overrides, INPUT_FILES, INPUT_PATTERNS)                                                                               |
-| 2026-10-30 | 1.3.0   | Add DR-15 (test fixtures registered to the index of a real git repo, compared with expected files; no git stub, timing recorded only) from impl harden review                                  |
-| 2026-10-30 | 1.4.0   | Add DR-16 (action.yml values are verified by static checks only; boundaries are tested at the accepted edge and the first rejected value) from tasks harden review                             |
-| 2026-10-30 | 2.2.0   | Unify document versions to 2.2.0 and approve                                                                                                                                                   |
+| Date       | Version | Description                                                                                                                                                                                                                                                                                                                        |
+| ---------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-10-29 | 1.0.0   | Initial release: DR-01..DR-08 for Issue #134 requirements                                                                                                                                                                                                                                                                          |
+| 2026-10-29 | 1.1.0   | Add DR-09 (delete filter.lib.sh), DR-10 (checkout to the workspace is a caller obligation), DR-11 (pattern size and non-UTF-8 paths stay assumptions) from req harden review                                                                                                                                                       |
+| 2026-10-30 | 1.2.0   | Add DR-12 (three steps, static env check), DR-13 (byte limit also in the diff stage), DR-14 (error format and wording, pass-through of internal errors and git stderr) from spec harden review                                                                                                                                     |
+| 2026-10-30 | 1.2.1   | Clarify DR-12: env compared by name only where the value source differs (overrides, INPUT_FILES, INPUT_PATTERNS)                                                                                                                                                                                                                   |
+| 2026-10-30 | 1.3.0   | Add DR-15 (test fixtures registered to the index of a real git repo, compared with expected files; no git stub, timing recorded only) from impl harden review                                                                                                                                                                      |
+| 2026-10-30 | 1.4.0   | Add DR-16 (action.yml values are verified by static checks only; boundaries are tested at the accepted edge and the first rejected value) from tasks harden review                                                                                                                                                                 |
+| 2026-10-30 | 2.2.0   | Unify document versions to 2.2.0 and approve                                                                                                                                                                                                                                                                                       |
+| 2026-11-09 | 2.2.1   | Refine DR-01, DR-02, DR-03, DR-04, DR-05, DR-06, DR-07, DR-08, DR-09, DR-10, DR-11, DR-12, DR-13, DR-14, DR-15, DR-16: clarify wording and supplement DR-07 basis of the 120000-byte limit, DR-09 scope of the lost test IDs, DR-14 scope of the error strings shared with _ca-filter-files; follow requirements v2.3.0 (based-on) |
