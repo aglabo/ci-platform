@@ -90,18 +90,32 @@ BREAKING CHANGE: required-tools input が必須になりました。
 
 1. リポジトリ設定で次の 2 点が有効になっていることを確認する
    - Settings → General → Releases の Immutable releases
-   - `v*` タグの更新 (force-push) と削除を禁止する Tag ruleset
+   - Tag ruleset `protect-version-tags` が `active` で、`v*.*.*` (と `r*.*.*`) タグの更新・force-push・削除を禁止している
+
+   ```bash
+   # "enabled": true であることを確認する
+   gh api repos/aglabo/ci-platform/immutable-releases
+   # protect-version-tags の enforcement が "active" であることを確認する
+   gh api repos/aglabo/ci-platform/rulesets --jq '.[] | select(.name == "protect-version-tags") | {name, enforcement}'
+   ```
+
 2. `bash ./runners/run-shellspec.sh all` でテストを実行し、全テストが PASS することを確認する
 3. CI と同じ検証として、ローカルで `jactionlint`・`ghalint`・`betterleaks` を実行して問題がないことを確認する
 4. `CHANGELOG.md` に変更内容・影響範囲を記載する
 5. リリースノート `Release-Note.md` を今回のバージョンの内容に更新する
 6. `package.json` の `version` をこれから付けるタグに合わせて更新する
 7. `git tag v0.X.Y` でバージョンタグを作成し、`git push origin v0.X.Y` でプッシュする
-8. 次のコマンドで GitHub Release を公開する
+8. 次のコマンドで GitHub Release を公開する。
+   `Release-Note.md` 先頭の YAML フロントマターはリリース本文で区切り線や見出しとして表示されるため、除去した本文を一時ファイルに書き出して渡す
 
    ```bash
-   gh release create v0.X.Y --verify-tag --title v0.X.Y --notes-file Release-Note.md
+   awk 'NR==1 && /^---$/ {fm=1; next} fm && /^---$/ {fm=0; next} !fm' Release-Note.md \
+     | sed '/./,$!d' > release-notes.tmp.md
+   gh release create v0.X.Y --verify-tag --title v0.X.Y --notes-file release-notes.tmp.md
+   rm release-notes.tmp.md
    ```
+
+   `gh release create` の前に、一時ファイルの先頭が本文の見出しになっていることを確認する
 
 9. `gh release view v0.X.Y --json isImmutable` の結果が `"isImmutable": true` であることを確認する
 10. ワークフロー内の `aglabo/ci-platform` 参照を新しいタグに更新し、`gh actions-lock` でロックファイルを更新して、別コミットとして記録する
