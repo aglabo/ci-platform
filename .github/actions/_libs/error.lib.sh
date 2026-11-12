@@ -15,11 +15,17 @@
 [ -n "${ERROR_LIB_LOADED:-}" ] && return 0
 ERROR_LIB_LOADED=1
 
+# The constants are read by the scripts that source this library, not by this
+# library, so SC2034 (appears unused) is disabled for each of them.
+
 # gha_error <target> for errors about the step output file ($GITHUB_OUTPUT)
+# shellcheck disable=SC2034
 readonly GHA_TARGET_GITHUB_OUTPUT=GITHUB_OUTPUT
 # gha_error <problem>: the output file path is not a writable regular file
+# shellcheck disable=SC2034
 readonly GHA_MSG_NOT_WRITABLE="is not a writable file"
 # gha_error <problem>: writing to the output file failed
+# shellcheck disable=SC2034
 readonly GHA_MSG_WRITE_FAILED="failed to write"
 
 ##

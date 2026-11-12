@@ -7,13 +7,13 @@
     "editor.defaultFormatter": "dprint.dprint"
   },
   "markdownlint.configFile": "configs/.markdownlint.yaml",
-
   // ShellCheck
   // Use the same rcfile as runners/run-shellcheck.sh; the relative path is
   // resolved from the workspace root.
   "shellcheck.useWorkspaceRootAsCwd": true,
-  "shellcheck.customArgs": ["--rcfile=configs/shellcheckrc"],
-
+  "shellcheck.customArgs": [
+    "--rcfile=configs/shellcheckrc"
+  ],
   // YAML
   // Composite action files must not be validated against the workflow schema,
   // which requires `on`/`jobs` and rejects `inputs`/`runs`.
@@ -30,5 +30,9 @@
       ".github/workflows/*.yml",
       ".github/workflows/*.yaml"
     ]
+  },
+  // trusted Domain for JSON
+  "json.schemaDownload.trustedDomains": {
+    "https://raw.githubusercontent.com/streetsidesoftware/cspell/main/packages/cspell-types/cspell.schema.json": true
   }
 }
