@@ -1,5 +1,5 @@
-# src: ./configs/cliff.toml
-# @(#): git-cliff configs: for ci-platform
+# src: configs/cliff.toml
+# @(#) : git-cliff configuration
 #
 # Copyright (c) 2026- atsushifx <https://github.com/atsushifx>
 #
@@ -82,15 +82,15 @@ protect_breaking_commits = false
 commit_parsers = [
   { message = "^Initial", skip = true },
 
-  # docs type (all of: docs: / docs(scope): / docs/config:)
+  # docs type (all of docs: / docs(scope): / docs/config:)
   { message = "^docs", group = "<!-- 02 --> Documentation" },
-  # Docs-related scopes are grouped into Documentation regardless of type
+  # Group documentation-related scopes regardless of commit type
   { message = "^\\w+\\((docs|website|user-guide|developer-guide|readme|changelog|license)[/)]", group = "<!-- 02 --> Documentation" },
   # Dependency updates for the documentation site
   { message = "(?i)^deps.*(docs|website|docusaurus)", group = "<!-- 02 --> Documentation" },
 
   { message = "dependabot", skip = true },
-  # True merge commits (not squash) carry no changes of their own
+  # A true merge commit (not a squash) carries no changes of its own
   { message = "^Merge branch", skip = true },
 
   { body = ".*security", group = "<!-- 10 --> Security" },
