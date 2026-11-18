@@ -35,6 +35,11 @@ on:
         required: false
         default: "v0.3.0"
         type: string
+      pnpm-version:
+        description: "pnpm version passed to ca-setup-repo (empty: no version specified, resolved from packageManager)"
+        required: false
+        default: ""
+        type: string
       textlint-config:
         description: "Path to the textlint configuration file"
         required: false
@@ -109,6 +114,7 @@ jobs:
           repo: aglabo/agla-doc-tools
           path: ./.tools/agla-doc-tools
           ref: ${{ inputs.doc-tools-version }}
+          pnpm-version: ${{ inputs.pnpm-version }}
 
       - name: Checkout textlint config
         id: config-checkout
@@ -179,6 +185,7 @@ jobs:
           repo: aglabo/agla-doc-tools
           path: ./.tools/agla-doc-tools
           ref: ${{ inputs.doc-tools-version }}
+          pnpm-version: ${{ inputs.pnpm-version }}
 
       - name: Checkout markdownlint config
         id: config-checkout

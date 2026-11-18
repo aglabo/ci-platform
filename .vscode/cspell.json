@@ -1,11 +1,11 @@
 // src: .vscode/cspell.json
 // @(#) : cspell config for user-centric settings
 //
-//
-// Copyright (c) 2025- atsushifx <https://github.com/atsushifx>
+// Copyright (c) 2026- atsushifx <https://github.com/atsushifx>
 //
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
+
 {
   "$schema": "https://raw.githubusercontent.com/streetsidesoftware/cspell/main/packages/cspell-types/cspell.schema.json",
   "version": "0.2",

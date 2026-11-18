@@ -1,6 +1,4 @@
 {
-  "hooks": {
-  },
   "permissions": {
     "allow": [
       "Bash(git status:*)",
@@ -33,7 +31,7 @@
       "Bash(git checkout:*)",
       "Bash(git switch:*)",
       "Bash(git stash:*)"
-    ]
-  },
-  "skipAutoPermissionPrompt": false
+    ],
+    "skipAutoPermissionPrompt": false
+  }
 }

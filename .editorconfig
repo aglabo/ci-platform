@@ -1,5 +1,5 @@
 # src: .editorconfig
-# @(#) : editorconfig for ci-platform
+# @(#) : editorconfig, shfmt settings: CI Platfrom
 #
 # Copyright (c) 2026- atsushifx <https://github.com/atsushifx>
 #
@@ -53,7 +53,7 @@ switch_case_indent = true
 space_redirects    = true
 keep_padding       = true
 # --func-next-line
-function_next_line = true
+function_next_line = false
 # --minify
 minify             = false
 

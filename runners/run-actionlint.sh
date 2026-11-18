@@ -42,7 +42,7 @@ main() {
   jactionlint --config-file "$configFile" "$@"
 }
 
-if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+if [[ ${BASH_SOURCE[0]} == "${0}"   ]]; then
   main "$@"
   exit $?
 fi

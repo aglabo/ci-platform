@@ -1,4 +1,4 @@
-# src: ./configs/betterleaks.toml
+# src: configs/betterleaks.toml
 # @(#) : betterleaks configuration for secret detection
 #
 # Copyright (c) 2026- atsushifx <https://github.com/atsushifx>
@@ -9,4 +9,16 @@
 title = "BetterLeaks config"
 
 minVersion = "v8.25.0" #  gitleaks min version
-betterleaksMinVersion = "v1.10.0"
+betterleaksMinVersion = "v1.0.0"
+
+# use betterleaks built-in rules (a config without rules detects nothing)
+[extend]
+useDefault = true
+
+# generated site output (gitignored) produces generic-api-key false positives
+[[allowlists]]
+description = "Generated site output (not tracked in git)"
+paths = [
+  '''aglabo\.github\.io/build/''',
+  '''aglabo\.github\.io/\.docusaurus/''',
+]

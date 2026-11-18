@@ -1,15 +1,20 @@
 # src: .gitignore
-# @(#) : main ignore settings (allowlist): ci-platform
+# @(#) : main ignore settings: for CI Platform
 #
-# Copyright (c) 2026- atsushifx <http://github.com/atsushifx>
+# Copyright (c) 2026- atsushifx <https://github.com/atsushifx>
 #
 # This software is released under the MIT License.
 # https://opensource.org/licenses/MIT
 
-
 # default: ignore all files
 *
 
+## Repository Specific
+# Allow Templates (for project-starter-template repo)
+!/templates/
+!/templates/**
+
+## General
 # Allow README, LICENSE, CONTRIBUTING
 !**/README*
 !**/LICENSE*
@@ -18,6 +23,10 @@
 # Allow .github directories
 !.github/
 !.github/**
+
+# Allow profile (organization README)
+!/profile/
+!/profile/**
 
 # Allow other ignore
 !*ignore
@@ -30,39 +39,36 @@
 
 
 ## Root configs
-!/package.json
-!/pnpm-lock.yaml
-!/renovate.json
-!/lefthook.yml
-!/dprint.jsonc
-!/.shellspec
-!/.mcp.json
-!/CHANGELOG.md
-!/Release-Note.md
-
+!**/package.json
+!**/pnpm-lock.yaml
+!**/renovate.json
+!**/lefthook.yml
+!**/dprint.jsonc
+!**/.shellspec
+!**/.mcp.json
+!**/CHANGELOG.*
+!**/Release-Note.*
 
 ## Project directories
-# Allow each subdirectory first, then allow files by extension
-# (files cannot be re-included while their parent directory is still ignored)
-# Brace expansion {a,b} does not work in .gitignore, so list one extension per line
+# config files
+!configs/
+!configs/**
+!configs/**/*.json
+!configs/**/*.yml
+!configs/**/*.yaml
+!configs/**/*.toml
+!configs/**/*rc
+!configs/**/*.js
+!configs/**/*.mjs
 
-# Scripts & Runners
-!/scripts/
-!/scripts/**/
+# runners & scripts
+!/runners
+!/runners/**
+!/runners/**/*.sh
+!/scripts
+!/scripts/**
 !/scripts/**/*.sh
 !/scripts/**/*.ts
-!/runners/
-!/runners/**/
-!/runners/**/*.sh
-
-# Configs
-!/configs/
-!/configs/**/
-!/configs/**/*.json
-!/configs/**/*.yml
-!/configs/**/*.yaml
-!/configs/**/*.toml
-!/configs/**/*.sh
 
 # Documents
 !/docs/
@@ -72,14 +78,28 @@
 
 # Website (allowlist details: aglabo.github.io/.gitignore)
 !/aglabo.github.io/
+!/aglabo.github.io/**/
+!/aglabo.github.io/**/*.md
+!/aglabo.github.io/**/*.mdx
+!/aglabo.github.io/**/*.json
+!/aglabo.github.io/**/*.ts
 
 
 ## AI Agents
+# General
+!**/AGENT.md
+
 # claude code
 !**/CLAUDE*.md
+
 # allowlist details: .claude/.gitignore
 !.claude/
-
+!.claude/agents/
+!.claude/agents/**
+!.claude/rules/
+!.claude/rules/**
+!.claude/commands/
+!.claude/commands/**
 
 ##  Editor
 #   VSCode
@@ -97,25 +117,11 @@
 # allow all gitignore
 !**/.gitignore
 
-### Repository Specific
-# Root
 
-# Ignore deckrd docs, works
-
-
-# Websites
-!aglabo.github.io/
-!aglabo.github.io/**
-!aglabo.github.io/**/*.md
-!aglabo.github.io/**/*.json
-!aglabo.github.io/**/*.ts
-
-
-
-
-
-## Deny rules (keep last)
-# default deny rules
+# ------------------------------------------------------------ ##
+##  Re-exclude: secrets and generated files                      ##
+##  Must stay last: these rules undo the broad allow rules above ##
+## ------------------------------------------------------------ ##
 
 #   OS specific files
 .DS_Store
@@ -136,8 +142,7 @@ thumbs.db
 **/*~
 **/*.tmp
 **/*.swp
-**/*.lock
-
+# **/*.lock # track *.lock
 
 #   session files
 **/*session.json
@@ -145,15 +150,22 @@ thumbs.db
 
 #   .env files
 **/.env*
+!.env.example
+
+
+#   API keys / credentials
+**/*.key
+**/*.pem
+**/*.p12
+**/*.pfx
+**/*apikey*
+**/*api-key*
+**/*api_key*
 
 #   temporary directories
-**/temp/
-**/tmp/
+**/temp
+**/tmp
 
 #   node
 **/node_modules/
 **/.pnpm-store/
-
-
-# Allow workflow lockfiles
-!.github/workflows/*.lock

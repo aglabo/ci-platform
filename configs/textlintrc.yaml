@@ -1,4 +1,4 @@
-# src: ./configs/textlintrc.yaml
+# src: configs/textlintrc.yaml
 # @(#) : textlint configuration for Japanese text linting
 #
 # Copyright (c) 2026- atsushifx <https://github.com/atsushifx>
@@ -6,9 +6,8 @@
 # This software is released under the MIT License.
 # https://opensource.org/licenses/MIT
 
-plugins: {
-  mdx: true,
-}
+plugins:
+  mdx: true
 filters:
   comments: true
   allowlist:
