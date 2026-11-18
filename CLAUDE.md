@@ -12,8 +12,9 @@ GitHub Actions と Git Hooks を統合した品質管理テンプレートを提
 
 - ローカル品質管理: lefthook (betterleaks/secretlint/commitlint/AI コミットメッセージ)
 - CI/CD 基盤: GitHub Actions 再利用可能ワークフロー (jactionlint/ghalint/betterleaks)
-- ドキュメント品質: textlint/markdownlint/dprint
+- ドキュメント品質: textlint/markdownlint/dprint/cspell (CI の `ru-lint-documents` で実行)
 - テストフレームワーク: ShellSpec (Bash)
+- ドキュメントサイト: Docusaurus (`aglabo.github.io/`)
 
 ## AI協働ルール
 
@@ -42,24 +43,47 @@ GitHub Actions と Git Hooks を統合した品質管理テンプレートを提
 
 **保護領域** (変更時は理由明記):
 
-`configs/betterleaks.toml`, `configs/secretlint.config.yaml`, `lefthook.yml`, `.github/workflows/*.yml`
+`lefthook.yml`, `.github/workflows/*.yml`, `runners/run-*.sh`
+
+- betterleaks/jactionlint の設定はグローバル設定を優先する
+- グローバル設定がなければ `configs/` を使う (`runners/run-*.sh`)
+- 現在 `configs/` にあるのは `betterleaks.toml` のみ (ghalint/secretlint/jactionlint の設定はない)
 
 ## 技術スタック
 
 **コア**: GitHub Actions (再利用可能ワークフロー), lefthook (Git Hook 統合), ShellSpec (Bash テスト)
 
-**品質ツール**: jactionlint, ghalint, betterleaks, secretlint, textlint, markdownlint, dprint, commitlint
+**品質ツール**:
+
+- CI/セキュリティ: jactionlint, ghalint, betterleaks, secretlint
+- ドキュメント: textlint, markdownlint, dprint, cspell, commitlint
+- シェル: shellcheck, shfmt
+
+**環境**: Node >=24, pnpm >=12
 
 **ディレクトリ構成**:
 
 ```bash
 .github/workflows/      # GitHub Actions ワークフロー (ci-*: CI 本体 / ru-*: 再利用可能ワークフロー / _tests_*: Action のテスト)
 .github/actions/        # Composite Actions (ca-*: 公開 / _ca-*: 内部専用 / _libs: 共有ライブラリ)
-configs/                # 品質ツール設定ファイル
+configs/                # 品質ツール設定 (betterleaks/textlint/commitlint/shellcheckrc/cliff)
 scripts/                # 開発スクリプト (setup-dev-env/prepare-commit-msg)
-runners/                # 品質ツール実行ラッパー (run-shellspec/run-shellcheck/run-shfmt ほか)
-.serena/memories/       # Serena MCP 技術メモリー
+runners/                # 品質ツール実行ラッパー (run-*.sh)。exec/: ShellSpec 実行本体、libs/: 共通ライブラリ
+docs/.deckrd/           # Deckrd 設計ドキュメント (composite-action/reusable-workflows) と rules/
+aglabo.github.io/       # Docusaurus ドキュメントサイト
+.claude/                # agents/ と rules/ (claude-rules, deckrd-rules)
+.serena/memories/       # Serena MCP 技術メモリー (現在は空)
 ```
+
+**ワークフロー**:
+
+- CI 本体: `ci-docs-qa`, `ci-publish-docs`, `ci-scan-secrets`, `ci-workflows-qa`
+- 再利用可能: `ru-lint-documents`, `ru-qa-actionlint`, `ru-qa-actions-lock`, `ru-qa-ghalint`, `ru-scan-betterleaks`
+
+**Composite Actions**:
+
+- 公開: `ca-get-changed-files`, `ca-setup-repo`, `ca-setup-tool`, `ca-validate-environment`
+- 内部専用: `_ca-filter-files`, `_ca-resolve-sha`
 
 ## Claude Code から ShellSpec を実行する方法
 
@@ -109,18 +133,30 @@ bash ./runners/run-shellspec.sh unit      # 種別指定 (all/unit/functional/in
 bash ./runners/run-shellspec.sh .github/actions/_libs/__tests__/unit/output.unit.spec.sh  # spec ファイル指定
 pnpm test:sh unit                         # pnpm 経由 (種別を引数で渡す)
 pnpm test:sh:all                          # pnpm 経由 (全テスト)
+pnpm test:sh:unit                         # 種別ごと (unit/functional/integration/e2e。integration は --integration 付き)
+
+# シェルスクリプト検証
+pnpm run lint:sh <files...>               # shellcheck
+pnpm run check:sh <files...>              # shfmt (差分一覧)
+pnpm run format:sh <files...>             # shfmt (整形)
 
 # ドキュメント検証
 pnpm run lint:text <files...>             # textlint 検証 (対象ファイル必須)
 pnpm run lint:text -- --fix <files...>    # 自動修正
 pnpm run lint:markdown <files...>         # markdownlint 検証 (glob 指定可)
-dprint fmt                                # フォーマット
+pnpm run lint:spells <files...>           # cspell
+pnpm run check:dprint                     # dprint 差分確認 (check:dprint:diff は詳細表示)
+pnpm run format:dprint                    # dprint フォーマット
 
 # CI 検証 (ローカル)
-pnpm run lint:gha                         # jactionlint (workflows) + ghalint run / ghalint act
-pnpm run lint:gha:actions .github/actions/<action>/action.yml  # jactionlint (引数なしは workflows のみ)
-pnpm run lint:gha:act .github/actions/<action>/action.yml      # ghalint act (引数なしは全 action)
-pnpm run scan:secrets:history             # betterleaks で git 履歴全体を走査
+pnpm run lint:gha                         # lint:gha:actions + lint:gha:workflows を並列実行
+pnpm run lint:gha:actions <files...>      # jactionlint (action.yml / workflow を引数で指定)
+pnpm run lint:gha:workflows               # ghalint run + ghalint act
+pnpm run scan:secrets                     # betterleaks (runners/run-betterleaks.sh) + secretlint を並列実行
+
+# ドキュメントサイト
+pnpm run site:dev                         # Docusaurus 開発サーバー
+pnpm run site:build                       # Docusaurus ビルド
 
 # トラブルシューティング
 lefthook uninstall && lefthook install    # lefthook 再設定
@@ -153,9 +189,9 @@ lefthook uninstall && lefthook install    # lefthook 再設定
 ## ドキュメント参照
 
 - `README.md`/`README.ja.md` - プロジェクト概要・セットアップガイド
-- `.serena/memories/` - Serena MCP 技術メモリー (構造・テスト・スクリプト・設定)
+- `docs/.deckrd/` - Deckrd 設計ドキュメント・ルール (索引: `.claude/rules/deckrd-rules/deckrd-rules-index.md`)
 - `configs/*` - 品質ツール設定ファイル
 - `lefthook.yml` - Git Hook 統合設定
 - `.claude/agents/*.md` - AI エージェント設定
 
-**情報探索優先順位**: CLAUDE.md → `.serena/memories/` → `README.md` → `configs/`
+**情報探索優先順位**: CLAUDE.md → `README.md` → `docs/.deckrd/` → `configs/` (`.serena/memories/` は現在空)
