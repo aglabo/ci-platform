@@ -15,13 +15,13 @@ inputs:
     description: "Git ref (tag, branch, or SHA)"
     required: true
   node-version:
-    description: "Node.js version"
+    description: "Node.js version (empty: no version specified)"
     required: false
-    default: "24"
+    default: ""
   pnpm-version:
-    description: "pnpm version"
+    description: "pnpm version (empty: no version specified)"
     required: false
-    default: "12.15.0"
+    default: ""
 
 runs:
   using: composite
