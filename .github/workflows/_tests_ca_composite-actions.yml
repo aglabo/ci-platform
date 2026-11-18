@@ -488,6 +488,7 @@ jobs:
       - setup-foundation
       - test-setup-tool
       - test-setup-repo
+      - test-setup-repo-explicit-versions
       - test-get-changed-files
       - test-resolve-sha
     permissions:
@@ -498,6 +499,7 @@ jobs:
           RESULT_FOUNDATION: ${{ needs.setup-foundation.result }}
           RESULT_SETUP_TOOL: ${{ needs.test-setup-tool.result }}
           RESULT_SETUP_REPO: ${{ needs.test-setup-repo.result }}
+          RESULT_SETUP_REPO_EXPLICIT: ${{ needs.test-setup-repo-explicit-versions.result }}
           RESULT_GET_CHANGED_FILES: ${{ needs.test-get-changed-files.result }}
           RESULT_RESOLVE_SHA: ${{ needs.test-resolve-sha.result }}
         run: |
@@ -515,6 +517,7 @@ jobs:
             echo "| setup-foundation        | $(_status "${RESULT_FOUNDATION}") |"
             echo "| test-setup-tool         | $(_status "${RESULT_SETUP_TOOL}") |"
             echo "| test-setup-repo         | $(_status "${RESULT_SETUP_REPO}") |"
+            echo "| test-setup-repo-explicit-versions | $(_status "${RESULT_SETUP_REPO_EXPLICIT}") |"
             echo "| test-get-changed-files  | $(_status "${RESULT_GET_CHANGED_FILES}") |"
             echo "| test-resolve-sha        | $(_status "${RESULT_RESOLVE_SHA}") |"
           } >> "${GITHUB_STEP_SUMMARY}"
@@ -522,6 +525,7 @@ jobs:
           [ "${RESULT_FOUNDATION}" = "success" ] || _failed=1
           [ "${RESULT_SETUP_TOOL}" = "success" ] || _failed=1
           [ "${RESULT_SETUP_REPO}" = "success" ] || _failed=1
+          [ "${RESULT_SETUP_REPO_EXPLICIT}" = "success" ] || _failed=1
           [ "${RESULT_GET_CHANGED_FILES}" = "success" ] || _failed=1
           [ "${RESULT_RESOLVE_SHA}" = "success" ] || _failed=1
 
