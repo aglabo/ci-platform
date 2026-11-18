@@ -1,8 +1,8 @@
 ---
 title: "Design Specification: setup-tool-repo Composite Action"
-based-on: requirements.md v1.0.5
+based-on: requirements.md v1.0.6
 status: Draft
-version: 1.1.0
+version: 1.2.0
 created: "2026-06-18"
 ---
 
@@ -168,15 +168,15 @@ GitHub Actions ワークフローが Node.js ベースのツール管理リポ�
 
 ### 2.5 Behavioral Design Decisions
 
-| ID    | Decision                                                        | Rationale                                                                                                                                                                          | Affected Rules | Status |
-| ----- | --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- | ------ |
-| DD-01 | `ref` は必須パラメータとする                                    | サプライチェーンリスク軽減（DR-05）                                                                                                                                                | R-003          | Active |
-| DD-02 | パッケージマネージャーは pnpm 固定                              | ツールリポジトリ設計の明確化（DR-02）                                                                                                                                              | R-007, R-008   | Active |
-| DD-03 | Node.js デフォルト `"24"`、pnpm デフォルト `"12.15.0"`          | 本リポジトリの `packageManager` と一致させる。`pnpm/action-setup` は呼び出し元の `package.json` の `packageManager` も読むため、異なる版を使う呼び出し元は `pnpm-version` で揃える | R-005, R-006   | Active |
-| DD-04 | PATH 追加は `bin/` のみ（`node_modules/.bin` は追加しない）     | `bin/` が内部解決するため二重追加は不要（DR-04）                                                                                                                                   | R-013          | Active |
-| DD-05 | `path` はセグメント単位で `..` を検出（部分文字列マッチは不可） | パストラバーサル防止・誤検知回避                                                                                                                                                   | R-002          | Active |
-| DD-06 | `path` は `./` 始まりの相対パスのみ（絶対パス不可）             | actions/checkout との整合性確保                                                                                                                                                    | R-002          | Active |
-| DD-07 | Linux/GitHub-hosted runner の確認は validate-env ユニットで実施 | 既存 validate-environment アクションと責務を統一                                                                                                                                   | R-010          | Active |
+| ID    | Decision                                                          | Rationale                                                                                                                                                                                                      | Affected Rules | Status |
+| ----- | ----------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- | ------ |
+| DD-01 | `ref` は必須パラメータとする                                      | サプライチェーンリスク軽減（DR-05）                                                                                                                                                                            | R-003          | Active |
+| DD-02 | パッケージマネージャーは pnpm 固定                                | ツールリポジトリ設計の明確化（DR-02）                                                                                                                                                                          | R-007, R-008   | Active |
+| DD-03 | Node.js・pnpm のデフォルトバージョンを持たない（空文字 = 未指定） | 特定バージョンを固定せず、呼び出し元の解決に委ねる。`pnpm/action-setup` は `pnpm-version` が空のとき呼び出し元の `package.json` の `packageManager` を読む。バージョンを固定したい呼び出し元は明示的に指定する | R-005, R-006   | Active |
+| DD-04 | PATH 追加は `bin/` のみ（`node_modules/.bin` は追加しない）       | `bin/` が内部解決するため二重追加は不要（DR-04）                                                                                                                                                               | R-013          | Active |
+| DD-05 | `path` はセグメント単位で `..` を検出（部分文字列マッチは不可）   | パストラバーサル防止・誤検知回避                                                                                                                                                                               | R-002          | Active |
+| DD-06 | `path` は `./` 始まりの相対パスのみ（絶対パス不可）               | actions/checkout との整合性確保                                                                                                                                                                                | R-002          | Active |
+| DD-07 | Linux/GitHub-hosted runner の確認は validate-env ユニットで実施   | 既存 validate-environment アクションと責務を統一                                                                                                                                                               | R-010          | Active |
 
 ### 2.6 Related Decision Records
 
@@ -189,7 +189,7 @@ GitHub Actions ワークフローが Node.js ベースのツール管理リポ�
 ### 2.7 DD to DR Promotion Criteria
 
 DD-01〜DD-05 は本仕様ローカルな決定であり、現状 DR 昇格の必要はない。
-ただし DD-03（バージョンデフォルト値）は将来バージョン変更時に影響範囲が広いため、
+ただし DD-03（バージョン未指定の扱い）は変更時に影響範囲が広いため、
 プロジェクト横断的な変更が生じた場合は DR 昇格を検討する。
 
 ---
@@ -198,13 +198,13 @@ DD-01〜DD-05 は本仕様ローカルな決定であり、現状 DR 昇格の�
 
 ### 3.1 Input Domain
 
-| Parameter      | Required | Format                                                            | Default     |
-| -------------- | -------- | ----------------------------------------------------------------- | ----------- |
-| `repo`         | Yes      | `<owner>/<repo>` 形式（英数字・ハイフン・アンダースコア・ドット） | —           |
-| `path`         | Yes      | `./` で始まる相対パス。`..` セグメントを含まない                  | —           |
-| `ref`          | Yes      | ブランチ名・タグ名・コミット SHA（非空文字列）                    | —           |
-| `node-version` | No       | 任意の Node.js バージョン文字列                                   | `"24"`      |
-| `pnpm-version` | No       | 任意の pnpm バージョン文字列                                      | `"12.15.0"` |
+| Parameter      | Required | Format                                                            | Default |
+| -------------- | -------- | ----------------------------------------------------------------- | ------- |
+| `repo`         | Yes      | `<owner>/<repo>` 形式（英数字・ハイフン・アンダースコア・ドット） | —       |
+| `path`         | Yes      | `./` で始まる相対パス。`..` セグメントを含まない                  | —       |
+| `ref`          | Yes      | ブランチ名・タグ名・コミット SHA（非空文字列）                    | —       |
+| `node-version` | No       | 任意の Node.js バージョン文字列（空文字 = 未指定）                | `""`    |
+| `pnpm-version` | No       | 任意の pnpm バージョン文字列（空文字 = 未指定）                   | `""`    |
 
 #### repo フォーマット規則
 
@@ -261,14 +261,14 @@ DD-01〜DD-05 は本仕様ローカルな決定であり、現状 DR 昇格の�
 
 ### Unit 3: setup-environment
 
-| Rule ID | Step | Condition                   | Outcome                       |
-| ------- | ---: | --------------------------- | ----------------------------- |
-| R-009   |    1 | `node-version` 未指定       | デフォルト `"24"` を使用      |
-| R-010   |    2 | `pnpm-version` 未指定       | デフォルト `"12.15.0"` を使用 |
-| R-011   |    3 | `actions/setup-node` が成功 | 次ステップへ進む              |
-| R-011E  |    3 | `actions/setup-node` が失敗 | エラー伝播 → exit 非ゼロ      |
-| R-012   |    4 | `pnpm/action-setup` が成功  | Unit 4 へ進む                 |
-| R-012E  |    4 | `pnpm/action-setup` が失敗  | エラー伝播 → exit 非ゼロ      |
+| Rule ID | Step | Condition                   | Outcome                                       |
+| ------- | ---: | --------------------------- | --------------------------------------------- |
+| R-009   |    1 | `node-version` 未指定       | 空文字を渡し、バージョンを明示しない          |
+| R-010   |    2 | `pnpm-version` 未指定       | 空文字を渡し、`packageManager` の解決に委ねる |
+| R-011   |    3 | `actions/setup-node` が成功 | 次ステップへ進む                              |
+| R-011E  |    3 | `actions/setup-node` が失敗 | エラー伝播 → exit 非ゼロ                      |
+| R-012   |    4 | `pnpm/action-setup` が成功  | Unit 4 へ進む                                 |
+| R-012E  |    4 | `pnpm/action-setup` が失敗  | エラー伝播 → exit 非ゼロ                      |
 
 ### Unit 4: checkout-repo
 
@@ -392,3 +392,4 @@ checkout 完了後、ランナー環境とリポジトリ構造を検証する�
 | 2026-06-18 | 1.0.1   | Codex review 反映: validate-env ユニット追加、path を相対パス限定、.. セグメント判定明確化 |
 | 2026-06-18 | 1.0.2   | check-existing-repo ユニット追加、.repo ファイル作成を add-path の最終ステップに追加       |
 | 2026-10-27 | 1.1.0   | DD-03 変更: 既定値を Node.js `"24"`・pnpm `"12.15.0"` に更新 (packageManager と一致)       |
+| 2026-11-18 | 1.2.0   | DD-03 変更: Node.js・pnpm の既定値を廃止 (空文字 = 未指定)。R-009/R-010・入力表を更新      |
