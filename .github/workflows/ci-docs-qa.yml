@@ -68,3 +68,5 @@ jobs:
     uses: ./.github/workflows/ru-lint-documents.yml
     with:
       commit-count: ${{ needs.resolve-inputs.outputs.commit-count }}
+      # TODO: ca-setup-repo@v0.6.1 の default (12.15.0) が packageManager と衝突するための暫定指定。新タグ参照後に削除
+      pnpm-version: "12.21.0"
