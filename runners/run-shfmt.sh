@@ -47,8 +47,9 @@ main() {
   fi
   targets=("${targets[@]//\\//}")
   case "$mode" in
-    list) (cd "$PROJECT_ROOT" && shfmt -l -- "${targets[@]}") ;;
-    format) (cd "$PROJECT_ROOT" && shfmt -w -- "${targets[@]}") ;;
+    # --apply-ignore: apply the .editorconfig ignore rules (e.g. *.spec.sh) to explicitly given files too
+    list) (cd "$PROJECT_ROOT" && shfmt -l --apply-ignore -- "${targets[@]}") ;;
+    format) (cd "$PROJECT_ROOT" && shfmt -w --apply-ignore -- "${targets[@]}") ;;
   esac
 }
 if [[ ${BASH_SOURCE[0]} == "$0" ]]; then

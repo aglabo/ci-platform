@@ -76,6 +76,14 @@
 !/docs/**/*.md
 !/docs/**/*.mdx
 
+# Website (allowlist details: aglabo.github.io/.gitignore)
+!/aglabo.github.io/
+!/aglabo.github.io/**/
+!/aglabo.github.io/**/*.md
+!/aglabo.github.io/**/*.mdx
+!/aglabo.github.io/**/*.json
+!/aglabo.github.io/**/*.ts
+
 
 ## AI Agents
 # General
