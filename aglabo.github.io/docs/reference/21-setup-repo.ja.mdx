@@ -37,8 +37,8 @@ tags:
 | `repo`         | string | はい   | —          | GitHub リポジトリ (`owner/repo` 形式)    |
 | `path`         | string | はい   | —          | ローカルチェックアウトパス (`./` 始まり) |
 | `ref`          | string | はい   | —          | Git ref (タグ・ブランチ・SHA)            |
-| `node-version` | string | いいえ | `24`       | Node.js バージョン                       |
-| `pnpm-version` | string | いいえ | `12.15.0`  | pnpm バージョン                          |
+| `node-version` | string | いいえ | `""`       | Node.js バージョン (空: 未指定)          |
+| `pnpm-version` | string | いいえ | `""`       | pnpm バージョン (空: 未指定)             |
 
 ### `repo`
 
@@ -79,7 +79,7 @@ with:
 
 ### `node-version` / `pnpm-version`
 
-`pnpm install` で使用する Node.js と pnpm のバージョンを指定します。省略時はそれぞれ `24` / `12.15.0` が使われます。
+`pnpm install` で使用する Node.js と pnpm のバージョンを指定します。既定値はなく、省略するとバージョンを指定しません。
 
 ```yaml
 with:
@@ -89,8 +89,9 @@ with:
 
 補足:
 
-- `pnpm/action-setup` は呼び出し元の `package.json` の `packageManager` も読みます。
-  呼び出し元が別の pnpm バージョンを使う場合は、`pnpm-version` をそのバージョンに合わせてください。
+- `pnpm-version` を省略すると、`pnpm/action-setup` は呼び出し元の `package.json` の `packageManager` から pnpm のバージョンを決めます。
+  `packageManager` が未設定なら、`pnpm-version` を明示してください。
+- バージョンを固定したい場合は、明示的に指定してください。
 
 ---
 

@@ -2,9 +2,9 @@
 title: "Requirements: setup-tool-repo Composite Action"
 module: "composite-action/setup-tool-repo"
 status: Draft
-version: 1.0.5
+version: 1.0.6
 created: "2026-06-18"
-updated: "2026-06-18"
+updated: "2026-11-18"
 ---
 
 <!-- textlint-disable
@@ -201,11 +201,11 @@ THEN the system SHALL actions/setup-node で Node.js を、pnpm/action-setup で
 
 **Acceptance Criteria**:
 
-| AC ID  | Scenario                                                                          |
-| ------ | --------------------------------------------------------------------------------- |
-| AC-010 | アクション実行後、指定した pnpm バージョンのコマンドが利用可能になっている        |
-| AC-011 | アクション実行後、指定した Node.js バージョンが利用可能になっている               |
-| AC-012 | node-version・pnpm-version を省略した場合、アクション定義のデフォルト値が使われる |
+| AC ID  | Scenario                                                                                                         |
+| ------ | ---------------------------------------------------------------------------------------------------------------- |
+| AC-010 | アクション実行後、指定した pnpm バージョンのコマンドが利用可能になっている                                       |
+| AC-011 | アクション実行後、指定した Node.js バージョンが利用可能になっている                                              |
+| AC-012 | node-version・pnpm-version を省略した場合、バージョンを明示せず、呼び出し元の解決（`packageManager` 等）に委ねる |
 
 ## 5. Non-Functional Requirements
 
@@ -365,3 +365,4 @@ Scenario: path に ./ でも / でも始まらない値を指定した場合ア�
 | 2026-06-18 | 1.0.3   | review explore 反映: Section 1.2・図・US-004 を pnpm 固定設計に整合                        |
 | 2026-06-18 | 1.0.4   | REQ-C-005 追加: repo は owner/repo 形式必須、REQ-C-006 追加: path は ./ または絶対パス必須 |
 | 2026-06-18 | 1.0.5   | review explore 反映: AC-001/002 の path 修正、REQ-F-004 GIVEN 更新、AC-015/016 追加        |
+| 2026-11-18 | 1.0.6   | AC-012 明確化: node-version・pnpm-version の既定値を廃止し、省略時は未指定として扱う       |
