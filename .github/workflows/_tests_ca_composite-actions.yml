@@ -115,6 +115,42 @@ jobs:
           echo "ls-lint version: ${_version}"
           echo "version=${_version}" >> "${GITHUB_OUTPUT}"
 
+  test-setup-repo-explicit-versions:
+    name: Test ca-setup-repo (explicit versions)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs:
+      - setup-foundation
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        id: checkout
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Test ca-setup-repo with explicit node-version and pnpm-version
+        id: test-setup-repo
+        if: steps.checkout.outcome == 'success'
+        uses: $/.github/actions/ca-setup-repo
+        with:
+          repo: aglabo/agla-dev-tools
+          path: ./tools/agla-dev-tools
+          ref: a88f3bf1ecda478ad8ec2e907139bd058ce5ee56 # v0.1.0
+          node-version: "24"
+          pnpm-version: "12.15.0"
+
+      - name: Verify specified versions
+        id: verify-versions
+        if: steps.test-setup-repo.outcome == 'success'
+        run: |
+          _node=$(node --version)
+          _pnpm=$(pnpm --version)
+          echo "node: ${_node}, pnpm: ${_pnpm}"
+          [[ "${_node}" == v24.* ]] || { echo "unexpected node version: ${_node}" >&2; exit 1; }
+          [[ "${_pnpm}" == "12.15.0" ]] || { echo "unexpected pnpm version: ${_pnpm}" >&2; exit 1; }
+
   test-get-changed-files:
     name: Test ca-get-changed-files
     runs-on: ubuntu-latest
