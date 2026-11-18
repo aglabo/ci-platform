@@ -115,6 +115,42 @@ jobs:
           echo "ls-lint version: ${_version}"
           echo "version=${_version}" >> "${GITHUB_OUTPUT}"
 
+  test-setup-repo-explicit-versions:
+    name: Test ca-setup-repo (explicit versions)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs:
+      - setup-foundation
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        id: checkout
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Test ca-setup-repo with explicit node-version and pnpm-version
+        id: test-setup-repo
+        if: steps.checkout.outcome == 'success'
+        uses: $/.github/actions/ca-setup-repo
+        with:
+          repo: aglabo/agla-dev-tools
+          path: ./tools/agla-dev-tools
+          ref: a88f3bf1ecda478ad8ec2e907139bd058ce5ee56 # v0.1.0
+          node-version: "24"
+          pnpm-version: "12.15.0"
+
+      - name: Verify specified versions
+        id: verify-versions
+        if: steps.test-setup-repo.outcome == 'success'
+        run: |
+          _node=$(node --version)
+          _pnpm=$(pnpm --version)
+          echo "node: ${_node}, pnpm: ${_pnpm}"
+          [[ "${_node}" == v24.* ]] || { echo "unexpected node version: ${_node}" >&2; exit 1; }
+          [[ "${_pnpm}" == "12.15.0" ]] || { echo "unexpected pnpm version: ${_pnpm}" >&2; exit 1; }
+
   test-get-changed-files:
     name: Test ca-get-changed-files
     runs-on: ubuntu-latest
@@ -452,6 +488,7 @@ jobs:
       - setup-foundation
       - test-setup-tool
       - test-setup-repo
+      - test-setup-repo-explicit-versions
       - test-get-changed-files
       - test-resolve-sha
     permissions:
@@ -462,6 +499,7 @@ jobs:
           RESULT_FOUNDATION: ${{ needs.setup-foundation.result }}
           RESULT_SETUP_TOOL: ${{ needs.test-setup-tool.result }}
           RESULT_SETUP_REPO: ${{ needs.test-setup-repo.result }}
+          RESULT_SETUP_REPO_EXPLICIT: ${{ needs.test-setup-repo-explicit-versions.result }}
           RESULT_GET_CHANGED_FILES: ${{ needs.test-get-changed-files.result }}
           RESULT_RESOLVE_SHA: ${{ needs.test-resolve-sha.result }}
         run: |
@@ -479,6 +517,7 @@ jobs:
             echo "| setup-foundation        | $(_status "${RESULT_FOUNDATION}") |"
             echo "| test-setup-tool         | $(_status "${RESULT_SETUP_TOOL}") |"
             echo "| test-setup-repo         | $(_status "${RESULT_SETUP_REPO}") |"
+            echo "| test-setup-repo-explicit-versions | $(_status "${RESULT_SETUP_REPO_EXPLICIT}") |"
             echo "| test-get-changed-files  | $(_status "${RESULT_GET_CHANGED_FILES}") |"
             echo "| test-resolve-sha        | $(_status "${RESULT_RESOLVE_SHA}") |"
           } >> "${GITHUB_STEP_SUMMARY}"
@@ -486,6 +525,7 @@ jobs:
           [ "${RESULT_FOUNDATION}" = "success" ] || _failed=1
           [ "${RESULT_SETUP_TOOL}" = "success" ] || _failed=1
           [ "${RESULT_SETUP_REPO}" = "success" ] || _failed=1
+          [ "${RESULT_SETUP_REPO_EXPLICIT}" = "success" ] || _failed=1
           [ "${RESULT_GET_CHANGED_FILES}" = "success" ] || _failed=1
           [ "${RESULT_RESOLVE_SHA}" = "success" ] || _failed=1
 
