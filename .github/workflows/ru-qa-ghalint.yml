@@ -26,9 +26,9 @@ on:
         default: "1.6.0"
         type: string
       config:
-        description: "Path to the ghalint configuration file"
+        description: "Path to the ghalint configuration file (empty: use the global-configs file)"
         required: false
-        default: "./global/configs/ghalint.yaml"
+        default: ""
         type: string
 
 jobs:
@@ -70,16 +70,24 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
 
+      - name: Resolve ghalint config
+        id: resolve-config
+        if: steps.config-checkout.outcome == 'success'
+        uses: aglabo/ci-platform/.github/actions/_ca-resolve-config@v0.7.1-pre
+        with:
+          config: ${{ inputs.config }}
+          global-config: global/configs/ghalint.yaml
+
       - name: Prepare report directory
         id: prepare-report
-        if: steps.config-checkout.outcome == 'success'
+        if: steps.resolve-config.outcome == 'success'
         run: mkdir -p .github/report
 
       - name: Run ghalint
         id: lint-execute
         if: steps.prepare-report.outcome == 'success'
         env:
-          CONFIG_FILE: ${{ inputs.config }}
+          CONFIG_FILE: ${{ steps.resolve-config.outputs.config-file }}
         run: |
           ghalint run --config "${CONFIG_FILE}" 2>&1 | tee .github/report/ghalint-report.txt
           exit "${PIPESTATUS[0]}"
