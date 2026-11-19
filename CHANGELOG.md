@@ -1,22 +1,52 @@
 ---
 title: "ci-platform Change Log"
-version: "0.7.0"
+version: "0.7.1"
 date: 2026-11-19
 tags:
   - release
   - reusable-workflows
   - ci-platform
 summary: >
-  v0.7.0 adds the ca-run-secretlint composite action and a secretlint scan,
-  renames ru-scan-betterleaks.yml to ru-scan-secrets.yml, removes the default
-  Node.js and pnpm versions from ca-setup-repo, and aligns all actions and
-  reusable workflows to v0.7.0.
+  v0.7.1 pins the external action in ca-run-secretlint to a commit SHA, and aligns all
+  composite actions and the package version to v0.7.1.
 ---
 
 <!-- textlint-disable
   ja-technical-writing/sentence-length,
   ja-technical-writing/max-comma
   -->
+
+## [0.7.1] - 2026-11-19
+
+### Overview
+
+This patch release pins the external action used by `ca-run-secretlint` to a commit
+SHA. The ci-platform action references in the workflows stay at v0.7.0.
+All composite actions and the package version are aligned to v0.7.1.
+
+### Changed
+
+#### GitHub Actions
+
+- `ca-run-secretlint`: Pinned `pnpm/action-setup` to commit SHA
+  `73e46992e05b19abd31f2f3c20e0e7370d762115` (v6.1.1).
+- `ca-setup-repo`: External actions remain tag references in this release.
+- `ru-*.yml`, `ci-publish-docs.yml`: The ci-platform composite action references
+  remain at v0.7.0 in this release. They will move to v0.7.1 after the tag is created.
+- `.github/dependabot.yml`: Added the composite actions directory
+  (`/.github/actions/*`) to the github-actions update targets.
+- `_tests_ca_composite-actions.yml`: Updated the explicit pnpm version from 12.15.0
+  to 12.21.0 to match `packageManager` in `package.json`.
+
+### Release
+
+- `package.json`: Bumped the version from 0.7.0 to 0.7.1.
+- Composite actions: Updated the `# @version` header from 0.7.0 to 0.7.1 in
+  `_ca-filter-files`, `_ca-resolve-sha`, `ca-get-changed-files`,
+  `ca-run-secretlint`, `ca-setup-repo`, `ca-setup-tool`, and
+  `ca-validate-environment`.
+
+---
 
 ## [0.7.0] - 2026-11-19
 

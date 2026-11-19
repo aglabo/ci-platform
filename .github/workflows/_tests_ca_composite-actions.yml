@@ -139,7 +139,7 @@ jobs:
           path: ./tools/agla-dev-tools
           ref: a88f3bf1ecda478ad8ec2e907139bd058ce5ee56 # v0.1.0
           node-version: "24"
-          pnpm-version: "12.15.0"
+          pnpm-version: "12.21.0"
 
       - name: Verify specified versions
         id: verify-versions
@@ -149,7 +149,7 @@ jobs:
           _pnpm=$(pnpm --version)
           echo "node: ${_node}, pnpm: ${_pnpm}"
           [[ "${_node}" == v24.* ]] || { echo "unexpected node version: ${_node}" >&2; exit 1; }
-          [[ "${_pnpm}" == "12.15.0" ]] || { echo "unexpected pnpm version: ${_pnpm}" >&2; exit 1; }
+          [[ "${_pnpm}" == "12.21.0" ]] || { echo "unexpected pnpm version: ${_pnpm}" >&2; exit 1; }
 
   test-get-changed-files:
     name: Test ca-get-changed-files
