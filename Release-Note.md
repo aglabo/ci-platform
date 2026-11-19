@@ -7,35 +7,26 @@ tags:
   - reusable-workflows
   - composite-actions
 summary: >
-  This patch release pins the external actions used by composite actions to
-  commit SHAs and relocks the ci-platform references in reusable workflows to v0.7.1
+  This patch release pins the external action used by ca-run-secretlint to
+  a commit SHA and aligns all composite actions and the package version to v0.7.1
 ---
 
 ## ci-platform v0.7.1 - 2026-11-19
 
-Composite Action が利用する外部 Action をコミット SHA に固定しました。
-あわせて、再利用可能ワークフローが参照する ci-platform の Composite Action を v0.7.1 に更新しました。
+`ca-run-secretlint` が利用する外部 Action をコミット SHA に固定しました。
 すべての Composite Action とパッケージのバージョンを v0.7.1 に揃えています。
 
 ## 主な変更
 
 ### 外部 Action をコミット SHA に固定
 
-- `ca-setup-repo` と `ca-run-secretlint` が利用する外部 Action を、タグではなくコミット SHA で参照するようにしました。
-  - `actions/checkout`: v7.0.1
-  - `actions/setup-node`: v7.1.0
-  - `pnpm/action-setup`: v6.1.1
+- `ca-run-secretlint` が利用する `pnpm/action-setup` (v6.1.1) を、タグではなくコミット SHA で参照するようにしました。
+- `ca-setup-repo` が利用する外部 Action は、今回のリリースでもタグ参照のままです。
 
-### 再利用可能ワークフローの参照を更新
+### 再利用可能ワークフローの参照
 
-- 次の再利用可能ワークフローが呼び出す Composite Action の参照を、v0.7.0 から v0.7.1 に更新しました。
-  - `ru-lint-documents.yml`
-  - `ru-qa-actionlint.yml`
-  - `ru-qa-actions-lock.yml`
-  - `ru-qa-ghalint.yml`
-  - `ru-scan-secrets.yml`
-- 上記ワークフローの `# @version` ヘッダーを 0.7.1 に更新しました。
-- `ci-publish-docs.yml` が呼び出す `ca-validate-environment` を v0.7.1 に更新しました。
+- 再利用可能ワークフロー (`ru-*.yml`) と `ci-publish-docs.yml` が呼び出す Composite Action の参照は、v0.7.0 のままです。
+- v0.7.1 タグの作成後に、これらの参照を v0.7.1 へ更新する予定です。
 
 ### バージョンの統一
 
@@ -49,4 +40,5 @@ Composite Action が利用する外部 Action をコミット SHA に固定し�
 
 ## 開発者向けの改善
 
-- `.github/workflows/actions.lock` の `aglabo/ci-platform` を v0.6.1 から v0.7.0 に更新しました。
+- Dependabot の監視対象に Composite Action のディレクトリ (`/.github/actions/*`) を追加しました。
+- Composite Action のテストで明示する pnpm のバージョンを、`packageManager` に合わせて 12.21.0 に更新しました。

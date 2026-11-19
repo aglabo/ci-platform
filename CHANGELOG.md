@@ -7,8 +7,7 @@ tags:
   - reusable-workflows
   - ci-platform
 summary: >
-  v0.7.1 pins external actions in composite actions to commit SHAs, relocks the
-  ci-platform references in reusable workflows to v0.7.1, and aligns all
+  v0.7.1 pins the external action in ca-run-secretlint to a commit SHA, and aligns all
   composite actions and the package version to v0.7.1.
 ---
 
@@ -21,8 +20,8 @@ summary: >
 
 ### Overview
 
-This patch release pins the external actions used by composite actions to commit
-SHAs, and relocks the ci-platform action references in the workflows to v0.7.1.
+This patch release pins the external action used by `ca-run-secretlint` to a commit
+SHA. The ci-platform action references in the workflows stay at v0.7.0.
 All composite actions and the package version are aligned to v0.7.1.
 
 ### Changed
@@ -31,25 +30,13 @@ All composite actions and the package version are aligned to v0.7.1.
 
 - `ca-run-secretlint`: Pinned `pnpm/action-setup` to commit SHA
   `73e46992e05b19abd31f2f3c20e0e7370d762115` (v6.1.1).
-- `ca-setup-repo`: Pinned the following external actions to commit SHAs.
-  - `actions/checkout`: `3d3c42e5aac5ba805825da76410c181273ba90b1` (v7.0.1)
-  - `pnpm/action-setup`: `73e46992e05b19abd31f2f3c20e0e7370d762115` (v6.1.1)
-  - `actions/setup-node`: `949feb2413d6458794dcd2491c4babbbce0c15c1` (v7.1.0)
-- `ru-lint-documents.yml`: Updated the `# @version` header to 0.7.1, and relocked
-  `ca-validate-environment`, `ca-get-changed-files`, and `ca-setup-repo` to v0.7.1.
-- `ru-qa-actionlint.yml`, `ru-qa-ghalint.yml`: Updated the `# @version` header to
-  0.7.1, and relocked `ca-validate-environment` and `ca-setup-tool` to v0.7.1.
-- `ru-qa-actions-lock.yml`: Updated the `# @version` header to 0.7.1, and relocked
-  `ca-validate-environment` to v0.7.1.
-- `ru-scan-secrets.yml`: Updated the `# @version` header to 0.7.1, and relocked
-  `ca-validate-environment`, `ca-setup-tool`, and `ca-run-secretlint` to v0.7.1.
-- `ci-publish-docs.yml`: Relocked `ca-validate-environment` from v0.7.0 to v0.7.1
-  in two jobs.
-- `.github/workflows/actions.lock`: Relocked `aglabo/ci-platform` from v0.6.1 to
-  v0.7.0 for `ci-publish-docs.yml`, `ru-lint-documents.yml`, `ru-qa-actionlint.yml`,
-  `ru-qa-actions-lock.yml`, `ru-qa-ghalint.yml`, and `ru-scan-secrets.yml`.
-  The dependency entry now points to
-  `sha1-4136db08e3f36b8b5a6c165483bd896f300846c5`.
+- `ca-setup-repo`: External actions remain tag references in this release.
+- `ru-*.yml`, `ci-publish-docs.yml`: The ci-platform composite action references
+  remain at v0.7.0 in this release. They will move to v0.7.1 after the tag is created.
+- `.github/dependabot.yml`: Added the composite actions directory
+  (`/.github/actions/*`) to the github-actions update targets.
+- `_tests_ca_composite-actions.yml`: Updated the explicit pnpm version from 12.15.0
+  to 12.21.0 to match `packageManager` in `package.json`.
 
 ### Release
 
