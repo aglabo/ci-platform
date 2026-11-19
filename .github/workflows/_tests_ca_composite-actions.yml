@@ -479,6 +479,144 @@ jobs:
         if: steps.prepare-history.outcome == 'success'
         run: git reset --hard HEAD~1
 
+  test-resolve-config:
+    name: Test _ca-resolve-config
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs:
+      - setup-foundation
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        id: checkout
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Prepare config fixtures
+        id: prepare
+        if: steps.checkout.outcome == 'success'
+        run: |
+          mkdir -p .ci-test-config
+          : > .ci-test-config/input.yaml
+          : > .ci-test-config/local.yaml
+          : > .ci-test-config/global.yaml
+          echo "workspace=${GITHUB_WORKSPACE}" >> "${GITHUB_OUTPUT}"
+
+      # explicit config wins over local / global
+      - name: Test _ca-resolve-config (input)
+        id: test-input
+        if: steps.prepare.outcome == 'success'
+        uses: $/.github/actions/_ca-resolve-config
+        with:
+          config: .ci-test-config/input.yaml
+          local-config: .ci-test-config/local.yaml
+          global-config: .ci-test-config/global.yaml
+
+      # no explicit config -> local wins over global
+      - name: Test _ca-resolve-config (local)
+        id: test-local
+        if: steps.prepare.outcome == 'success'
+        uses: $/.github/actions/_ca-resolve-config
+        with:
+          local-config: .ci-test-config/local.yaml
+          global-config: .ci-test-config/global.yaml
+
+      # local file missing -> falls back to global
+      - name: Test _ca-resolve-config (global fallback)
+        id: test-global
+        if: steps.prepare.outcome == 'success'
+        uses: $/.github/actions/_ca-resolve-config
+        with:
+          local-config: .ci-test-config/missing.yaml
+          global-config: .ci-test-config/global.yaml
+
+      # explicit config missing -> error, no fallback
+      - name: Test _ca-resolve-config (input missing)
+        id: test-input-missing
+        if: steps.prepare.outcome == 'success'
+        continue-on-error: true
+        uses: $/.github/actions/_ca-resolve-config
+        with:
+          config: .ci-test-config/missing.yaml
+          global-config: .ci-test-config/global.yaml
+
+      # path with ".." -> error
+      - name: Test _ca-resolve-config (parent traversal)
+        id: test-traversal
+        if: steps.prepare.outcome == 'success'
+        continue-on-error: true
+        uses: $/.github/actions/_ca-resolve-config
+        with:
+          config: .ci-test-config/../.ci-test-config/input.yaml
+
+      # nothing found -> error
+      - name: Test _ca-resolve-config (no candidates)
+        id: test-none
+        if: steps.prepare.outcome == 'success'
+        continue-on-error: true
+        uses: $/.github/actions/_ca-resolve-config
+        with:
+          local-config: .ci-test-config/missing.yaml
+          global-config: .ci-test-config/missing.yaml
+
+      - name: Verify outputs
+        id: verify
+        if: steps.prepare.outcome == 'success'
+        env:
+          WS: ${{ steps.prepare.outputs.workspace }}
+          OUTCOME_INPUT: ${{ steps.test-input.outcome }}
+          FILE_INPUT: ${{ steps.test-input.outputs.config-file }}
+          SOURCE_INPUT: ${{ steps.test-input.outputs.source }}
+          OUTCOME_LOCAL: ${{ steps.test-local.outcome }}
+          FILE_LOCAL: ${{ steps.test-local.outputs.config-file }}
+          SOURCE_LOCAL: ${{ steps.test-local.outputs.source }}
+          OUTCOME_GLOBAL: ${{ steps.test-global.outcome }}
+          FILE_GLOBAL: ${{ steps.test-global.outputs.config-file }}
+          SOURCE_GLOBAL: ${{ steps.test-global.outputs.source }}
+          OUTCOME_INPUT_MISSING: ${{ steps.test-input-missing.outcome }}
+          FILE_INPUT_MISSING: ${{ steps.test-input-missing.outputs.config-file }}
+          OUTCOME_TRAVERSAL: ${{ steps.test-traversal.outcome }}
+          FILE_TRAVERSAL: ${{ steps.test-traversal.outputs.config-file }}
+          OUTCOME_NONE: ${{ steps.test-none.outcome }}
+          FILE_NONE: ${{ steps.test-none.outputs.config-file }}
+        run: |
+          _failed=0
+
+          # @arg $1 case label, $2 actual, $3 expected
+          _expect() {
+            if [ "$2" = "$3" ]; then
+              echo "[$1] OK: $2"
+            else
+              echo "::error::[$1] Expected '$3', got: '$2'"
+              _failed=1
+            fi
+          }
+
+          _expect "input/outcome" "${OUTCOME_INPUT}" "success"
+          _expect "input/config-file" "${FILE_INPUT}" "${WS}/.ci-test-config/input.yaml"
+          _expect "input/source" "${SOURCE_INPUT}" "input"
+
+          _expect "local/outcome" "${OUTCOME_LOCAL}" "success"
+          _expect "local/config-file" "${FILE_LOCAL}" "${WS}/.ci-test-config/local.yaml"
+          _expect "local/source" "${SOURCE_LOCAL}" "local"
+
+          _expect "global/outcome" "${OUTCOME_GLOBAL}" "success"
+          _expect "global/config-file" "${FILE_GLOBAL}" "${WS}/.ci-test-config/global.yaml"
+          _expect "global/source" "${SOURCE_GLOBAL}" "global"
+
+          _expect "input-missing/outcome" "${OUTCOME_INPUT_MISSING}" "failure"
+          _expect "input-missing/config-file" "${FILE_INPUT_MISSING}" ""
+
+          _expect "traversal/outcome" "${OUTCOME_TRAVERSAL}" "failure"
+          _expect "traversal/config-file" "${FILE_TRAVERSAL}" ""
+
+          _expect "none/outcome" "${OUTCOME_NONE}" "failure"
+          _expect "none/config-file" "${FILE_NONE}" ""
+
+          exit "${_failed}"
+
   summary:
     name: Test Summary
     runs-on: ubuntu-latest
@@ -491,6 +629,7 @@ jobs:
       - test-setup-repo-explicit-versions
       - test-get-changed-files
       - test-resolve-sha
+      - test-resolve-config
     permissions:
       contents: read
     steps:
@@ -502,6 +641,7 @@ jobs:
           RESULT_SETUP_REPO_EXPLICIT: ${{ needs.test-setup-repo-explicit-versions.result }}
           RESULT_GET_CHANGED_FILES: ${{ needs.test-get-changed-files.result }}
           RESULT_RESOLVE_SHA: ${{ needs.test-resolve-sha.result }}
+          RESULT_RESOLVE_CONFIG: ${{ needs.test-resolve-config.result }}
         run: |
           _failed=0
 
@@ -520,6 +660,7 @@ jobs:
             echo "| test-setup-repo-explicit-versions | $(_status "${RESULT_SETUP_REPO_EXPLICIT}") |"
             echo "| test-get-changed-files  | $(_status "${RESULT_GET_CHANGED_FILES}") |"
             echo "| test-resolve-sha        | $(_status "${RESULT_RESOLVE_SHA}") |"
+            echo "| test-resolve-config     | $(_status "${RESULT_RESOLVE_CONFIG}") |"
           } >> "${GITHUB_STEP_SUMMARY}"
 
           [ "${RESULT_FOUNDATION}" = "success" ] || _failed=1
@@ -528,5 +669,6 @@ jobs:
           [ "${RESULT_SETUP_REPO_EXPLICIT}" = "success" ] || _failed=1
           [ "${RESULT_GET_CHANGED_FILES}" = "success" ] || _failed=1
           [ "${RESULT_RESOLVE_SHA}" = "success" ] || _failed=1
+          [ "${RESULT_RESOLVE_CONFIG}" = "success" ] || _failed=1
 
           exit "${_failed}"
