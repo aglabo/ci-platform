@@ -1,7 +1,7 @@
 # src: ./.github/workflows/ru-lint-documents.yml
 # @(#) : Reusable workflow for linting changed Markdown files with textlint and markdownlint
 #
-# @version : 0.8.0
+# @version : 0.8.1
 #
 # Copyright (c) 2026- atsushifx <https://github.com/atsushifx>
 #
@@ -74,14 +74,14 @@ jobs:
       - name: Validate environment
         id: env-validation
         if: steps.target-checkout.outcome == 'success'
-        uses: aglabo/ci-platform/.github/actions/ca-validate-environment@v0.8.0-pre
+        uses: aglabo/ci-platform/.github/actions/ca-validate-environment@v0.8.1
         with:
           actions-type: read
 
       - name: Get changed files
         id: changed-files
         if: steps.env-validation.outcome == 'success'
-        uses: aglabo/ci-platform/.github/actions/ca-get-changed-files@v0.8.0-pre
+        uses: aglabo/ci-platform/.github/actions/ca-get-changed-files@v0.8.1
         with:
           commit-count: ${{ inputs.commit-count }}
           pattern: ${{ inputs.pattern }}
@@ -104,14 +104,14 @@ jobs:
       - name: Validate environment
         id: env-validation
         if: steps.target-checkout.outcome == 'success'
-        uses: aglabo/ci-platform/.github/actions/ca-validate-environment@v0.8.0-pre
+        uses: aglabo/ci-platform/.github/actions/ca-validate-environment@v0.8.1
         with:
           actions-type: read
 
       - name: Setup agla-doc-tools
         id: tool-install
         if: steps.env-validation.outcome == 'success'
-        uses: aglabo/ci-platform/.github/actions/ca-setup-repo@v0.8.0-pre
+        uses: aglabo/ci-platform/.github/actions/ca-setup-repo@v0.8.1
         with:
           repo: aglabo/agla-doc-tools
           path: ./.tools/agla-doc-tools
@@ -131,7 +131,7 @@ jobs:
       - name: Resolve textlint config
         id: resolve-config
         if: steps.config-checkout.outcome == 'success'
-        uses: aglabo/ci-platform/.github/actions/_ca-resolve-config@v0.8.0-pre
+        uses: aglabo/ci-platform/.github/actions/_ca-resolve-config@v0.8.1
         with:
           config: ${{ inputs.textlint-config }}
           local-config: configs/textlintrc.yaml
@@ -184,14 +184,14 @@ jobs:
       - name: Validate environment
         id: env-validation
         if: steps.target-checkout.outcome == 'success'
-        uses: aglabo/ci-platform/.github/actions/ca-validate-environment@v0.8.0-pre
+        uses: aglabo/ci-platform/.github/actions/ca-validate-environment@v0.8.1
         with:
           actions-type: read
 
       - name: Setup agla-doc-tools
         id: tool-install
         if: steps.env-validation.outcome == 'success'
-        uses: aglabo/ci-platform/.github/actions/ca-setup-repo@v0.8.0-pre
+        uses: aglabo/ci-platform/.github/actions/ca-setup-repo@v0.8.1
         with:
           repo: aglabo/agla-doc-tools
           path: ./.tools/agla-doc-tools
@@ -211,7 +211,7 @@ jobs:
       - name: Resolve markdownlint config
         id: resolve-config
         if: steps.config-checkout.outcome == 'success'
-        uses: aglabo/ci-platform/.github/actions/_ca-resolve-config@v0.8.0-pre
+        uses: aglabo/ci-platform/.github/actions/_ca-resolve-config@v0.8.1
         with:
           config: ${{ inputs.markdownlint-config }}
           local-config: configs/.markdownlint-cli2.yaml
