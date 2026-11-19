@@ -21,13 +21,13 @@ normalize_version() {
   version="${version#V}"
 
   # X.Y format → normalize to X.Y.0
-  if [[ "$version" =~ ^([0-9]+)\.([0-9]+)$ ]]; then
+  if [[ $version =~ ^([0-9]+)\.([0-9]+)$   ]]; then
     version="${version}.0"
   fi
 
   # Extract version number (first 3 digit groups)
   # Suffixes like -beta are not allowed
-  if [[ ! "$version" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+  if [[ ! $version =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$   ]]; then
     echo "Error: Invalid version format: $version" >&2
     return 1
   fi

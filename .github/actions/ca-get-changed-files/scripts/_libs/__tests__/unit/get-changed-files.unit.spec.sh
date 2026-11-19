@@ -171,7 +171,7 @@ _lcf_write_paths_of_bytes() {
   _rest=$(($1 - _count * 101))
   (
     set -o pipefail
-    awk -v count="$_count" -v rest="$_rest" -v mark="$_mark" 'BEGIN {
+    LC_ALL=C awk -v count="$_count" -v rest="$_rest" -v mark="$_mark" 'BEGIN {
       fmt = "d%02d/" mark "%0" (96 - length(mark)) "d\n"
       for (i = 0; i < count; i++) printf fmt, int(i / 100), i
       last = "z/"

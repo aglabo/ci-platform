@@ -179,7 +179,8 @@ secretlint-version"
       It 'T-RSL-ACT-11: sets up pnpm before running secretlint'
         When call _act_step_order
         The status should be success
-        The line 1 of output should equal 'uses=pnpm/action-setup@v6.1.1'
+        The line 1 of output should start with 'uses=pnpm/action-setup@'
+        The line 1 of output should end with '# v6.1.1'
         The line 2 of output should equal 'run'
         The lines of output should equal 2
       End
@@ -204,7 +205,8 @@ secretlint-version"
         When call _act_dir_matches '^[[:space:]]*(-[[:space:]]+)?uses:'
         The status should be success
         The lines of output should equal 1
-        The output should include 'pnpm/action-setup@v6.1.1'
+        The output should include 'pnpm/action-setup@'
+        The output should include '# v6.1.1'
       End
 
       It 'T-RSL-ACT-13: does not check out the repository'

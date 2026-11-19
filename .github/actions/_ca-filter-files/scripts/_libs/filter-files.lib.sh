@@ -111,11 +111,11 @@ check_line_endings() {
   if [[ $_s != *$'\r'* ]]; then
     return 0
   fi
-  mapfile -t _conv <<<"$_s"
+  mapfile -t _conv <<< "$_s"
   for _i in "${!_conv[@]}"; do
     [[ ${_conv[_i]} == *$'\r'* ]] && break
   done
-  mapfile -t _lines <<<"$2"
+  mapfile -t _lines <<< "$2"
   ff_error "$1" "contains a CR not followed by LF" "${_lines[_i]}"
   return 1
 }
@@ -147,7 +147,7 @@ parse_filelist() {
   local -a _lines
   _text=$(_ff_split_lines "$1") || return 1
   [ -z "$_text" ] && return 0
-  mapfile -t _lines <<<"$_text"
+  mapfile -t _lines <<< "$_text"
   for _line in "${_lines[@]}"; do
     [ -z "$_line" ] && continue
     if ! [[ $_line =~ $_FF_UTF8_RE ]]; then
@@ -189,7 +189,7 @@ parse_patterns() {
   local -a _lines
   _text=$(_ff_split_lines "$1") || return 1
   [ -z "$_text" ] && return 0
-  mapfile -t _lines <<<"$_text"
+  mapfile -t _lines <<< "$_text"
   for _line in "${_lines[@]}"; do
     if ! [[ $_line =~ $_FF_UTF8_RE ]]; then
       ff_error patterns "contains an invalid UTF-8 byte sequence" "$_line"
@@ -230,7 +230,7 @@ check_line_limit() {
   local _count=0
   local -a _lines
   if [ -n "$2" ]; then
-    mapfile -t _lines <<<"$2"
+    mapfile -t _lines <<< "$2"
     _count=${#_lines[@]}
   fi
 
@@ -271,7 +271,7 @@ check_patterns() {
   local _line _rest
   local -a _lines
   [ -z "$1" ] && return 0
-  mapfile -t _lines <<<"$1"
+  mapfile -t _lines <<< "$1"
   for _line in "${_lines[@]}"; do
     [[ $_line == '!'* ]] || continue
     _rest="${_line#!}"
@@ -487,7 +487,7 @@ _ff_read_lines() {
   local -n _ff_lines_ref="$1"
   _ff_lines_ref=()
   [ -z "$2" ] && return 0
-  mapfile -t _ff_lines_ref <<<"$2"
+  mapfile -t _ff_lines_ref <<< "$2"
 }
 
 ##
@@ -514,20 +514,20 @@ _ff_glob_to_regex_var() {
   # _ff_gtr_i ("/" at the start)
   while ((_ff_gtr_i < ${#2})); do
     case "${_ff_gtr_g:_ff_gtr_i}" in
-    '/**/'*)
-      _ff_gtr_out+='(.*/)?'
-      _ff_gtr_i=$((_ff_gtr_i + 3))
-      continue
-      ;;
-    ?'/**')
-      _ff_gtr_out+='/.+'
-      break
-      ;;
-    ?'*'*) _ff_gtr_out+='[^/]*' ;;
-    ?'?'*) _ff_gtr_out+='[^/]' ;;
-    # ERE metacharacters: . [ ] \ ( ) { } + | ^ $
-    ?[]'[.\(){}+|^$']*) _ff_gtr_out+="\\${2:_ff_gtr_i:1}" ;;
-    *) _ff_gtr_out+="${2:_ff_gtr_i:1}" ;;
+      '/**/'*)
+        _ff_gtr_out+='(.*/)?'
+        _ff_gtr_i=$((_ff_gtr_i + 3))
+        continue
+        ;;
+      ?'/**')
+        _ff_gtr_out+='/.+'
+        break
+        ;;
+      ?'*'*) _ff_gtr_out+='[^/]*' ;;
+      ?'?'*) _ff_gtr_out+='[^/]' ;;
+      # ERE metacharacters: . [ ] \ ( ) { } + | ^ $
+      ?[]'[.\(){}+|^$']*) _ff_gtr_out+="\\${2:_ff_gtr_i:1}" ;;
+      *) _ff_gtr_out+="${2:_ff_gtr_i:1}" ;;
     esac
     _ff_gtr_i=$((_ff_gtr_i + 1))
   done
