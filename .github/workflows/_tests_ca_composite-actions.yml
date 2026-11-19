@@ -6,8 +6,6 @@
 # This software is released under the MIT License.
 # https://opensource.org/licenses/MIT
 
-# cspell:words rhysd
-
 name: "TestRunner for CA Composite Actions"
 
 permissions:
@@ -72,15 +70,15 @@ jobs:
         if: steps.checkout.outcome == 'success'
         uses: $/.github/actions/ca-setup-tool
         with:
-          repo: rhysd/actionlint
-          tool-version: "1.7.12"
+          repo: jdx/jactionlint
+          tool-version: "2.6.0"
 
       - name: Verify installed tool
         id: verify-tool
         if: steps.test-setup-tool.outcome == 'success'
         run: |
-          _version=$(actionlint -version 2>&1 | head -n 1)
-          echo "actionlint version: ${_version}"
+          _version=$(jactionlint --version 2>&1 | head -n 1)
+          echo "jactionlint version: ${_version}"
           echo "version=${_version}" >> "${GITHUB_OUTPUT}"
 
   test-setup-repo:

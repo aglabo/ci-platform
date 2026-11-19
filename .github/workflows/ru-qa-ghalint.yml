@@ -76,6 +76,7 @@ jobs:
         uses: aglabo/ci-platform/.github/actions/_ca-resolve-config@v0.8.0-pre
         with:
           config: ${{ inputs.config }}
+          local-config: configs/ghalint.yaml
           global-config: global/configs/ghalint.yaml
 
       - name: Prepare report directory

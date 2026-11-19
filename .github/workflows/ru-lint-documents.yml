@@ -45,12 +45,12 @@ on:
       textlint-config:
         description: "Path to the textlint configuration file"
         required: false
-        default: "./global/configs/textlintrc.yaml"
+        default: ""
         type: string
       markdownlint-config:
         description: "Path to the markdownlint-cli2 configuration file"
         required: false
-        default: "./global/configs/.markdownlint-cli2.yaml"
+        default: ""
         type: string
 
 jobs:
@@ -128,16 +128,25 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
 
+      - name: Resolve textlint config
+        id: resolve-config
+        if: steps.config-checkout.outcome == 'success'
+        uses: aglabo/ci-platform/.github/actions/_ca-resolve-config@v0.8.0-pre
+        with:
+          config: ${{ inputs.textlint-config }}
+          local-config: configs/textlintrc.yaml
+          global-config: global/configs/textlintrc.yaml
+
       - name: Prepare report directory
         id: prepare-report
-        if: steps.config-checkout.outcome == 'success'
+        if: steps.resolve-config.outcome == 'success'
         run: mkdir -p .github/report
 
       - name: Run textlint
         id: lint-execute
         if: steps.prepare-report.outcome == 'success'
         env:
-          CONFIG_FILE: ${{ inputs.textlint-config }}
+          CONFIG_FILE: ${{ steps.resolve-config.outputs.config-file }}
           CHANGED_FILES: ${{ needs.get-changed-files.outputs.files }}
         run: |
           mapfile -t targets <<< "${CHANGED_FILES}"
@@ -199,16 +208,25 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
 
+      - name: Resolve markdownlint config
+        id: resolve-config
+        if: steps.config-checkout.outcome == 'success'
+        uses: aglabo/ci-platform/.github/actions/_ca-resolve-config@v0.8.0-pre
+        with:
+          config: ${{ inputs.markdownlint-config }}
+          local-config: configs/.markdownlint-cli2.yaml
+          global-config: global/configs/.markdownlint-cli2.yaml
+
       - name: Prepare report directory
         id: prepare-report
-        if: steps.config-checkout.outcome == 'success'
+        if: steps.resolve-config.outcome == 'success'
         run: mkdir -p .github/report
 
       - name: Run markdownlint
         id: lint-execute
         if: steps.prepare-report.outcome == 'success'
         env:
-          CONFIG_FILE: ${{ inputs.markdownlint-config }}
+          CONFIG_FILE: ${{ steps.resolve-config.outputs.config-file }}
           CHANGED_FILES: ${{ needs.get-changed-files.outputs.files }}
         run: |
           mapfile -t targets <<< "${CHANGED_FILES}"

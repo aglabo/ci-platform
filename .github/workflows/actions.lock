@@ -4,9 +4,10 @@
 version: 'v0.0.3'
 workflows:
     '.github/workflows/_tests_ca_composite-actions.yml':
+        - 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1'
         - 'actions/checkout@v7.0.1'
-        - 'actions/setup-node@v7.1.0'
-        - 'pnpm/action-setup@v6.1.1'
+        - 'actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1'
+        - 'pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115'
     '.github/workflows/_tests_ru_reusable-workflows.yml': []
     '.github/workflows/ci-docs-qa.yml': []
     '.github/workflows/ci-publish-docs.yml':
