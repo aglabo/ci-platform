@@ -17,41 +17,20 @@ _RC_COMMON_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)/_libs
 # shellcheck source=.github/actions/_libs/error.lib.sh
 # shellcheck disable=SC1091
 . "${_RC_COMMON_LIB_DIR}/error.lib.sh" || return 1
+# shellcheck source=.github/actions/_libs/path.lib.sh
+# shellcheck disable=SC1091
+. "${_RC_COMMON_LIB_DIR}/path.lib.sh" || return 1
 
 ##
-# @description Make <path> absolute: a relative path is taken from
-#              GITHUB_WORKSPACE.
-# @arg $1 path — config path
-# @stdout the absolute path
-# @return 0 always
-_rc_abs() {
-  case "$1" in
-    /*) printf '%s\n' "$1" ;;
-    *) printf '%s\n' "${GITHUB_WORKSPACE}/${1}" ;;
-  esac
-}
-
-##
-# @description Make <value> an absolute path and confirm it is acceptable: a
-#              path with a ".." segment is rejected.
+# @description Make <value> an absolute path under GITHUB_WORKSPACE and confirm
+#              it is acceptable; the checks are done by validate_path.
 # @arg $1 target — input name used in the error message
 # @arg $2 value  — config path (non-empty)
 # @stdout the absolute path; nothing on error
 # @stderr one ::error:: line on error
 # @return 0 on success, 1 when the path is rejected
 _rc_resolve() {
-  local _target="$1" _value="$2"
-  if [[ "/${_value}/" == */../* ]]; then
-    gha_error "$_target" "must not contain '..'" "$_value"
-    return 1
-  fi
-  local _abs
-  _abs="$(_rc_abs "$_value")"
-  if [[ $_abs != "${GITHUB_WORKSPACE%/}"/*   ]]; then
-    gha_error "$_target" "must be inside GITHUB_WORKSPACE" "$_value"
-    return 1
-  fi
-  printf '%s\n' "$_abs"
+  validate_path "$1" "$2" "$GITHUB_WORKSPACE"
 }
 
 ##
@@ -79,8 +58,8 @@ _rc_try() {
 #              taken from GITHUB_WORKSPACE. A non-empty <config> is the only
 #              candidate: when it is not a regular file it is an error and
 #              there is no fallback. Otherwise <local_config> and then
-#              <global_config> are tried. Any path with a ".." segment, or
-#              outside GITHUB_WORKSPACE, is rejected.
+#              <global_config> are tried. Any path with a ".." segment,
+#              whitespace, or outside GITHUB_WORKSPACE is rejected.
 # @arg $1 config        — config input
 # @arg $2 local_config  — local config path
 # @arg $3 global_config — global config path

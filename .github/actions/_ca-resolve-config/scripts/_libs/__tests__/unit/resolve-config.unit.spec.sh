@@ -86,6 +86,22 @@ Describe 'resolve-config.lib.sh'
         The status should equal 0
         The stdout should equal "${WS}/.cfg/local.yml local"
       End
+      It '[Normal] T-RC-RC-0106: workspace 内ファイルへの symlink は受理する'
+        _fx_touch "${WS}/real/a.yml"
+        ln -s "${WS}/real/a.yml" "${WS}/link.yml"
+        When call resolve_config "link.yml" "" ""
+        The status should equal 0
+        The stdout should equal "${WS}/link.yml input"
+      End
+      It '[Normal] T-RC-RC-0107: GITHUB_WORKSPACE 自体が symlink でも workspace 内の file は受理する'
+        mkdir -p "${ROOT}/real-ws"
+        _fx_touch "${ROOT}/real-ws/cfg/a.yml"
+        ln -s "${ROOT}/real-ws" "${ROOT}/ws-link"
+        export GITHUB_WORKSPACE="${ROOT}/ws-link"
+        When call resolve_config "cfg/a.yml" "" ""
+        The status should equal 0
+        The stdout should equal "${ROOT}/ws-link/cfg/a.yml input"
+      End
     End
 
     Context 'When: 異常系'
@@ -144,6 +160,64 @@ Describe 'resolve-config.lib.sh'
         The stderr should match pattern "::error::GITHUB_WORKSPACE*"
         The lines of stderr should equal 1
       End
+      It '[Error] T-RC-RC-0208: config が workspace 外ファイルへの symlink ならエラー'
+        _fx_touch "${OUT}/x.yml"
+        ln -s "${OUT}/x.yml" "${WS}/link.yml"
+        When call resolve_config "link.yml" "" ""
+        The status should equal 1
+        The stdout should equal ""
+        The stderr should match pattern "::error::*"
+        The lines of stderr should equal 1
+      End
+      It '[Error] T-RC-RC-0209: local_config が workspace 外ファイルへの symlink ならエラー (フォールバックしない)'
+        _fx_touch "${OUT}/x.yml"
+        _fx_touch "${WS}/global.yml"
+        ln -s "${OUT}/x.yml" "${WS}/link.yml"
+        When call resolve_config "" "link.yml" "global.yml"
+        The status should equal 1
+        The stdout should equal ""
+        The stderr should match pattern "::error::*"
+        The lines of stderr should equal 1
+      End
+      It '[Error] T-RC-RC-0210: symlink ディレクトリ経由で workspace 外ファイルならエラー'
+        _fx_touch "${OUT}/x.yml"
+        ln -s "${OUT}" "${WS}/linkdir"
+        When call resolve_config "linkdir/x.yml" "" ""
+        The status should equal 1
+        The stdout should equal ""
+        The stderr should match pattern "::error::*"
+        The lines of stderr should equal 1
+      End
+      It '[Error] T-RC-RC-0211: 2 段 symlink (ws 内 -> ws 内 -> 外部) ならエラー'
+        _fx_touch "${OUT}/x.yml"
+        ln -s "${OUT}/x.yml" "${WS}/mid.yml"
+        ln -s "${WS}/mid.yml" "${WS}/link.yml"
+        When call resolve_config "link.yml" "" ""
+        The status should equal 1
+        The stdout should equal ""
+        The stderr should match pattern "::error::*"
+        The lines of stderr should equal 1
+      End
+      It '[Error] T-RC-RC-0212: GITHUB_WORKSPACE が symlink でも外部を指す symlink ならエラー'
+        mkdir -p "${ROOT}/real-ws"
+        ln -s "${ROOT}/real-ws" "${ROOT}/ws-link"
+        export GITHUB_WORKSPACE="${ROOT}/ws-link"
+        _fx_touch "${OUT}/x.yml"
+        ln -s "${OUT}/x.yml" "${ROOT}/ws-link/link.yml"
+        When call resolve_config "link.yml" "" ""
+        The status should equal 1
+        The stdout should equal ""
+        The stderr should match pattern "::error::*"
+        The lines of stderr should equal 1
+      End
+      It '[Error] T-RC-RC-0213: 空白を含むパスは (実在しても) 拒否する'
+        _fx_touch "${WS}/a b.yml"
+        When call resolve_config "a b.yml" "" ""
+        The status should equal 1
+        The stdout should equal ""
+        The stderr should match pattern "::error::*"
+        The lines of stderr should equal 1
+      End
     End
 
     Context 'When: エッジケース'
@@ -187,6 +261,31 @@ Describe 'resolve-config.lib.sh'
         The stdout should equal "rc=0 loaded=1
 sentinel"
         The stderr should equal ""
+      End
+      It '[Edge] T-RC-RC-0306: 接頭辞が同じ兄弟ディレクトリ (ws-evil) への symlink はエラー'
+        _fx_touch "${ROOT}/ws-evil/x.yml"
+        ln -s "${ROOT}/ws-evil/x.yml" "${WS}/link.yml"
+        When call resolve_config "link.yml" "" ""
+        The status should equal 1
+        The stdout should equal ""
+        The stderr should match pattern "::error::*"
+        The lines of stderr should equal 1
+      End
+      It '[Edge] T-RC-RC-0307: dangling symlink は file not found'
+        ln -s "${WS}/nonexistent.yml" "${WS}/link.yml"
+        When call resolve_config "link.yml" "" ""
+        The status should equal 1
+        The stdout should equal ""
+        The stderr should match pattern "::error::*"
+        The lines of stderr should equal 1
+      End
+      It '[Edge] T-RC-RC-0308: workspace 内の symlink チェーンは受理する'
+        _fx_touch "${WS}/real.yml"
+        ln -s "${WS}/real.yml" "${WS}/mid.yml"
+        ln -s "${WS}/mid.yml" "${WS}/link.yml"
+        When call resolve_config "link.yml" "" ""
+        The status should equal 0
+        The stdout should equal "${WS}/link.yml input"
       End
     End
   End
