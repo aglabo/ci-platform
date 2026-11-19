@@ -1,6 +1,6 @@
 ---
 title: "Implementation Plan: Secretlint Scan Job (Reusable Workflow)"
-version: 1.0.0
+version: 1.0.1
 based-on: specifications.md v1.0.0
 status: Draft
 ---
@@ -37,7 +37,7 @@ This plan records how the `scan-secretlint` job of `.github/workflows/ru-scan-se
 
 - Steps:
   - `target-checkout`: `actions/checkout`, `with.fetch-depth: ${{ inputs.fetch-depth }}`, `with.persist-credentials: false`. No `if`.
-  - `secretlint-scan`: `aglabo/ci-platform/.github/actions/ca-run-secretlint@v0.8.0-pre`, `with.pnpm-version: ${{ inputs.pnpm-version }}`, `with.secretlint-version: ${{ inputs.secretlint-version }}`, `if: steps.target-checkout.outcome == 'success'`.
+  - `secretlint-scan`: `aglabo/ci-platform/.github/actions/ca-run-secretlint@v0.8.1`, `with.pnpm-version: ${{ inputs.pnpm-version }}`, `with.secretlint-version: ${{ inputs.secretlint-version }}`, `if: steps.target-checkout.outcome == 'success'`.
 
 - Do not add `continue-on-error`, `ca-validate-environment`, `_ca-resolve-config`, or an upload step.
 
@@ -48,6 +48,7 @@ This plan records how the `scan-secretlint` job of `.github/workflows/ru-scan-se
 
 ## 3. Change History
 
-| Date       | Version | Description                 |
-| ---------- | ------- | --------------------------- |
-| 2026-11-19 | 1.0.0   | Initial implementation plan |
+| Date       | Version | Description                                                    |
+| ---------- | ------- | -------------------------------------------------------------- |
+| 2026-11-20 | 1.0.1   | Update composite action references from @v0.8.0-pre to @v0.8.1 |
+| 2026-11-19 | 1.0.0   | Initial implementation plan                                    |

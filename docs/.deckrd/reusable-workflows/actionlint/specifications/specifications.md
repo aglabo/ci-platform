@@ -1,7 +1,7 @@
 ---
 title: "Design Specification: Actionlint Reusable Workflow"
 based-on: requirements.md v1.8.0
-version: 1.4.0
+version: 1.4.1
 status: Draft
 ---
 
@@ -79,10 +79,10 @@ Each unit SHALL have a single behavioral responsibility:
 | lint-execute    | Configuration resolved           | Linter exits and report file is written                         | SHALL fail immediately on non-zero linter exit         |
 | report-upload   | lint-execute failed              | Lint report artifact is uploaded                                | Non-fatal; workflow is already failed at lint-execute  |
 
-<!-- impl-note: env-validation uses aglabo/ci-platform/.github/actions/ca-validate-environment@v0.8.0-pre with actions-type=read (other inputs use their defaults). -->
-<!-- impl-note: tool-install uses aglabo/ci-platform/.github/actions/ca-setup-tool@v0.8.0-pre with repo=jdx/jactionlint, tool-version=${{ inputs.version }}. -->
+<!-- impl-note: env-validation uses aglabo/ci-platform/.github/actions/ca-validate-environment@v0.8.1 with actions-type=read (other inputs use their defaults). -->
+<!-- impl-note: tool-install uses aglabo/ci-platform/.github/actions/ca-setup-tool@v0.8.1 with repo=jdx/jactionlint, tool-version=${{ inputs.version }}. -->
 <!-- impl-note: Configuration checkout path: global/configs/. Global fallback config: global/configs/jactionlint.yaml. -->
-<!-- impl-note: resolve-config uses aglabo/ci-platform/.github/actions/_ca-resolve-config@v0.8.0-pre with config=${{ inputs.config }}, local-config=configs/jactionlint.yaml, global-config=global/configs/jactionlint.yaml. Outputs: config-file, source. -->
+<!-- impl-note: resolve-config uses aglabo/ci-platform/.github/actions/_ca-resolve-config@v0.8.1 with config=${{ inputs.config }}, local-config=configs/jactionlint.yaml, global-config=global/configs/jactionlint.yaml. Outputs: config-file, source. -->
 
 #### Unit Interaction Map
 
@@ -380,6 +380,7 @@ The lint execution unit SHALL fail fast. It MUST NOT ignore a non-zero linter ex
 
 | Date       | Version | Change                                                                                                                                                                                                                                                              |
 | ---------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-11-20 | 1.4.1   | Update composite action references from @v0.8.0-pre to @v0.8.1                                                                                                                                                                                                      |
 | 2026-11-19 | 1.4.0   | Add the resolve-config unit and rules R-023..R-027 (input, local, global precedence; path confinement); config default is empty; default version 2.6.0; action references @v0.8.0-pre; based-on requirements v1.8.0                                                 |
 | 2026-11-03 | 1.3.1   | Update ca-* composite action references from @v0.5.0 to @v0.6.0                                                                                                                                                                                                     |
 | 2026-11-03 | 1.3.0   | Change the configuration repository to aglabo/global-configs (checkout path global/configs, config default ./global/configs/jactionlint.yaml); update composite action references to ca-validate-environment / ca-setup-tool @v0.5.0 and actions/checkout to v7.0.1 |

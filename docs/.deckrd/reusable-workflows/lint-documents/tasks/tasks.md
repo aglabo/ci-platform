@@ -110,7 +110,7 @@ source: specifications.md v1.0.0, implementation.md v1.0.0
 - [ ] **T-02-01-02**: Verify `changed-files` passes `commit-count` and `pattern`
   - Target: `steps.changed-files.with`
   - Scenario: Given validation succeeded
-  - Expected: Then `uses` is `ca-get-changed-files@v0.8.0-pre`, `with.commit-count: ${{ inputs.commit-count }}`, `with.pattern: ${{ inputs.pattern }}`, `if: steps.env-validation.outcome == 'success'`
+  - Expected: Then `uses` is `ca-get-changed-files@v0.8.1`, `with.commit-count: ${{ inputs.commit-count }}`, `with.pattern: ${{ inputs.pattern }}`, `if: steps.env-validation.outcome == 'success'`
   - `yq`: `(.jobs."get-changed-files".steps[] | select(.id=="changed-files")).with.pattern == "${{ inputs.pattern }}"`
 
 - [ ] **T-02-01-03**: Verify job outputs map to the `changed-files` step
@@ -238,8 +238,8 @@ source: specifications.md v1.0.0, implementation.md v1.0.0
   - Expected: Then no job has duplicate step ids
   - `yq`: `[.jobs[].steps | ([.[].id] | (unique | length) == length)] | all`
 
-- [ ] **T-04-01-03**: Verify every action reference from this repository is pinned to `@v0.8.0-pre`
+- [ ] **T-04-01-03**: Verify every action reference from this repository is pinned to `@v0.8.1`
   - Target: `jobs.*.steps[*].uses`
   - Scenario: Given the workflow uses repository composite actions
-  - Expected: Then every `aglabo/ci-platform/` reference ends with `@v0.8.0-pre`
+  - Expected: Then every `aglabo/ci-platform/` reference ends with `@v0.8.1`
   - `yq`: `[.jobs[].steps[].uses | select(. != null and test("^aglabo/ci-platform/"))] | all(test("@v0\\.8\\.0-pre$"))`

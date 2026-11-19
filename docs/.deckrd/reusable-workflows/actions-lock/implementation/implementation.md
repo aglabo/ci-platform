@@ -1,6 +1,6 @@
 ---
 title: "Implementation Plan: Actions Lock Reusable Workflow"
-version: 1.0.0
+version: 1.0.1
 based-on: specifications.md v1.0.0
 status: Draft
 ---
@@ -38,7 +38,7 @@ This plan records how `.github/workflows/ru-qa-actions-lock.yml` implements the 
 
 - Steps:
   - `target-checkout`: `actions/checkout`, `persist-credentials: false`. No `if`.
-  - `env-validation`: `aglabo/ci-platform/.github/actions/ca-validate-environment@v0.8.0-pre`, `actions-type: read`, `if: steps.target-checkout.outcome == 'success'`.
+  - `env-validation`: `aglabo/ci-platform/.github/actions/ca-validate-environment@v0.8.1`, `actions-type: read`, `if: steps.target-checkout.outcome == 'success'`.
   - `tool-install`: `if: steps.env-validation.outcome == 'success'`, env `GH_TOKEN: ${{ github.token }}` and `EXT_VERSION: ${{ inputs.version }}`, run `gh extension install github/gh-actions-lock --pin "${EXT_VERSION}"`.
   - `tool-version`: `if: steps.tool-install.outcome == 'success'`, env `GH_TOKEN`, run `gh actions-lock --version`.
   - `prepare-report`: `if: steps.tool-version.outcome == 'success'`, run `mkdir -p .github/report`.
@@ -55,6 +55,7 @@ This plan records how `.github/workflows/ru-qa-actions-lock.yml` implements the 
 
 ## 3. Change History
 
-| Date       | Version | Description                 |
-| ---------- | ------- | --------------------------- |
-| 2026-11-19 | 1.0.0   | Initial implementation plan |
+| Date       | Version | Description                                                    |
+| ---------- | ------- | -------------------------------------------------------------- |
+| 2026-11-20 | 1.0.1   | Update composite action references from @v0.8.0-pre to @v0.8.1 |
+| 2026-11-19 | 1.0.0   | Initial implementation plan                                    |

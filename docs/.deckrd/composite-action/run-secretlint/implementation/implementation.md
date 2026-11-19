@@ -2,7 +2,7 @@
 title: "Implementation Plan: ca-run-secretlint"
 based-on: specifications.md v1.0.0
 status: Draft
-version: 1.0.0
+version: 1.0.1
 created: "2026-11-19"
 ---
 
@@ -79,7 +79,7 @@ created: "2026-11-19"
 - `ru-scan-secrets.yml` に `scan-secretlint` ジョブを追加する
   - `runs-on: ubuntu-slim`、`timeout-minutes: 10`、`permissions: contents: read`
   - `actions/checkout` (`fetch-depth: ${{ inputs.fetch-depth }}`、`persist-credentials: false`)
-  - `ca-run-secretlint@v0.8.0-pre` に `pnpm-version` と `secretlint-version` を渡す
+  - `ca-run-secretlint@v0.8.1` に `pnpm-version` と `secretlint-version` を渡す
 - ワークフローの入力 `secretlint-version` (既定 "14.0.1") と `pnpm-version` (既定 "") を追加する
 - betterleaks のジョブとは `needs` で結ばない
 
@@ -87,6 +87,7 @@ created: "2026-11-19"
 
 <!-- バージョニングは deckrd-rule-document-versioning.md に従う。 -->
 
-| Date       | Version | Description     |
-| ---------- | ------- | --------------- |
-| 2026-11-19 | 1.0.0   | Initial release |
+| Date       | Version | Description                                                    |
+| ---------- | ------- | -------------------------------------------------------------- |
+| 2026-11-20 | 1.0.1   | Update composite action references from @v0.8.0-pre to @v0.8.1 |
+| 2026-11-19 | 1.0.0   | Initial release                                                |

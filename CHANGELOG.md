@@ -1,12 +1,13 @@
 ---
 title: "ci-platform Change Log"
-version: "0.8.0"
+version: "0.8.1"
 date: 2026-11-19
 tags:
   - release
   - reusable-workflows
   - ci-platform
 summary: >
+  v0.8.1 updates gh actions-lock to 0.5.0 and makes actions.lock compatible with 0.5.0.
   v0.8.0 resolves tool configurations in the reusable workflows via _ca-resolve-config,
   adds validate_path for root-confined path validation, and aligns all composite
   actions, reusable workflows, and the package version to v0.8.0.
@@ -16,6 +17,19 @@ summary: >
   ja-technical-writing/sentence-length,
   ja-technical-writing/max-comma
   -->
+
+## 0.8.1 - 2026-11-19
+
+### Overview
+
+This release updates `gh actions-lock` to 0.5.0 and makes `actions.lock` compatible with 0.5.0.
+
+### Changed
+
+#### GitHub Actions
+
+- `ci-publish-docs.yml`: Updated `gh actions-lock` to 0.5.0 and made `actions.lock`
+  compatible with 0.5.0.
 
 ## 0.8.0 - 2026-11-19
 

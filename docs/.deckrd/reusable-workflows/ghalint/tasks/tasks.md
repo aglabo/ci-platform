@@ -88,11 +88,11 @@ source: specifications.md v1.2.0
 
 #### T-01-05: resolve-config の設定
 
-- [x] **T-01-05-01**: resolve-config が `_ca-resolve-config@v0.8.0-pre` を使い、ghalint 用のパスを渡します
+- [x] **T-01-05-01**: resolve-config が `_ca-resolve-config@v0.8.1` を使い、ghalint 用のパスを渡します
   - Target: `ru-qa-ghalint.yml steps.resolve-config`
   - Scenario: Given resolve-config ステップを確認します, When uses と with を検査します
   - Expected: Then 次を設定しています。
-    `uses: aglabo/ci-platform/.github/actions/_ca-resolve-config@v0.8.0-pre`, `config: ${{ inputs.config }}`,
+    `uses: aglabo/ci-platform/.github/actions/_ca-resolve-config@v0.8.1`, `config: ${{ inputs.config }}`,
     `local-config: configs/ghalint.yaml`, `global-config: global/configs/ghalint.yaml`,
     `if: steps.config-checkout.outcome == 'success'`
 

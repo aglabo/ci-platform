@@ -1,7 +1,7 @@
 ---
 title: "Implementation Plan: Ghalint Reusable Workflow"
 based-on: specifications.md v1.2.0
-version: 1.2.0
+version: 1.2.1
 status: Draft
 ---
 
@@ -59,11 +59,11 @@ status: Draft
   - `actions/checkout@v7.0.1`
   - `persist-credentials: false`
 - Step 2 `env-validation`: 実行環境を検証します
-  - `aglabo/ci-platform/.github/actions/ca-validate-environment@v0.8.0-pre`
+  - `aglabo/ci-platform/.github/actions/ca-validate-environment@v0.8.1`
   - `actions-type: read`
   - 条件: `steps.target-checkout.outcome == 'success'`
 - Step 3 `tool-install`: ghalint をインストールします
-  - `aglabo/ci-platform/.github/actions/ca-setup-tool@v0.8.0-pre`
+  - `aglabo/ci-platform/.github/actions/ca-setup-tool@v0.8.1`
   - `repo: suzuki-shunsuke/ghalint`
   - `tool-version: ${{ inputs.version }}`
   - 条件: `steps.env-validation.outcome == 'success'`
@@ -73,7 +73,7 @@ status: Draft
   - `fetch-depth: 1`、`persist-credentials: false`
   - 条件: `steps.tool-install.outcome == 'success'`
 - Step 5 `resolve-config`: 使用する設定ファイルを解決します
-  - `aglabo/ci-platform/.github/actions/_ca-resolve-config@v0.8.0-pre`
+  - `aglabo/ci-platform/.github/actions/_ca-resolve-config@v0.8.1`
   - `config: ${{ inputs.config }}`
   - `local-config: configs/ghalint.yaml`
   - `global-config: global/configs/ghalint.yaml`
@@ -122,6 +122,7 @@ status: Draft
 
 | Date       | Version | Description                                                                                                                                                                                                                                                                                                                                                                             |
 | ---------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-11-20 | 1.2.1   | Update composite action references from @v0.8.0-pre to @v0.8.1                                                                                                                                                                                                                                                                                                                          |
 | 2026-11-19 | 1.2.0   | resolve-config ステップ（`_ca-resolve-config`）を追加して 8 ステップ構成に更新、config 既定値を空文字に変更、`CONFIG_FILE` の出所を resolve-config の出力に変更、composite action 参照を @v0.8.0-pre に更新、based-on を specifications v1.2.0 に更新                                                                                                                                   |
 | 2026-11-03 | 1.1.1   | ca-* Composite Action の参照を @v0.5.0 から @v0.6.0 に更新                                                                                                                                                                                                                                                                                                                              |
 | 2026-11-03 | 1.1.0   | 設定リポジトリを aglabo/global-configs に変更 (チェックアウト先 global/configs、config 既定値 ./global/configs/ghalint.yaml)、実装に合わせて参照を更新 (ru-qa-ghalint.yml、入力 version / config、env CONFIG_FILE、ca-* Composite Action @v0.5.0、バージョンタグ固定)、版番号を 3 部構成に修正、Open Questions を解決済みに更新、caller は with: なしで global-configs の既定設定を使用 |

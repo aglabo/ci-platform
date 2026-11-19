@@ -2,7 +2,7 @@
 title: "Requirements: Actions Lock Reusable Workflow"
 module: "reusable-workflows/actions-lock"
 status: Draft
-version: 1.0.0
+version: 1.0.1
 created: "2026-11-19"
 ---
 
@@ -42,7 +42,7 @@ This document defines the requirements for the reusable workflow `.github/workfl
 
 - Target Environment: GitHub Actions (`ubuntu-slim`)
 - Related Components:
-  - `ca-validate-environment` composite action (`aglabo/ci-platform/.github/actions/ca-validate-environment@v0.8.0-pre`)
+  - `ca-validate-environment` composite action (`aglabo/ci-platform/.github/actions/ca-validate-environment@v0.8.1`)
   - `github/gh-actions-lock` GitHub CLI extension
   - `.github/workflows/actions.lock` (the lockfile under verification)
   - Caller: `.github/workflows/ci-workflows-qa.yml` (job `actions-lock`, no `with:` block)
@@ -57,12 +57,12 @@ Caller (ci-workflows-qa.yml)
         |  workflow_call
         v
 +--------------------------------------+
-| qa-actions-lock (ubuntu-slim)        |
-| checkout -> env-validation           |
-| -> install extension (pinned)        |
-| -> show version -> prepare report    |
-| -> gh actions-lock --verify          |
-| -> upload report on failure          |
+| qa-actions-lock (ubuntu-slim)     |
+| --------------------------------- |
+| -> install extension (pinned)     |
+| -> show version -> prepare report |
+| -> gh actions-lock --verify       |
+| -> upload report on failure       |
 +--------------------------------------+
 ```
 
@@ -176,7 +176,7 @@ The job MUST run on `ubuntu-slim` with a 10-minute timeout.
 
 ### REQ-C-002: Repository Actions
 
-The workflow MUST use this repository's `ca-validate-environment` at `@v0.8.0-pre`.
+The workflow MUST use this repository's `ca-validate-environment` at `@v0.8.1`.
 
 ### REQ-C-003: Lockfile Location
 
@@ -224,9 +224,9 @@ Scenario: Environment Validation Failure Blocks Installation
 
 ## 9. Open Questions
 
-| Question                                                                         | Type      | Impact Area            | Owner         |
-| -------------------------------------------------------------------------------- | --------- | ---------------------- | ------------- |
-| Should the extension version be pinned by checksum instead of a tag?             | Technical | Supply-chain security  | Security Team |
+| Question                                                             | Type      | Impact Area           | Owner         |
+| -------------------------------------------------------------------- | --------- | --------------------- | ------------- |
+| Should the extension version be pinned by checksum instead of a tag? | Technical | Supply-chain security | Security Team |
 
 ## 10. Traceability
 
@@ -247,6 +247,7 @@ Scenario: Environment Validation Failure Blocks Installation
 
 ## 11. Change History
 
-| Date       | Version | Description     |
-| ---------- | ------- | --------------- |
-| 2026-11-19 | 1.0.0   | Initial release |
+| Date       | Version | Description                                                    |
+| ---------- | ------- | -------------------------------------------------------------- |
+| 2026-11-20 | 1.0.1   | Update composite action references from @v0.8.0-pre to @v0.8.1 |
+| 2026-11-19 | 1.0.0   | Initial release                                                |

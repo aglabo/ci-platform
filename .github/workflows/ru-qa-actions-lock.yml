@@ -1,7 +1,7 @@
 # src: ./.github/workflows/ru-qa-actions-lock.yml
 # @(#) : Reusable workflow for GitHub Actions lockfile verification with gh actions-lock
 #
-# @version : 0.8.0
+# @version : 0.8.1
 #
 # Copyright (c) 2026- atsushifx <https://github.com/atsushifx>
 #
@@ -23,7 +23,7 @@ on:
       version:
         description: "Version of gh-actions-lock extension to install"
         required: false
-        default: "v0.4.1"
+        default: "v0.5.0"
         type: string
 
 jobs:
@@ -43,7 +43,7 @@ jobs:
       - name: Validate environment
         id: env-validation
         if: steps.target-checkout.outcome == 'success'
-        uses: aglabo/ci-platform/.github/actions/ca-validate-environment@v0.8.0-pre
+        uses: aglabo/ci-platform/.github/actions/ca-validate-environment@v0.8.1
         with:
           actions-type: read
 

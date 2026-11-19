@@ -109,7 +109,7 @@ source: specifications.md v1.0.0, implementation.md v1.0.0
 - [ ] **T-02-01-03**: Verify `secretlint-scan` uses the repository action and forwards the inputs
   - Target: `steps.secretlint-scan`
   - Scenario: Given the checkout succeeded
-  - Expected: Then `uses` is `aglabo/ci-platform/.github/actions/ca-run-secretlint@v0.8.0-pre`, `with.pnpm-version: ${{ inputs.pnpm-version }}`, `with.secretlint-version: ${{ inputs.secretlint-version }}`
+  - Expected: Then `uses` is `aglabo/ci-platform/.github/actions/ca-run-secretlint@v0.8.1`, `with.pnpm-version: ${{ inputs.pnpm-version }}`, `with.secretlint-version: ${{ inputs.secretlint-version }}`
   - `yq`: `(.jobs."scan-secretlint".steps[] | select(.id=="secretlint-scan")).with."secretlint-version" == "${{ inputs.secretlint-version }}"`
 
 ### [異常] Error Cases
@@ -145,8 +145,8 @@ source: specifications.md v1.0.0, implementation.md v1.0.0
   - Scenario: Given the workflow YAML exists
   - Expected: Then `jactionlint .github/workflows/ru-scan-secrets.yml` exits 0
 
-- [ ] **T-03-01-02**: Verify the repository action is pinned to `@v0.8.0-pre`
+- [ ] **T-03-01-02**: Verify the repository action is pinned to `@v0.8.1`
   - Target: `jobs.scan-secretlint.steps[*].uses`
   - Scenario: Given the job uses a repository composite action
-  - Expected: Then every `aglabo/ci-platform/` reference ends with `@v0.8.0-pre`
+  - Expected: Then every `aglabo/ci-platform/` reference ends with `@v0.8.1`
   - `yq`: `[.jobs."scan-secretlint".steps[].uses | select(. != null and test("^aglabo/ci-platform/"))] | all(test("@v0\\.8\\.0-pre$"))`

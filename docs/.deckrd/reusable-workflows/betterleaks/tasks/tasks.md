@@ -130,13 +130,13 @@ source: specifications.md v2.0.0
 - [x] **T-02-01-02**: Verify `env-validation` step runs second and is gated on `target-checkout`
   - Target: `steps.env-validation`
   - Scenario: Given `target-checkout` completed, When the second step is evaluated
-  - Expected: Then step with `id: env-validation` uses `aglabo/ci-platform/.github/actions/ca-validate-environment@v0.8.0-pre`, sets `with.actions-type: read`, has `if: steps.target-checkout.outcome == 'success'`, and appears at index 1 in the step list
+  - Expected: Then step with `id: env-validation` uses `aglabo/ci-platform/.github/actions/ca-validate-environment@v0.8.1`, sets `with.actions-type: read`, has `if: steps.target-checkout.outcome == 'success'`, and appears at index 1 in the step list
   - `yq`: `.jobs."scan-betterleaks".steps[1].id == "env-validation"` and `.jobs."scan-betterleaks".steps[1].if == "steps.target-checkout.outcome == 'success'"`
 
 - [x] **T-02-01-03**: Verify `tool-install` uses the `ca-setup-tool` action with correct inputs and gate
   - Target: `steps.tool-install`
   - Scenario: Given `env-validation` completed
-  - Expected: Then step `tool-install` uses `aglabo/ci-platform/.github/actions/ca-setup-tool@v0.8.0-pre`, sets `with.repo: betterleaks/betterleaks`, `with.tool-version: ${{ inputs.version }}`, and has `if: steps.env-validation.outcome == 'success'`
+  - Expected: Then step `tool-install` uses `aglabo/ci-platform/.github/actions/ca-setup-tool@v0.8.1`, sets `with.repo: betterleaks/betterleaks`, `with.tool-version: ${{ inputs.version }}`, and has `if: steps.env-validation.outcome == 'success'`
   - `yq`: `(.jobs."scan-betterleaks".steps[] | select(.id=="tool-install")).with.repo == "betterleaks/betterleaks" and (.jobs."scan-betterleaks".steps[] | select(.id=="tool-install")).if == "steps.env-validation.outcome == 'success'"`
 
 - [x] **T-02-01-04**: Verify `config-checkout` checks out `config-repo` (default branch) into `global/configs/`
@@ -345,7 +345,7 @@ source: specifications.md v2.0.0
 - [x] **T-06-01-01**: Verify `resolve-config` uses `_ca-resolve-config` with the three candidates
   - Target: `steps.resolve-config`
   - Scenario: Given `config-checkout` completed
-  - Expected: Then step `resolve-config` uses `aglabo/ci-platform/.github/actions/_ca-resolve-config@v0.8.0-pre`, sets `with.config: ${{ inputs.config }}`, `with.local-config: configs/betterleaks.toml`, `with.global-config: global/configs/betterleaks.toml`, and has `if: steps.config-checkout.outcome == 'success'`
+  - Expected: Then step `resolve-config` uses `aglabo/ci-platform/.github/actions/_ca-resolve-config@v0.8.1`, sets `with.config: ${{ inputs.config }}`, `with.local-config: configs/betterleaks.toml`, `with.global-config: global/configs/betterleaks.toml`, and has `if: steps.config-checkout.outcome == 'success'`
   - `yq`: `(.jobs."scan-betterleaks".steps[] | select(.id=="resolve-config")).with."local-config" == "configs/betterleaks.toml" and (.jobs."scan-betterleaks".steps[] | select(.id=="resolve-config")).with."global-config" == "global/configs/betterleaks.toml"`
 
 - [x] **T-06-01-02**: Verify `scan-execute` reads the resolved config file

@@ -1,6 +1,6 @@
 ---
 title: "Design Specification: Betterleaks Reusable Workflow"
-version: 2.0.0
+version: 2.0.1
 based-on: requirements.md v2.0.0
 status: Draft
 ---
@@ -73,10 +73,10 @@ Each unit SHALL have a single behavioral responsibility:
 | resolve-config  | Configuration checkout completed | One existing configuration file is selected                     | SHALL fail the job when no candidate file exists       |
 | scan-execute    | Configuration resolved           | Scanner exits successfully                                      | SHALL fail immediately on non-zero scanner exit        |
 
-<!-- impl-note: env-validation uses aglabo/ci-platform/.github/actions/ca-validate-environment@v0.8.0-pre with actions-type=read (architecture and require-github-hosted keep the action defaults amd64 and false). -->
-<!-- impl-note: tool-install uses aglabo/ci-platform/.github/actions/ca-setup-tool@v0.8.0-pre, which installs betterleaks/betterleaks into ${RUNNER_TEMP}/bin and appends that directory to GITHUB_PATH. -->
+<!-- impl-note: env-validation uses aglabo/ci-platform/.github/actions/ca-validate-environment@v0.8.1 with actions-type=read (architecture and require-github-hosted keep the action defaults amd64 and false). -->
+<!-- impl-note: tool-install uses aglabo/ci-platform/.github/actions/ca-setup-tool@v0.8.1, which installs betterleaks/betterleaks into ${RUNNER_TEMP}/bin and appends that directory to GITHUB_PATH. -->
 <!-- impl-note: Configuration checkout implementation path: global/configs. Fallback scanner config: global/configs/betterleaks.toml. -->
-<!-- impl-note: resolve-config uses aglabo/ci-platform/.github/actions/_ca-resolve-config@v0.8.0-pre with config=inputs.config, local-config=configs/betterleaks.toml, global-config=global/configs/betterleaks.toml. It outputs config-file (absolute path) and source (input, local, or global). -->
+<!-- impl-note: resolve-config uses aglabo/ci-platform/.github/actions/_ca-resolve-config@v0.8.1 with config=inputs.config, local-config=configs/betterleaks.toml, global-config=global/configs/betterleaks.toml. It outputs config-file (absolute path) and source (input, local, or global). -->
 
 #### Unit Interaction Map
 
@@ -336,6 +336,7 @@ The scanner execution unit SHALL fail fast. It MUST NOT ignore a non-zero scanne
 
 | Date       | Version | Change                                                                                                                                                                                                                       |
 | ---------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-11-20 | 2.0.1   | Update composite action references from @v0.8.0-pre to @v0.8.1                                                                                                                                                               |
 | 2026-11-19 | 2.0.0   | Add resolve-config unit (R-022..R-025, DD-009, DR-08) with local-first precedence; add config input; default version 1.10.0; actions @v0.8.0-pre; target-checkout id and env-validation gating; based-on requirements v2.0.0 |
 | 2026-11-03 | 1.4.1   | Update ca-* composite action references from @v0.5.0 to @v0.6.0                                                                                                                                                              |
 | 2026-11-03 | 1.4.0   | Change config-repo default to aglabo/global-configs (checkout path global/configs); align version input, step order, trigger, and actions with ru-scan-betterleaks.yml                                                       |
