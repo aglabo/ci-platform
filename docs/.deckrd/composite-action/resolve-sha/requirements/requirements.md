@@ -15,7 +15,8 @@ created: "2026-10-25"
 
 ### 1.1 Purpose
 
-`ca-get-changed-files` 内にある base/head SHA 解決ロジックを、独立した内部 Composite Action `.github/actions/_ca-resolve-sha/` に切り出す。
+base/head SHA の解決ロジックは、現在 `ca-get-changed-files` 内にある。
+これを独立した内部 Composite Action `.github/actions/_ca-resolve-sha/` に切り出す。
 切り出した Action は、他の Action から再利用可能にする (Issue #135, 親 #134)。
 
 あわせて、従来の実装で未対応だった次のケースを解決する。
@@ -64,7 +65,8 @@ pull_request では、base を含む履歴の取得 (`fetch-depth: 0` 等) を�
 - Target Environment: GitHub Actions (Composite Action)。checkout の `fetch-depth` 前提は REQ-C-003 に従う。
 - Related Components:
   - `.github/actions/ca-get-changed-files/action.yml` (resolve-sha ステップ)
-  - `.github/actions/ca-get-changed-files/scripts/_libs/filter.lib.sh` (`resolve_sha_for_event` / `resolve_before_sha`)
+  - `.github/actions/ca-get-changed-files/scripts/_libs/filter.lib.sh`
+    - 関数: `resolve_sha_for_event` / `resolve_before_sha`
   - `.github/actions/_libs/` (`output.lib.sh`, `validation.lib.sh`, `env.lib.sh`)
   - `.github/actions/ca-setup-repo`, `ca-setup-tool`, `ca-validate-environment` (`_libs/` の既存利用元)
 - Assumptions:
@@ -313,7 +315,8 @@ GIVEN イベントが push でも pull_request でもない (workflow_dispatch, 
 THEN the system SHALL before-sha を HEAD~N (N は commit-count) として、after-sha を HEAD として解決する.
 ```
 
-`pull_request_target`、`pull_request_review`、`merge_group` 等は `pull_request` と同一視せず、その他イベントとして扱う (DR-06, DR-19)。
+`pull_request_target`、`pull_request_review`、`merge_group` 等は `pull_request` と同一視せず、その他イベントとして扱う。
+根拠は DR-06, DR-19 を参照する。
 このため `pull_request_target` の出力は checkout 済み HEAD の直近 N 世代の比較であり、PR の変更検査には使えない。
 
 **Rationale**: 従来は `Unsupported event` エラーであったが、再利用性のため全イベントで解決可能にする。
@@ -422,7 +425,8 @@ THEN the system SHALL "::error::" を出力し、非ゼロ終了コードで終�
 
 実在検証には `git cat-file -e <sha>^{commit}` を使う。
 空ツリー SHA の検証免除は、REQ-F-007 の経路で本 Action が生成した before-sha に限る。
-オーバーライド値 (before-sha / after-sha) または after-sha が空ツリー SHA の場合は、コミットとして存在しない場合と同様にエラーとする (DR-14, DR-24)。
+オーバーライド値 (before-sha / after-sha) または after-sha が空ツリー SHA の場合は、コミットとして存在しない場合と同様にエラーとする。
+根拠は DR-14, DR-24 を参照する。
 
 `pull_request.base.sha` / `pull_request.head.sha` が空の場合も、同様にエラーとする。
 push の after (`github.sha`) は、通常解決 (REQ-F-004) で出力する場合に検証する。
@@ -521,7 +525,8 @@ THEN the system SHALL オーバーライドの有無に関わらず "::error::" 
 
 ```text
 GIVEN commit-count、オーバーライド、イベント名、push の ref 種別の検証に成功している
-  WHEN 作業ディレクトリのリポジトリが partial clone である (remote.<name>.promisor が true、remote.<name>.partialclonefilter が設定されている、またはリポジトリの設定に extensions.partialClone が設定されている)
+  WHEN 作業ディレクトリのリポジトリが partial clone である (remote.<name>.promisor が true、remote.<name>.partialclonefilter が設定されている、
+  またはリポジトリの設定に extensions.partialClone が設定されている)
 THEN the system SHALL オブジェクトを参照する前に "::error::" を出力し、非ゼロ終了コードで終了する.
 ```
 
@@ -606,7 +611,9 @@ Composite Action は `permissions` を宣言できない。
 - HEAD~N が shallow 境界やリポジトリの先頭を越える場合は、空ツリー SHA へフォールバックしなければならない (MUST, REQ-F-007)。
 - push で `github.event.before` が shallow 範囲外にある場合は、HEAD~N へフォールバックする (REQ-F-006)。
 - partial clone (`filter` を指定した checkout) を使ってはならない (MUST NOT, REQ-F-019)。
-- push で本 Action を使う場合は、ブランチ削除とタグの push を `branches:` での絞り込み、または `if: ${{ !github.event.deleted }}` 等で除外しなければならない (MUST)。除外しない場合は REQ-F-020 でエラーとなる。
+- push で本 Action を使う場合は、ブランチ削除とタグの push を除外しなければならない (MUST)。
+  除外には、`branches:` での絞り込み、または `if: ${{ !github.event.deleted }}` 等を使う。
+  除外しない場合は REQ-F-020 でエラーとなる。
 
 ### REQ-C-004: 内部専用
 

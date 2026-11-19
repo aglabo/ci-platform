@@ -2,7 +2,7 @@
 title: "Requirements: ca-get-changed-files"
 module: "composite-action/get-changed-files"
 status: approved
-version: 2.3.0
+version: 2.3.1
 created: "2026-10-29"
 ---
 
@@ -31,7 +31,7 @@ SHA の解決と glob による絞り込みは内部 Action に任せ、本 Acti
 
 ### 1.2 Scope
 
-- `action.yml` の入力の変更: `before-sha` / `after-sha` の削除、`commit-count` の追加、`pattern` の意味の変更 (git pathspec から glob へ)
+- `action.yml` の入力の変更: `before-sha` / `after-sha` の削除、`commit-count` の追加、`pattern` を git pathspec から glob へ変更
 - `_ca-resolve-sha` のスクリプトによる差分範囲の SHA 解決
 - `git diff` による変更ファイルの一覧の取得 (pathspec なし)
 - `_ca-filter-files` のスクリプトによる絞り込みと、出力 `files` / `count` の書き出し
@@ -361,7 +361,8 @@ THEN the system SHALL resolve_sha_for_event、resolve_before_sha、ローカル�
 
 ### REQ-NF-001: Testability
 
-すべての REQ-F は、ShellSpec (unit / functional) または `_tests_ca_composite-actions.yml` のテストジョブで 1 件以上検証しなければならない (MUST)。
+すべての REQ-F は、1 件以上のテストで検証しなければならない (MUST)。
+テストは、ShellSpec (unit / functional) または `_tests_ca_composite-actions.yml` のテストジョブとする。
 `bash ./runners/run-shellspec.sh all` が `not ok` 0 件で完了しなければならない (MUST)。
 
 `git diff` の取得は、実 git リポジトリ fixture で検証しなければならない (MUST)。非 ASCII 文字を含むパスを fixture に含めなければならない (MUST)。
@@ -370,7 +371,8 @@ THEN the system SHALL resolve_sha_for_event、resolve_before_sha、ローカル�
 
 出力 `files` / `count` の名前と書式 (改行区切りのパス一覧、10 進整数の件数) は、改訂前と同じでなければならない (MUST)。
 `pattern` が空で、差分が上限以下の場合を考える。
-このとき `files` は `git diff --name-only --diff-filter=ACMR <before-sha> <after-sha>` の結果と一致し、
+このとき `files` は、次のコマンドの結果と一致しなければならない (MUST)。
+コマンドは `git diff --name-only --diff-filter=ACMR <before-sha> <after-sha>` とする。
 `count` はその行数と一致しなければならない (MUST)。
 改訂前の Action は同じコマンドで一覧を取得していたため、この一致をもって改訂前との互換とみなす。
 ただし、次の差は互換性の例外とする。
@@ -394,7 +396,8 @@ Composite Action は `permissions` を宣言できない。
 ### REQ-C-003: checkout 前提
 
 呼び出し元は、`actions/checkout` を `fetch-depth: 0` で実行しなければならない (MUST)。この前提を `action.yml` の description に明記する (MUST, AC-017)。
-`fetch-depth: 0` は、`_ca-resolve-sha` REQ-C-003 の取得の深さの前提 (push / その他イベントは N+1 以上、pull_request は base と head を含む) を満たす。
+`fetch-depth: 0` は、`_ca-resolve-sha` REQ-C-003 の取得の深さの前提を満たす。
+前提の内容は、push / その他イベントでは N+1 以上、pull_request では base と head を含むこととする。
 深さを満たしても、両端のコミットが存在することは保証しない。
 force push で push の `before` が到達不能な場合は、`_ca-resolve-sha` REQ-F-006 に従い HEAD~N へフォールバックする。
 pull_request の base / head が存在しない場合は、`_ca-resolve-sha` REQ-F-013 に従いエラーとなる。
@@ -421,14 +424,16 @@ pull_request の base / head が存在しない場合は、`_ca-resolve-sha` REQ
 - 出力:
   - `files`: 変更ファイルのパス、1 行 1 件
   - `count`: 変更ファイル数
-- スクリプト: `.github/actions/ca-get-changed-files/scripts/get-changed-files.sh` (環境変数 `BEFORE_SHA` / `AFTER_SHA` を読む)
+- スクリプト: `.github/actions/ca-get-changed-files/scripts/get-changed-files.sh`
+  - 環境変数 `BEFORE_SHA` / `AFTER_SHA` を読む
 - 削除する入力: `before-sha`, `after-sha`
 
 上記を満たさなければならない (MUST)。
 
 ### REQ-C-006: 内部 Action の契約と _libs/ の既存関数を変更しない
 
-内部 Action (`.github/actions/_ca-resolve-sha/`、`.github/actions/_ca-filter-files/`) の契約を変更してはならない (MUST NOT)。
+内部 Action の契約を変更してはならない (MUST NOT)。
+対象は `.github/actions/_ca-resolve-sha/`、`.github/actions/_ca-filter-files/` とする。
 契約は、入力・出力・エラーの文言とする。
 内部 Action の契約に不足がある場合は、本モジュールでは対処せず、各モジュールの要件の改訂として扱う。
 
@@ -443,7 +448,8 @@ pull_request の base / head が存在しない場合は、`_ca-resolve-sha` REQ
 
 ### REQ-C-007: CI テストジョブ
 
-`.github/workflows/_tests_ca_composite-actions.yml` の `test-get-changed-files` ジョブを、新しい入力で動くように改訂しなければならない (MUST)。
+`.github/workflows/_tests_ca_composite-actions.yml` の `test-get-changed-files` ジョブを改訂しなければならない (MUST)。
+改訂後のジョブは、新しい入力で動くようにする。
 `before-sha` / `after-sha` を渡すステップと、git pathspec を前提とした `*.txt` パターンのステップを書き換える (`_ca-filter-files` DR-06)。
 同ファイルは保護領域であるため、PR に変更理由を明記しなければならない (MUST)。
 
@@ -468,7 +474,8 @@ pull_request の base / head が存在しない場合は、`_ca-resolve-sha` REQ
 
 ### REQ-C-009: テストファイルの変更
 
-本モジュールの改訂では、`.github/actions/ca-get-changed-files/` 配下の `__tests__/**/*.spec.sh` を変更・削除してよい (Issue #134 による明示的な指示)。
+本モジュールの改訂では、`.github/actions/ca-get-changed-files/` 配下の `__tests__/**/*.spec.sh` を変更・削除してよい。
+これは Issue #134 の明示的な指示に基づく。
 本モジュールの所有範囲 (`workspaces/module/module.md` の `owns`) 外のテストファイルを変更してはならない (MUST NOT)。
 
 ## 7. User Stories
@@ -715,3 +722,4 @@ Owner が spec / impl の項目は、spec で解決した。各行の括弧内�
 | 2026-10-29 | 2.1.2   | Apply req fix review: unify terms (変更ファイルの一覧, 絞り込みの段, 改訂前, 解決済み), AC-012 covers both limits, add AC-018 (invalid pattern), move AC-015 to F-003/F-005, reorder C-008, cite filter-files REQ-F-017/DR-14, scope cites DR-09                                     |
 | 2026-10-30 | 2.2.0   | Unify document versions to 2.2.0 and approve                                                                                                                                                                                                                                         |
 | 2026-10-31 | 2.3.0   | REQ-C-006: allow the shared-library additions this module owns (error.lib.sh, constants.lib.sh, check_byte_limit) and keep the internal actions' contracts unchanged; scope and Out of Scope follow                                                                                  |
+| 2026-11-19 | 2.3.1   | Split sentences over 100 characters (textlint sentence-length); no change in meaning                                                                                                                                                                                                 |

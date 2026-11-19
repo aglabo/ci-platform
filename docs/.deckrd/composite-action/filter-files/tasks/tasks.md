@@ -1682,7 +1682,7 @@ source: specifications-index.md v1.6.1, implementation.md v1.7.1
   - Target: `filter-files.sh`
   - Test ID: T-FF-MAINF-21
   - Scenario: Given `INPUT_FILES` が 3001 行, When スクリプトを実行する
-  - Expected: Then stderr は `::error::files: ` で始まり、出力ファイルは空である (AC-017)
+  - Expected: Then stderr は `::error::files:` で始まり、出力ファイルは空である (AC-017)
 
 - [x] **T-13-02-05**: patterns が 101 行
   - Target: `filter-files.sh`

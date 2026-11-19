@@ -12,7 +12,7 @@ created: "2026-10-25"
 
 ### 1.1 Purpose
 
-本書は、イベント名・push の ref 種別・partial clone の検査、イベント種別ごとの SHA 解決、HEAD~N 解決、コミット検証、git 障害の分類について振る舞いの規則を定義する。
+本書は、イベント名・push の ref 種別・partial clone の検査、イベント種別ごとの SHA 解決、HEAD~N 解決、コミット検証、git 障害の分類の規則を定義する。
 本書は REQ-F-004 から REQ-F-009、REQ-F-013、REQ-F-014、REQ-F-018 から REQ-F-020 を対象 FR とする。
 入力検証 (commit-count、オーバーライドの対と形式) と出力の書き出しは、別ファイルで扱う。
 
@@ -55,7 +55,8 @@ created: "2026-10-25"
 | head-n-resolution   | HEAD を基準に HEAD~N を解決し、履歴不足を空ツリー SHA に分類する                               | REQ-F-005, REQ-F-006, REQ-F-007, REQ-F-009, REQ-F-014                                  |
 | commit-verification | 出力しようとする SHA がコミットとして存在することを確認する                                    | REQ-F-013                                                                              |
 
-<!-- impl-note: event-resolution = resolve_sha (RSH)、head-n-resolution = resolve_head_n (RHN)、commit-verification = verify_commit (VC)。
+<!-- impl-note: event-resolution = resolve_sha (RSH)、head-n-resolution = resolve_head_n (RHN)、
+commit-verification = verify_commit (VC)。
   partial clone の判定は is_partial_clone (IPC)、push の before の確認はエラーを出さない is_commit (IC) で行う。
   RSH は引数だけを入力とし、環境変数を読まない。RSH と RHN は "<before> <after> <resolution>" を 1 行で標準出力へ返す。
   VC は成功で 0、失敗で 1 を返し、失敗時は <field> を対象とするエラーを出す。空ツリー SHA の定数はモジュール専用ライブラリに置く。 -->
@@ -80,7 +81,8 @@ head-n-resolution と commit-verification は、互いに呼び出さない。
 #### Data Flow Diagram
 
 ```text
-[Event name / ref / SHAs / N] --> [event name check] --> [push ref check] --> [partial clone check] --> [event-resolution] --> [Triple]
+[Event name / ref / SHAs / N] --> [event name check] --> [push ref check] --> [partial clone check] -->
+[event-resolution] --> [Triple]
                                          |                     |                    |                       |
                                          v                     v                    v                       +--> [commit-verification]
                                   (empty: error)    (tag / delete: error)   (partial: error)                |

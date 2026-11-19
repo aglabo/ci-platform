@@ -15,13 +15,16 @@ created: "2026-10-27"
 入力は `files` (必須) と `patterns` (任意、既定値は空文字列) とする。
 出力は `files` (保持行、入力順)、`count` (10 進整数文字列) の 2 つとする。
 純粋なフィルタであり、git とファイルシステムを参照しない (REQ-F-012)。
-評価順序は specifications-index.md §3.4 に従う。入力の検査・正規化 → パターン行の検査 → 照合 → 出力先の検証 → files、count の書き出しの順とし、入力の検証をすべて終えてから出力先を検証する (DD-IDX-02)。
+評価順序は specifications-index.md §3.4 に従う。
+入力の検査・正規化 → パターン行の検査 → 照合 → 出力先の検証 → files、count の書き出しの順とし、入力の検証をすべて終えてから出力先を検証する (DD-IDX-02)。
 
 本計画の範囲は、Composite Action の作成と CI ジョブの追加までとする。`ca-get-changed-files` への組み込みは #134 の別タスクとする。
 
 - 既存のワークフローとアクションは、`_tests_ca_composite-actions.yml` (REQ-C-008) を除いて変更しない。
-- 共有ライブラリ `.github/actions/_libs/` への変更は、REQ-C-007 の追加 (`validate_output_file`、`write_multiline_output`) に限る。
-- `ca-get-changed-files/scripts/_libs/filter.lib.sh` の旧 `write_multiline_output` の置き換えはスコープ外とする (DR-06、DR-07)。
+- 共有ライブラリ `.github/actions/_libs/` への変更は、REQ-C-007 の追加に限る。
+  対象は `validate_output_file`、`write_multiline_output` とする。
+- 旧 `write_multiline_output` の置き換えはスコープ外とする (DR-06、DR-07)。
+  旧関数は `ca-get-changed-files/scripts/_libs/filter.lib.sh` にある。
 - 完了条件は、次のすべてを満たすこととする。
   - actionlint / ghalint を通過する
   - ShellSpec の全テストに `not ok` が無い
@@ -39,7 +42,8 @@ PR は 2 つに分ける。
 
 - 各コミットの中で BDD の RGR サイクルを回す。テストが FAIL することを確認してから実装し、PASS を確認してからコミットする。
 - テストとその実装は同じコミットに含める。
-- テスト ID は `T-FF-<略語>-NN` とする。略語は `module.md` の「関数一覧」に従う (functional は `T-FF-MAINF-NN`)。ケース名には `[Normal]` / `[Error]` / `[Edge]` を付ける。
+- テスト ID は `T-FF-<略語>-NN` とする。略語は `module.md` の「関数一覧」に従う (functional は `T-FF-MAINF-NN`)。
+  ケース名には `[Normal]` / `[Error]` / `[Edge]` を付ける。
 - テストを追加したコミットでは、そのテストが使う略語を `module.md` の「テスト対象の略語」表に追記する (テスト ID 検査 D)。
 - ShellSpec の `It` にはテスト ID をリテラルで書き、`Parameters` は使わない (テスト ID 検査 B / D が ID を読めるようにするため)。
 - テストの実行は `runners/run-shellspec.sh` 経由で行う。
@@ -48,7 +52,8 @@ PR は 2 つに分ける。
 - 内部シンボルは先頭アンダースコアで区別する。
 - 環境変数を読むのは MAIN だけとし、`${VAR:-}` の形で読む (REQ-C-006)。
   ライブラリのロードガード変数 (`*_LIB_LOADED`) は例外とする。ガード変数は判定直後に設定し、共有ライブラリの読み込みに失敗したら 1 を返す。
-- 失敗系のテストは、`set -e` が効かない文脈 (ShellSpec の `When call`) で終了コードとエラー出力を確認する。関数内のコマンドの失敗が、`set -e` なしでも呼び出し元へ返ることを確かめるため (impl second opinion)。
+- 失敗系のテストは、`set -e` が効かない文脈 (ShellSpec の `When call`) で終了コードとエラー出力を確認する。
+  関数内のコマンドの失敗が、`set -e` なしでも呼び出し元へ返ることを確かめるため (impl second opinion)。
 
 ### 1.2 Reference
 
@@ -93,7 +98,8 @@ PR は 2 つに分ける。
   - コマンド置換の結果を受ける変数は `local` で先に宣言し、代入は別の行で行う (`local _x=$(fn)` は `fn` の終了コードを失うため。impl explore review A-04)。
   - データを stdout に出すのはコマンド置換の中だけとし、ログへ直接 echo しない (ファイル名によるワークフローコマンドの偽装を防ぐ)。
   - CP (`check_patterns`) はパターン行を検査するだけで、stdout に何も出さない。終了コード (0 / 1) だけを返す (DR-19)。
-  - MAIN は、CP が 0 を返した後、PPT の結果 (`pattern` / `!pattern` の行、入力の順) をそのまま FF に渡す。包含と除外の分離や種別の付与はしない (DR-19。impl harden review GF-01 の「MAIN が分ける」方式と、`I<TAB>` / `E<TAB>` の分類済み一覧の方式を置き換える)。
+  - MAIN は、CP が 0 を返した後、PPT の結果 (`pattern` / `!pattern` の行、入力の順) をそのまま FF に渡す。包含と除外の分離や種別の付与はしない。
+    これは、impl harden review GF-01 の「MAIN が分ける」方式と、`I<TAB>` / `E<TAB>` の分類済み一覧の方式を置き換える (DR-19)。
   - FF は、各パターンの種別と ERE を照合ループの前に 1 回だけ生成し、入力の順で配列に持つ。ループ内では Bash の組み込み機能 (`[[ =~ ]]`) だけを使う。パターン内のタブやバックスラッシュは変えない。
   - データの形の流れ (入口から出力まで):
 
@@ -109,9 +115,11 @@ PR は 2 つに分ける。
     | `$GITHUB_OUTPUT`                          | `files<<<区切り>` / 各行 / `<区切り>`                                                     |
     | 後続ステップの `steps.<id>.outputs.files` | LF 区切りの文字列 (末尾に LF なし)                                                        |
 
-  - 表せないデータ: パス中の LF は行の区切りと区別できないため、渡さないことを呼び出し元の義務とする (REQ-C-009)。既定の `git diff --name-only` は LF を含むパスをクオートして出す。CR は CLE が拒否する。NUL は Bash の文字列・環境変数に入らない。
+  - 表せないデータ: パス中の LF は行の区切りと区別できないため、渡さないことを呼び出し元の義務とする (REQ-C-009)。既定の `git diff --name-only` は LF を含むパスをクオートして出す。
+    CR は CLE が拒否する。NUL は Bash の文字列・環境変数に入らない。
   - 行の扱い: 変数は常にダブルクオートで囲み、単語分割とパス名展開を起こさない。データの出力は `echo` ではなく `printf '%s\n'` を使う (`-n` などのパスを壊さない)。`mapfile -t` はバックスラッシュと両端の空白を変えない。
-  - サイズ: 関数の呼び出しは `execve` を通らないため `ARG_MAX` の制約を受けない。`env:` の値は 1 つあたり `MAX_ARG_STRLEN` (131072 バイト) を超えられないが、入力の上限 (DR-16) はそれより小さい。
+  - サイズ: 関数の呼び出しは `execve` を通らないため `ARG_MAX` の制約を受けない。
+    `env:` の値は 1 つあたり `MAX_ARG_STRLEN` (131072 バイト) を超えられないが、入力の上限 (DR-16) はそれより小さい。
   - テストで複数行の値を書くときは、ヒアドキュメントをコマンド置換で包む (`"$(cat <<'EOF' ... EOF)"`) か、ShellSpec の `%text` を使う。関数の引数は文字列のままとする。
 - glob の変換順 (impl second opinion): GTR は 1 つの glob を先頭から書かれた順に読み、各位置で次の順に判定する (R-MAT-002〜R-MAT-008)。
   境界の期待値は specifications-matching.md §5 のエッジケース表を網羅する。
@@ -131,7 +139,8 @@ PR は 2 つに分ける。
 - 保持の判定 (DR-19、R-MAT-010〜R-MAT-013): パターンを記述順に適用し、ファイルに一致した最後のパターンで決める (包含なら残し、除外なら捨てる)。
   どのパターンにも一致しなければ、先頭のパターンが除外なら残し、包含なら捨てる。パターンが 0 件なら全件を残す。
   除外の後に書いた包含で、ファイルを戻せる (AC-019)。
-- 件数の上限 (DR-16、REQ-F-018): `filter-files.lib.sh` に readonly 定数 `FF_MAX_FILES=3000`・`FF_MAX_PATTERNS=100` を置く。
+- 件数の上限 (DR-16、REQ-F-018): `filter-files.lib.sh` に readonly 定数を置く。
+  定数は `FF_MAX_FILES=3000`・`FF_MAX_PATTERNS=100` とする。
   `FF_MAX_FILES` には共通定数 `GHA_MAX_PR_FILES` (`_libs/constants.lib.sh`、GitHub の PR の差分の最大ファイル数) を代入する。
   CLL は空行を捨てた後の行数で判定し、上限ちょうどは受け付ける。
   エラーは `::error::files: exceeds the limit of 3000 lines (got: '3001')` の形式とする (DR-15。文言は下の「エラーの文言」)。
@@ -177,20 +186,24 @@ PR は 2 つに分ける。
   | R-OUT-001           | `GITHUB_OUTPUT`      | なし (空値の形式)  |
   | R-OUT-002           | `GITHUB_OUTPUT`      | パス               |
   | R-OUT-006           | `files` / `count`    | 出力先のパス       |
+
 - エラー形式 (DR-15): FE は `_ca-resolve-sha` の `rs_error` と同じ形式とする。
   - 通常: `::error::<対象>: <問題> (got: '<値>')`
   - 空値: `::error::<対象>: value must not be empty`
   - 値の `%` / CR / LF は `%25` / `%0D` / `%0A` にエンコードする
 - VOF は `_ca-resolve-sha` の `_rs_check_output_file` のロジックを共有化する (DR-12、R-OUT-020〜R-OUT-022)。
   終了コードは、書き込めれば 0、出力先が空なら 1、書き込めなければ 2 とし、ファイルは作らない。
-  - `_rs_check_output_file` が拒否するのは、ディレクトリと書き込めないパスだけである。VOF は、既存のパスが通常ファイル (`-f`) でなければ 2 を返す判定を追加する (R-OUT-022。書き込み可能な FIFO などを拒否する)。
+  - `_rs_check_output_file` が拒否するのは、ディレクトリと書き込めないパスだけである。VOF は、既存のパスが通常ファイル (`-f`) でなければ 2 を返す判定を追加する (R-OUT-022。
+    書き込み可能な FIFO などを拒否する)。
   - `_ca-resolve-sha` の `_rs_check_output_file` 自体は変更しない。
 - VOF と WMO は stdout / stderr に何も出さない (DR-13)。エラーは呼び出し側の EO が FE で出す。
 - WMO は `write_multiline_output <file> <key> [<line>...]` とし、1 引数 = 1 行で受け取る。CR または LF を含む引数は引数不正とする (DR-13)。
   区切り文字は、`EOF`、`EOF_1`、`EOF_2` … のうち、行の引数のどれとも衝突しない最初の候補とする (R-OUT-010〜R-OUT-014)。引数不正は 1、書き込み失敗は 2 を返す。
 - 共有関数のテストは、`_libs/__tests__/unit/` に新規ファイルとして置く (`write-output.unit.spec.sh` が手本)。
   ファイル名は `validate-output-file.unit.spec.sh`・`write-multiline-output.unit.spec.sh` の 2 つとする。
-- UTF-8 の検査は、RFC 3629 の表に従う ERE (`_FF_UTF8_RE`、読み込み時に 1 回だけ作る) で、関数内の `local LC_ALL=C` (バイト単位) のもとで各行を `[[ =~ ]]` で照合する。PFL と PPT は同じ方式を使う。この方式は次をすべて満たす (impl harden review W-01)。
+- UTF-8 の検査は、RFC 3629 の表に従う ERE (`_FF_UTF8_RE`、読み込み時に 1 回だけ作る) を使う。
+  関数内の `local LC_ALL=C` (バイト単位) のもとで、各行を `[[ =~ ]]` で照合する。
+  PFL と PPT は同じ方式を使う。この方式は次をすべて満たす (impl harden review W-01)。
   - 行ごとに外部コマンドを起動しない
   - 最初の不正な行を特定し、FE に値として渡せる (R-IN-010)
   - ロケールは `C` と `C.UTF-8` 以外を前提にしない (specifications-index.md §2.2)
@@ -201,10 +214,12 @@ PR は 2 つに分ける。
 
 **関数ごとの実装上の詳細:**
 
-- CLE: `check_line_endings <target> <text>`。1 つの入力を検査し、最初に CR を見つけた 1 行だけを報告する。MAIN が files、patterns の順に呼ぶ。CRLF は検査の対象外とする (R-IN-013 が分割前に LF へ正規化するのは、LF を伴わない CR の検査を通過した後である)。
+- CLE: `check_line_endings <target> <text>`。1 つの入力を検査し、最初に CR を見つけた 1 行だけを報告する。MAIN が files、patterns の順に呼ぶ。
+  CRLF は検査の対象外とする (R-IN-013 が分割前に LF へ正規化するのは、LF を伴わない CR の検査を通過した後である)。
 - PFL: `parse_filelist <text>`。UTF-8 とダブルクオートを検査し、行は変更せず、長さ 0 の行だけを捨てる (DR-08)。エラーの対象は `files` とする。
 - PPT: `parse_patterns <text>`。UTF-8 を検査し、両端のスペースとタブを除去してから、空行を捨てる (DR-08)。ダブルクオートは受け付ける (DR-11)。エラーの対象は `patterns` とする。
-- 関数の中のコマンドの失敗は、`set -e` に頼らず `|| return 1` で呼び出し元へ返す。`if` の条件や `||` の左辺など、`set -e` が効かない文脈で呼ばれても失敗が伝わるようにする (impl second opinion)。
+- 関数の中のコマンドの失敗は、`set -e` に頼らず `|| return 1` で呼び出し元へ返す。
+  `if` の条件や `||` の左辺など、`set -e` が効かない文脈で呼ばれても失敗が伝わるようにする (impl second opinion)。
 - CBL: `check_byte_limit <target> <text> <max>`。バイト数が max を超えれば FE でエラーを出して 1 を返す。
 - CLL: `check_line_limit <target> <lines> <max>`。行数が max を超えれば FE でエラーを出して 1 を返す。
 - CP: `check_patterns <lines>`。`!` で始まる行を検査し、不正なら FE でエラーを出して 1 を返す。正しければ 0 を返す。stdout には何も出さない (DR-19)。
@@ -220,8 +235,10 @@ PR は 2 つに分ける。
   - `globstar` / `extglob` / `nocaseglob` はパス名展開にだけ効く。変数は常にクオートし、パス名展開を起こさない。
 - EO: 出力先を検証してから、files、count の順に書く。0 件の files は空で書く (R-OUT-004)。
   - VOF の戻り値が 1 なら R-OUT-001、2 なら R-OUT-002 のエラーを FE で出し、何も書かずに 1 を返す。
-  - `files` は WMO で書く。保持行 (DR-18 の LF 区切りの文字列) は、空でなければ `mapfile -t` (ヒアストリング) で配列に読み込み、`"${lines[@]}"` として WMO に渡す。0 件なら行の引数を渡さない (R-OUT-012)。
-  - `count` は既存の `write_output <file> <key> <value>` で書く。`write_output` は値に CR / LF があると 1、書き込みに失敗すると 2 を返す。`count` は数字だけなので 1 にはならない。
+  - `files` は WMO で書く。保持行 (DR-18 の LF 区切りの文字列) は、空でなければ `mapfile -t` (ヒアストリング) で配列に読み込み、`"${lines[@]}"` として WMO に渡す。
+    0 件なら行の引数を渡さない (R-OUT-012)。
+  - `count` は既存の `write_output <file> <key> <value>` で書く。`write_output` は値に CR / LF があると 1、書き込みに失敗すると 2 を返す。
+    `count` は数字だけなので 1 にはならない。
   - WMO または `write_output` が 0 以外を返したら、R-OUT-006 のエラーを FE で出し、以降を書かずに 1 を返す。files が残り得る (DR-09)。
 
 ---
@@ -233,7 +250,8 @@ PR は 2 つに分ける。
 Phase 1 の開始前、全テストを 1 回実行して結果をベースラインとして記録する (impl explore review G-02)。
 ベースラインで既に FAIL しているテストは、本計画の変更と切り分けて報告する。
 ベースラインで PASS していた既存のテストが 1 件でも FAIL した場合は、Phase 1 を中断し、次のコミットへ進まずに報告する (REQ-C-007)。
-対象は、既存の `_libs` のテストと、既存の利用元 (`ca-setup-repo`、`ca-setup-tool`、`ca-validate-environment`、`_ca-resolve-sha`。REQ-C-007) のテストとする。
+対象は、既存の `_libs` のテストと、既存の利用元のテストとする (REQ-C-007)。
+既存の利用元は `ca-setup-repo`、`ca-setup-tool`、`ca-validate-environment`、`_ca-resolve-sha` とする。
 
 #### Commit 1: feat(libs): add validate_output_file to output.lib.sh
 
@@ -246,7 +264,8 @@ Phase 1 の開始前、全テストを 1 回実行して結果をベースライ
 - `_libs/__tests__/unit/write-multiline-output.unit.spec.sh` (T-FF-WMO-*)
 - 既存の `_libs` と利用元のテストを全件実行し、ベースラインで PASS していたテストがすべて PASS することを確認する
 - PR-A のマージ前に、テスト ID の機械検査 A / C を実行する (impl explore review A-05)
-- 旧 `write_multiline_output` (`ca-get-changed-files/scripts/_libs/filter.lib.sh`、引数 2 つ) は新 WMO (引数 2 つ以上の可変長) と同じ名前である。
+- 旧 `write_multiline_output` は、新 WMO (引数 2 つ以上の可変長) と同じ名前を持つ。
+  旧関数は `ca-get-changed-files/scripts/_libs/filter.lib.sh` にあり、引数は 2 つである。
   現在、両方を読み込むスクリプトは無い。
   #134 で `ca-get-changed-files` に組み込むときは、`output.lib.sh` を読み込む前に旧関数を新 WMO に置き換える。
   読み込み順で一方が他方を上書きしないことをテストする (DR-06、DR-07、impl second opinion)
@@ -313,7 +332,8 @@ Phase 1 の開始前、全テストを 1 回実行して結果をベースライ
 - パターンは PPT の結果 (`pattern` / `!pattern` の行、入力の順) を 1 つの引数で受け取る
 - パターンの順序で結果が変わること、除外の後の包含でファイルを戻せること、先頭が除外なら一致しないファイルを残すことをテストする
 - 本体をサブシェルで書き、`shopt -u nocasematch` と `LC_ALL=C.UTF-8` を設定する
-- `shopt -s globstar extglob nocasematch nocaseglob` を有効にしたテストを書く (REQ-NF-002、specifications-matching.md §5 の impl-note)
+- `shopt -s globstar extglob nocasematch nocaseglob` を有効にしたテストを書く。
+  根拠は REQ-NF-002 と、specifications-matching.md §5 の impl-note とする
   - 結果が変わらないこと
   - `*.SH` が `a.sh` に一致しないこと (DD-MAT-06) を含める
   - 呼び出し後も、呼び出し元の `nocasematch` が有効のままであることを確かめる
@@ -336,7 +356,8 @@ Phase 1 の開始前、全テストを 1 回実行して結果をベースライ
 #### Commit 2: feat(filter-files): add filter-files.sh entry script
 
 - MAIN (`scripts/filter-files.sh`) を追加する。環境変数を読む唯一の箇所とし、1.3 の「MAIN の関数の呼び出し順」で関数を呼ぶ
-- `check_patterns "$_patterns" || return 1` の後、PPT の結果をそのまま FF へ渡す (`filter_files "$_files" "$_patterns"`。1.3 の受け渡し形式、DR-19)
+- `check_patterns "$_patterns" || return 1` の後、PPT の結果をそのまま FF へ渡す。
+  呼び出しは `filter_files "$_files" "$_patterns"` とする (1.3 の受け渡し形式、DR-19)
 - 次の書き方は `_ca-resolve-sha/scripts/resolve-sha.sh` に合わせる (REQ-C-006)
   - `set -euo pipefail`、ライブラリの読み込み、`(return 0 2>/dev/null)` の main ガード
 - T-FF-MAINF-* (functional): AC-001〜AC-019 を検証する
@@ -349,7 +370,8 @@ Phase 1 の開始前、全テストを 1 回実行して結果をベースライ
 - 上限ちょうどの入力 (files 3000 行・patterns 100 行、バイト数の上限以内) で、実機で実行時間を測り、PR に記録する (impl explore review G-01)
   - 負荷の条件として、全パターンが一致しない場合、長いパターン、`**` を繰り返すパターンも測る (impl second opinion)
   - 実用的な速度に収まらない場合は、`FF_MAX_PATTERNS` を下げる。目標の時間と新しい上限は、計測結果を見てユーザーが決める
-  - 上限を下げる場合は、まず次の文書を改訂する: requirements (REQ-F-018)、decision-records (DR-16)、specifications-input (R-IN-015、DD-IN-10)
+  - 上限を下げる場合は、まず次の文書を改訂する。
+    対象は requirements (REQ-F-018)、decision-records (DR-16)、specifications-input (R-IN-015、DD-IN-10) とする
   - その後で定数とテスト (T-FF-CLL-*、T-FF-MAINF-*) を更新する。PR-B のマージ前に済ませる
   - 計測結果 (Git Bash、3000 ファイル、全パターンが一致しない場合): 1000 パターンで約 26 秒、100 パターンで約 2.8 秒。ユーザーの判断で `FF_MAX_PATTERNS` を 100 に下げた (DR-16)
 

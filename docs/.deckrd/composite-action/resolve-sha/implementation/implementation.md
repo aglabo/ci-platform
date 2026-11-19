@@ -10,7 +10,8 @@ created: "2026-10-25"
 
 ### 1.1 Purpose
 
-`ca-get-changed-files` 内の base/head SHA 解決ロジックを、内部 Composite Action `.github/actions/_ca-resolve-sha/` として新設する。
+`ca-get-changed-files` 内の base/head SHA 解決ロジックを切り出す。
+切り出し先は、内部 Composite Action `.github/actions/_ca-resolve-sha/` として新設する。
 実装する機能は、push / pull_request / その他イベントの SHA 解決、HEAD~N と空ツリー SHA へのフォールバック、オーバーライド入力、`resolution` 出力とする。
 評価順序は specifications-index.md §4 に従う。
 
@@ -18,7 +19,8 @@ created: "2026-10-25"
 
 - 既存のワークフローとアクションは変更しない。`ca-get-changed-files` への組み込みは #134 の別タスクとする。
 - 本計画による共有ライブラリ `.github/actions/_libs/` への変更は、REQ-C-008 の追加 (ロードガード、VPI、WO) に限る。
-  `error.lib.sh`・`constants.lib.sh`・`check_byte_limit` は、後に get-changed-files モジュールが追加した。`rs_error` はその `gha_error` の互換ラッパーとなった (tasks.md T-15)。
+  `error.lib.sh`・`constants.lib.sh`・`check_byte_limit` は、後に get-changed-files モジュールが追加した。
+  `rs_error` はその `gha_error` の互換ラッパーとなった (tasks.md T-15)。
 - 完了条件は、次のすべてを満たすこととする。
   - actionlint / ghalint を通過する
   - ShellSpec の全テストに `not ok` が無い
@@ -38,7 +40,10 @@ created: "2026-10-25"
 
 ### 1.2 Reference
 
-- Prior Art / Reference PR: PoC なし。既存実装 `ca-get-changed-files/scripts/_libs/filter.lib.sh` (`resolve_sha_for_event`、`resolve_before_sha`) を参照する。計画の構成は `setup-tool` の implementation.md に倣う。
+- Prior Art / Reference PR: PoC なし。
+  既存実装 `ca-get-changed-files/scripts/_libs/filter.lib.sh` を参照する。
+  対象の関数は `resolve_sha_for_event`、`resolve_before_sha` である。
+  計画の構成は `setup-tool` の implementation.md に倣う。
 - Specifications:
   - specifications-index.md v2.1.1
   - specifications-input.md v1.1.2
@@ -72,7 +77,8 @@ created: "2026-10-25"
 **確定した判断:**
 
 - VPI と WO は共有ライブラリの関数であり、エラーを出さずに終了コードだけを返す。エラーは呼び出し側 (NCC、EO) がモジュール専用の RE で出す。既存のエラー形式は spec の形式と異なり、既存関数は変更できないため (DR-26)。
-- VLG・VPI・WO のテストは、`_libs/__tests__/unit/` に新しいテストファイル (`*.spec.sh`) として置き、RS モジュールの `owns` にファイル単位で含める。旧形式の ID を使う既存のテストファイルには追加しない (DR-26)。
+- VLG・VPI・WO のテストは、`_libs/__tests__/unit/` に新しいテストファイル (`*.spec.sh`) として置き、RS モジュールの `owns` にファイル単位で含める。
+  旧形式の ID を使う既存のテストファイルには追加しない (DR-26)。
 - WO は `write_output <file> <key> <value>` とし、出力先を引数で受け取る。`$GITHUB_OUTPUT` を読むのは MAIN だけとし、EO 経由で WO へ渡す (DR-26)。
   - 既存の `write_status` と異なり、出力先が空の場合に `/dev/null` へ黙って書かない。
 - 出力の事前検査 (R-OUT-003 から R-OUT-006) は EO が正とする。WO は自身の安全のため、次の 2 つだけを終了コードで返す (DR-26)。
@@ -188,7 +194,8 @@ specifications-index.md §3.5 の impl-note を補う。tasks.md はこの記述
 
 #### Commit 5: feat(ca/resolve-sha): add resolve_sha validation gates and override route
 
-- RSH の検査部分を追加する: R-RES-001 (イベント名)、R-RES-009 (push の ref 種別。削除を先に判定)、R-RES-010 / R-RES-008 (partial clone)
+- RSH の検査部分を追加する: R-RES-001 (イベント名)、R-RES-010 / R-RES-008 (partial clone)
+- R-RES-009 (push の ref 種別) を追加する。削除を先に判定する
 - R-RES-002 (オーバーライドの経路) を追加する
 - T-RS-RSH-*
 
@@ -210,7 +217,8 @@ specifications-index.md §3.5 の impl-note を補う。tasks.md はこの記述
 #### Commit 2: feat(ca/resolve-sha): add resolve-sha.sh entry point
 
 - MAIN (`scripts/resolve-sha.sh`) を追加する。環境変数 (`$GITHUB_OUTPUT` を含む) を読む唯一の箇所とし、NCC → VOV → RSH → EO の順に呼ぶ
-- `set -euo pipefail`、ライブラリの読み込み、`BASH_SOURCE` ガードは `ca-get-changed-files/scripts/get-changed-files.sh` の書き方に合わせる
+- `set -euo pipefail`、ライブラリの読み込み、`BASH_SOURCE` ガードは、
+  `ca-get-changed-files/scripts/get-changed-files.sh` の書き方に合わせる
 - T-RS-MAINF-* (functional): specifications-index.md §4 の評価順序、AC-022 の組み合わせ、成功時の 3 出力
 - T-RS-MAINF-*: partial clone のフィクスチャで、`git fetch` の子プロセスが起動されないことを確かめる (AC-018。`GIT_TRACE` の出力で確認する)
 

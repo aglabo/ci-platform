@@ -8,7 +8,8 @@ requirements v2.0.1 の作成時に見つけた食い違いのうち、spec 以�
 spec / impl / tasks を新しい requirements から作り直す際に解消する。
 
 - [x] 旧 spec は `action.yml` を 1 step としているが、コードには resolve-sha の step がある
-- [x] 旧 impl に書かれたユニットテストのパス (`scripts/__tests__/unit/`) が、実際の場所 (`scripts/_libs/__tests__/unit/filter.unit.spec.sh`) と違う
+- [x] 旧 impl に書かれたユニットテストのパス (`scripts/__tests__/unit/`) が、実際の場所と違う
+  - 実際の場所: `scripts/_libs/__tests__/unit/filter.unit.spec.sh`
 - [x] 旧 tasks の ID 体系 (`[nrm-01]`) が、コードの `T-gcf-*` とも module.md の `test_scope: GCF` とも合わない
 - [x] 旧 impl が、存在しない ID (IMPL-001、SPEC-001、REQ-001) を参照している
 - [x] 旧 tasks は `write_multiline_output` の「空値」テストを挙げているが、コードの T-wrt-edg-01 は値 `0` を検証している

@@ -11,7 +11,8 @@ created: "2026-10-25"
 - Status: Accepted
 - Context: base/head SHA の解決ロジックは `ca-get-changed-files` の `filter.lib.sh` に埋め込まれている。
   このため、他の Action から再利用できない (Issue #135, 親 #134)。
-- Decision: `.github/actions/_ca-resolve-sha/` を内部 Composite Action として新設する。入力は `commit-count`、出力は `before-sha` / `after-sha` とする。
+- Decision: `.github/actions/_ca-resolve-sha/` を内部 Composite Action として新設する。
+  入力は `commit-count`、出力は `before-sha` / `after-sha` とする。
 - Alternatives:
   - 現状維持: `ca-get-changed-files` 内に保持する。再利用できないため不採用。
   - 責務の縮小: イベント値の取得と方針の決定を呼び出し元に置き、本 Action は明示 SHA ペアの検証、または HEAD と世代数からの解決に限定する (codex review)。イベントごとの解決方針が呼び出し元ごとに重複し、乖離していくため不採用。
@@ -77,13 +78,17 @@ created: "2026-10-25"
 ## DR-07: 明示オーバーライド入力 before-sha / after-sha を継承する
 
 - Status: Accepted
-- Context: 現行の `ca-get-changed-files` は入力 `before-sha` / `after-sha` による明示オーバーライドを持つ (`filter.lib.sh` の `resolve_sha_for_event`)。requirements v1.0.0 はこれに言及しておらず、置き換えタスクで呼び出し元の入力契約が失われる。
-- Decision: 入力 `before-sha` / `after-sha` (required: false, default "") を追加する。両方が指定された場合はイベント別解決より優先して採用する。片方のみの指定は `::error::` と非ゼロ終了で拒否する。`commit-count` の検証は DR-05 どおり先頭で行い、コミット実在検証 (DR-10) はオーバーライド値にも適用する。
+- Context: 現行の `ca-get-changed-files` は、入力 `before-sha` / `after-sha` による明示オーバーライドを持つ。
+  実装は `filter.lib.sh` の `resolve_sha_for_event` にある。
+  requirements v1.0.0 はこれに言及しておらず、置き換えタスクで呼び出し元の入力契約が失われる。
+- Decision: 入力 `before-sha` / `after-sha` (required: false, default "") を追加する。両方が指定された場合はイベント別解決より優先して採用する。
+  片方のみの指定は `::error::` と非ゼロ終了で拒否する。`commit-count` の検証は DR-05 どおり先頭で行い、コミット実在検証 (DR-10) はオーバーライド値にも適用する。
 - Alternatives:
   - オーバーライドを廃止し、呼び出し元に残す。置き換えタスクの移行コストが増えるため不採用。
 - Rationale: 現行挙動と互換を保ち、`ca-get-changed-files` からの移行を単純な置換にできる。
 - Trade-offs: 入力が 3 つに増え、入力の組み合わせ検証が必要になる。
-- Note (2026-10-29): `ca-get-changed-files` は #134 で入力 `before-sha` / `after-sha` を削除した (get-changed-files DR-03)。
+- Note (2026-10-29): `ca-get-changed-files` は #134 で入力 `before-sha` / `after-sha` を削除した。
+  詳細は get-changed-files DR-03 を参照する。
   本 Action のオーバーライドには、常に空文字列を渡す。
   本 Action のオーバーライド入力は、内部 Action の汎用機能として残す。
 - Related: REQ-F-011, REQ-F-015, REQ-C-006
@@ -91,7 +96,8 @@ created: "2026-10-25"
 ## DR-08: 解決経路を resolution 出力で通知する
 
 - Status: Accepted
-- Context: フォールバック (HEAD~N / 空ツリー) 時も正常終了するため、呼び出し元は返された SHA が正確な差分基準か近似かを区別できない (codex risk review の最優先指摘)。
+- Context: フォールバック (HEAD~N / 空ツリー) 時も正常終了するため、呼び出し元は返された SHA が正確な差分基準か近似かを区別できない。
+  これは codex risk review の最優先指摘である。
 - Decision: 出力 `resolution` を追加し、`override` / `event` / `fallback-head-n` / `empty-tree` のいずれかを設定する。
 - Alternatives:
   - `::warning::` をログに出すのみ。呼び出し元が条件分岐に使えないため不採用。
@@ -103,8 +109,11 @@ created: "2026-10-25"
 ## DR-09: フォールバックとその他イベントの基準は checkout 済み HEAD とする
 
 - Status: Accepted
-- Context: requirements v1.0.0 では push のフォールバックが before に HEAD~N、after に `github.sha` を使い、その他イベントは HEAD を使う。checkout の `ref` が `github.sha` と異なると、無関係な履歴同士を比較し得る。
-- Decision: HEAD~N を使う経路 (push のフォールバック、その他イベント) では、before-sha を HEAD~N、after-sha を HEAD とする。push の通常解決と pull_request はイベント提供の SHA を使う。
+- Context: requirements v1.0.0 では、push のフォールバックが before に HEAD~N、after に `github.sha` を使う。
+  その他イベントは HEAD を使う。
+  checkout の `ref` が `github.sha` と異なると、無関係な履歴同士を比較し得る。
+- Decision: HEAD~N を使う経路 (push のフォールバック、その他イベント) では、before-sha を HEAD~N、after-sha を HEAD とする。
+  push の通常解決と pull_request はイベント提供の SHA を使う。
 - Alternatives:
   - `github.sha~N` / `github.sha` に統一する。checkout の `ref` が異なるとローカルに存在しない SHA を返し得るため不採用。
 - Rationale: before / after が常に checkout 済みの同一履歴上に存在する。
@@ -114,7 +123,8 @@ created: "2026-10-25"
 ## DR-10: 出力 SHA のコミット実在検証と git エラーの区別
 
 - Status: Accepted
-- Context: requirements v1.0.0 は push の before のみ実在を確認する。PR の base/head やオーバーライド値が不在でも正常終了し、呼び出し元の `git diff` で失敗する。また、HEAD~N の解決失敗をすべて履歴不足と扱うと、リポジトリ不在等の異常が空ツリーで隠れる。
+- Context: requirements v1.0.0 は push の before のみ実在を確認する。PR の base/head やオーバーライド値が不在でも正常終了し、呼び出し元の `git diff` で失敗する。
+  また、HEAD~N の解決失敗をすべて履歴不足と扱うと、リポジトリ不在等の異常が空ツリーで隠れる。
 - Decision:
   - 空ツリー以外の出力 SHA は `git cat-file -e <sha>^{commit}` で検証する。
   - push の before が不在の場合は、DR-02 どおり HEAD~N に fall back する。
@@ -135,7 +145,8 @@ created: "2026-10-25"
   - REQ-C-002 (`permissions: contents: read`) は呼び出し元 workflow / job の制約とする。
   - `commit-count` の許容形式は `^[1-9][0-9]*$` とする (前後空白・先頭ゼロは不可)。
   - `_libs/` の拡張 (`output.lib.sh` への汎用出力関数、`validation.lib.sh` への正整数検証関数) をスコープに含める。
-  - イベント値を受け取る環境変数名は、現行の `GITHUB_BEFORE_SHA` / `GITHUB_AFTER_SHA` / `GITHUB_BASE_SHA` / `GITHUB_HEAD_SHA` と `INPUT_*` に揃える。
+  - イベント値を受け取る環境変数名は、現行のものに揃える。
+    対象は `GITHUB_BEFORE_SHA` / `GITHUB_AFTER_SHA` / `GITHUB_BASE_SHA` / `GITHUB_HEAD_SHA` と `INPUT_*` である。
   - `pull_request_target` は DR-06 どおりその他イベントとして扱う。
 - Alternatives:
   - `_libs/` を拡張せず、スクリプト内に実装する。共通の型・定数の配置規約に反するため不採用。
@@ -146,7 +157,8 @@ created: "2026-10-25"
 ## DR-12: checkout の fetch-depth はイベントごとに N+1 / base を含む深さとする
 
 - Status: Accepted
-- Context: requirements v1.0.0 は `fetch-depth: 0` を前提としていた。完全な履歴取得を避け、commit-count に見合った深さで checkout したい。ただし `fetch-depth: N` では HEAD~N が常に shallow 境界の外となり、pull_request の base も取得されない。
+- Context: requirements v1.0.0 は `fetch-depth: 0` を前提としていた。完全な履歴取得を避け、commit-count に見合った深さで checkout したい。
+  ただし `fetch-depth: N` では HEAD~N が常に shallow 境界の外となり、pull_request の base も取得されない。
 - Decision:
   - push / その他イベントでは、呼び出し元は `fetch-depth` を N+1 以上 (N は commit-count) として checkout する。
   - リポジトリの履歴が N+1 コミットに満たず HEAD~N を解決できない場合は、空ツリー SHA とする (DR-03)。
@@ -162,8 +174,11 @@ created: "2026-10-25"
 ## DR-13: 本 Action は SHA 解決器とし、変更網羅は保証しない
 
 - Status: Accepted
-- Context: codex risk review で、フォールバック経路 (HEAD~N / 空ツリー) は正常終了しても変更を見落とし得ると指摘された。例として、複数コミットの push で before が shallow 範囲外の場合、最後の N コミットしか比較されない。また、pull_request の base 先頭と head の直接比較は、PR が導入した変更とは一致しない。
-- Decision: `_ca-resolve-sha` は二点比較の基準 SHA を返す SHA 解決器と定義する。イベント全体の変更網羅は保証しない。`resolution` が `event` / `override` 以外の場合に全件検査等へ切り替えるかは、呼び出し元の責務とする。pull_request の出力は base 先頭と head の二点差の基準であると明記する。
+- Context: codex risk review で、フォールバック経路 (HEAD~N / 空ツリー) は正常終了しても変更を見落とし得ると指摘された。
+  例として、複数コミットの push で before が shallow 範囲外の場合、最後の N コミットしか比較されない。
+  また、pull_request の base 先頭と head の直接比較は、PR が導入した変更とは一致しない。
+- Decision: `_ca-resolve-sha` は二点比較の基準 SHA を返す SHA 解決器と定義する。イベント全体の変更網羅は保証しない。
+  `resolution` が `event` / `override` 以外の場合に全件検査等へ切り替えるかは、呼び出し元の責務とする。pull_request の出力は base 先頭と head の二点差の基準であると明記する。
 - Alternatives:
   - 見落とし防止を保証する。網羅できない経路では空ツリーかエラーを返す。DR-02 の HEAD~N フォールバックを撤回することになり、CI の処理量が増えるため不採用。
 - Rationale: 責務を SHA 解決に限定し、変更検出の方針は利用目的を知る呼び出し元に委ねる。DR-08 の `resolution` がその判断材料となる。
@@ -173,7 +188,8 @@ created: "2026-10-25"
 ## DR-14: 入力形式・git 障害分類・checkout と出力の契約を厳格化する
 
 - Status: Accepted
-- Context: codex risk review で、いくつかの穴が指摘された。リビジョン式のオーバーライドはコミット検証を通過する。after-sha が空ツリー SHA でも検証免除で通過する。commit-count に上限がない。HEAD~N の解決失敗を一律に履歴不足と扱う。PR の head 取得が前提に含まれない。出力が部分的に書き出され得る。
+- Context: codex risk review で、いくつかの穴が指摘された。リビジョン式のオーバーライドはコミット検証を通過する。after-sha が空ツリー SHA でも検証免除で通過する。
+  commit-count に上限がない。HEAD~N の解決失敗を一律に履歴不足と扱う。PR の head 取得が前提に含まれない。出力が部分的に書き出され得る。
 - Decision:
   - オーバーライド値は `^[0-9a-f]{40}$` (完全長 SHA-1 OID) に限る。
   - 空ツリー SHA の検証免除は before-sha に限る。
@@ -192,8 +208,10 @@ created: "2026-10-25"
 ## DR-17: GITHUB_EVENT_NAME はオーバーライドの有無に関わらず検証する
 
 - Status: Accepted
-- Context: Phase 10 のレビューで、仕様間の食い違いが見つかった。resolution 仕様はオーバーライドなしの場合だけイベント名を検証し、index と output 仕様は常に検証する。GITHUB_EVENT_NAME はランナーが常に設定する既定の環境変数である。
-- Decision: GITHUB_EVENT_NAME の空・未設定は、オーバーライドの有無に関わらずエラーとする。評価順序は、commit-count、オーバーライド、イベント名の検証、SHA 解決、書き出しとする。規則は resolution 仕様に置き、他の仕様はそれを参照する。
+- Context: Phase 10 のレビューで、仕様間の食い違いが見つかった。resolution 仕様はオーバーライドなしの場合だけイベント名を検証し、index と output 仕様は常に検証する。
+  GITHUB_EVENT_NAME はランナーが常に設定する既定の環境変数である。
+- Decision: GITHUB_EVENT_NAME の空・未設定は、オーバーライドの有無に関わらずエラーとする。評価順序は、commit-count、オーバーライド、イベント名の検証、SHA 解決、書き出しとする。
+  規則は resolution 仕様に置き、他の仕様はそれを参照する。
 - Alternatives:
   - オーバーライドなしの場合だけ検証する。実行ごとに環境の契約が変わるため不採用。
 - Rationale: すべての実行で同じ環境の契約を保つ。ランナーは常に値を設定するため、実運用でオーバーライドを妨げることはない。
@@ -203,7 +221,8 @@ created: "2026-10-25"
 ## DR-18: 書き出し中の I/O 失敗による部分出力は、呼び出し元の契約で扱う
 
 - Status: Accepted
-- Context: DR-14 は all-or-nothing の出力を定める。ただし `$GITHUB_OUTPUT` への追記中に I/O 障害 (ディスク満杯等) が起きると、先に書いた行が残る可能性は排除できない (output 仕様 OQ1)。
+- Context: DR-14 は all-or-nothing の出力を定める。
+  ただし `$GITHUB_OUTPUT` への追記中に I/O 障害 (ディスク満杯等) が起きると、先に書いた行が残る可能性は排除できない (output 仕様 OQ1)。
 - Decision: 書き出し前の検査 (出力先の設定、書き込み可否、改行、resolution の値) はすべて最初の行を書く前に終える。それでも残る I/O 失敗による部分出力は許容し、非ゼロ終了する。呼び出し元は非ゼロ終了したステップの出力を使ってはならない、と契約に明記する。
 - Alternatives:
   - 3 行を組み立てて 1 回の追記で書き出す。部分出力の機会は減るが、ゼロにはできないため不採用。
@@ -230,10 +249,13 @@ created: "2026-10-25"
 ## DR-23: partial clone はエラーとし、対象外の環境を前提として扱う
 
 - Status: Accepted
-- Context: spec review と codex review の指摘を受け、DR-15、DR-16、DR-20、DR-21、DR-22 を追加した。しかし、2 つの SHA を履歴から得る内部 Action に対して、要件・仕様・テストが過剰になった。イベント値は GitHub のコンテキストが与える完全長 SHA であり、呼び出し元も内部 Action に限られる。partial clone、replace refs、graft、注釈付きタグの OID は、通常の `actions/checkout` では生じない。
+- Context: spec review と codex review の指摘を受け、DR-15、DR-16、DR-20、DR-21、DR-22 を追加した。
+  しかし、2 つの SHA を履歴から得る内部 Action に対して、要件・仕様・テストが過剰になった。イベント値は GitHub のコンテキストが与える完全長 SHA であり、呼び出し元も内部 Action に限られる。
+  partial clone、replace refs、graft、注釈付きタグの OID は、通常の `actions/checkout` では生じない。
 - Decision:
   - DR-15、DR-16、DR-20、DR-21、DR-22 を削除する。DR-ID は再利用しない。
-  - partial clone のリポジトリ (`remote.<name>.promisor` または `extensions.partialClone` が設定されている) では、オブジェクトを参照する前に `::error::` で終了する。
+  - partial clone のリポジトリでは、オブジェクトを参照する前に `::error::` で終了する。
+    partial clone とは、`remote.<name>.promisor` または `extensions.partialClone` が設定されている状態を指す。
   - 判定は git の設定だけで行い、オブジェクトを参照しない。このため、遅延取得は起動しない。
   - イベント由来の SHA には形式検証をしない。GitHub が完全長 SHA を渡すことを前提とする。
   - replace refs、旧形式の graft ファイル、注釈付きタグの OID の入力は対象外とする。コミット検証は DR-10 のとおりとする。
@@ -248,7 +270,9 @@ created: "2026-10-25"
 ## DR-24: オーバーライド値に空ツリー SHA を受け付けない
 
 - Status: Accepted
-- Context: REQ-F-013 は before-sha 側の空ツリー SHA を実在検証から免除する。一方、REQ-F-011 と AC-007 は、オーバーライド値がコミットとして存在する前提に立つ。このため、入力 before-sha に空ツリー SHA を指定できるかが曖昧であった (codex review)。現行の `ca-get-changed-files` は、オーバーライド値をそのまま通し、空ツリー SHA の指定も受け付けていた。ただし、空ツリー SHA を指定する利用元はない。
+- Context: REQ-F-013 は before-sha 側の空ツリー SHA を実在検証から免除する。一方、REQ-F-011 と AC-007 は、オーバーライド値がコミットとして存在する前提に立つ。
+  このため、入力 before-sha に空ツリー SHA を指定できるかが曖昧であった (codex review)。
+  現行の `ca-get-changed-files` は、オーバーライド値をそのまま通し、空ツリー SHA の指定も受け付けていた。ただし、空ツリー SHA を指定する利用元はない。
 - Decision:
   - オーバーライド値は、before-sha / after-sha とも、コミットとして存在する完全長 SHA に限る。
   - 入力 before-sha / after-sha に空ツリー SHA が指定された場合は、`::error::` で終了する。
@@ -262,9 +286,13 @@ created: "2026-10-25"
 ## DR-25: push はブランチの作成・更新に限り、それ以外はエラーとする
 
 - Status: Accepted
-- Context: push の分岐は `github.event.before` の状態だけで決めており、ブランチ削除やタグの作成・移動・削除を区別していなかった (codex review)。ブランチ削除では、`github.sha` と `github.ref` がデフォルトブランチに戻る。このため clone の深さに応じて、次のどちらかが正常終了で返る。「削除したブランチの先頭とデフォルトブランチの先頭の比較」(`resolution=event`) か、デフォルトブランチの HEAD~N (`fallback-head-n`) である。タグの push でも、比較の意味を持たない基準が正常終了で返る。いずれもエラーにならず、誤った基準が呼び出し元に渡る。
+- Context: push の分岐は `github.event.before` の状態だけで決めており、ブランチ削除やタグの作成・移動・削除を区別していなかった (codex review)。
+  ブランチ削除では、`github.sha` と `github.ref` がデフォルトブランチに戻る。このため clone の深さに応じて、次のどちらかが正常終了で返る。
+  「削除したブランチの先頭とデフォルトブランチの先頭の比較」(`resolution=event`) か、デフォルトブランチの HEAD~N (`fallback-head-n`) である。
+  タグの push でも、比較の意味を持たない基準が正常終了で返る。いずれもエラーにならず、誤った基準が呼び出し元に渡る。
 - Decision:
-  - オーバーライドが指定されていない push では、`GITHUB_REF` が `refs/heads/` で始まり、かつ `GITHUB_EVENT_DELETED` が `true` でない場合だけ解決する。それ以外は `::error::` で終了する (許可リスト方式)。
+  - オーバーライドが指定されていない push では、`GITHUB_REF` が `refs/heads/` で始まり、かつ `GITHUB_EVENT_DELETED` が `true` でない場合だけ解決する。
+    それ以外は `::error::` で終了する (許可リスト方式)。
   - 削除の判定には `github.event.deleted` を使う。削除時は `github.ref` がデフォルトブランチに戻るため、ref だけでは削除を検出できない。
   - オーバーライドが指定されている場合は、この検証を適用しない。オーバーライドではイベントの before / after と ref を参照しないためである。
   - DR-17 のイベント名の検証は環境の契約の検査であり、全経路に適用する。本 DR の検証は、イベント別解決の意味に対する制限であり、push のイベント別解決にだけ適用する。
@@ -274,13 +302,21 @@ created: "2026-10-25"
   - 削除・タグの push を、その他イベントと同様に HEAD~N / HEAD で解決する。削除時の比較は意味を持たず、`resolution` で区別できるだけであるため不採用。
   - オーバーライド指定時にも検証を適用する。タグの push で任意の二点を比較する用途を塞ぐため不採用。
 - Rationale: 誤った基準を正常終了で返す経路をなくす。判定は環境変数だけで行い、git の操作を要しない。
-- Trade-offs: `on: push` を絞っていない呼び出し元では、ブランチ削除やタグの push のたびに本 Action がエラーとなる。呼び出し元は、これらの push を除外する必要がある。除外には `branches:` での絞り込みか `if: ${{ !github.event.deleted }}` を使う。現行の `ca-get-changed-files` は、タグ作成 (before が全ゼロ) を空ツリーとの比較として成功させていた。このため挙動変更となるが、該当する呼び出し元はない。オーバーライド値の妥当性は呼び出し元の責務とし、REQ-F-013 / REQ-F-016 の検証だけを適用する。
-- Related: REQ-F-003 / REQ-F-004..006 / REQ-F-009 / REQ-F-011 / REQ-F-020 / REQ-C-003 / REQ-C-006 / DR-10 / DR-14 / DR-17
+- Trade-offs: `on: push` を絞っていない呼び出し元では、ブランチ削除やタグの push のたびに本 Action がエラーとなる。呼び出し元は、これらの push を除外する必要がある。
+  除外には `branches:` での絞り込みか `if: ${{ !github.event.deleted }}` を使う。
+  現行の `ca-get-changed-files` は、タグ作成 (before が全ゼロ) を空ツリーとの比較として成功させていた。このため挙動変更となるが、該当する呼び出し元はない。
+  オーバーライド値の妥当性は呼び出し元の責務とし、REQ-F-013 / REQ-F-016 の検証だけを適用する。
+- Related: REQ-F-003 / REQ-F-004..006 / REQ-F-009 / REQ-F-011 / REQ-F-020 / REQ-C-003 / REQ-C-006
+  - 関連 DR: DR-10 / DR-14 / DR-17
 
 ## DR-26: 共有ライブラリの追加関数はエラーを出さず、出力先を引数で受け取る
 
 - Status: Accepted
-- Context: REQ-C-007 / REQ-C-008 により、正整数の検証 (VPI) と key=value の出力 (WO) は `_libs/` に追加する。一方、既存の `validation.lib.sh` のエラー形式は、spec index §3.3 の形式 (`(got: '<値>')` と `%` / CR / LF のエンコード) と異なる。既存関数は変更できず、エンコードの補助関数を共有ライブラリに追加することも REQ-C-008 の範囲外となる。また、既存の `write_status` は `$GITHUB_OUTPUT` を直接読み、未設定時は `/dev/null` へ黙って書き込む。これは「環境変数を読むのは入口だけ」(spec index §3.5) と R-OUT-003 に合わない (impl explore review)。
+- Context: REQ-C-007 / REQ-C-008 により、正整数の検証 (VPI) と key=value の出力 (WO) は `_libs/` に追加する。
+  一方、既存の `validation.lib.sh` のエラー形式は、spec index §3.3 の形式 (`(got: '<値>')` と `%` / CR / LF のエンコード) と異なる。
+  既存関数は変更できず、エンコードの補助関数を共有ライブラリに追加することも REQ-C-008 の範囲外となる。
+  また、既存の `write_status` は `$GITHUB_OUTPUT` を直接読み、未設定時は `/dev/null` へ黙って書き込む。
+  これは「環境変数を読むのは入口だけ」(spec index §3.5) と R-OUT-003 に合わない (impl explore review)。
 - Decision:
   - VPI と WO は、エラーを出さずに終了コードだけを返す。エラーは呼び出し側 (NCC、EO) が、モジュール専用の補助関数 (RE) で spec index §3.3 の形式で出す。
   - WO は `write_output <file> <key> <value>` とし、出力先を引数で受け取る。不正な引数 (出力先が空、値に CR / LF を含む) は rc 1、書き込みの失敗は rc 2 を返す。
@@ -297,7 +333,9 @@ created: "2026-10-25"
 ## DR-27: action.yml の検証は CI ジョブを追加せず、静的検査で行う
 
 - Status: Accepted
-- Context: 本モジュールの範囲は Composite Action の作成までとし、既存のワークフローとアクションは変更しない (impl Phase 5)。このため、`_tests_ca_composite-actions.yml` に本 Action を実行するジョブを追加しない。一方、action.yml で環境変数の対応付けが欠けると、入力は空として届き、既定値で静かに解決される (spec index §5)。この欠落は、スクリプトの単体テストでは検出できない (impl explore review)。
+- Context: 本モジュールの範囲は Composite Action の作成までとし、既存のワークフローとアクションは変更しない (impl Phase 5)。
+  このため、`_tests_ca_composite-actions.yml` に本 Action を実行するジョブを追加しない。
+  一方、action.yml で環境変数の対応付けが欠けると、入力は空として届き、既定値で静かに解決される (spec index §5)。この欠落は、スクリプトの単体テストでは検出できない (impl explore review)。
 - Decision:
   - action.yml は、actionlint / ghalint に加え、ShellSpec の静的検査 (T-RS-ACT-*) で確かめる。検査は grep で行い、外部ツールを増やさない。
   - 静的検査では、次の 3 点を確かめる。

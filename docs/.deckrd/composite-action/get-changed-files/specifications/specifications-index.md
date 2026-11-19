@@ -2,7 +2,7 @@
 title: "Design Specification: ca-get-changed-files (Index)"
 based-on: requirements.md v2.3.0
 status: approved
-version: 2.2.1
+version: 2.2.2
 created: "2026-10-29"
 ---
 
@@ -279,7 +279,8 @@ No reordering is permitted. 各 Step が非ゼロで終了した場合は、後�
 | R-IDX-006 |    5 | 後始末                                     | 一時コミットを `git reset --hard HEAD~1` で取り消す                                                                                                                                                                                           |
 
 - Rule ID は追加の順に採番し、表は Step の順に並べる。このため R-IDX-007 は R-IDX-006 の前にある。
-- 検証は `test-resolve-sha` ジョブの書き方 (イベントによる `if:`、`continue-on-error`、Verify ステップでの outcome と outputs の env 経由の検査) に合わせる。
+- 検証は `test-resolve-sha` ジョブの書き方に合わせる。
+  合わせる対象は、イベントによる `if:`、`continue-on-error`、Verify ステップでの outcome と outputs の env 経由の検査とする。
 - `before-sha` / `after-sha` を渡すステップと、git pathspec を前提とした `*.txt` のステップは削除する。
 - summary ジョブは既に `test-get-changed-files` を含む。ジョブ名を変えない限り変更しない。
 - `.github/workflows/*.yml` は保護領域のため、PR に変更理由を明記する。
@@ -382,3 +383,4 @@ requirements の Open Questions のうち、Owner が spec の項目は次のと
 | 2026-10-30 | 1.3.0   | Apply spec second opinion: R-IDX-003/004 use two files to exercise the multi-line handoff, git settings assumption, edge cases ("!" with no changes, quoted path among excluded files)                                                         |
 | 2026-10-30 | 2.2.0   | Unify document versions to 2.2.0 and approve                                                                                                                                                                                                   |
 | 2026-10-31 | 2.2.1   | Follow requirements v2.3.0: Non-Goals limit the excluded change to the internal actions' contracts and existing _libs functions                                                                                                                |
+| 2026-11-19 | 2.2.2   | Split sentences over 100 characters (textlint sentence-length); no change in meaning                                                                                                                                                           |
