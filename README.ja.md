@@ -58,7 +58,7 @@
 | `ru-qa-actionlint.yml`                   | jactionlint で GitHub Actions ワークフローを検証する                 |
 | `ru-qa-actions-lock.yml` (v0.6.0 で追加) | `gh actions-lock` でワークフローのアクションロックファイルを検証する |
 | `ru-qa-ghalint.yml`                      | ghalint で GitHub Actions ワークフローを検証する                     |
-| `ru-scan-betterleaks.yml`                | betterleaks でリポジトリのシークレット混入を検出する                 |
+| `ru-scan-secrets.yml`                    | betterleaks/secretlint でリポジトリのシークレット混入を検出する      |
 
 lint とシークレットスキャンのワークフローは、設定を入力で指定しない場合、[aglabo/global-configs](https://github.com/aglabo/global-configs) の既定設定を使います。
 

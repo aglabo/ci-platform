@@ -1,0 +1,33 @@
+# src: ./.github/workflows/_tests_ru_reusable-workflows.yml
+# @(#) : Test workflow for running ru- prefixed reusable workflows from this repository
+#
+# Copyright (c) 2026- atsushifx <https://github.com/atsushifx>
+#
+# This software is released under the MIT License.
+# https://opensource.org/licenses/MIT
+
+name: "TestRunner for RU Reusable Workflows"
+
+permissions:
+  contents: read
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/_tests_ru_reusable-workflows.yml
+      - .github/workflows/ru-scan-secrets.yml
+      - .github/actions/ca-run-secretlint/**
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-ru-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-scan-secrets:
+    name: Test ru-scan-secrets
+    permissions:
+      contents: read
+    uses: ./.github/workflows/ru-scan-secrets.yml

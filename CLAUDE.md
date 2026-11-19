@@ -78,7 +78,7 @@ aglabo.github.io/       # Docusaurus ドキュメントサイト
 **ワークフロー**:
 
 - CI 本体: `ci-docs-qa`, `ci-publish-docs`, `ci-scan-secrets`, `ci-workflows-qa`
-- 再利用可能: `ru-lint-documents`, `ru-qa-actionlint`, `ru-qa-actions-lock`, `ru-qa-ghalint`, `ru-scan-betterleaks`
+- 再利用可能: `ru-lint-documents`, `ru-qa-actionlint`, `ru-qa-actions-lock`, `ru-qa-ghalint`, `ru-scan-secrets`
 
 **Composite Actions**:
 

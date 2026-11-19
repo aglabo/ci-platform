@@ -59,7 +59,7 @@ Example: `aglabo/ci-platform/.github/actions/<action>@v0.6.1`
 | `ru-qa-actionlint.yml`                   | Lints GitHub Actions workflows with jactionlint              |
 | `ru-qa-actions-lock.yml` (new in v0.6.0) | Verifies the workflow action lockfile with `gh actions-lock` |
 | `ru-qa-ghalint.yml`                      | Lints GitHub Actions workflows with ghalint                  |
-| `ru-scan-betterleaks.yml`                | Scans the repository for secrets with betterleaks            |
+| `ru-scan-secrets.yml`                    | Scans the repository for secrets with betterleaks/secretlint |
 
 By default, the lint and secret-scan workflows use configs from [aglabo/global-configs](https://github.com/aglabo/global-configs).
 

@@ -1,0 +1,37 @@
+# src: ./.github/actions/ca-run-secretlint/action.yml
+# @(#) : Composite: scan files for secrets with secretlint
+#
+# Copyright (c) 2026- aglabo <https://github.com/aglabo>
+#
+# This software is released under the MIT License.
+# https://opensource.org/licenses/MIT
+
+name: "run-secretlint"
+description: |
+  Scan files for secrets with secretlint 14.0.0 or later, run through pnpm dlx.
+  The repository must already be checked out; this action sets up pnpm itself.
+  secretlint uses its bundled configuration, so no config file is read or accepted.
+
+inputs:
+  pnpm-version:
+    description: "pnpm version (empty: use packageManager of package.json)"
+    required: false
+    default: ""
+  secretlint-version:
+    description: "secretlint version to run."
+    required: false
+    default: "14.0.1"
+
+runs:
+  using: composite
+  steps:
+    - name: setup-pnpm
+      uses: pnpm/action-setup@v6.1.1
+      with:
+        version: ${{ inputs.pnpm-version }}
+
+    - name: Run secretlint
+      shell: bash
+      env:
+        INPUT_SECRETLINT_VERSION: ${{ inputs.secretlint-version }}
+      run: bash "${GITHUB_ACTION_PATH}/scripts/run-secretlint.sh"
