@@ -1,14 +1,15 @@
 ---
 title: "ci-platform Change Log"
-version: "0.7.1"
+version: "0.8.0"
 date: 2026-11-19
 tags:
   - release
   - reusable-workflows
   - ci-platform
 summary: >
-  v0.7.1 pins the external action in ca-run-secretlint to a commit SHA, and aligns all
-  composite actions and the package version to v0.7.1.
+  v0.8.0 resolves tool configurations in the reusable workflows via _ca-resolve-config,
+  adds validate_path for root-confined path validation, and aligns all composite
+  actions, reusable workflows, and the package version to v0.8.0.
 ---
 
 <!-- textlint-disable
@@ -16,7 +17,82 @@ summary: >
   ja-technical-writing/max-comma
   -->
 
-## [0.7.1] - 2026-11-19
+## 0.8.0 - 2026-11-19
+
+### Overview
+
+This release makes the reusable workflows resolve their tool configurations through
+the `_ca-resolve-config` composite action. Each workflow now prefers the caller's
+local configuration and falls back to the global one.
+
+Path validation is shared through a new `validate_path` function in
+`_libs/path.lib.sh`, which also rejects symlinks that resolve outside the root and
+paths that contain whitespace. All composite actions, the package version, and the
+reusable workflows are aligned to v0.8.0.
+
+### Added
+
+#### Composite Actions
+
+- `_libs/path.lib.sh`: Added `validate_path`, which makes a value absolute under a
+  root and prints the unresolved path. It rejects empty values, `..` segments,
+  whitespace, paths not strictly inside the root, and paths whose realpath falls
+  outside the realpath of the root. Includes ShellSpec unit tests
+  (T-PA-VP-0101..0502).
+
+### Changed
+
+#### Composite Actions
+
+- `_ca-resolve-config`: Delegated path validation to `validate_path` and removed
+  `_rc_abs` and the inline `..` and `GITHUB_WORKSPACE` checks from `_rc_resolve`.
+  Paths that contain whitespace are now rejected.
+- `_ca-resolve-config` tests: Added unit tests for symlinks inside the workspace,
+  symlinks that resolve outside it, prefix-sibling and dangling symlinks, and
+  paths with whitespace (T-RC-RC-0106..0107, 0208..0213, 0306..0308). Added
+  functional tests for whitespace in `INPUT_CONFIG`, `INPUT_LOCAL_CONFIG`, and
+  `INPUT_GLOBAL_CONFIG` (T-RC-05-01..03).
+- `ca-setup-repo`: Added the copyright and MIT license header to `action.yml`.
+
+#### Reusable Workflows
+
+- `ru-lint-documents.yml`: Resolves the textlint and markdownlint configurations,
+  updated the configuration defaults, and gates report preparation on a
+  successful resolution.
+- `ru-qa-actionlint.yml`, `ru-qa-ghalint.yml`: Added a local configuration fallback
+  for jactionlint and ghalint.
+- `ru-scan-secrets.yml`: Resolves the betterleaks configuration and updated report
+  preparation.
+
+#### GitHub Actions
+
+- `_tests_ca_composite-actions.yml`: Switched the `ca-setup-tool` test from
+  actionlint to jactionlint 2.6.0.
+- `.github/workflows/actions.lock`: Updated the ci-platform references to
+  v0.8.0-pre with a pinned SHA, added the pinned `actions/checkout` and
+  `actions/setup-node`, and removed the unused `pnpm/action-setup`.
+- `ci-publish-docs.yml`, `ru-*.yml`: Updated the ci-platform composite action
+  references to v0.8.0-pre.
+
+#### Development
+
+- `.vscode/settings.json`: Enabled Markdown validation and fixed the indentation
+  and trailing comma.
+- `.vscode/cspell/dicts/test-id.dic`: Added `ACMR`.
+
+#### Documentation
+
+- `docs/.deckrd/README.md`: Replaced the `notes/` section with the directory layout
+  and simplified the design chain description.
+- Deckrd: Added documents for `resolve-config`, `run-secretlint`,
+  `validate-environment`, `actions-lock`, `lint-documents`, and `secretlint`.
+  Integrated `resolve-config` into the actionlint, betterleaks, and ghalint
+  documents, and updated the existing requirements, specifications,
+  implementation plans, and tasks.
+
+---
+
+## 0.7.1 - 2026-11-19
 
 ### Overview
 
@@ -48,7 +124,7 @@ All composite actions and the package version are aligned to v0.7.1.
 
 ---
 
-## [0.7.0] - 2026-11-19
+## 0.7.0 - 2026-11-19
 
 ### Overview
 
@@ -148,7 +224,7 @@ composite actions and reusable workflows are aligned to v0.7.0.
 
 ---
 
-## [0.6.1] - 2026-11-08
+## 0.6.1 - 2026-11-08
 
 ### Overview
 
@@ -193,7 +269,7 @@ the updated references.
 
 ---
 
-## [0.6.0] - 2026-11-03
+## 0.6.0 - 2026-11-03
 
 ### Overview
 
@@ -244,7 +320,7 @@ workflows, and Dependabot now checks GitHub Actions updates.
 
 ---
 
-## [0.5.0] - 2026-11-02
+## 0.5.0 - 2026-11-02
 
 ### Overview
 
@@ -304,7 +380,7 @@ versions in a lockfile, and expands action and CI test coverage.
 
 ---
 
-## [0.4.1] - 2026-10-27
+## 0.4.1 - 2026-10-27
 
 ### Overview
 
@@ -319,7 +395,7 @@ This release updates tool versions used by workflows and composite actions.
 - Updated ghalint from 1.5.6 to 1.5.7 in `ru-qa-ghalint.yml`.
 - Updated jactionlint from 2.2.0 to 2.3.0 in `ru-qa-actionlint.yml`.
 
-## [0.4.0] - 2026-10-15
+## 0.4.0 - 2026-10-15
 
 ### Overview
 
@@ -388,7 +464,7 @@ It also fixes runner path resolution and updates development tools and setup scr
 
 ---
 
-## [0.3.5] - 2026-09-18
+## 0.3.5 - 2026-09-18
 
 ### Overview
 
@@ -468,7 +544,7 @@ from `"10"` to `"11.22.0"`. Consumers that do not set this input explicitly will
 
 ---
 
-## [0.3.4] - 2026-08-09
+## 0.3.4 - 2026-08-09
 
 ### Overview
 
@@ -531,7 +607,7 @@ by the v7 breaking changes, but consumers of `ca-setup-repo` will run the v7 ser
 
 ---
 
-## [0.3.3] - 2026-06-28
+## 0.3.3 - 2026-06-28
 
 ### Overview
 
@@ -573,7 +649,7 @@ with:
 
 ---
 
-## [0.3.2] - 2026-06-24
+## 0.3.2 - 2026-06-24
 
 ### Overview
 
@@ -619,7 +695,7 @@ resolution logic behind them.
 
 ---
 
-## [0.3.1] - 2026-06-22
+## 0.3.1 - 2026-06-22
 
 ### Overview
 
@@ -650,7 +726,7 @@ enabling downstream jobs and steps to use them for conditional branching or file
 
 ---
 
-## [0.3.0] - 2026-06-21
+## 0.3.0 - 2026-06-21
 
 ### Overview
 
@@ -727,7 +803,7 @@ from `validate-environment`, `setup-tool`, and `setup-tool-repo` to `ca-validate
 
 ---
 
-## [0.2.1] - 2026-06-13
+## 0.2.1 - 2026-06-13
 
 ### Overview
 
@@ -750,7 +826,7 @@ external pins in v0.2.0. Also updates pinned action SHAs to the v0.2.1 commit ha
 
 ---
 
-## [0.1.0] - 2026-02-21
+## 0.1.0 - 2026-02-21
 
 ### Overview
 
