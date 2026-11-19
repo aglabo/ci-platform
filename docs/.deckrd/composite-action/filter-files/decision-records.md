@@ -263,7 +263,8 @@ Issue #136 は `ca-get-changed-files` から pathspec を外し `_ca-filter-file
   - 他の Action から同じ実装を再利用できる
 - Negative:
   - `filter.lib.sh` のローカル実装と同名の関数が一時的に並存する
-  - `ca-get-changed-files` は、後続の get-changed-files の要件改訂で共有ライブラリの `write_multiline_output` に切り替え、ローカル実装を廃止する (DR-06)
+  - `ca-get-changed-files` は、後続の get-changed-files の要件改訂で、共有ライブラリの `write_multiline_output` に切り替える。
+    ローカル実装は廃止する (DR-06)
 
 ### Related
 
@@ -375,7 +376,8 @@ YAML のブロックスカラー (`files: |`) で渡すと値の末尾に改行�
 ### Context
 
 本 Action はパスを正規化しない (REQ-F-001 の CRLF の変換を除く)。
-しかし、デコード済み・リポジトリ相対・正規化済み・LF 区切りといった前提は Assumptions (非規範) に置かれており、前提が崩れたときの責任の所在が定まっていない (harden review P-01)。
+しかし、デコード済み・リポジトリ相対・正規化済み・LF 区切りといった前提は Assumptions (非規範) に置かれている。
+前提が崩れたときの責任の所在が定まっていない (harden review P-01)。
 
 ### Decision
 
@@ -626,7 +628,8 @@ fail-first の方針に従い、最初の誤りで止める。
 
 入力の件数に上限が無いと、照合時間と入出力の規模を見積もれない (impl second opinion)。
 照合はファイルごと・パターンごとに行うため、時間は件数の積に比例して増える。
-また、入力は環境変数で渡すため、Linux の環境変数 1 つ分の上限 (`MAX_ARG_STRLEN`、131072 バイト) を超えると step が起動しない (impl explore review Q-C1)。
+また、入力は環境変数で渡す。
+Linux の環境変数 1 つ分の上限 (`MAX_ARG_STRLEN`、131072 バイト) を超えると、step が起動しない (impl explore review Q-C1)。
 
 ### Decision
 
@@ -634,7 +637,8 @@ REQ-F-001 の処理後の件数に上限を設け、超えた入力は `::error:
 
 - ファイル数の上限は 3000 行、パターン数の上限は 100 行とする。上限ちょうどは受け付ける
 - `files`・`patterns` の値のバイト数の上限は、それぞれ 120000 バイトとする。改行の変換・分割の前に、バイト単位で数える
-- 上限値は `filter-files.lib.sh` の定数 (`FF_MAX_FILES`、`FF_MAX_PATTERNS`、`FF_MAX_FILES_BYTES`、`FF_MAX_PATTERNS_BYTES`) として定義する
+- 上限値は `filter-files.lib.sh` の定数として定義する。
+  定数名は `FF_MAX_FILES`、`FF_MAX_PATTERNS`、`FF_MAX_FILES_BYTES`、`FF_MAX_PATTERNS_BYTES` とする
   - 他の Action と共通する根拠を持つ値には、`_libs/constants.lib.sh` の共通定数を代入する。
     `FF_MAX_FILES` は `GHA_MAX_PR_FILES`、2 つのバイト数の上限は `GHA_MAX_ENV_VALUE_BYTES` とする
 - エラーは DR-15 の形式に従い、上限値を `<問題>` に埋め込む (例: `::error::files: exceeds the limit of 3000 lines (got: '3001')`)
@@ -734,12 +738,14 @@ specifications-index.md §3.5 は、CP の包含・除外の受け渡し方式�
 - パイプラインとプロセス置換では受け渡さない。配列への読み込みは `mapfile -t` (ヒアストリング) だけで行う
 - データを stdout に出すのはコマンド置換の中だけとし、ログへ直接出さない
 - パターンは、PPT の結果 (1 行ごとに `pattern` または `!pattern`) のまま、入力の順で受け渡す。包含と除外の別の一覧や、種別を付けた形には変換しない (DR-19)
-- 共有出力関数 `write_multiline_output` (DR-13) だけは、1 引数 = 1 行で受け取る。呼び出し側 (EO) は、LF 区切りの文字列を空でなければ `mapfile -t` で配列にし、`"${lines[@]}"` として渡す。0 件なら行の引数を渡さない
+- 共有出力関数 `write_multiline_output` (DR-13) だけは、1 引数 = 1 行で受け取る。
+  呼び出し側 (EO) は、LF 区切りの文字列を空でなければ `mapfile -t` で配列にし、`"${lines[@]}"` として渡す。0 件なら行の引数を渡さない
 - 関数の中で 1 件ずつ処理するときは、入口で `mapfile -t` によって配列にしてからループする。関数の間では配列を受け渡さない
 
 ### Alternatives Considered
 
-- ファイルを 1 引数 1 件で FF に渡す (`filter_files <include> <exclude> [<file>...]`)。FF はサブシェルで動くため戻り値は stdout の文字列のままとなり、変換の場所が MAIN に移るだけで減らないため不採用。
+- ファイルを 1 引数 1 件で FF に渡す (`filter_files <include> <exclude> [<file>...]`)。
+  FF はサブシェルで動くため戻り値は stdout の文字列のままとなり、変換の場所が MAIN に移るだけで減らないため不採用。
 - 複数の一覧をファイル記述子ごとのヒアドキュメント (`3<<EOF 4<<EOF`) で渡す。関数の契約が fd に依存し、ShellSpec で渡しにくいため不採用。
 - グローバル配列で受け渡す。テストに `BeforeEach` / `AfterEach` が要り、関数間の結合も強くなるため不採用。
 - 配列名を渡す (nameref)。関数が呼び出し側の変数名に依存するため不採用。
@@ -784,11 +790,14 @@ DR-05 は、除外パターンに 1 つでも一致したファイルを記述�
 - パターンは入力の行の順に適用する。ファイルごとに、そのファイルに一致した最後のパターンで決める。包含なら残し、除外なら捨てる
 - どのパターンにも一致しないファイルは、先頭のパターンで決める。先頭が除外なら残し、先頭が包含なら捨てる
 - パターンが 1 件も無い場合は、全ファイルを残す (REQ-F-004)
-- `classify_patterns` を `check_patterns <lines>` に改める。`!` だけの行 (R-IN-005) と、`!` の直後が空白の行 (R-IN-009) を検査し、`ff_error` で報告して 0 / 1 を返す。stdout には何も出さない
+- `classify_patterns` を `check_patterns <lines>` に改める。
+  `!` だけの行 (R-IN-005) と、`!` の直後が空白の行 (R-IN-009) を検査し、`ff_error` で報告して 0 / 1 を返す。stdout には何も出さない
 - FF のシグネチャは `filter_files <files> <patterns>` とする。`<patterns>` は PPT の結果 (CP で検査済み) を、`pattern` / `!pattern` の行のまま入力の順で渡す
-- FF は、照合ループの前に各パターンを 1 回だけ `glob_to_regex` で ERE に変換し、種別と ERE を入力の順に持つ (DR-17)。除外は先頭の `!` を 1 つだけ除いてから変換する (`!!a.sh` は `!a.sh` を除外する)
+- FF は、照合ループの前に各パターンを 1 回だけ `glob_to_regex` で ERE に変換し、種別と ERE を入力の順に持つ (DR-17)。
+  除外は先頭の `!` を 1 つだけ除いてから変換する (`!!a.sh` は `!a.sh` を除外する)
 - FF は、ファイルごとに最後のパターンから先頭へ向けて照合し、最初に一致したパターンで決める
-- MAIN は `check_patterns "$_patterns" || return 1` の後に `filter_files "$_files" "$_patterns"` を呼ぶ。MAIN の内部関数 `_main_split_patterns` は設けない
+- MAIN は `check_patterns "$_patterns" || return 1` の後に `filter_files "$_files" "$_patterns"` を呼ぶ。
+  MAIN の内部関数 `_main_split_patterns` は設けない
 
 ### Alternatives Considered
 

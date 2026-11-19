@@ -1,21 +1,122 @@
 ---
 title: "ci-platform Change Log"
-version: "0.6.1"
-date: 2026-11-08
+version: "0.7.0"
+date: 2026-11-19
 tags:
   - release
   - reusable-workflows
   - ci-platform
 summary: >
-  v0.6.1 updates the ci-platform action references in the reusable workflows
-  from v0.5.0 to v0.6.0, updates pnpm/action-setup and the default betterleaks
-  version, and adds a config input to the betterleaks secret-scan workflow.
+  v0.7.0 adds the ca-run-secretlint composite action and a secretlint scan,
+  renames ru-scan-betterleaks.yml to ru-scan-secrets.yml, removes the default
+  Node.js and pnpm versions from ca-setup-repo, and aligns all actions and
+  reusable workflows to v0.7.0.
 ---
 
 <!-- textlint-disable
   ja-technical-writing/sentence-length,
   ja-technical-writing/max-comma
   -->
+
+## [0.7.0] - 2026-11-19
+
+### Overview
+
+This release adds a secretlint composite action and a secretlint scan to the
+secret scanning workflow. `ru-scan-betterleaks.yml` is renamed to
+`ru-scan-secrets.yml` because it now scans with both betterleaks and secretlint.
+
+`ca-setup-repo` no longer sets default Node.js and pnpm versions. A new
+`scripts/bump-version.sh` unifies the ci-platform version references, and all
+composite actions and reusable workflows are aligned to v0.7.0.
+
+### Added
+
+#### Composite Actions
+
+- `ca-run-secretlint`: Added an action that runs `pnpm dlx secretlint@<version>`
+  after setting up pnpm. The version must be X.Y.Z with major version 14 or
+  later. Includes ShellSpec unit and functional tests.
+
+#### Reusable Workflows
+
+- `ru-scan-secrets.yml`: Added the `scan-secretlint` job, and the
+  `secretlint-version` (default `14.0.1`) and `pnpm-version` (default empty) inputs.
+- `ru-lint-documents.yml`: Added the `pnpm-version` input (default empty), passed
+  to `ca-setup-repo`.
+
+#### CI Workflows
+
+- `_tests_ru_reusable-workflows.yml`: Added a test runner workflow for
+  `ru-scan-secrets.yml`.
+- `_tests_ca_composite-actions.yml`: Added a job that runs `ca-setup-repo` with
+  explicit Node.js and pnpm versions.
+
+#### Development
+
+- `scripts/bump-version.sh`: Added a script that updates `package.json`, the
+  `# @version` headers, and `uses: aglabo/ci-platform/...@vX.Y.Z` references at
+  once. Supports `--dry-run`. `.github/workflows/actions.lock` is not updated;
+  run `gh actions-lock` separately.
+- `runners/run-betterleaks.sh`: Added a betterleaks runner that resolves local and
+  global configuration, and supports staged changes, directories, and files. It
+  exits with code 78 when the configuration is missing.
+- `scripts/prepare-commit-msg.sh`: Added `fable` model support and changed the
+  default AI model to `opus`.
+
+### Changed
+
+#### GitHub Actions
+
+- `ru-scan-betterleaks.yml` is renamed to `ru-scan-secrets.yml`, and the workflow
+  name is now "Reusable: Scan Secrets". Update callers that reference the old name.
+- `ci-scan-secrets.yml`: Renamed the job to `scan-secrets` and changed it to call
+  `ru-scan-secrets.yml`.
+- `ca-setup-repo`: Removed the default values of `node-version` and `pnpm-version`.
+  When omitted, the version is resolved by the caller.
+- `ru-qa-actionlint.yml`: Updated the default jactionlint version from 2.5.0 to 2.6.0.
+- Added the `# @version : 0.7.0` header to all composite actions and `ru-*.yml`
+  reusable workflows, and updated the ci-platform action references to v0.7.0,
+  including `ca-validate-environment` in `ci-publish-docs.yml`.
+- `ci-docs-qa.yml`: Passes `pnpm-version: "12.21.0"` to `ru-lint-documents.yml`.
+- `.github/workflows/actions.lock`: Updated the locks for the renamed and new workflows.
+
+#### Development
+
+- Updated pnpm from 12.15.0 to 12.21.0, and reorganized the `package.json` scripts
+  (ShellSpec scripts per test tier, secret scanning with betterleaks and secretlint).
+- `lefthook.yml`: Runs betterleaks through `runners/run-betterleaks.sh` and
+  simplified the secretlint command.
+- `runners/run-shfmt.sh`: Added `--apply-ignore` so that `.editorconfig` ignore
+  rules apply to explicit files.
+- `runners/run-shellcheck.sh`: Resolves local and global ShellCheck configuration.
+- `runners/`: Normalized script headers and formatting.
+- `.claude/agents/commit-message-generator.md`: Rewrote the rules (v0.10.0).
+- `.editorconfig`, `.gitignore`, `dprint.jsonc`, `.textlintignore`, and the
+  textlint, markdownlint, betterleaks, cliff, and commitlint configurations:
+  Cleaned up headers, exclude patterns, and rules.
+- `_libs/error.lib.sh`: Scoped the SC2034 suppressions to each shared constant.
+
+#### Documentation
+
+- `CLAUDE.md`: Expanded the project structure, tool list, and command reference,
+  and replaced `ru-scan-betterleaks` with `ru-scan-secrets`.
+- `README.md`, `README.ja.md`: Replaced `ru-scan-betterleaks.yml` with
+  `ru-scan-secrets.yml` in the reusable workflow list.
+- `.claude/rules`: Added the command execution rule and updated the Deckrd rules index.
+- Deckrd: Refined the get-changed-files decision records (v2.2.1), and updated the
+  setup-tool-repo documents and added the `ca-run-secretlint` module definition.
+- Documentation site: Updated the `ca-setup-repo` reference and user guide for the
+  new version defaults. Documented immutable releases and version tag protection
+  in the developer and user guides.
+
+### Removed
+
+- `configs/jactionlint.yaml`, `configs/ghalint.yaml`, `configs/secretlint.config.yaml`:
+  Removed the obsolete configurations. Use the global configuration.
+- `configs/shellcheckrc`: Removed the SC2329, SC2034, and SC2016 suppressions.
+
+---
 
 ## [0.6.1] - 2026-11-08
 

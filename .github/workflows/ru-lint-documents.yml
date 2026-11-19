@@ -1,6 +1,8 @@
 # src: ./.github/workflows/ru-lint-documents.yml
 # @(#) : Reusable workflow for linting changed Markdown files with textlint and markdownlint
 #
+# @version : 0.7.0
+#
 # Copyright (c) 2026- atsushifx <https://github.com/atsushifx>
 #
 # This software is released under the MIT License.
@@ -72,14 +74,14 @@ jobs:
       - name: Validate environment
         id: env-validation
         if: steps.target-checkout.outcome == 'success'
-        uses: aglabo/ci-platform/.github/actions/ca-validate-environment@v0.6.1
+        uses: aglabo/ci-platform/.github/actions/ca-validate-environment@v0.7.0
         with:
           actions-type: read
 
       - name: Get changed files
         id: changed-files
         if: steps.env-validation.outcome == 'success'
-        uses: aglabo/ci-platform/.github/actions/ca-get-changed-files@v0.6.1
+        uses: aglabo/ci-platform/.github/actions/ca-get-changed-files@v0.7.0
         with:
           commit-count: ${{ inputs.commit-count }}
           pattern: ${{ inputs.pattern }}
@@ -102,14 +104,14 @@ jobs:
       - name: Validate environment
         id: env-validation
         if: steps.target-checkout.outcome == 'success'
-        uses: aglabo/ci-platform/.github/actions/ca-validate-environment@v0.6.1
+        uses: aglabo/ci-platform/.github/actions/ca-validate-environment@v0.7.0
         with:
           actions-type: read
 
       - name: Setup agla-doc-tools
         id: tool-install
         if: steps.env-validation.outcome == 'success'
-        uses: aglabo/ci-platform/.github/actions/ca-setup-repo@v0.6.1
+        uses: aglabo/ci-platform/.github/actions/ca-setup-repo@v0.7.0
         with:
           repo: aglabo/agla-doc-tools
           path: ./.tools/agla-doc-tools
@@ -173,14 +175,14 @@ jobs:
       - name: Validate environment
         id: env-validation
         if: steps.target-checkout.outcome == 'success'
-        uses: aglabo/ci-platform/.github/actions/ca-validate-environment@v0.6.1
+        uses: aglabo/ci-platform/.github/actions/ca-validate-environment@v0.7.0
         with:
           actions-type: read
 
       - name: Setup agla-doc-tools
         id: tool-install
         if: steps.env-validation.outcome == 'success'
-        uses: aglabo/ci-platform/.github/actions/ca-setup-repo@v0.6.1
+        uses: aglabo/ci-platform/.github/actions/ca-setup-repo@v0.7.0
         with:
           repo: aglabo/agla-doc-tools
           path: ./.tools/agla-doc-tools

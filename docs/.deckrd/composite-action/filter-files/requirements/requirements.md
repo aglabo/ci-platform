@@ -15,7 +15,8 @@ created: "2026-10-27"
 
 ### 1.1 Purpose
 
-改行区切りのファイルリストを glob パターン (包含・`!` による除外) で絞り込む内部 Composite Action `.github/actions/_ca-filter-files/` を新設する。
+内部 Composite Action `.github/actions/_ca-filter-files/` を新設する。
+この Action は、改行区切りのファイルリストを glob パターン (包含・`!` による除外) で絞り込む。
 これにより、`git diff` に依存しないファイルフィルタを他の Action から再利用可能にする (Issue #136, 親 #134)。
 
 現状の `ca-get-changed-files` の `pattern` 入力は git pathspec として `git diff` に渡されており、次の制約がある。
@@ -46,7 +47,8 @@ created: "2026-10-27"
 - get-changed-files モジュールのドキュメント改訂と `ca-get-changed-files` の置き換え (DR-06)
 - `_tests_ca_composite-actions.yml` の `test-get-changed-files` ジョブの `*.txt` パターンの修正
 - 親 Issue #134 の `pattern` に関する記述の更新
-- `ca-get-changed-files` を共有ライブラリの `write_multiline_output` (`_libs/output.lib.sh`) に切り替え、`filter.lib.sh` のローカル実装を廃止する。
+- `ca-get-changed-files` を共有ライブラリの `write_multiline_output` (`_libs/output.lib.sh`) に切り替える。
+  `filter.lib.sh` のローカル実装は廃止する。
   get-changed-files の要件を改訂する際に追加する (DR-07)
 
 ## 2. Context
@@ -364,7 +366,8 @@ THEN the system SHALL compare each delimiter candidate with every line of the va
      and SHALL write the multi-line output only with a delimiter that does not appear as a line in the value.
 ```
 
-**Rationale**: 既存の `filter.lib.sh` の `write_multiline_output` は区切り文字が固定の `EOF` であり、パスが `EOF` だと出力が壊れる (ヒアリング Q5, DR-07)。
+**Rationale**: 既存の `filter.lib.sh` の `write_multiline_output` は区切り文字に固定の `EOF` を使う。
+パスが `EOF` だと出力が壊れる (ヒアリング Q5, DR-07)。
 一意な文字列を生成するだけでは「衝突しにくい」に留まり、衝突しないことの保証にならない (codex review)。
 
 **Acceptance Criteria**:
@@ -386,7 +389,8 @@ THEN the system SHALL set the files output so that subsequent steps read it as a
      and SHALL exit with status 0.
 ```
 
-**Rationale**: 既存の `filter.lib.sh` の `write_multiline_output` は空の値で空行を 1 行書き出すため、後続ステップから見た値を明示する (explore review Q-07)。
+**Rationale**: 既存の `filter.lib.sh` の `write_multiline_output` は、空の値で空行を 1 行書き出す。
+このため、後続ステップから見た値を明示する (explore review Q-07)。
 対象 0 件は正常な結果であり、`count` の誤計算や `set -e` による異常終了を起こしてはならない (codex review)。
 
 **Acceptance Criteria**:
@@ -434,9 +438,10 @@ THEN the system SHALL use the input value as passed by GitHub Actions after its 
      and SHALL treat double quotes remaining in a pattern line as literal characters.
 ```
 
-**Rationale**: `with:` の値をダブルクオートで囲んだ場合 (例: `patterns: "*.sh"`) は、GitHub Actions が YAML として解釈し、
+**Rationale**: `with:` の値をダブルクオートで囲んだ場合 (例: `patterns: "*.sh"`) は、GitHub Actions が YAML として解釈する。
 クオートを外した文字列 (`*.sh`) を Action に渡す。
-ブロックスカラー (`patterns: |`) 内の行に書いたクオート (例: `"a b.sh"`) は、YAML の解釈後も文字として残るため、Action はそれをパターンの一部として照合する (DR-11)。
+ブロックスカラー (`patterns: |`) 内の行に書いたクオート (例: `"a b.sh"`) は、YAML の解釈後も文字として残る。
+Action はそれをパターンの一部として照合する (DR-11)。
 patterns は両端の空白を除去するため、ブロックスカラー内では両端に空白を持つパターンを表現できない (DR-08, DR-11)。
 files の行がダブルクオートを含む場合は、git の引用表記をデコードせずに渡した入力とみなし、REQ-F-017 でエラーとする。
 files の行は変更しないため、両端の空白もパスの一部として照合される (REQ-F-001)。
@@ -491,7 +496,8 @@ THEN the system SHALL check the byte size of each value before any other input c
 ```
 
 **Rationale**: 件数に上限を設け、照合時間と入出力の規模を見積もれるようにする (impl second opinion)。
-ファイル数の上限は、GitHub の PR の差分が最大 3000 ファイルであることに合わせる。パターン数の上限は 100 とする。照合時間はファイル数とパターン数の積に比例するため、ファイル数の上限 3000 のもとで実用的な時間に収まる値とする (DR-16)。
+ファイル数の上限は、GitHub の PR の差分が最大 3000 ファイルであることに合わせる。パターン数の上限は 100 とする。
+照合時間はファイル数とパターン数の積に比例するため、ファイル数の上限 3000 のもとで実用的な時間に収まる値とする (DR-16)。
 上限ちょうどの件数は受け付ける。件数は REQ-F-001 で無視した行を含めない。
 上限値はスクリプトの定数として定義する (DR-16)。
 バイト数の上限は、Linux の環境変数 1 つ分の上限 (`MAX_ARG_STRLEN`、131072 バイト) に余裕を残すように決める。
@@ -565,7 +571,8 @@ Action 名は `_` プレフィックス (`_ca-filter-files`) とし、内部専�
   ガード変数はガードの判定直後に設定する。依存ライブラリの読み込みに失敗したら 1 を返してアクションを失敗させ、ガード変数の解除や再試行は考慮しない。
   ガード変数が設定済みなら、そのライブラリと依存ライブラリの関数・定数は最初の読み込みで定義済みとみなし、`declare -F` による依存関数の確認は行わない。
 - エラーは `::error::` を stderr に出力して非ゼロで終了する。
-- 出力先の検証と出力の書き出しは、共有ライブラリ `.github/actions/_libs/output.lib.sh` の関数 (出力先の検証関数、`write_output`、`write_multiline_output`) で行う。
+- 出力先の検証と出力の書き出しは、共有ライブラリ `.github/actions/_libs/output.lib.sh` の関数で行う。
+  対象は、出力先の検証関数、`write_output`、`write_multiline_output` とする。
 
 ### REQ-C-007: _libs/ の変更方針
 
@@ -573,7 +580,8 @@ Action 名は `_` プレフィックス (`_ca-filter-files`) とし、内部専�
 
 - 追加してよいもの: `output.lib.sh` への `write_multiline_output` と出力先の検証関数 (DR-07, DR-12)
 - 既存関数のシグネチャおよび挙動は変更してはならない (MUST NOT)。
-- 既存利用元 (`ca-setup-repo`, `ca-setup-tool`, `ca-validate-environment`, `_ca-resolve-sha`) の既存テストは、引き続き PASS しなければならない (MUST)。
+- 既存利用元の既存テストは、引き続き PASS しなければならない (MUST)。
+  既存利用元は `ca-setup-repo`, `ca-setup-tool`, `ca-validate-environment`, `_ca-resolve-sha` とする。
 
 ### REQ-C-008: CI テストジョブ
 

@@ -12,7 +12,8 @@ owns:
 
 内部 Composite Action `_ca-resolve-sha` の差分基準 SHA 解決を扱うモジュール。
 `ca-get-changed-files` の base/head SHA 解決ロジックを切り出し、入力検証・イベント別の SHA 解決・出力の書き出しを提供する。
-共有ライブラリ `.github/actions/_libs/` への追加分 (ロードガード、`validate_positive_int`、`write_output`) のテストは、ファイル単位で本モジュールが所有する。
+共有ライブラリ `.github/actions/_libs/` への追加分のテストは、ファイル単位で本モジュールが所有する。
+追加分は、ロードガード、`validate_positive_int`、`write_output` を指す。
 
 ## テスト対象の略語
 

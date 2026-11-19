@@ -297,6 +297,7 @@ checkout の深さと取得対象は REQ-C-003 に従う。本仕様での帰結
 
 ### 3.5 Function List
 
+<!-- markdownlint-disable MD013 -->
 <!-- impl-note: public function list and test ID abbreviations
   テスト ID は T-RS-<略称>-NN とする。略称はレイヤサフィックスを除いたベース略称とする。
 
@@ -335,6 +336,7 @@ checkout の深さと取得対象は REQ-C-003 に従う。本仕様での帰結
     9223372036854775808 (符号付き 64 bit の最大値 + 1。負の値に桁あふれする)。
   - push の ref 種別の検証は RSH の内部で行う。専用の関数は設けない。
 -->
+<!-- markdownlint-enable MD013 -->
 
 ---
 
@@ -426,8 +428,8 @@ Step 4 は、オーバーライドを指定しない push にだけ適用する 
 REQUIREMENTS の Open Question (エラーメッセージの形式) は、DD-IDX-01 で解消した。
 個別の文言は、各分割ファイルのエラー規則が定める。
 
-REQUIREMENTS の Open Question (merge 履歴で第一親の系列が shallow 境界に達する場合の判定) は、
-`specifications-resolution.md` 3.4 と §5 で解消した。
+REQUIREMENTS の Open Question は、`specifications-resolution.md` 3.4 と §5 で解消した。
+対象は、merge 履歴で第一親の系列が shallow 境界に達する場合の判定を指す。
 
 ---
 
