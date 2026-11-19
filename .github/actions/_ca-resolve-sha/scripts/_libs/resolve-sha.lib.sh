@@ -89,22 +89,22 @@ validate_override() {
     return 0
   fi
   # R-IN-004: exactly one side specified -> error on the empty side
-  if [[ -z "$_after" ]]; then
+  if [[ -z $_after   ]]; then
     rs_error after-sha
     return 1
   fi
-  if [[ -z "$_before" ]]; then
+  if [[ -z $_before   ]]; then
     rs_error before-sha
     return 1
   fi
   # R-IN-006: both specified -> each must be a full lowercase hex OID
   local _oid_pattern='^[0-9a-f]{40}$'
   local _oid_problem="must be a full 40-character lowercase hex commit SHA"
-  if [[ ! "$_before" =~ $_oid_pattern ]]; then
+  if [[ ! $_before =~ $_oid_pattern   ]]; then
     rs_error before-sha "$_oid_problem" "$_before"
     return 1
   fi
-  if [[ ! "$_after" =~ $_oid_pattern ]]; then
+  if [[ ! $_after =~ $_oid_pattern   ]]; then
     rs_error after-sha "$_oid_problem" "$_after"
     return 1
   fi
@@ -122,11 +122,11 @@ validate_override() {
 # @stderr (none)
 # @return 0 on a match, 1 on no match, 2 on any other failure
 _rs_git_config() {
-  git config "$@" 2>/dev/null
+  git config "$@" 2> /dev/null
   case "$?" in
-  0) return 0 ;;
-  1) return 1 ;;
-  *) return 2 ;;
+    0) return 0 ;;
+    1) return 1 ;;
+    *) return 2 ;;
   esac
 }
 
@@ -152,7 +152,7 @@ _rs_git_config() {
 is_partial_clone() {
   local _promisors _rc
 
-  _rs_git_config --get-regexp '^remote\..*\.partialclonefilter$' >/dev/null
+  _rs_git_config --get-regexp '^remote\..*\.partialclonefilter$' > /dev/null
   _rc=$?
   [ "$_rc" -eq 1 ] || return "$_rc"
 
@@ -163,8 +163,8 @@ is_partial_clone() {
 
   # The config is readable, so a failure here means there is no repository
   # (and hence no repository config): not a partial clone.
-  git rev-parse --git-dir >/dev/null 2>&1 || return 1
-  _rs_git_config --local --get extensions.partialclone >/dev/null
+  git rev-parse --git-dir > /dev/null 2>&1 || return 1
+  _rs_git_config --local --get extensions.partialclone > /dev/null
 }
 
 ##
@@ -181,7 +181,7 @@ is_partial_clone() {
 #         the repository, the 40-digit zero OID, and non-commit objects such
 #         as RS_EMPTY_TREE_SHA)
 is_commit() {
-  git cat-file -e "${1}^{commit}" >/dev/null 2>&1
+  git cat-file -e "${1}^{commit}" > /dev/null 2>&1
 }
 
 ##
@@ -204,7 +204,7 @@ is_commit() {
 verify_commit() {
   local _sha="$1" _field="$2"
   # R-RES-021
-  if [[ -z "$_sha" ]]; then
+  if [[ -z $_sha   ]]; then
     rs_error "$_field"
     return 1
   fi
@@ -230,8 +230,8 @@ verify_commit() {
 #         its output is not all digits
 _rs_first_parent_count() {
   local _count
-  _count="$(git rev-list --first-parent --count "$1" 2>/dev/null)" || return 1
-  [[ "$_count" =~ ^[0-9]+$ ]] || return 1
+  _count="$(git rev-list --first-parent --count "$1" 2> /dev/null)" || return 1
+  [[ $_count =~ ^[0-9]+$   ]] || return 1
   printf '%s\n' "$_count"
 }
 
@@ -256,12 +256,12 @@ _rs_first_parent_count() {
 resolve_head_n() {
   local _n="$1" _head _before _count
   # R-RES-011
-  if ! _head="$(git rev-parse --verify -q "HEAD^{commit}" 2>/dev/null)"; then
+  if ! _head="$(git rev-parse --verify -q "HEAD^{commit}" 2> /dev/null)"; then
     rs_error HEAD "cannot be resolved as a commit" HEAD
     return 1
   fi
   # R-RES-012
-  if _before="$(git rev-parse --verify -q "${_head}~${_n}^{commit}" 2>/dev/null)"; then
+  if _before="$(git rev-parse --verify -q "${_head}~${_n}^{commit}" 2> /dev/null)"; then
     printf '%s %s %s\n' "$_before" "$_head" fallback-head-n
     return 0
   fi
@@ -301,17 +301,17 @@ resolve_head_n() {
 # @return 0 when the check passes or does not apply, 1 on error
 _rs_check_push_event() {
   local _event="$1" _override="$2" _ref="$3" _deleted="$4"
-  [[ "$_event" == push ]] || return 0
-  [[ "$_override" != override ]] || return 0
-  if [[ "$_deleted" == true ]]; then
+  [[ $_event == push   ]] || return 0
+  [[ $_override != override   ]] || return 0
+  if [[ $_deleted == true   ]]; then
     rs_error GITHUB_EVENT_DELETED "a ref deletion push has no commit range" "$_deleted"
     return 1
   fi
-  if [[ -z "$_ref" ]]; then
+  if [[ -z $_ref   ]]; then
     rs_error GITHUB_REF
     return 1
   fi
-  if [[ "$_ref" != refs/heads/* ]]; then
+  if [[ $_ref != refs/heads/*   ]]; then
     rs_error GITHUB_REF "must be a branch ref (refs/heads/*) for a push" "$_ref"
     return 1
   fi
@@ -336,22 +336,22 @@ _rs_check_push_event() {
 # @return 0 when the check passes, 1 on error
 _rs_check_repository() {
   # R-RES-026
-  if ! git rev-parse --git-dir >/dev/null 2>&1; then
+  if ! git rev-parse --git-dir > /dev/null 2>&1; then
     rs_error repository "cannot be opened as a git repository" "$PWD"
     return 1
   fi
   is_partial_clone
   case "$?" in
-  2)
-    # R-RES-010
-    rs_error repository "git config cannot be read" "$PWD"
-    return 1
-    ;;
-  0)
-    # R-RES-008
-    rs_error repository "partial clone is not supported" "$PWD"
-    return 1
-    ;;
+    2)
+      # R-RES-010
+      rs_error repository "git config cannot be read" "$PWD"
+      return 1
+      ;;
+    0)
+      # R-RES-008
+      rs_error repository "partial clone is not supported" "$PWD"
+      return 1
+      ;;
   esac
   return 0
 }
@@ -482,27 +482,27 @@ resolve_sha() {
     _ev_before="$5" _ev_after="$6" _base="$7" _head="$8" \
     _ref="$9" _deleted="${10}"
   # R-RES-001
-  if [[ -z "$_event" ]]; then
+  if [[ -z $_event   ]]; then
     rs_error GITHUB_EVENT_NAME
     return 1
   fi
   # Override decision, made once here and shared by R-RES-009 and R-RES-002
   # so the two cannot drift apart: "override" when both inputs are non-empty
   local _override=none
-  [[ -n "$_ov_before" && -n "$_ov_after" ]] && _override=override
+  [[ -n $_ov_before && -n $_ov_after     ]] && _override=override
   # R-RES-009
   _rs_check_push_event "$_event" "$_override" "$_ref" "$_deleted" || return 1
   # R-RES-026 -> R-RES-010 -> R-RES-008
   _rs_check_repository || return 1
   # R-RES-002
-  if [[ "$_override" == override ]]; then
+  if [[ $_override == override   ]]; then
     _rs_resolve_override "$_ov_before" "$_ov_after"
     return
   fi
   case "$_event" in
-  push) _rs_resolve_push "$_n" "$_ev_before" "$_ev_after" ;;  # R-RES-003 -> R-RES-005
-  pull_request) _rs_resolve_pull_request "$_base" "$_head" ;; # R-RES-006
-  *) resolve_head_n "$_n" ;;                                  # R-RES-007
+    push) _rs_resolve_push "$_n" "$_ev_before" "$_ev_after" ;; # R-RES-003 -> R-RES-005
+    pull_request) _rs_resolve_pull_request "$_base" "$_head" ;; # R-RES-006
+    *) resolve_head_n "$_n" ;;                                # R-RES-007
   esac
 }
 
@@ -520,7 +520,7 @@ resolve_sha() {
 # @return 0 when the check passes, 1 on error
 _rs_check_output_file() {
   # R-OUT-003
-  if [[ -z "$1" ]]; then
+  if [[ -z $1   ]]; then
     rs_error "$GHA_TARGET_GITHUB_OUTPUT"
     return 1
   fi
@@ -528,8 +528,8 @@ _rs_check_output_file() {
   # does not exist yet ("<parent>/." is never writable unless <parent> is a
   # writable directory)
   local _rs_probe="$1"
-  [[ -e "$1" ]] || _rs_probe="$(dirname -- "$1")/."
-  if [[ -d "$1" || ! -w "$_rs_probe" ]]; then
+  [[ -e $1   ]] || _rs_probe="$(dirname -- "$1")/."
+  if [[ -d $1 || ! -w $_rs_probe     ]]; then
     rs_error "$GHA_TARGET_GITHUB_OUTPUT" "$GHA_MSG_NOT_WRITABLE" "$1"
     return 1
   fi
@@ -545,7 +545,7 @@ _rs_check_output_file() {
 # @stderr nothing on success; one ::error::<key> line on error
 # @return 0 when the check passes, 1 on error
 _rs_check_output_value() {
-  if [[ "$2" == *[$'\r\n']* ]]; then
+  if [[ $2 == *[$'\r\n']*   ]]; then
     rs_error "$1" "must not contain CR or LF" "$2"
     return 1
   fi
@@ -564,16 +564,16 @@ _rs_check_output_value() {
 #         empty form for an empty <resolution>)
 # @return 0 when the check passes, 1 on error
 _rs_check_resolution() {
-  if [[ -z "$1" ]]; then
+  if [[ -z $1   ]]; then
     rs_error resolution
     return 1
   fi
   case "$1" in
-  override | event | fallback-head-n | empty-tree) ;;
-  *)
-    rs_error resolution "is not a known resolution" "$1"
-    return 1
-    ;;
+    override | event | fallback-head-n | empty-tree) ;;
+    *)
+      rs_error resolution "is not a known resolution" "$1"
+      return 1
+      ;;
   esac
 }
 

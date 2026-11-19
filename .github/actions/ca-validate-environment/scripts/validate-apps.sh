@@ -95,22 +95,22 @@ is_safe_regex() {
 
   [ -z "$pattern" ] && return 1
   # 空白のみも "空" と同じ扱い
-  [[ "$pattern" =~ ^[[:space:]]+$ ]] && return 1
+  [[ $pattern =~ ^[[:space:]]+$   ]] && return 1
 
   # Layer 1: control character check (newline, CR, tab, NUL, etc.)
-  [[ "$pattern" =~ [[:cntrl:]] ]] && return 2
+  [[ $pattern =~ [[:cntrl:]]   ]] && return 2
 
   # Layer 2: dangerous shell metacharacter check (fail-fast defense layer)
   # Matches: ; & | ' " < > { } backslash  ($, ` caught by whitelist)
   # Note: '"'"' is the shell quoting trick to embed a literal single quote
   #       in a single-quoted string: close ', append "'" (quoted), reopen '
   local _danger_pattern='[;&|"'"'"'<>{}\\]'
-  [[ "$pattern" =~ $_danger_pattern ]] && return 3
+  [[ $pattern =~ $_danger_pattern   ]] && return 3
 
   # Layer 3: whitelist check - version extraction characters only
   # Note: * and ? omitted to reduce ReDoS attack surface
   local _safe_pattern='^[]A-Za-z0-9._()+^: [-]+$'
-  [[ "$pattern" =~ $_safe_pattern ]] || return 4
+  [[ $pattern =~ $_safe_pattern   ]] || return 4
 
   return 0
 }
@@ -135,36 +135,36 @@ extract_version_by_regex() {
   local safe_status=0
   is_safe_regex "$regex_pattern" || safe_status=$?
   case $safe_status in
-  0) ;;
-  1)
-    echo "ERROR"
-    echo "::error::Empty regex pattern"
-    return 1
-    ;;
-  2)
-    echo "ERROR"
-    echo "::error::Regex pattern contains control characters"
-    return 1
-    ;;
-  3)
-    echo "ERROR"
-    echo "::error::Regex pattern contains dangerous shell metacharacters"
-    return 1
-    ;;
-  4)
-    echo "ERROR"
-    echo "::error::Regex contains unsupported characters (allowed: A-Za-z0-9 . _ - [ ] ( ) + ^ : and space)"
-    return 1
-    ;;
-  *)
-    echo "ERROR"
-    echo "::error::Invalid regex pattern"
-    return 1
-    ;;
+    0) ;;
+    1)
+      echo "ERROR"
+      echo "::error::Empty regex pattern"
+      return 1
+      ;;
+    2)
+      echo "ERROR"
+      echo "::error::Regex pattern contains control characters"
+      return 1
+      ;;
+    3)
+      echo "ERROR"
+      echo "::error::Regex pattern contains dangerous shell metacharacters"
+      return 1
+      ;;
+    4)
+      echo "ERROR"
+      echo "::error::Regex contains unsupported characters (allowed: A-Za-z0-9 . _ - [ ] ( ) + ^ : and space)"
+      return 1
+      ;;
+    *)
+      echo "ERROR"
+      echo "::error::Invalid regex pattern"
+      return 1
+      ;;
   esac
 
   # Extract using bash =~ (BEMATCH) - partial match by default
-  if [[ ! "$full_version" =~ $regex_pattern ]]; then
+  if [[ ! $full_version =~ $regex_pattern   ]]; then
     echo "ERROR"
     echo "::error::Pattern did not match: $regex_pattern"
     return 1
@@ -214,45 +214,45 @@ extract_version_number() {
   local argument="${version_extractor#*:}"
 
   case "$method" in
-  auto)
-    # Extract semver (X.Y or X.Y.Z)
-    local extracted
-    extracted=$(grep -oE '[0-9]{1,3}\.[0-9]+(\.[0-9]+)?' <<<"$full_version" | head -1 || true)
-    if [ -z "$extracted" ]; then
-      echo "ERROR"
-      echo "::error::No semver pattern found in: $full_version"
-      return 1
-    fi
-    echo "$extracted"
-    ;;
+    auto)
+      # Extract semver (X.Y or X.Y.Z)
+      local extracted
+      extracted=$(grep -oE '[0-9]{1,3}\.[0-9]+(\.[0-9]+)?' <<< "$full_version" | head -1 || true)
+      if [ -z "$extracted" ]; then
+        echo "ERROR"
+        echo "::error::No semver pattern found in: $full_version"
+        return 1
+      fi
+      echo "$extracted"
+      ;;
 
-  field)
-    # Extract Nth field (space-delimited)
-    if [[ ! "$argument" =~ ^[0-9]+$ ]]; then
-      echo "ERROR"
-      echo "::error::Invalid field number: $argument"
-      return 1
-    fi
-    local result
-    result=$(cut -d' ' -f"$argument" <<<"$full_version")
-    if [ -z "$result" ]; then
-      echo "ERROR"
-      echo "::error::Field $argument not found in: $full_version"
-      return 1
-    fi
-    echo "$result"
-    ;;
+    field)
+      # Extract Nth field (space-delimited)
+      if [[ ! $argument =~ ^[0-9]+$ ]]; then
+        echo "ERROR"
+        echo "::error::Invalid field number: $argument"
+        return 1
+      fi
+      local result
+      result=$(cut -d' ' -f"$argument" <<< "$full_version")
+      if [ -z "$result" ]; then
+        echo "ERROR"
+        echo "::error::Field $argument not found in: $full_version"
+        return 1
+      fi
+      echo "$result"
+      ;;
 
-  regex)
-    # Delegate to extract_version_by_regex helper function
-    extract_version_by_regex "$full_version" "$argument" || return $?
-    ;;
+    regex)
+      # Delegate to extract_version_by_regex helper function
+      extract_version_by_regex "$full_version" "$argument" || return $?
+      ;;
 
-  *)
-    echo "ERROR"
-    echo "::error::Unknown extraction method: $method (expected: auto, field, or regex)"
-    return 1
-    ;;
+    *)
+      echo "ERROR"
+      echo "::error::Unknown extraction method: $method (expected: auto, field, or regex)"
+      return 1
+      ;;
   esac
 
   return 0
@@ -323,9 +323,9 @@ get_app_version() {
 # Note: comma (,) is intentionally excluded from rejection — it has no shell injection risk in bash
 is_safe_command() {
   local cmd="$1"
-  [[ "$cmd" =~ $'\n'|$'\r'|$'\t' ]] && return 1
-  [[ "$cmd" == ./* || "$cmd" == ../* || "$cmd" == */./* || "$cmd" == */../* ]] && return 2
-  [[ "$cmd" =~ [\;\|\&\$\`\(\)\*\?\{\}[:space:]] ]] && return 3
+  [[ $cmd =~ $'\n'|$'\r'|$'\t'   ]] && return 1
+  [[ $cmd == ./* || $cmd == ../* || $cmd == */./* || $cmd == */../*         ]] && return 2
+  [[ $cmd =~ [\;\|\&\$\`\(\)\*\?\{\}[:space:]]   ]] && return 3
   return 0
 }
 
@@ -363,29 +363,29 @@ validate_app_format() {
   local cmd_status=0
   is_safe_command "$cmd" || cmd_status=$?
   case $cmd_status in
-  0) ;;
-  1)
-    echo "ERROR:Invalid command name contains control characters"
-    echo "::error::Invalid command name '${cmd}': contains control characters (newline/CR/tab)" >&2
-    echo "::error::This indicates malicious input or data corruption" >&2
-    return 1
-    ;;
-  2)
-    echo "ERROR:Invalid command name contains relative path: $cmd"
-    echo "::error::Invalid command name contains relative path: $cmd" >&2
-    return 1
-    ;;
-  3)
-    echo "ERROR:Invalid command name contains shell metacharacters: $cmd"
-    echo "::error::Invalid command name contains shell metacharacters: $cmd" >&2
-    return 1
-    ;;
+    0) ;;
+    1)
+      echo "ERROR:Invalid command name contains control characters"
+      echo "::error::Invalid command name '${cmd}': contains control characters (newline/CR/tab)" >&2
+      echo "::error::This indicates malicious input or data corruption" >&2
+      return 1
+      ;;
+    2)
+      echo "ERROR:Invalid command name contains relative path: $cmd"
+      echo "::error::Invalid command name contains relative path: $cmd" >&2
+      return 1
+      ;;
+    3)
+      echo "ERROR:Invalid command name contains shell metacharacters: $cmd"
+      echo "::error::Invalid command name contains shell metacharacters: $cmd" >&2
+      return 1
+      ;;
   esac
 
   # Security: Validate app_name for control characters (newline, CR, tab) - CHECK FIRST
   # This prevents log injection attacks
   # Note: Checked before other validations for more specific error messages
-  if [[ "$app_name" =~ $'\n'|$'\r'|$'\t' ]]; then
+  if [[ $app_name =~ $'\n'|$'\r'|$'\t'   ]]; then
     echo "ERROR:Invalid app name contains control characters"
     echo "::error::Invalid app_name '${app_name}': contains control characters (newline/CR/tab)" >&2
     echo "::error::This indicates malicious input or data corruption" >&2
@@ -410,7 +410,7 @@ validate_app_exists() {
 
   echo "Checking ${app_name}..." >&2
 
-  if ! command -v "$cmd" &>/dev/null; then
+  if ! command -v "$cmd" &> /dev/null; then
     echo "ERROR:${app_name} is not installed"
     echo "::error::${app_name} is not installed" >&2
     return 1
@@ -473,7 +473,7 @@ validate_app_version() {
   fi
 
   # Guard 4: Validate version meets minimum requirement
-  if ! check_version "$version_num" "$min_ver" >/dev/null; then
+  if ! check_version "$version_num" "$min_ver" > /dev/null; then
     echo "ERROR:${app_name} version ${version_num} is below minimum required ${min_ver}"
     echo "::error::${app_name} version ${version_num} is below minimum required ${min_ver}" >&2
     return 1
@@ -499,27 +499,27 @@ validate_app_special() {
   cmd_name=$(basename "$cmd") # Normalize: /usr/bin/gh → gh
 
   case "$cmd_name" in
-  gh)
-    # GitHub CLI: Check authentication status
-    echo "Checking ${app_name} authentication..." >&2
+    gh)
+      # GitHub CLI: Check authentication status
+      echo "Checking ${app_name} authentication..." >&2
 
-    if ! check_gh_authentication; then
-      echo "ERROR:${app_name} is not authenticated"
-      echo "::error::${app_name} is not authenticated. Run 'gh auth login' to authenticate." >&2
-      return 1
-    fi
+      if ! check_gh_authentication; then
+        echo "ERROR:${app_name} is not authenticated"
+        echo "::error::${app_name} is not authenticated. Run 'gh auth login' to authenticate." >&2
+        return 1
+      fi
 
-    echo "  ✓ ${app_name} is authenticated" >&2
-    echo "" >&2
-    echo "SUCCESS:${app_name} is authenticated"
-    return 0
-    ;;
+      echo "  ✓ ${app_name} is authenticated" >&2
+      echo "" >&2
+      echo "SUCCESS:${app_name} is authenticated"
+      return 0
+      ;;
 
-  *)
-    # No special validation needed for this command
-    echo "SUCCESS:No special validation required"
-    return 0
-    ;;
+    *)
+      # No special validation needed for this command
+      echo "SUCCESS:No special validation required"
+      return 0
+      ;;
   esac
 }
 
@@ -527,7 +527,7 @@ validate_app_special() {
 # @exitcode 0 jq is available
 # @exitcode 1 jq is not found
 check_jq() {
-  command -v jq >/dev/null 2>&1
+  command -v jq > /dev/null 2>&1
 }
 
 # @description Check GitHub CLI authentication status
@@ -536,7 +536,7 @@ check_jq() {
 check_gh_authentication() {
   # Check authentication status using gh auth status
   # Exit code 0 = authenticated, 1 = not authenticated or auth issues
-  gh auth status >/dev/null 2>&1
+  gh auth status > /dev/null 2>&1
   return $?
 }
 
@@ -551,7 +551,7 @@ handle_validation_error() {
   {
     echo "status=error"
     echo "message=${error_message}"
-  } >>"$(out_status)"
+  } >> "$(out_status)"
   return 1
 }
 
@@ -579,7 +579,7 @@ initialize_apps_list() {
 
   # Add default apps first (with validation for defense-in-depth)
   for app in "${default_apps[@]}"; do
-    if ! validate_app_format "$app" >/dev/null; then
+    if ! validate_app_format "$app" > /dev/null; then
       return 1 # Fail-fast on validation error
     fi
     APPS+=("$app")
@@ -603,7 +603,7 @@ initialize_apps_list() {
       # 3. Skip empty lines (after comment removal and whitespace stripping)
       if [ -n "$line" ]; then
         # Validate line (format + control characters + security)
-        if ! validate_app_format "$line" >/dev/null; then
+        if ! validate_app_format "$line" > /dev/null; then
           return 1 # Fail-fast on validation error
         fi
 
@@ -632,21 +632,21 @@ output_success() {
 
   # Derive all data from VALIDATION_RESULTS
   local results_json
-  results_json=$(printf '%s\n' "${VALIDATION_RESULTS[@]}" |
-    jq -s '[.[] | select(.status == "success")]')
+  results_json=$(printf '%s\n' "${VALIDATION_RESULTS[@]}" \
+                                                          | jq -s '[.[] | select(.status == "success")]')
 
   local all_versions
   all_versions=$(printf '%s' "$results_json" | jq -r '.[] | "  " + .app + " " + .version')
 
   {
     echo "status=success"
-    cat <<HEREDOC
+    cat << HEREDOC
 message<<MULTILINE_EOF
 Applications validated:
 ${all_versions}
 MULTILINE_EOF
 HEREDOC
-  } >>"$(out_status)"
+  } >> "$(out_status)"
 }
 
 # ============================================================================
@@ -666,7 +666,7 @@ validate_apps() {
     # Parse app definition first to get app_name for error handling
     # Supported formats: 2-field (cmd|app_name) or 4-field (cmd|app_name|extractor|version)
     local cmd app_name version_extractor min_ver
-    IFS='|' read -r cmd app_name version_extractor min_ver <<EOF
+    IFS='|' read -r cmd app_name version_extractor min_ver << EOF
 $app_def
 EOF
 
@@ -706,14 +706,14 @@ EOF
 
     # Get version once (used for validate_app_version and JSON entry)
     local version=""
-    if command -v "$cmd" &>/dev/null; then
-      version=$(get_app_version "$cmd" 2>/dev/null || true)
+    if command -v "$cmd" &> /dev/null; then
+      version=$(get_app_version "$cmd" 2> /dev/null || true)
     fi
 
     # Validate application version (pass pre-fetched version to avoid second call)
     local version_output version_message
     if version_output=$(validate_app_version "$cmd" "$app_name" "$version_extractor" "$min_ver" "$version"); then
-      if [[ "${version_output}" == WARNING:* ]]; then
+      if [[ ${version_output} == WARNING:*   ]]; then
         echo "::warning::${version_output#WARNING:}" >&2
       fi
     else

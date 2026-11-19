@@ -81,17 +81,17 @@ normalize_architecture() {
   local raw_arch="$1"
 
   case "${raw_arch}" in
-  x86_64 | amd64 | x64)
-    echo "amd64"
-    return 0
-    ;;
-  aarch64 | arm64)
-    echo "arm64"
-    return 0
-    ;;
-  *)
-    return 1
-    ;;
+    x86_64 | amd64 | x64)
+      echo "amd64"
+      return 0
+      ;;
+    aarch64 | arm64)
+      echo "arm64"
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
   esac
 }
 
@@ -121,12 +121,12 @@ validate_os() {
 # @exitcode 1 EXPECTED_ARCH is invalid
 validate_expected_arch() {
   case "${EXPECTED_ARCH}" in
-  amd64 | arm64)
-    return 0
-    ;;
-  *)
-    return 1
-    ;;
+    amd64 | arm64)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
   esac
 }
 
@@ -135,7 +135,7 @@ validate_expected_arch() {
 # @exitcode 0 Architecture is valid (can be normalized)
 # @exitcode 1 Architecture is unsupported
 is_supported_architecture() {
-  normalize_architecture "$1" >/dev/null
+  normalize_architecture "$1" > /dev/null
 }
 
 # @description Validate architecture matches expected value

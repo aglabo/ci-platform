@@ -42,13 +42,13 @@ main() {
   local _n _range _before _after _resolution
   _n=$(normalize_commit_count "${INPUT_COMMIT_COUNT:-}") || return 1
   # Validation only: the "none" / "override" decision is made by resolve_sha
-  validate_override "${INPUT_BEFORE_SHA:-}" "${INPUT_AFTER_SHA:-}" >/dev/null || return 1
+  validate_override "${INPUT_BEFORE_SHA:-}" "${INPUT_AFTER_SHA:-}" > /dev/null || return 1
   _range=$(resolve_sha "${GITHUB_EVENT_NAME:-}" "$_n" \
     "${INPUT_BEFORE_SHA:-}" "${INPUT_AFTER_SHA:-}" \
     "${GITHUB_BEFORE_SHA:-}" "${GITHUB_AFTER_SHA:-}" \
     "${GITHUB_BASE_SHA:-}" "${GITHUB_HEAD_SHA:-}" \
     "${GITHUB_REF:-}" "${GITHUB_EVENT_DELETED:-}") || return 1
-  read -r _before _after _resolution <<<"$_range"
+  read -r _before _after _resolution <<< "$_range"
   emit_outputs "${GITHUB_OUTPUT:-}" "$_before" "$_after" "$_resolution" || return 1
 }
 
@@ -57,7 +57,7 @@ main() {
 # the script is executed. Unlike comparing ${BASH_SOURCE[0]} with $0, this does
 # not depend on how the path is spelled: when bash finds the script through
 # PATH, BASH_SOURCE[0] is the full path while $0 is the bare name.
-if ! (return 0 2>/dev/null); then
+if ! (return 0 2> /dev/null); then
   main "$@"
   exit $?
 fi

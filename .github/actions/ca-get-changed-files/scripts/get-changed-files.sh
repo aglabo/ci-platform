@@ -87,7 +87,7 @@ main() {
   _list="$(list_changed_files "${BEFORE_SHA:-}" "${AFTER_SHA:-}")" || return 1
   # A here-string of an empty list reads as one empty line, so an empty list
   # passes no line arguments (R-DIF-015)
-  [ -z "$_list" ] || mapfile -t _lines <<<"$_list"
+  [ -z "$_list" ] || mapfile -t _lines <<< "$_list"
   # R-DIF-016: write_multiline_output reports nothing itself, so main reports
   # the failure (any non-zero status)
   write_multiline_output "$GITHUB_OUTPUT" files "${_lines[@]}" || {
@@ -100,7 +100,7 @@ main() {
 # a file is being sourced (or inside a function), so the subshell fails when
 # the script is executed. Unlike comparing ${BASH_SOURCE[0]} with $0, this does
 # not depend on how the path is spelled.
-if ! (return 0 2>/dev/null); then
+if ! (return 0 2> /dev/null); then
   main "$@"
   exit $?
 fi
