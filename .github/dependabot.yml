@@ -9,7 +9,9 @@
 version: 2
 updates:
   - package-ecosystem: "github-actions" # for Workflows lockfile
-    directory: "/" # Location of package manifests
+    directories: # "/" = workflows, actions/* = SHA-pinned composite actions
+      - "/"
+      - "/.github/actions/*"
     cooldown:
       default-days: 7
     schedule:
