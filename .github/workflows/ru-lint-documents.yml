@@ -74,14 +74,14 @@ jobs:
       - name: Validate environment
         id: env-validation
         if: steps.target-checkout.outcome == 'success'
-        uses: aglabo/ci-platform/.github/actions/ca-validate-environment@v0.7.1-pre
+        uses: aglabo/ci-platform/.github/actions/ca-validate-environment@v0.8.0-pre
         with:
           actions-type: read
 
       - name: Get changed files
         id: changed-files
         if: steps.env-validation.outcome == 'success'
-        uses: aglabo/ci-platform/.github/actions/ca-get-changed-files@v0.7.1-pre
+        uses: aglabo/ci-platform/.github/actions/ca-get-changed-files@v0.8.0-pre
         with:
           commit-count: ${{ inputs.commit-count }}
           pattern: ${{ inputs.pattern }}
@@ -104,14 +104,14 @@ jobs:
       - name: Validate environment
         id: env-validation
         if: steps.target-checkout.outcome == 'success'
-        uses: aglabo/ci-platform/.github/actions/ca-validate-environment@v0.7.1-pre
+        uses: aglabo/ci-platform/.github/actions/ca-validate-environment@v0.8.0-pre
         with:
           actions-type: read
 
       - name: Setup agla-doc-tools
         id: tool-install
         if: steps.env-validation.outcome == 'success'
-        uses: aglabo/ci-platform/.github/actions/ca-setup-repo@v0.7.1-pre
+        uses: aglabo/ci-platform/.github/actions/ca-setup-repo@v0.8.0-pre
         with:
           repo: aglabo/agla-doc-tools
           path: ./.tools/agla-doc-tools
@@ -175,14 +175,14 @@ jobs:
       - name: Validate environment
         id: env-validation
         if: steps.target-checkout.outcome == 'success'
-        uses: aglabo/ci-platform/.github/actions/ca-validate-environment@v0.7.1-pre
+        uses: aglabo/ci-platform/.github/actions/ca-validate-environment@v0.8.0-pre
         with:
           actions-type: read
 
       - name: Setup agla-doc-tools
         id: tool-install
         if: steps.env-validation.outcome == 'success'
-        uses: aglabo/ci-platform/.github/actions/ca-setup-repo@v0.7.1-pre
+        uses: aglabo/ci-platform/.github/actions/ca-setup-repo@v0.8.0-pre
         with:
           repo: aglabo/agla-doc-tools
           path: ./.tools/agla-doc-tools

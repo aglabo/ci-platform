@@ -50,14 +50,14 @@ jobs:
       - name: Validate environment
         id: env-validation
         if: steps.target-checkout.outcome == 'success'
-        uses: aglabo/ci-platform/.github/actions/ca-validate-environment@v0.7.1-pre
+        uses: aglabo/ci-platform/.github/actions/ca-validate-environment@v0.8.0-pre
         with:
           actions-type: read
 
       - name: Install jactionlint
         id: tool-install
         if: steps.env-validation.outcome == 'success'
-        uses: aglabo/ci-platform/.github/actions/ca-setup-tool@v0.7.1-pre
+        uses: aglabo/ci-platform/.github/actions/ca-setup-tool@v0.8.0-pre
         with:
           repo: jdx/jactionlint
           tool-version: ${{ inputs.version }}
@@ -75,7 +75,7 @@ jobs:
       - name: Resolve jactionlint config
         id: resolve-config
         if: steps.config-checkout.outcome == 'success'
-        uses: aglabo/ci-platform/.github/actions/_ca-resolve-config@v0.7.1-pre
+        uses: aglabo/ci-platform/.github/actions/_ca-resolve-config@v0.8.0-pre
         with:
           config: ${{ inputs.config }}
           global-config: global/configs/jactionlint.yaml
