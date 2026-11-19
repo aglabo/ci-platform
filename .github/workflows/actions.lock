@@ -15,30 +15,30 @@ workflows:
         - 'actions/deploy-pages@v5.0.1'
         - 'actions/setup-node@v7.1.0'
         - 'actions/upload-pages-artifact@v5.0.0'
-        - 'aglabo/ci-platform@v0.7.0'
+        - 'aglabo/ci-platform@v0.7.1-pre'
         - 'pnpm/action-setup@v6.1.1'
     '.github/workflows/ci-scan-secrets.yml': []
     '.github/workflows/ci-workflows-qa.yml': []
     '.github/workflows/ru-lint-documents.yml':
         - 'actions/checkout@v7.0.1'
         - 'actions/upload-artifact@v7.0.2'
-        - 'aglabo/ci-platform@v0.7.0'
+        - 'aglabo/ci-platform@v0.7.1-pre'
     '.github/workflows/ru-qa-actionlint.yml':
         - 'actions/checkout@v7.0.1'
         - 'actions/upload-artifact@v7.0.2'
-        - 'aglabo/ci-platform@v0.7.0'
+        - 'aglabo/ci-platform@v0.7.1-pre'
     '.github/workflows/ru-qa-actions-lock.yml':
         - 'actions/checkout@v7.0.1'
         - 'actions/upload-artifact@v7.0.2'
-        - 'aglabo/ci-platform@v0.7.0'
+        - 'aglabo/ci-platform@v0.7.1-pre'
     '.github/workflows/ru-qa-ghalint.yml':
         - 'actions/checkout@v7.0.1'
         - 'actions/upload-artifact@v7.0.2'
-        - 'aglabo/ci-platform@v0.7.0'
+        - 'aglabo/ci-platform@v0.7.1-pre'
     '.github/workflows/ru-scan-secrets.yml':
         - 'actions/checkout@v7.0.1'
         - 'actions/upload-artifact@v7.0.2'
-        - 'aglabo/ci-platform@v0.7.0'
+        - 'aglabo/ci-platform@v0.7.1-pre'
 dependencies:
     'actions/cache@v6.1.0':
         ref: 'v6.1.0'
@@ -77,15 +77,20 @@ dependencies:
         repo_id: 496012378
         uses:
             - 'actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f'
-    'aglabo/ci-platform@v0.7.0':
-        ref: 'v0.7.0'
-        commit: 'sha1-4136db08e3f36b8b5a6c165483bd896f300846c5'
+    'aglabo/ci-platform@v0.7.1-pre':
+        ref: 'v0.7.1-pre'
+        commit: 'sha1-f9a18573f8d3d783eeb5304230113fabfbd2a37a'
         owner_id: 211574028
         repo_id: 1154660752
         uses:
-            - 'actions/checkout@v7.0.1'
             - 'actions/setup-node@v7.1.0'
+            - 'pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115'
             - 'pnpm/action-setup@v6.1.1'
+    'pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115':
+        ref: 'v6.1.1'
+        commit: 'sha1-73e46992e05b19abd31f2f3c20e0e7370d762115'
+        owner_id: 21320719
+        repo_id: 262289747
     'pnpm/action-setup@v6.1.1':
         ref: 'v6.1.1'
         commit: 'sha1-73e46992e05b19abd31f2f3c20e0e7370d762115'
