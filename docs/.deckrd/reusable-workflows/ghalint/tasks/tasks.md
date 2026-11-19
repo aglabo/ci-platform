@@ -3,7 +3,7 @@ title: "Implementation Tasks: Ghalint Reusable Workflow"
 module: reusable-workflows/ghalint
 status: Active
 created: "2026-06-13 00:00:00"
-source: specifications.md
+source: specifications.md v1.2.0
 ---
 
 <!-- markdownlint-disable line-length -->
@@ -12,9 +12,9 @@ source: specifications.md
 
 | Test Target                  | Scenarios | Cases | Status    |
 | ---------------------------- | --------- | ----- | --------- |
-| T-01: ru-qa-ghalint.yml      | 4         | 12    | completed |
-| T-02: trigger-inputs         | 2         | 4     | completed |
-| T-03: step-gating            | 3         | 8     | completed |
+| T-01: ru-qa-ghalint.yml      | 5         | 13    | completed |
+| T-02: trigger-inputs         | 3         | 7     | completed |
+| T-03: step-gating            | 3         | 10    | completed |
 | T-04: lint-execute           | 2         | 4     | completed |
 | T-05: ci-workflows-qa update | 2         | 3     | completed |
 
@@ -48,19 +48,19 @@ source: specifications.md
   - Scenario: Given inputs 定義を確認します, When version を検査します
   - Expected: Then type: string, required: false, default: `1.6.0` を設定しています
 
-- [x] **T-01-02-02**: config input をデフォルト値 `./global/configs/ghalint.yaml` 付きで定義しています
+- [x] **T-01-02-02**: config input を空文字のデフォルト値付きで定義しています
   - Target: `ru-qa-ghalint.yml on.workflow_call.inputs`
   - Scenario: Given inputs 定義を確認します, When config を検査します
-  - Expected: Then type: string, required: false, default: `./global/configs/ghalint.yaml` を設定しています
+  - Expected: Then type: string, required: false, default: `""` を設定しています（空の場合は resolve-config が解決します）
 
 #### T-01-03: ステップ定義とバージョン固定
 
-- [x] **T-01-03-01**: 全 7 ステップを正しい ID で順序どおりに定義しています
+- [x] **T-01-03-01**: 全 8 ステップを正しい ID で順序どおりに定義しています
   - Target: `ru-qa-ghalint.yml jobs.qa-ghalint.steps`
   - Scenario: Given ステップ一覧を確認します, When ステップ ID と順序を検査します
   - Expected: Then 次の順序で定義しています。
     前半は target-checkout → env-validation → tool-install → config-checkout です。
-    後半は prepare-report → lint-execute → report-upload です
+    後半は resolve-config → prepare-report → lint-execute → report-upload です
 
 - [x] **T-01-03-02**: actions/checkout をバージョンタグで固定しています
   - Target: `ru-qa-ghalint.yml steps.target-checkout, steps.config-checkout`
@@ -84,7 +84,17 @@ source: specifications.md
   - Target: `ru-qa-ghalint.yml steps.lint-execute`
   - Scenario: Given lint-execute ステップを確認します, When run コマンドを検査します
   - Expected: Then 次の 2 つを含んでいます。
-    `ghalint run --config "${CONFIG_FILE}"` (`CONFIG_FILE: ${{ inputs.config }}`) と `exit "${PIPESTATUS[0]}"`
+    `ghalint run --config "${CONFIG_FILE}"` (`CONFIG_FILE: ${{ steps.resolve-config.outputs.config-file }}`) と `exit "${PIPESTATUS[0]}"`
+
+#### T-01-05: resolve-config の設定
+
+- [x] **T-01-05-01**: resolve-config が `_ca-resolve-config@v0.8.0-pre` を使い、ghalint 用のパスを渡します
+  - Target: `ru-qa-ghalint.yml steps.resolve-config`
+  - Scenario: Given resolve-config ステップを確認します, When uses と with を検査します
+  - Expected: Then 次を設定しています。
+    `uses: aglabo/ci-platform/.github/actions/_ca-resolve-config@v0.8.0-pre`, `config: ${{ inputs.config }}`,
+    `local-config: configs/ghalint.yaml`, `global-config: global/configs/ghalint.yaml`,
+    `if: steps.config-checkout.outcome == 'success'`
 
 ---
 
@@ -99,10 +109,10 @@ source: specifications.md
   - Scenario: Given version を指定せず呼び出します, When tool-install を実行します
   - Expected: Then デフォルトバージョンで ghalint をインストールします (R-002a)
 
-- [x] **T-02-01-02**: config を省略した場合に `./global/configs/ghalint.yaml` を使用します
+- [x] **T-02-01-02**: config を省略した場合に空文字のまま resolve-config に解決を委ねます
   - Target: `ru-qa-ghalint.yml inputs.config`
-  - Scenario: Given config を指定せず呼び出します, When lint-execute を実行します
-  - Expected: Then `./global/configs/ghalint.yaml` を config として使用します (R-003a)
+  - Scenario: Given config を指定せず呼び出します, When resolve-config を実行します
+  - Expected: Then `config` は空文字で渡され、ローカル、グローバルの順に解決されます (R-003a)
 
 #### T-02-02: 明示的なパラメータ指定
 
@@ -114,7 +124,27 @@ source: specifications.md
 - [x] **T-02-02-02**: 明示的に指定した config を lint-execute で使用します
   - Target: `ru-qa-ghalint.yml inputs.config`
   - Scenario: Given config を明示的に指定して呼び出します, When lint-execute を実行します
-  - Expected: Then 指定したパスを `--config` 引数として使用します (R-003)
+  - Expected: Then 指定したパスを resolve-config が検証し、その `config-file` を `--config` 引数として使用します (R-003)
+
+#### T-02-03: resolve-config の解決順序
+
+- [x] **T-02-03-01**: config が空でローカル `configs/ghalint.yaml` が存在する場合にローカルを使用します
+  - Target: `_ca-resolve-config` 経由の resolve-config ステップ
+  - Scenario: Given config が空でローカルとグローバルの設定が存在します, When resolve-config を実行します
+  - Expected: Then `config-file` はローカルファイルの絶対パス、`source` は `local` です (R-011a)
+  - 検証: `_ca-resolve-config` のテストと CI の `test-resolve-config` ジョブ
+
+- [x] **T-02-03-02**: ローカル設定が存在しない場合にグローバル `global/configs/ghalint.yaml` を使用します
+  - Target: `_ca-resolve-config` 経由の resolve-config ステップ
+  - Scenario: Given config が空でローカル設定が存在しません, When resolve-config を実行します
+  - Expected: Then `config-file` はグローバルファイルの絶対パス、`source` は `global` です (R-011b)
+  - 検証: 同上
+
+- [x] **T-02-03-03**: 存在しない config を指定した場合にフォールバックせず失敗します
+  - Target: `_ca-resolve-config` 経由の resolve-config ステップ
+  - Scenario: Given config が存在しないファイルを指します, When resolve-config を実行します
+  - Expected: Then ステップが失敗し、lint-execute は実行されません (R-011, R-010a)
+  - 検証: 同上
 
 ---
 
@@ -140,6 +170,11 @@ source: specifications.md
   - Expected: Then 次の 2 項目を設定しています (R-006)。
     `repo: suzuki-shunsuke/ghalint` と `tool-version: ${{ inputs.version }}`
 
+- [x] **T-03-01-04**: resolve-config の成功時に prepare-report を実行します
+  - Target: `ru-qa-ghalint.yml steps.prepare-report.if`
+  - Scenario: Given resolve-config が成功します, When prepare-report の if 条件を確認します
+  - Expected: Then `steps.resolve-config.outcome == 'success'` 条件を設定しています (R-010)
+
 ### [異常] Error Cases
 
 #### T-03-02: 失敗時のステップブロック
@@ -154,6 +189,11 @@ source: specifications.md
   - Target: `ru-qa-ghalint.yml steps.report-upload.if`
   - Scenario: Given lint-execute が失敗します, When report-upload の if 条件を確認します
   - Expected: Then `failure() && steps.lint-execute.outcome == 'failure'` を設定しています (R-009a)
+
+- [x] **T-03-02-03**: resolve-config に continue-on-error がなく、失敗時に後続をブロックします
+  - Target: `ru-qa-ghalint.yml steps.resolve-config`
+  - Scenario: Given resolve-config が失敗します, When continue-on-error と後続の if 条件を確認します
+  - Expected: Then `continue-on-error` は存在せず、prepare-report 以降はスキップされます (R-010a)
 
 ### [エッジケース] Edge Cases
 

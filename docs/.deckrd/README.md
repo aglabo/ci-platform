@@ -21,7 +21,7 @@ docs/.deckrd/
 └── reusable-workflows/<module>/# Design documents for reusable workflows
 ```
 
-Each module directory follows the design chain `requirements → specifications → implementation → tasks`:
+Each module follows the design chain `requirements → specifications → implementation → tasks`:
 
 ```text
 <namespace>/<module>/

@@ -1,7 +1,7 @@
 ---
 title: "Implementation Plan: Actionlint Reusable Workflow"
 based-on: specifications.md v1.3.1
-version: 1.2.1
+version: 1.3.0
 status: Draft
 ---
 
@@ -23,6 +23,7 @@ The workflow implements the following behavioral units in sequence:
 - `env-validation-step`
 - `tool-install-step`
 - `config-checkout-step` (fixed to aglabo/global-configs, path: global/configs, fetch-depth: 1)
+- `resolve-config-step` (`_ca-resolve-config`: input → local `configs/jactionlint.yaml` → global `global/configs/jactionlint.yaml`)
 - `prepare-report-step`
 - `lint-execute-step` (with report output via tee)
 - `report-upload-step` (on failure only)
@@ -66,14 +67,14 @@ the external `aglabo/.github` actionlint job with a call to the new local reusab
 - Add input `version`:
   - Set `required: false`.
   - Set `type: string`.
-  - Set `default: "2.4.0"`.
+  - Set `default: "2.6.0"`.
   - Reference as `${{ inputs.version }}`.
 
 - Add input `config`:
   - Set `required: false`.
   - Set `type: string`.
-  - Set `default: "./global/configs/jactionlint.yaml"`.
-  - Reference as `${{ inputs.config }}`.
+  - Set `default: ""` (empty: resolved by `resolve-config`).
+  - Pass as `config` to the `resolve-config` step (not referenced directly by `lint-execute`).
 
 - Add step ID `target-checkout` as the first step:
   - Use `actions/checkout@v7.0.1`.
@@ -82,12 +83,12 @@ the external `aglabo/.github` actionlint job with a call to the new local reusab
   - Do not add an `if` condition to this first step.
 
 - Add step ID `env-validation` after `target-checkout`:
-  - Use the validate-environment composite action `aglabo/ci-platform/.github/actions/ca-validate-environment@v0.6.0`.
+  - Use the validate-environment composite action `aglabo/ci-platform/.github/actions/ca-validate-environment@v0.8.0-pre`.
   - Set `with.actions-type: read`.
   - Add `if: steps.target-checkout.outcome == 'success'`.
 
 - Add step ID `tool-install` after `env-validation`:
-  - Use the setup-tool composite action `aglabo/ci-platform/.github/actions/ca-setup-tool@v0.6.0`.
+  - Use the setup-tool composite action `aglabo/ci-platform/.github/actions/ca-setup-tool@v0.8.0-pre`.
   - Set `with.repo: jdx/jactionlint`.
   - Set `with.tool-version: ${{ inputs.version }}`.
   - Add `if: steps.env-validation.outcome == 'success'`.
@@ -100,14 +101,25 @@ the external `aglabo/.github` actionlint job with a call to the new local reusab
   - Set `with.persist-credentials: false`.
   - Add `if: steps.tool-install.outcome == 'success'`.
 
-- Add step ID `prepare-report` after `config-checkout`:
-  - Use a shell `run` step: `mkdir -p .github/report`.
+- Add step ID `resolve-config` after `config-checkout`:
+  - Use the composite action `aglabo/ci-platform/.github/actions/_ca-resolve-config@v0.8.0-pre`.
+  - Set `with.config: ${{ inputs.config }}`.
+  - Set `with.local-config: configs/jactionlint.yaml`.
+  - Set `with.global-config: global/configs/jactionlint.yaml`.
   - Add `if: steps.config-checkout.outcome == 'success'`.
+  - Resolution order: explicit `config` (missing file is an error, no fallback) → local → global.
+    Paths containing `..` or whitespace, or outside `GITHUB_WORKSPACE`, are rejected.
+  - Outputs: `config-file` (absolute path) and `source` (`input` / `local` / `global`).
+
+- Add step ID `prepare-report` after `resolve-config`:
+  - Use a shell `run` step: `mkdir -p .github/report`.
+  - Add `if: steps.resolve-config.outcome == 'success'`.
 
 - Add step ID `lint-execute` after `prepare-report`:
   - Use a shell `run` step with `tee` and `PIPESTATUS` pattern:
     `jactionlint --config-file "${CONFIG_FILE}" 2>&1 | tee .github/report/jactionlint-report.txt; exit "${PIPESTATUS[0]}"`
-  - Pass the config path through step `env` as `CONFIG_FILE: ${{ inputs.config }}` (no direct expression in `run`).
+  - Pass the config path through step `env` as
+    `CONFIG_FILE: ${{ steps.resolve-config.outputs.config-file }}` (no direct expression in `run`).
   - Add `if: steps.prepare-report.outcome == 'success'`.
   - Do not add `continue-on-error`.
 
@@ -126,7 +138,8 @@ the external `aglabo/.github` actionlint job with a call to the new local reusab
   | env-validation  | `steps.target-checkout.outcome == 'success'`           |
   | tool-install    | `steps.env-validation.outcome == 'success'`            |
   | config-checkout | `steps.tool-install.outcome == 'success'`              |
-  | prepare-report  | `steps.config-checkout.outcome == 'success'`           |
+  | resolve-config  | `steps.config-checkout.outcome == 'success'`           |
+  | prepare-report  | `steps.resolve-config.outcome == 'success'`            |
   | lint-execute    | `steps.prepare-report.outcome == 'success'`            |
   | report-upload   | `failure() && steps.lint-execute.outcome == 'failure'` |
 
@@ -134,10 +147,11 @@ the external `aglabo/.github` actionlint job with a call to the new local reusab
   - Callable via `workflow_call` only.
   - Checks out the caller repository with `persist-credentials: false`.
   - Validates the environment for read-only actions usage.
-  - Installs jactionlint from `jdx/jactionlint` using the configured version (default: `2.4.0`).
+  - Installs jactionlint from `jdx/jactionlint` using the configured version (default: `2.6.0`).
   - Checks out `aglabo/global-configs` (fixed) with `fetch-depth: 1` into `global/configs/`.
+  - Resolves the config file (input → local `configs/jactionlint.yaml` → global `global/configs/jactionlint.yaml`).
   - Creates `.github/report/` directory before linting.
-  - Runs jactionlint with the resolved `config` and
+  - Runs jactionlint with the resolved config file and
     writes output to `.github/report/jactionlint-report.txt`.
   - Fails immediately when jactionlint reports a non-zero exit.
   - Uploads the artifact `jactionlint-report` only when lint fails.
@@ -156,7 +170,8 @@ the external `aglabo/.github` actionlint job with a call to the new local reusab
   - Replace `uses: aglabo/.github/.github/workflows/ci-common-lint-actionlint.yml@<hash> # r1.1.2`
     with `uses: ./.github/workflows/ru-qa-actionlint.yml`.
   - Remove the external commit hash pin (no longer needed for a local reference).
-  - Do not add a `with:` block; the caller uses the global-configs default (`./global/configs/jactionlint.yaml`).
+  - Do not add a `with:` block; the caller relies on the default resolution
+    (local `configs/jactionlint.yaml`, then global `global/configs/jactionlint.yaml`).
   - Retain `permissions: contents: read` at the job level.
 
 - Expected behavior after this commit:
@@ -170,6 +185,7 @@ the external `aglabo/.github` actionlint job with a call to the new local reusab
 
 | Date       | Version | Description                                                                                                                                                                                                                                                                                                                               |
 | ---------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-11-19 | 1.3.0   | Add the `resolve-config` step (`_ca-resolve-config`); `config` default is empty and `CONFIG_FILE` comes from the step output; update default version to 2.6.0 and action references to @v0.8.0-pre                                                                                                                                        |
 | 2026-11-03 | 1.2.1   | Update ca-* composite action references from @v0.5.0 to @v0.6.0                                                                                                                                                                                                                                                                           |
 | 2026-11-03 | 1.2.0   | Change the configuration repository to aglabo/global-configs (checkout path global/configs, config default ./global/configs/jactionlint.yaml); update action references (ca-validate-environment / ca-setup-tool @v0.5.0, actions/checkout@v7.0.1) and the caller config override; caller uses the global-configs default without `with:` |
 | 2026-11-01 | 1.1.0   | Update references for the jactionlint migration (jdx/jactionlint, inputs version / config, ru-qa-actionlint.yml); lint command reads the config path from env CONFIG_FILE                                                                                                                                                                 |

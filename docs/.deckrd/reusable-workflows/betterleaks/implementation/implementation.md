@@ -1,7 +1,7 @@
 ---
 title: "Implementation Plan: Betterleaks Reusable Workflow"
-version: 1.3.1
-based-on: specifications.md v1.4.1
+version: 2.0.0
+based-on: specifications.md v2.0.0
 status: Draft
 ---
 
@@ -13,7 +13,7 @@ status: Draft
 
 ### 1.1 Purpose
 
-This implementation plan delivers a reusable GitHub Actions workflow for running Betterleaks scans from caller repositories. The workflow will be added at `.github/workflows/ru-scan-betterleaks.yml` and will support reusable invocation through `workflow_call`.
+This implementation plan delivers a reusable GitHub Actions workflow for running Betterleaks scans from caller repositories. The workflow lives in `.github/workflows/ru-scan-secrets.yml` (`scan-betterleaks` job; the `scan-secretlint` job in the same file belongs to `reusable-workflows/secretlint`) and supports reusable invocation through `workflow_call`.
 
 The workflow implements the following behavioral units in sequence:
 
@@ -22,6 +22,7 @@ The workflow implements the following behavioral units in sequence:
 - `env-validation-step`
 - `tool-install-step`
 - `config-checkout-step`
+- `resolve-config-step` (`_ca-resolve-config`)
 - `prepare-report-step`
 - `scan-execute-step` (with report output and exit-code capture)
 - `upload-report-step` (on failure only)
@@ -32,7 +33,7 @@ The workflow will enforce read-only repository access with `contents: read` at b
 
 - Prior Art/Reference PR: none
 - Specifications: specifications.md
-- Output workflow file: `.github/workflows/ru-scan-betterleaks.yml`
+- Output workflow file: `.github/workflows/ru-scan-secrets.yml` (`scan-betterleaks` job)
 
 ## 2. Implementation Plan
 
@@ -40,14 +41,14 @@ The workflow will enforce read-only repository access with `contents: read` at b
 
 #### Commit 1: ci(workflows): add betterleaks reusable workflow
 
-- Create `.github/workflows/ru-scan-betterleaks.yml`.
+- Create `.github/workflows/ru-scan-secrets.yml` (the file also holds the `scan-secretlint` job).
 
 - Add the reusable workflow skeleton:
   - Set `name` to a descriptive Betterleaks reusable workflow name.
   - Add top-level `permissions`.
   - Set `permissions.contents` to `read`.
   - Set `defaults.run.shell` to `bash`.
-  - Add a single job for the Betterleaks scan.
+  - Add the job `scan-betterleaks` for the Betterleaks scan.
   - Add job-level `permissions`.
   - Set job-level `permissions.contents` to `read`.
   - Set `runs-on` to `ubuntu-slim`.
@@ -61,7 +62,7 @@ The workflow will enforce read-only repository access with `contents: read` at b
   - Define under `on.workflow_call.inputs`.
   - Set `required: false`.
   - Set `type: string`.
-  - Set `default: "1.9.0"` (compatible with betterleaks >= v1.0.0 and gitleaks >= v8.25.0).
+  - Set `default: "1.10.0"` (compatible with betterleaks >= v1.0.0 and gitleaks >= v8.25.0).
   - Reference as `${{ inputs.version }}`.
 
 - Add input `config-repo`:
@@ -71,6 +72,13 @@ The workflow will enforce read-only repository access with `contents: read` at b
   - Set `default: "aglabo/global-configs"`.
   - Reference as `${{ inputs.config-repo }}`.
 
+- Add input `config`:
+  - Define under `on.workflow_call.inputs`.
+  - Set `required: false`.
+  - Set `type: string`.
+  - Set `default: ""`.
+  - Reference as `${{ inputs.config }}`.
+
 - Add input `fetch-depth`:
   - Define under `on.workflow_call.inputs`.
   - Set `required: false`.
@@ -78,7 +86,7 @@ The workflow will enforce read-only repository access with `contents: read` at b
   - Set `default: 50` (latest 50 commits; use 0 for full history).
   - Reference as `${{ inputs.fetch-depth }}`.
 
-- Add the target checkout as the first step (no step ID):
+- Add the target checkout as the first step (`id: target-checkout`):
   - Use `actions/checkout`.
   - Do not set `path` (checks out caller repository to workspace root).
   - Set `with.fetch-depth: ${{ inputs.fetch-depth }}`.
@@ -86,13 +94,13 @@ The workflow will enforce read-only repository access with `contents: read` at b
   - Do not add an `if` condition to this first step.
 
 - Add step ID `env-validation` after the target checkout:
-  - Use the composite action `aglabo/ci-platform/.github/actions/ca-validate-environment@v0.6.0`.
+  - Use the composite action `aglabo/ci-platform/.github/actions/ca-validate-environment@v0.8.0-pre`.
   - Set `with.actions-type: read`.
-  - Do not add an `if` condition to this step.
+  - Add `if: steps.target-checkout.outcome == 'success'`.
   - Exposes `steps.env-validation.outputs.runner-status`.
 
 - Add step ID `tool-install` after `env-validation`:
-  - Use the composite action `aglabo/ci-platform/.github/actions/ca-setup-tool@v0.6.0`.
+  - Use the composite action `aglabo/ci-platform/.github/actions/ca-setup-tool@v0.8.0-pre`.
   - Set `with.repo: betterleaks/betterleaks`.
   - Set `with.tool-version: ${{ inputs.version }}`.
   - Add `if: steps.env-validation.outcome == 'success'`.
@@ -105,14 +113,23 @@ The workflow will enforce read-only repository access with `contents: read` at b
   - Do NOT set `with.ref` (check out default branch).
   - Add `if: steps.tool-install.outcome == 'success'`.
 
-- Add step ID `prepare-report` after `config-checkout`:
-  - Use a shell `run` step: `mkdir -p .github/report`.
+- Add step ID `resolve-config` after `config-checkout`:
+  - Use the composite action `aglabo/ci-platform/.github/actions/_ca-resolve-config@v0.8.0-pre`.
+  - Set `with.config: ${{ inputs.config }}`.
+  - Set `with.local-config: configs/betterleaks.toml`.
+  - Set `with.global-config: global/configs/betterleaks.toml`.
   - Add `if: steps.config-checkout.outcome == 'success'`.
+  - Exposes `steps.resolve-config.outputs.config-file` and `steps.resolve-config.outputs.source`.
+
+- Add step ID `prepare-report` after `resolve-config`:
+  - Use a shell `run` step: `mkdir -p .github/report`.
+  - Add `if: steps.resolve-config.outcome == 'success'`.
 
 - Add step ID `scan-execute` after `prepare-report`:
   - Use a shell `run` step with `set +e`/`set -e` pattern to capture exit code.
+  - Set `env.CONFIG_FILE: ${{ steps.resolve-config.outputs.config-file }}`.
   - Run betterleaks with:
-    `betterleaks git . --config global/configs/betterleaks.toml --report-path=.github/report/betterleaks-report.json --exit-code=1 --verbose`
+    `betterleaks git . --config "${CONFIG_FILE}" --report-path=.github/report/betterleaks-report.json --exit-code=1 --verbose`
   - Capture exit code into `$GITHUB_OUTPUT` as `status`.
   - Re-exit with the captured exit code so the step fails on non-zero.
   - Add `if: steps.prepare-report.outcome == 'success'`.
@@ -126,11 +143,12 @@ The workflow will enforce read-only repository access with `contents: read` at b
   - Set `with.retention-days: 30`.
 
 - Final step order and gating summary:
-  - target checkout (no step ID) — no if condition
-  - `env-validation` — no if condition
+  - `target-checkout` — no if condition
+  - `env-validation` — `if: steps.target-checkout.outcome == 'success'`
   - `tool-install` — `if: steps.env-validation.outcome == 'success'`
   - `config-checkout` — `if: steps.tool-install.outcome == 'success'`
-  - `prepare-report` — `if: steps.config-checkout.outcome == 'success'`
+  - `resolve-config` — `if: steps.config-checkout.outcome == 'success'`
+  - `prepare-report` — `if: steps.resolve-config.outcome == 'success'`
   - `scan-execute` — `if: steps.prepare-report.outcome == 'success'`
   - `upload-report` — `if: failure() && steps.scan-execute.outputs.status != '0'`
 
@@ -140,18 +158,20 @@ The workflow will enforce read-only repository access with `contents: read` at b
   - Validates the environment for read-only actions usage.
   - Installs Betterleaks from `betterleaks/betterleaks` using the configured version.
   - Checks out `${{ inputs.config-repo }}` (default: `aglabo/global-configs`, default branch) into `global/configs/`.
+  - Resolves the configuration with `_ca-resolve-config` (`config` input, then `configs/betterleaks.toml`, then `global/configs/betterleaks.toml`).
   - Creates `.github/report/` directory before scanning.
-  - Runs Betterleaks with `global/configs/betterleaks.toml` and writes report to `.github/report/betterleaks-report.json`.
+  - Runs Betterleaks with the resolved configuration file and writes report to `.github/report/betterleaks-report.json`.
   - Fails immediately when Betterleaks reports a non-zero exit.
   - Uploads the report artifact `betterleaks-report` only when scan fails.
   - Operates with `contents: read` at both top-level and job-level.
 
 ## 3. Change History
 
-| Date       | Version | Description                                                                                                                                                                       |
-| ---------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 2026-11-03 | 1.3.1   | Update ca-* composite action references from @v0.5.0 to @v0.6.0                                                                                                                   |
-| 2026-11-03 | 1.3.0   | Change config-repo default to aglabo/global-configs (checkout path global/configs); align file name, version input, step order, trigger, and actions with ru-scan-betterleaks.yml |
-| 2026-06-12 | 1.2.0   | Add fetch-depth input, prepare-report step, report output, upload-report on failure                                                                                               |
-| 2026-06-12 | 1.1.0   | Set default betterleaks version to `1.4.1`                                                                                                                                        |
-| 2026-06-12 | 1.0.0   | Initial implementation plan                                                                                                                                                       |
+| Date       | Version | Description                                                                                                                                                                                         |
+| ---------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-11-19 | 2.0.0   | Align with ru-scan-secrets.yml: add resolve-config step and config input, default version 1.10.0, target-checkout id and env-validation gating, actions @v0.8.0-pre; based-on specifications v2.0.0 |
+| 2026-11-03 | 1.3.1   | Update ca-* composite action references from @v0.5.0 to @v0.6.0                                                                                                                                     |
+| 2026-11-03 | 1.3.0   | Change config-repo default to aglabo/global-configs (checkout path global/configs); align file name, version input, step order, trigger, and actions with ru-scan-betterleaks.yml                   |
+| 2026-06-12 | 1.2.0   | Add fetch-depth input, prepare-report step, report output, upload-report on failure                                                                                                                 |
+| 2026-06-12 | 1.1.0   | Set default betterleaks version to `1.4.1`                                                                                                                                                          |
+| 2026-06-12 | 1.0.0   | Initial implementation plan                                                                                                                                                                         |

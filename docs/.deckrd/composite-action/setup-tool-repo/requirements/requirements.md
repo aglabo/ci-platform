@@ -1,15 +1,17 @@
 ---
-title: "Requirements: setup-tool-repo Composite Action"
+title: "Requirements: setup-tool-repo Composite Action (ca-setup-repo)"
 module: "composite-action/setup-tool-repo"
 status: Draft
-version: 1.0.6
+version: 1.0.7
 created: "2026-06-18"
-updated: "2026-11-18"
+updated: "2026-11-19"
 ---
 
 <!-- textlint-disable
   ja-technical-writing/sentence-length -->
 <!-- markdownlint-disable line-length -->
+
+**Note**: 実装ディレクトリは `.github/actions/ca-setup-repo/`（旧称 `setup-tool-repo`）。本ドキュメントの `setup-tool-repo` は同アクションを指す。
 
 > **Normative Statement**
 > This document defines binding requirements.
@@ -38,7 +40,7 @@ GitHub Actions ワークフロー内で、Node.js ベースのツール管理リ
 - macOS/Windows ランナーのサポート（Linux ubuntu runner のみ）
 - チェックサム検証やセキュリティスキャン（呼び出し元ワークフロー側の責務）
 - npm/yarn など pnpm 以外のパッケージマネージャーのサポート
-- インストールキャッシュの提供（呼び出し元ワークフロー側の責務）
+- 独自のキャッシュ機構（`actions/cache` 等）の提供（pnpm ストアのキャッシュは `actions/setup-node` の `cache: "pnpm"` に委ねる）
 
 ## 2. Context
 
@@ -47,7 +49,7 @@ GitHub Actions ワークフロー内で、Node.js ベースのツール管理リ
   - `actions/checkout` — リポジトリチェックアウト
   - `actions/setup-node` — Node.js セットアップ
   - `pnpm/action-setup` — pnpm セットアップ
-  - 既存コンポジットアクション `composite-action/setup-tool` — GitHub Releases からバイナリを取得する別アクション
+  - 既存コンポジットアクション `ca-setup-tool` — GitHub Releases からバイナリを取得する別アクション
 - Assumptions:
   - 呼び出し元リポジトリは既にチェックアウト済みである
   - ツールリポジトリはパブリックリポジトリであり、デフォルトの `GITHUB_TOKEN` でアクセス可能である
@@ -61,9 +63,9 @@ GitHub Actions ワークフロー内で、Node.js ベースのツール管理リ
 ```text
 [GitHub Actions Workflow] --> +------------------------------------------+
                               |  setup-tool-repo Composite Action         |
-[External Tool Repo] -------> |  1. actions/setup-node (node-version)     |
+[External Tool Repo] -------> |  1. actions/checkout (repo, path, ref)    |
 (public GitHub repo,          |  2. pnpm/action-setup (pnpm-version)      |
- e.g. aglabo/agla-doc-tools)  |  3. actions/checkout (repo, path, ref)    |
+ e.g. aglabo/agla-doc-tools)  |  3. actions/setup-node (node-version)     |
                               |  4. pnpm install --frozen-lockfile         |
                               |  5. verify bin/ + node_modules/.bin/       |
                               |  6. add <path>/bin/ to GITHUB_PATH         |
@@ -75,14 +77,14 @@ GitHub Actions ワークフロー内で、Node.js ベースのツール管理リ
 
 ## 3. Design Decisions (Summary)
 
-| ID    | Decision                                                                              | Linked Record            |
-| ----- | ------------------------------------------------------------------------------------- | ------------------------ |
-| DR-01 | パブリックリポジトリのみ対応                                                          | decision-record.md#DR-01 |
-| DR-02 | パッケージマネージャーは pnpm 固定                                                    | decision-record.md#DR-02 |
-| DR-03 | Node.js / pnpm セットアップはアクション内で実施                                       | decision-record.md#DR-03 |
-| DR-04 | PATH に追加するのは `bin/` のみ                                                       | decision-record.md#DR-04 |
-| DR-05 | `ref` は必須パラメータとする                                                          | decision-record.md#DR-05 |
-| DR-06 | Node.js / pnpm バージョンは入力パラメータで指定可能、デフォルト値をアクション側で定義 | decision-record.md#DR-06 |
+| ID    | Decision                                                                  | Linked Record            |
+| ----- | ------------------------------------------------------------------------- | ------------------------ |
+| DR-01 | パブリックリポジトリのみ対応                                              | decision-record.md#DR-01 |
+| DR-02 | パッケージマネージャーは pnpm 固定                                        | decision-record.md#DR-02 |
+| DR-03 | Node.js / pnpm セットアップはアクション内で実施                           | decision-record.md#DR-03 |
+| DR-04 | PATH に追加するのは `bin/` のみ                                           | decision-record.md#DR-04 |
+| DR-05 | `ref` は必須パラメータとする                                              | decision-record.md#DR-05 |
+| DR-06 | Node.js / pnpm バージョンは入力パラメータで指定可能、既定値は空（未指定） | decision-record.md#DR-06 |
 
 ## 4. Functional Requirements
 
@@ -146,7 +148,8 @@ THEN the system SHALL 以下をすべて確認し、いずれかが失敗した�
      アクションを失敗させる:
      (1) <path>/bin/ ディレクトリが存在する
      (2) <path>/node_modules/.bin/ ディレクトリが存在する
-     (3) <path>/bin/ 配下のすべてのファイルが実行権限（executable bit）を持つ
+     (3) <path>/bin/ 配下の候補ファイル（拡張子なし、または .sh）が実行権限（executable bit）を持つ。
+         shebang 付きの候補には事前に chmod +x を適用する
 ```
 
 **Rationale**: `bin/` と `node_modules/.bin` の両方が揃って初めてツールが実行できる。
@@ -181,7 +184,7 @@ THEN the system SHALL チェックアウト先ディレクトリの bin/ を $GI
 | AC ID  | Scenario                                                           |
 | ------ | ------------------------------------------------------------------ |
 | AC-008 | アクション完了後、後続ステップで bin/ 配下のツールが実行可能になる |
-| AC-009 | $GITHUB_PATH に bin/ の絶対パスが追加されている                    |
+| AC-009 | $GITHUB_PATH に <path>/bin が追加されている（path 入力のまま）     |
 
 ### REQ-F-005: Node.js および pnpm のセットアップ
 
@@ -189,15 +192,18 @@ THEN the system SHALL チェックアウト先ディレクトリの bin/ を $GI
 
 ```text
 GIVEN setup-tool-repo アクションが開始した
-  WHEN チェックアウトおよびインストールの前に環境セットアップフェーズが実行された
-THEN the system SHALL actions/setup-node で Node.js を、pnpm/action-setup で pnpm を
-     セットアップする。入力パラメータ node-version および pnpm-version でバージョンを
-     指定できるものとし、未指定時はアクション側で定義したデフォルト値を使用する。
+  WHEN チェックアウトの後、インストールの前に環境セットアップフェーズが実行された
+THEN the system SHALL pnpm/action-setup で pnpm を、actions/setup-node で Node.js を
+     （この順で）セットアップする。入力パラメータ pnpm-version および node-version で
+     バージョンを指定できるものとし、未指定（空文字）の場合はバージョンを明示せず、
+     呼び出し元の解決（packageManager 等）に委ねる。
+     actions/setup-node は cache: "pnpm" で pnpm ストアをキャッシュする。
 ```
 
 **Rationale**: ランナーに pnpm がデフォルトでインストールされていない環境を想定し、
 アクション内で pnpm のセットアップを保証する。バージョンを入力パラメータ化することで
-呼び出し元が将来バージョンを固定できる柔軟性を持たせる。
+呼び出し元がバージョンを固定できる柔軟性を持たせる。pnpm のセットアップは setup-node の
+`cache: "pnpm"` が pnpm を必要とするため、setup-node より前に行う。
 
 **Acceptance Criteria**:
 
@@ -226,8 +232,9 @@ lock ファイルとの整合性が取れない場合はインストールを失
 
 ### REQ-NF-004: 保守性
 
-スクリプトは既存の `composite-action/setup-tool` のライブラリ規約（`set -euo pipefail`、
-double-source guard、フェーズ別 exit code）に準拠すること。
+スクリプトは `ca-setup-tool` のライブラリ規約のうち double-source guard とフェーズ別の
+戻り値（0 / 1）に準拠すること。ライブラリ自体は `set -euo pipefail` を設定しない
+（呼び出し元の `run:` ブロックのシェル設定に従う）。
 
 ## 6. Constraints
 
@@ -258,8 +265,8 @@ macOS および Windows ランナーはサポートしない。
 
 ### REQ-C-006: path パラメータのフォーマット
 
-`path` パラメータは `./` で始まる相対パス、または `/` で始まる絶対パスのいずれかでなければならない。
-それ以外の形式（例: `tools/agla`、`../foo`）はエラーを出力してアクションを失敗させる。
+`path` パラメータは `./` で始まる相対パスでなければならず、`..` セグメントを含んではならない。
+それ以外の形式（例: `tools/agla`、`../foo`、`/abs/path`）はエラーを出力してアクションを失敗させる。
 
 ## 7. User Stories
 
@@ -318,22 +325,22 @@ Scenario: repo に owner/repo 形式でない値を指定した場合アクシ�
 
 # AC-016: path が不正フォーマットの場合アクションが失敗する
 # Requirement: REQ-C-006
-Scenario: path に ./ でも / でも始まらない値を指定した場合アクションが失敗する
+Scenario: path に ./ で始まらない値を指定した場合アクションが失敗する
   Given setup-tool-repo アクションを呼び出す
-  When path="tools/agla"（./ も / も始まらない）を渡す
+  When path="tools/agla"（./ で始まらない）を渡す
   Then アクションがエラーメッセージとともに非ゼロ exit code で終了する
 ```
 
 ## 9. Open Questions
 
-| Question                                                                                      | Type   | Impact Area          | Owner | Status    |
-| --------------------------------------------------------------------------------------------- | ------ | -------------------- | ----- | --------- |
-| OQ-001: bin/ が存在しない場合エラーにするか → **エラーで失敗させる**                          | Design | REQ-F-004, REQ-C-003 | —     | ✅ Closed |
-| OQ-002: Node.js バージョンを入力パラメータで指定できるようにするか → **可能、デフォルトあり** | Scope  | REQ-F-005            | —     | ✅ Closed |
-| OQ-003: pnpm バージョンを入力パラメータで指定できるようにするか → **可能、デフォルトあり**    | Scope  | REQ-F-005            | —     | ✅ Closed |
-| OQ-004: インストール時のキャッシュ（actions/cache）をアクション内で提供するか                 | Scope  | REQ-NF-001           | TBD   | Open      |
-| OQ-005: pnpm install --frozen-lockfile は必須か → **必須（固定）**                            | Design | REQ-NF-001           | —     | ✅ Closed |
-| OQ-006: `ref` 未指定時の挙動 → **エラーで失敗させる（ref は必須）**                           | Design | REQ-F-001            | —     | ✅ Closed |
+| Question                                                                                  | Type   | Impact Area          | Owner | Status    |
+| ----------------------------------------------------------------------------------------- | ------ | -------------------- | ----- | --------- |
+| OQ-001: bin/ が存在しない場合エラーにするか → **エラーで失敗させる**                      | Design | REQ-F-004, REQ-C-003 | —     | ✅ Closed |
+| OQ-002: Node.js バージョンを入力パラメータで指定できるようにするか → **可能、既定値は空** | Scope  | REQ-F-005            | —     | ✅ Closed |
+| OQ-003: pnpm バージョンを入力パラメータで指定できるようにするか → **可能、既定値は空**    | Scope  | REQ-F-005            | —     | ✅ Closed |
+| OQ-004: pnpm ストアのキャッシュを提供するか → **setup-node の cache: "pnpm" で提供**      | Scope  | REQ-NF-001           | —     | ✅ Closed |
+| OQ-005: pnpm install --frozen-lockfile は必須か → **必須（固定）**                        | Design | REQ-NF-001           | —     | ✅ Closed |
+| OQ-006: `ref` 未指定時の挙動 → **エラーで失敗させる（ref は必須）**                       | Design | REQ-F-001            | —     | ✅ Closed |
 
 ## 10. Traceability
 
@@ -357,12 +364,13 @@ Scenario: path に ./ でも / でも始まらない値を指定した場合ア�
 
 ## 11. Change History
 
-| Date       | Version | Description                                                                                |
-| ---------- | ------- | ------------------------------------------------------------------------------------------ |
-| 2026-06-18 | 1.0.0   | Initial release                                                                            |
-| 2026-06-18 | 1.0.1   | ref 必須化、pnpm 固定、Node.js/pnpm バージョンパラメータ化（Codex review 反映）            |
-| 2026-06-18 | 1.0.2   | REQ-F-003 拡張: bin/ 存在確認・node_modules/.bin 存在確認・実行権限チェックを追加          |
-| 2026-06-18 | 1.0.3   | review explore 反映: Section 1.2・図・US-004 を pnpm 固定設計に整合                        |
-| 2026-06-18 | 1.0.4   | REQ-C-005 追加: repo は owner/repo 形式必須、REQ-C-006 追加: path は ./ または絶対パス必須 |
-| 2026-06-18 | 1.0.5   | review explore 反映: AC-001/002 の path 修正、REQ-F-004 GIVEN 更新、AC-015/016 追加        |
-| 2026-11-18 | 1.0.6   | AC-012 明確化: node-version・pnpm-version の既定値を廃止し、省略時は未指定として扱う       |
+| Date       | Version | Description                                                                                                             |
+| ---------- | ------- | ----------------------------------------------------------------------------------------------------------------------- |
+| 2026-06-18 | 1.0.0   | Initial release                                                                                                         |
+| 2026-06-18 | 1.0.1   | ref 必須化、pnpm 固定、Node.js/pnpm バージョンパラメータ化（Codex review 反映）                                         |
+| 2026-06-18 | 1.0.2   | REQ-F-003 拡張: bin/ 存在確認・node_modules/.bin 存在確認・実行権限チェックを追加                                       |
+| 2026-06-18 | 1.0.3   | review explore 反映: Section 1.2・図・US-004 を pnpm 固定設計に整合                                                     |
+| 2026-06-18 | 1.0.4   | REQ-C-005 追加: repo は owner/repo 形式必須、REQ-C-006 追加: path は ./ または絶対パス必須                              |
+| 2026-06-18 | 1.0.5   | review explore 反映: AC-001/002 の path 修正、REQ-F-004 GIVEN 更新、AC-015/016 追加                                     |
+| 2026-11-18 | 1.0.6   | AC-012 明確化: node-version・pnpm-version の既定値を廃止し、省略時は未指定として扱う                                    |
+| 2026-11-19 | 1.0.7   | ca-setup-repo の現行実装に整合: 実行順 checkout→pnpm→node、cache: "pnpm"、REQ-C-006 を ./ 限定、REQ-NF-004 の規約を修正 |

@@ -1,8 +1,8 @@
 ---
 title: "Design Specification: Ghalint Reusable Workflow"
-based-on: requirements.md v1.1.0
+based-on: requirements.md v1.2.0
 status: Draft
-version: 1.1.0
+version: 1.2.0
 created: "2026-06-13"
 ---
 
@@ -13,7 +13,7 @@ created: "2026-06-13"
 ### 1.1 Purpose
 
 本文書は、`ru-qa-ghalint.yml` reusable workflow の振る舞い仕様を定義します。
-ghalint によるワークフローポリシー検証を 7 ステップのシーケンシャル実行として記述します。
+ghalint によるワークフローポリシー検証を 8 ステップのシーケンシャル実行として記述します。
 あわせて、`ci-workflows-qa.yml` における外部依存の置き換え動作も対象に含めます。
 
 ### 1.2 Scope
@@ -37,6 +37,7 @@ ghalint によるワークフローポリシー検証を 7 ステップのシー
 - `ca-setup-tool` composite action は指定リポジトリの GitHub Releases からバイナリを取得できます
 - `ca-validate-environment` composite action は `actions-type: read` で正常に動作します
 - `aglabo/global-configs` リポジトリは `workflow_call` 実行時にアクセスできます
+- `_ca-resolve-config` composite action が設定ファイルの解決（`config` 入力、ローカル、グローバルの順）を担います
 
 ### 2.3 External Design Summary
 
@@ -44,17 +45,18 @@ ghalint によるワークフローポリシー検証を 7 ステップのシー
 
 #### Feature Decomposition
 
-| Unit            | Responsibility                                         | REQ Coverage         |
-| --------------- | ------------------------------------------------------ | -------------------- |
-| trigger-inputs  | 呼び出し側入力とデフォルト値を解決します               | REQ-F-001, REQ-F-002 |
-| target-checkout | ターゲットリポジトリをワークスペースに配置します       | REQ-F-003            |
-| env-validation  | ランナー環境と権限を検証します                         | REQ-F-004            |
-| tool-install    | ghalint バイナリを実行パスにインストールします         | REQ-F-005            |
-| config-checkout | 共有設定リポジトリを取得してワークスペースに配置します | REQ-F-006            |
-| prepare-report  | レポート出力先ディレクトリを準備します                 | REQ-F-007            |
-| lint-execute    | ghalint を実行しポリシー違反を検出します               | REQ-F-007            |
-| report-upload   | 失敗時のみレポートをアーティファクトとして保存します   | REQ-F-008            |
-| caller-update   | 外部依存をローカル呼び出しに置き換えます               | REQ-F-009            |
+| Unit            | Responsibility                                                 | REQ Coverage         |
+| --------------- | -------------------------------------------------------------- | -------------------- |
+| trigger-inputs  | 呼び出し側入力とデフォルト値を解決します                       | REQ-F-001, REQ-F-002 |
+| target-checkout | ターゲットリポジトリをワークスペースに配置します               | REQ-F-003            |
+| env-validation  | ランナー環境と権限を検証します                                 | REQ-F-004            |
+| tool-install    | ghalint バイナリを実行パスにインストールします                 | REQ-F-005            |
+| config-checkout | 共有設定リポジトリを取得してワークスペースに配置します         | REQ-F-006            |
+| resolve-config  | 使用する設定ファイルを解決します（入力、ローカル、グローバル） | REQ-F-010            |
+| prepare-report  | レポート出力先ディレクトリを準備します                         | REQ-F-007            |
+| lint-execute    | ghalint を実行しポリシー違反を検出します                       | REQ-F-007            |
+| report-upload   | 失敗時のみレポートをアーティファクトとして保存します           | REQ-F-008            |
+| caller-update   | 外部依存をローカル呼び出しに置き換えます                       | REQ-F-009            |
 
 #### Unit Interaction Map
 
@@ -85,6 +87,11 @@ ghalint によるワークフローポリシー検証を 7 ステップのシー
                            |
                            v
                     +----------------+
+                    | resolve-config | <-- [_ca-resolve-config: input / local / global]
+                    +----------------+
+                           |
+                           v
+                    +----------------+
                     | prepare-report |
                     +----------------+
                            |
@@ -102,12 +109,14 @@ ghalint によるワークフローポリシー検証を 7 ステップのシー
 #### Data Flow Diagram
 
 ```text
-[inputs]             --> [trigger-inputs] --> [resolved-version, resolved-config-path]
+[inputs]             --> [trigger-inputs] --> [resolved-version, config-override]
 [target-repo]        --> [target-checkout] --> [workspace/source]
 [workspace/source]   --> [env-validation]  --> [env-status]
 [ghalint-releases]   --> [tool-install]    --> [ghalint-binary-in-PATH]
 [global-configs]     --> [config-checkout] --> [./global/configs/ghalint.yaml]
-[ghalint-binary]     --> [lint-execute]    --> [ghalint-report.txt, exit-code]
+[config-override, ./configs/ghalint.yaml, ./global/configs/ghalint.yaml]
+                     --> [resolve-config]  --> [config-file, source]
+[ghalint-binary, config-file] --> [lint-execute] --> [ghalint-report.txt, exit-code]
 [exit-code: failure] --> [report-upload]   --> [artifact: ghalint-report]
 ```
 
@@ -122,13 +131,13 @@ ghalint によるワークフローポリシー検証を 7 ステップのシー
 
 ### 2.5 Behavioral Design Decisions
 
-| ID    | Decision                                                            | Rationale                                                                                                                          | Affected Rules | Status |
-| ----- | ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | -------------- | ------ |
-| DD-01 | 外部依存を排除しローカル reusable workflow として実装します         | 外部リポジトリの可用性リスクを排除し、バージョン管理を一元化します                                                                 | R-001〜R-009   | Active |
-| DD-02 | 設定は `aglabo/global-configs` からチェックアウトします             | 一元管理用の設定リポジトリが `aglabo/global-configs` に移ったため、そこから取得します。`config` 入力による上書き可能性も維持します | R-006, R-007   | Active |
-| DD-03 | 入力パラメータは `version` と `config` の 2 つとします              | 呼び出し側がバージョンと設定パスを制御できる最小限のインターフェースです                                                           | R-002          | Active |
-| DD-04 | ステップ間条件は `steps.<id>.outcome == 'success'` パターンとします | プロジェクト既存ワークフロー（actionlint）との一貫性を維持します                                                                   | R-001〜R-008   | Active |
-| DD-05 | 失敗時のみレポートをアーティファクトとしてアップロードします        | 成功時のストレージ消費を抑制し、エラー確認の利便性を確保します                                                                     | R-009          | Active |
+| ID    | Decision                                                                               | Rationale                                                                                       | Affected Rules      | Status |
+| ----- | -------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- | ------------------- | ------ |
+| DD-01 | 外部依存を排除しローカル reusable workflow として実装します                            | 外部リポジトリの可用性リスクを排除し、バージョン管理を一元化します                              | R-001〜R-009        | Active |
+| DD-02 | 設定は `aglabo/global-configs` からチェックアウトし、`_ca-resolve-config` で解決します | 一元管理用の設定リポジトリを取得したうえで、`config` 入力、ローカル、グローバルの順に解決します | R-006, R-007, R-010 | Active |
+| DD-03 | 入力パラメータは `version` と `config` の 2 つとします                                 | 呼び出し側がバージョンと設定パスを制御できる最小限のインターフェースです                        | R-002               | Active |
+| DD-04 | ステップ間条件は `steps.<id>.outcome == 'success'` パターンとします                    | プロジェクト既存ワークフロー（actionlint）との一貫性を維持します                                | R-001〜R-008        | Active |
+| DD-05 | 失敗時のみレポートをアーティファクトとしてアップロードします                           | 成功時のストレージ消費を抑制し、エラー確認の利便性を確保します                                  | R-009               | Active |
 
 ### 2.6 Related Decision Records
 
@@ -138,7 +147,7 @@ ghalint によるワークフローポリシー検証を 7 ステップのシー
 ### 2.7 DD to DR Promotion Criteria
 
 DD-01（外部依存排除）と DD-02（設定リポジトリ固定）は、他の reusable workflow モジュールにも共通する設計判断です。
-対象となるモジュールは actionlint と betterleaks です。
+対象となるモジュールは actionlint と betterleaks です。設定解決（`_ca-resolve-config`）は textlint / markdownlint（`ru-lint-documents`）とも共有します。
 そのため、将来的に DR へ昇格させることを検討します。
 
 ---
@@ -148,7 +157,7 @@ DD-01（外部依存排除）と DD-02（設定リポジトリ固定）は、他
 ### 3.1 Input Domain
 
 - `version`: バージョン文字列（X.Y.Z 形式）です。省略時はデフォルト値を使用します。
-- `config`: 設定ファイルのパス文字列です。省略時は `./global/configs/ghalint.yaml` を使用します。
+- `config`: 設定ファイルのパス文字列です。既定値は空文字です。空の場合は resolve-config がローカル `configs/ghalint.yaml`、次にグローバル `global/configs/ghalint.yaml` の順に選びます。
 - トリガー: `workflow_call` のみです。他のトリガーは受け付けません。
 
 ### 3.2 Output Semantics
@@ -166,7 +175,7 @@ DD-01（外部依存排除）と DD-02（設定リポジトリ固定）は、他
 - `version` が指定された場合、その値をそのまま使用します
 - `version` が省略された場合、事前定義されたデフォルトバージョンを使用します
 - `config` が指定された場合、その値をそのまま使用します
-- `config` が省略された場合、`./global/configs/ghalint.yaml` を使用します
+- `config` が省略された場合、空文字のままにして resolve-config に解決を委ねます
 - この処理は失敗しません。入力の省略はデフォルト値で補完します
 
 #### target-checkout
@@ -193,11 +202,22 @@ DD-01（外部依存排除）と DD-02（設定リポジトリ固定）は、他
 - `aglabo/global-configs` リポジトリを浅いチェックアウト（履歴 1 件）で取得します
 - 認証情報がワークスペースに残留しないよう保護した状態でチェックアウトします
 - チェックアウト後、`./global/configs/` 配下に設定ファイルが配置された状態になります
-- チェックアウトに失敗した場合、prepare-report 以降の全ステップをブロックします
+- チェックアウトに失敗した場合、resolve-config 以降の全ステップをブロックします
+
+#### resolve-config
+
+- config-checkout が成功した場合のみ実行します
+- `_ca-resolve-config` で次の順に設定ファイルを解決します
+  - `config` 入力が空でなければそれのみを候補とします。ファイルが無い場合はエラーとし、フォールバックしません
+  - ローカル `configs/ghalint.yaml`
+  - グローバル `global/configs/ghalint.yaml`
+- `..` または空白を含むパス、および `GITHUB_WORKSPACE` の外を指すパスは拒否します
+- 出力として `config-file`（絶対パス）と `source`（`input` / `local` / `global`）を公開します
+- 解決に失敗した場合、prepare-report 以降の全ステップをブロックします
 
 #### prepare-report
 
-- config-checkout が成功した場合のみ実行します
+- resolve-config が成功した場合のみ実行します
 - レポート出力先ディレクトリが存在しない場合は作成します
 - ディレクトリが既に存在する場合も失敗しません（冪等）
 - 準備に失敗した場合、lint-execute をブロックします
@@ -205,7 +225,7 @@ DD-01（外部依存排除）と DD-02（設定リポジトリ固定）は、他
 #### lint-execute
 
 - prepare-report が成功した場合のみ実行します
-- 解決済みの設定ファイルパスを使用して ghalint を実行します
+- resolve-config の出力 `config-file` を使用して ghalint を実行します
 - 実行結果をレポートファイルに出力します
 - ポリシー違反が検出された場合、非ゼロ終了コードを伝播してジョブを失敗させます
 - ポリシー違反がない場合、ゼロ終了コードでジョブを成功させます
@@ -223,25 +243,31 @@ DD-01（外部依存排除）と DD-02（設定リポジトリ固定）は、他
 
 Evaluation MUST follow this order:
 
-| Rule ID | Step | Condition                                   | Outcome                                              |
-| ------- | ---: | ------------------------------------------- | ---------------------------------------------------- |
-| R-001   |    1 | workflow_call で呼び出された                | trigger-inputs を実行し入力値を解決します            |
-| R-002   |    2 | version が指定された                        | 指定バージョンを使用します                           |
-| R-002a  |    2 | version が省略された                        | デフォルトバージョンを使用します                     |
-| R-003   |    3 | config が指定された                         | 指定パスを使用します                                 |
-| R-003a  |    3 | config が省略された                         | `./global/configs/ghalint.yaml` を使用します         |
-| R-004   |    4 | target-checkout が成功した                  | env-validation を実行します                          |
-| R-004a  |    4 | target-checkout が失敗した                  | 後続全ステップをブロックしジョブを失敗させます       |
-| R-005   |    5 | env-validation が成功した                   | tool-install を実行します                            |
-| R-005a  |    5 | env-validation が失敗した                   | tool-install 以降をブロックしジョブを失敗させます    |
-| R-006   |    6 | tool-install が成功した                     | config-checkout を実行します                         |
-| R-006a  |    6 | tool-install が失敗した                     | config-checkout 以降をブロックしジョブを失敗させます |
-| R-007   |    7 | config-checkout が成功した                  | prepare-report を実行します                          |
-| R-007a  |    7 | config-checkout が失敗した                  | prepare-report 以降をブロックしジョブを失敗させます  |
-| R-008   |    8 | prepare-report が成功した                   | lint-execute を実行します                            |
-| R-008a  |    8 | prepare-report が失敗した                   | lint-execute をブロックしジョブを失敗させます        |
-| R-009   |    9 | lint-execute が成功した（exit code 0）      | ジョブを成功させます。アーティファクトは保存しません |
-| R-009a  |    9 | lint-execute が失敗した（exit code 非ゼロ） | report-upload を実行しアーティファクトを保存します   |
+| Rule ID | Step | Condition                                       | Outcome                                                          |
+| ------- | ---: | ----------------------------------------------- | ---------------------------------------------------------------- |
+| R-001   |    1 | workflow_call で呼び出された                    | trigger-inputs を実行し入力値を解決します                        |
+| R-002   |    2 | version が指定された                            | 指定バージョンを使用します                                       |
+| R-002a  |    2 | version が省略された                            | デフォルトバージョンを使用します                                 |
+| R-003   |    3 | config が指定された                             | 指定パスを使用します                                             |
+| R-003a  |    3 | config が省略された                             | 空文字のまま resolve-config に解決を委ねます                     |
+| R-004   |    4 | target-checkout が成功した                      | env-validation を実行します                                      |
+| R-004a  |    4 | target-checkout が失敗した                      | 後続全ステップをブロックしジョブを失敗させます                   |
+| R-005   |    5 | env-validation が成功した                       | tool-install を実行します                                        |
+| R-005a  |    5 | env-validation が失敗した                       | tool-install 以降をブロックしジョブを失敗させます                |
+| R-006   |    6 | tool-install が成功した                         | config-checkout を実行します                                     |
+| R-006a  |    6 | tool-install が失敗した                         | config-checkout 以降をブロックしジョブを失敗させます             |
+| R-007   |    7 | config-checkout が成功した                      | resolve-config を実行します                                      |
+| R-007a  |    7 | config-checkout が失敗した                      | resolve-config 以降をブロックしジョブを失敗させます              |
+| R-010   |    7 | resolve-config が成功した                       | prepare-report を実行します                                      |
+| R-010a  |    7 | resolve-config が失敗した                       | prepare-report 以降をブロックしジョブを失敗させます              |
+| R-011   |    7 | config が空でない                               | その設定のみを候補とし、無ければ失敗します（フォールバックなし） |
+| R-011a  |    7 | config が空でローカル設定が存在する             | ローカル設定を使用します（source=local）                         |
+| R-011b  |    7 | config が空でローカル設定が存在しない           | グローバル設定を使用します（source=global）                      |
+| R-012   |    7 | パスが `..`・空白を含む、またはワークスペース外 | パスを拒否しジョブを失敗させます                                 |
+| R-008   |    8 | prepare-report が成功した                       | lint-execute を実行します                                        |
+| R-008a  |    8 | prepare-report が失敗した                       | lint-execute をブロックしジョブを失敗させます                    |
+| R-009   |    9 | lint-execute が成功した（exit code 0）          | ジョブを成功させます。アーティファクトは保存しません             |
+| R-009a  |    9 | lint-execute が失敗した（exit code 非ゼロ）     | report-upload を実行しアーティファクトを保存します               |
 
 No reordering is permitted.
 
@@ -251,9 +277,11 @@ No reordering is permitted.
 
 | Scenario                                         | 振る舞い                                               | REQ       | Rationale                                                   |
 | ------------------------------------------------ | ------------------------------------------------------ | --------- | ----------------------------------------------------------- |
-| `config` に存在しないパスを指定                  | lint-execute が失敗し report-upload が実行されます     | REQ-F-007 | ghalint は設定ファイル不在時に非ゼロ終了します              |
+| `config` に存在しないパスを指定                  | resolve-config が失敗し lint-execute は実行されません  | REQ-F-010 | 誤指定を別の設定で黙って補いません（フォールバックなし）    |
+| `config` が空でローカル設定が存在する            | ローカル設定を使用します                               | REQ-F-010 | リポジトリ固有の設定を優先します                            |
+| `config` に `..` を含むパスを指定                | resolve-config が拒否しジョブが失敗します              | REQ-F-010 | パスの閉じ込めにより任意ファイルの参照を防ぎます            |
 | `version` に存在しないバージョンを指定           | tool-install が失敗し後続がブロックされます            | REQ-F-005 | ca-setup-tool は Releases に存在しない版を取得できません    |
-| `aglabo/global-configs` に `ghalint.yaml` が不在 | lint-execute が失敗し report-upload が実行されます     | REQ-F-006 | 通常は発生しません (リポジトリ直下に存在することを確認済み) |
+| `aglabo/global-configs` に `ghalint.yaml` が不在 | ローカル設定も無ければ resolve-config が失敗します     | REQ-F-010 | 通常は発生しません (リポジトリ直下に存在することを確認済み) |
 | `.github/report/` が既に存在する状態で再実行     | prepare-report が正常終了し lint-execute へ進みます    | REQ-F-007 | ディレクトリ作成は冪等です                                  |
 | ポリシー違反がゼロ件                             | lint-execute が exit code 0 で終了しジョブが成功します | REQ-F-007 | 正常系です                                                  |
 | ポリシー違反が 1 件以上                          | lint-execute が非ゼロで終了しジョブが失敗します        | REQ-F-007 | 違反を CI 失敗として確実に伝播させます                      |
@@ -263,25 +291,26 @@ No reordering is permitted.
 
 ## 6. Requirements Traceability
 
-| Requirement ID | Spec Rule                    | Notes                                                                            |
-| -------------- | ---------------------------- | -------------------------------------------------------------------------------- |
-| REQ-F-001      | R-001                        | workflow_call トリガーのみ受け付けます                                           |
-| REQ-F-002      | R-002, R-002a, R-003, R-003a | 入力パラメータのデフォルトを解決します                                           |
-| REQ-F-003      | R-004, R-004a                | target-checkout の成功/失敗で分岐します                                          |
-| REQ-F-004      | R-005, R-005a                | env-validation の成功/失敗で分岐します                                           |
-| REQ-F-005      | R-006, R-006a                | tool-install の成功/失敗で分岐します                                             |
-| REQ-F-006      | R-007, R-007a                | config-checkout の成功/失敗で分岐します                                          |
-| REQ-F-007      | R-008, R-008a, R-009         | prepare-report と lint-execute を実行し結果を伝播します                          |
-| REQ-F-008      | R-009a                       | 失敗時のみ report-upload を実行します                                            |
-| REQ-F-009      | DD-01                        | ci-workflows-qa.yml の外部依存をローカルに置き換えます（実装フェーズで扱います） |
-| REQ-NF-001     | Section 3.3 全 Unit          | 全チェックアウトで認証情報を保護し、最小権限を適用します                         |
-| REQ-NF-002     | Section 2.3                  | actionlint の 7 ステップパターンに準拠します                                     |
-| REQ-NF-003     | Section 2.5 DD-04            | バージョンタグ固定とタイムアウト設定は実装フェーズで扱います                     |
-| REQ-NF-004     | Section 2.3 Unit 名          | ステップ ID 命名規則は actionlint と統一します                                   |
-| REQ-C-001      | Section 2.2                  | ubuntu-slim ランナーを前提とします                                               |
-| REQ-C-002      | Section 2.5 DD-04            | `steps.<id>.outcome == 'success'` パターンのみを使用します                       |
-| REQ-C-003      | R-001                        | workflow_call トリガーのみを使用します                                           |
-| REQ-C-004      | Section 3.3 config-checkout  | aglabo/global-configs を設定ソースとして使用します                               |
+| Requirement ID | Spec Rule                                   | Notes                                                                                      |
+| -------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| REQ-F-001      | R-001                                       | workflow_call トリガーのみ受け付けます                                                     |
+| REQ-F-002      | R-002, R-002a, R-003, R-003a                | 入力パラメータのデフォルトを解決します                                                     |
+| REQ-F-003      | R-004, R-004a                               | target-checkout の成功/失敗で分岐します                                                    |
+| REQ-F-004      | R-005, R-005a                               | env-validation の成功/失敗で分岐します                                                     |
+| REQ-F-005      | R-006, R-006a                               | tool-install の成功/失敗で分岐します                                                       |
+| REQ-F-006      | R-007, R-007a                               | config-checkout の成功/失敗で分岐します                                                    |
+| REQ-F-010      | R-010, R-010a, R-011, R-011a, R-011b, R-012 | resolve-config が `config`、ローカル、グローバルの順に設定を解決します                     |
+| REQ-F-007      | R-008, R-008a, R-009                        | prepare-report と lint-execute を実行し結果を伝播します                                    |
+| REQ-F-008      | R-009a                                      | 失敗時のみ report-upload を実行します                                                      |
+| REQ-F-009      | DD-01                                       | ci-workflows-qa.yml の外部依存をローカルに置き換えます（実装フェーズで扱います）           |
+| REQ-NF-001     | Section 3.3 全 Unit                         | 全チェックアウトで認証情報を保護し、最小権限を適用します                                   |
+| REQ-NF-002     | Section 2.3                                 | actionlint の 8 ステップパターンに準拠します                                               |
+| REQ-NF-003     | Section 2.5 DD-04                           | バージョンタグ固定とタイムアウト設定は実装フェーズで扱います                               |
+| REQ-NF-004     | Section 2.3 Unit 名                         | ステップ ID 命名規則は actionlint と統一します                                             |
+| REQ-C-001      | Section 2.2                                 | ubuntu-slim ランナーを前提とします                                                         |
+| REQ-C-002      | Section 2.5 DD-04                           | `steps.<id>.outcome == 'success'` パターンのみを使用します                                 |
+| REQ-C-003      | R-001                                       | workflow_call トリガーのみを使用します                                                     |
+| REQ-C-004      | Section 3.3 config-checkout, resolve-config | aglabo/global-configs はグローバル設定ソースとして使用し、解決は resolve-config が担います |
 
 ---
 
@@ -300,5 +329,6 @@ No reordering is permitted.
 
 | Date       | Version | Description                                                                                                                                                                                                                                                                                           |
 | ---------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-11-19 | 1.2.0   | resolve-config ユニットとルール R-010..R-012 を追加（`_ca-resolve-config` による入力、ローカル、グローバルの解決とパス検証）、config 既定値を空文字に変更、8 ステップ構成に更新、based-on を requirements v1.2.0 に更新                                                                               |
 | 2026-11-03 | 1.1.0   | 設定リポジトリを aglabo/global-configs に変更 (チェックアウト先 global/configs、config 既定値 ./global/configs/ghalint.yaml)、実装に合わせて参照を更新 (ru-qa-ghalint.yml、入力 version / config、ca-* Composite Action)、ubuntu-slim を GitHub ホストランナーに訂正、Open Questions を解決済みに更新 |
 | 2026-06-13 | 1.0.0   | Initial specification                                                                                                                                                                                                                                                                                 |

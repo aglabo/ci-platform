@@ -3,7 +3,7 @@ title: "Implementation Tasks"
 module: reusable-workflows/actionlint
 status: Active
 created: "2026-06-12 00:00:00"
-source: specifications.md
+source: specifications.md v1.4.0
 ---
 
 <!-- cspell:words jactionlint jdx -->
@@ -25,11 +25,11 @@ source: specifications.md
 | Test Target                  | Scenario Groups            | Case Count | Status      |
 | ---------------------------- | -------------------------- | ---------: | ----------- |
 | T-01: Workflow structure     | Normal / Error / Edge case |         11 | in progress |
-| T-02: Step chain             | Normal / Error / Edge case |         12 | in progress |
-| T-03: Failure propagation    | Error / Edge case          |          7 | in progress |
+| T-02: Step chain             | Normal / Error / Edge case |         13 | in progress |
+| T-03: Failure propagation    | Error / Edge case          |          8 | in progress |
 | T-04: YAML static validation | Normal                     |          4 | in progress |
-| T-05: Config file and report | Normal / Error / Edge case |         10 | in progress |
-| **Total**                    | 17 scenario groups         |     **44** |             |
+| T-05: Config file and report | Normal / Error / Edge case |         14 | in progress |
+| **Total**                    | 18 scenario groups         |     **50** |             |
 
 ---
 
@@ -39,16 +39,16 @@ source: specifications.md
 
 #### T-01-01: Inputs and triggers are correctly defined
 
-- [x] **T-01-01-01**: `version` が `required: false`、`type: string`、`default: "2.4.0"` で宣言されていること
+- [x] **T-01-01-01**: `version` が `required: false`、`type: string`、`default: "2.6.0"` で宣言されていること
   - Target: `ru-qa-actionlint.yml` `.on.workflow_call.inputs.version`
   - Scenario: Given `ru-qa-actionlint.yml` が存在する、When inputs を検査する
-  - Expected: `required: false`、`type: string`、`default: "2.4.0"` がすべて設定されている
+  - Expected: `required: false`、`type: string`、`default: "2.6.0"` がすべて設定されている
   - `yq: yq '.on.workflow_call.inputs.version' .github/workflows/ru-qa-actionlint.yml`
 
-- [x] **T-01-01-02**: `config` が `required: false`、`type: string`、`default: "./global/configs/jactionlint.yaml"` で宣言されていること
+- [x] **T-01-01-02**: `config` が `required: false`、`type: string`、`default: ""` で宣言されていること
   - Target: `ru-qa-actionlint.yml` `.on.workflow_call.inputs.config`
   - Scenario: Given `ru-qa-actionlint.yml` が存在する、When inputs を検査する
-  - Expected: `required: false`、`type: string`、`default: "./global/configs/jactionlint.yaml"` がすべて設定されている
+  - Expected: `required: false`、`type: string`、`default: ""` (空文字。`resolve-config` が解決する) がすべて設定されている
   - `yq: yq '.on.workflow_call.inputs.config' .github/workflows/ru-qa-actionlint.yml`
 
 - [x] **T-01-01-03**: top-level permissions が `contents: read` のみであること
@@ -107,10 +107,10 @@ source: specifications.md
 
 #### T-01-03: Input defaults are explicitly declared
 
-- [x] **T-01-03-01**: `version` と `config` が `workflow_call` で非空デフォルトを持つこと
+- [x] **T-01-03-01**: `version` が非空デフォルトを持ち、`config` が空文字デフォルトを持つこと
   - Target: `ru-qa-actionlint.yml` `.on.workflow_call.inputs`
   - Scenario: Given inputs が省略された状態で `workflow_call` が呼ばれる、When デフォルト値を検査する
-  - Expected: 両入力のデフォルト値が非空文字列
+  - Expected: `version` のデフォルト値が非空文字列、`config` のデフォルト値が空文字列
   - `yq: yq '.on.workflow_call.inputs | to_entries[] | .value.default' .github/workflows/ru-qa-actionlint.yml`
 
 ---
@@ -133,16 +133,16 @@ source: specifications.md
   - Expected: `steps[0].id == 'target-checkout'`
   - `yq: yq '.jobs.qa-actionlint.steps[0].id' .github/workflows/ru-qa-actionlint.yml`
 
-- [x] **T-02-01-02**: `env-validation` が `aglabo/ci-platform/.github/actions/ca-validate-environment@v0.6.0` を使用し、`if: steps.target-checkout.outcome == 'success'` でゲートされること
+- [x] **T-02-01-02**: `env-validation` が `aglabo/ci-platform/.github/actions/ca-validate-environment@v0.8.0-pre` を使用し、`if: steps.target-checkout.outcome == 'success'` でゲートされること
   - Target: `ru-qa-actionlint.yml` step `env-validation`
   - Scenario: Given `ru-qa-actionlint.yml` が存在する、When `env-validation` ステップを検査する
-  - Expected: `uses: aglabo/ci-platform/.github/actions/ca-validate-environment@v0.6.0`、`with.actions-type: read`、`if: steps.target-checkout.outcome == 'success'`
+  - Expected: `uses: aglabo/ci-platform/.github/actions/ca-validate-environment@v0.8.0-pre`、`with.actions-type: read`、`if: steps.target-checkout.outcome == 'success'`
   - `yq: yq '.jobs.qa-actionlint.steps[] | select(.id == "env-validation")' .github/workflows/ru-qa-actionlint.yml`
 
-- [x] **T-02-01-03**: `tool-install` が `aglabo/ci-platform/.github/actions/ca-setup-tool@v0.6.0` を使用し、`repo: jdx/jactionlint`、`if: steps.env-validation.outcome == 'success'` でゲートされること
+- [x] **T-02-01-03**: `tool-install` が `aglabo/ci-platform/.github/actions/ca-setup-tool@v0.8.0-pre` を使用し、`repo: jdx/jactionlint`、`if: steps.env-validation.outcome == 'success'` でゲートされること
   - Target: `ru-qa-actionlint.yml` step `tool-install`
   - Scenario: Given `ru-qa-actionlint.yml` が存在する、When `tool-install` ステップを検査する
-  - Expected: `uses: aglabo/ci-platform/.github/actions/ca-setup-tool@v0.6.0`、`with.repo: jdx/jactionlint`、`if: steps.env-validation.outcome == 'success'`
+  - Expected: `uses: aglabo/ci-platform/.github/actions/ca-setup-tool@v0.8.0-pre`、`with.repo: jdx/jactionlint`、`if: steps.env-validation.outcome == 'success'`
   - `yq: yq '.jobs.qa-actionlint.steps[] | select(.id == "tool-install")' .github/workflows/ru-qa-actionlint.yml`
 
 - [x] **T-02-01-03b**: `tool-install` が `tool-version: ${{ inputs.version }}` を渡すこと
@@ -157,13 +157,19 @@ source: specifications.md
   - Expected: `with.repository: aglabo/global-configs`、`with.path: global/configs`、`with.fetch-depth: 1`、`with.persist-credentials: false`、`if: steps.tool-install.outcome == 'success'`
   - `yq: yq '.jobs.qa-actionlint.steps[] | select(.id == "config-checkout")' .github/workflows/ru-qa-actionlint.yml`
 
+- [x] **T-02-01-04b**: `resolve-config` が `aglabo/ci-platform/.github/actions/_ca-resolve-config@v0.8.0-pre` を使用し、`if: steps.config-checkout.outcome == 'success'` でゲートされること
+  - Target: `ru-qa-actionlint.yml` step `resolve-config`
+  - Scenario: Given `ru-qa-actionlint.yml` が存在する、When `resolve-config` ステップを検査する
+  - Expected: `uses: aglabo/ci-platform/.github/actions/_ca-resolve-config@v0.8.0-pre`、`with.config: ${{ inputs.config }}`、`with.local-config: configs/jactionlint.yaml`、`with.global-config: global/configs/jactionlint.yaml`、`if: steps.config-checkout.outcome == 'success'`
+  - `yq: yq '.jobs.qa-actionlint.steps[] | select(.id == "resolve-config")' .github/workflows/ru-qa-actionlint.yml`
+
 - [x] **T-02-01-05**: `lint-execute` が `jactionlint --config-file` コマンドを実行し、`if: steps.prepare-report.outcome == 'success'` でゲートされること
   - Target: `ru-qa-actionlint.yml` step `lint-execute`
   - Scenario: Given `ru-qa-actionlint.yml` が存在する、When `lint-execute` ステップを検査する
   - Expected: `run` に `jactionlint --config-file` と `tee .github/report/jactionlint-report.txt` を含み、`if: steps.prepare-report.outcome == 'success'`
   - `yq: yq '.jobs.qa-actionlint.steps[] | select(.id == "lint-execute")' .github/workflows/ru-qa-actionlint.yml`
 
-- [x] **T-02-01-06**: ステップ実行順が `target-checkout → env-validation → tool-install → config-checkout → prepare-report → lint-execute` であること
+- [x] **T-02-01-06**: ステップ実行順が `target-checkout → env-validation → tool-install → config-checkout → resolve-config → prepare-report → lint-execute` であること
   - Target: `ru-qa-actionlint.yml` `.jobs.qa-actionlint.steps`
   - Scenario: Given `ru-qa-actionlint.yml` が存在する、When ステップ順序を検査する
   - Expected: steps 配列内の ID が上記順序に従う
@@ -195,11 +201,11 @@ source: specifications.md
   - Expected: 各 `if` 式が `steps.<prev>.outcome == 'success'` パターンのみ
   - `yq: yq '.jobs.qa-actionlint.steps[] | select(.id != "target-checkout" and .id != "report-upload") | {(.id): .if}' .github/workflows/ru-qa-actionlint.yml`
 
-- [x] **T-02-03-02**: `tool-install`、`config-checkout`、`prepare-report`、`lint-execute` のいずれにも `continue-on-error: true` がないこと
+- [x] **T-02-03-02**: `tool-install`、`config-checkout`、`resolve-config`、`prepare-report`、`lint-execute` のいずれにも `continue-on-error: true` がないこと
   - Target: `ru-qa-actionlint.yml` steps
   - Scenario: Given `ru-qa-actionlint.yml` が存在する、When 各ステップの `continue-on-error` を検査する
   - Expected: 対象ステップ全てで `continue-on-error` が存在しないか `false`
-  - `yq: yq '.jobs.qa-actionlint.steps[] | select(.id == "tool-install" or .id == "config-checkout" or .id == "prepare-report" or .id == "lint-execute") | .continue-on-error' .github/workflows/ru-qa-actionlint.yml`
+  - `yq: yq '.jobs.qa-actionlint.steps[] | select(.id == "tool-install" or .id == "config-checkout" or .id == "resolve-config" or .id == "prepare-report" or .id == "lint-execute") | .continue-on-error' .github/workflows/ru-qa-actionlint.yml`
 
 ---
 
@@ -221,11 +227,17 @@ source: specifications.md
   - Expected: `continue-on-error` が存在せず、ステップ失敗がジョブ全体の失敗につながる
   - `yq: yq '.jobs.qa-actionlint.steps[] | select(.id == "config-checkout") | .continue-on-error' .github/workflows/ru-qa-actionlint.yml`
 
-- [x] **T-03-01-03**: lint コマンドが config パスを使用し、設定ファイルが存在しない場合に即時失敗すること
+- [x] **T-03-01-03**: lint コマンドが解決済み config パスを使用し、lint 失敗時に即時失敗すること
   - Target: `ru-qa-actionlint.yml` step `lint-execute` の `run` コマンド
-  - Scenario: Given `config` が存在しないパスを指す、When `lint-execute` を実行する
-  - Expected: step `env.CONFIG_FILE` が `${{ inputs.config }}` で、`run` コマンドが `"${CONFIG_FILE}"` を使い、`exit ${PIPESTATUS[0]}` で失敗を伝播する
+  - Scenario: Given `resolve-config` が `config-file` を出力している、When `lint-execute` を実行する
+  - Expected: step `env.CONFIG_FILE` が `${{ steps.resolve-config.outputs.config-file }}` で、`run` コマンドが `"${CONFIG_FILE}"` を使い、`exit ${PIPESTATUS[0]}` で失敗を伝播する
   - `yq: yq '.jobs.qa-actionlint.steps[] | select(.id == "lint-execute") | {"env": .env, "run": .run}' .github/workflows/ru-qa-actionlint.yml`
+
+- [x] **T-03-01-03b**: `resolve-config` に `continue-on-error` がなく、解決失敗でジョブが失敗すること
+  - Target: `ru-qa-actionlint.yml` step `resolve-config`
+  - Scenario: Given `config` が存在しないパスを指す (または候補が無い)、When `resolve-config` を実行する
+  - Expected: `continue-on-error` が存在せず、ステップ失敗により `prepare-report` 以降がスキップされる
+  - `yq: yq '.jobs.qa-actionlint.steps[] | select(.id == "resolve-config") | .continue-on-error' .github/workflows/ru-qa-actionlint.yml`
 
 - [x] **T-03-01-04**: `env-validation` に `continue-on-error` がないこと
   - Target: `ru-qa-actionlint.yml` step `env-validation`
@@ -237,16 +249,16 @@ source: specifications.md
 
 #### T-03-02: Edge inputs and output suppression
 
-- [x] **T-03-02-01**: `version` のデフォルトが `"2.4.0"` であること
+- [x] **T-03-02-01**: `version` のデフォルトが `"2.6.0"` であること
   - Target: `ru-qa-actionlint.yml` `.on.workflow_call.inputs.version.default`
   - Scenario: Given inputs を省略して呼び出す、When デフォルト値を検査する
-  - Expected: `default == "2.4.0"`
+  - Expected: `default == "2.6.0"`
   - `yq: yq '.on.workflow_call.inputs.version.default' .github/workflows/ru-qa-actionlint.yml`
 
-- [x] **T-03-02-02**: `config` のデフォルトが `"./global/configs/jactionlint.yaml"` であること
+- [x] **T-03-02-02**: `config` のデフォルトが空文字 `""` であること
   - Target: `ru-qa-actionlint.yml` `.on.workflow_call.inputs.config.default`
   - Scenario: Given inputs を省略して呼び出す、When デフォルト値を検査する
-  - Expected: `default == "./global/configs/jactionlint.yaml"`
+  - Expected: `default == ""`
   - `yq: yq '.on.workflow_call.inputs.config.default' .github/workflows/ru-qa-actionlint.yml`
 
 - [x] **T-03-02-03**: workflow および job レベルで outputs が存在しないこと
@@ -272,7 +284,7 @@ source: specifications.md
 - [x] **T-04-01-02**: workflow が正確に 1 つの job `qa-actionlint` を持ち、必須ステップ ID をすべて含むこと
   - Target: `ru-qa-actionlint.yml` `.jobs`
   - Scenario: Given `ru-qa-actionlint.yml` が存在する、When job と step 構造を検査する
-  - Expected: job が `qa-actionlint` のみ、step IDs に `target-checkout`、`env-validation`、`tool-install`、`config-checkout`、`prepare-report`、`lint-execute`、`report-upload` が全て含まれる
+  - Expected: job が `qa-actionlint` のみ、step IDs に `target-checkout`、`env-validation`、`tool-install`、`config-checkout`、`resolve-config`、`prepare-report`、`lint-execute`、`report-upload` が全て含まれる
   - `yq: yq '.jobs | keys' .github/workflows/ru-qa-actionlint.yml`
 
 - [x] **T-04-01-03**: 全ステップ ID が一意であること
@@ -293,7 +305,7 @@ source: specifications.md
 
 ### [正常] Normal Cases
 
-#### T-05-01: config-checkout is fixed and config is caller-overridable
+#### T-05-01: config-checkout is fixed and config is resolved
 
 - [x] **T-05-01-01**: `config-checkout` の `repository` が `aglabo/global-configs` に固定されていること（入力パラメータではない）
   - Target: `ru-qa-actionlint.yml` step `config-checkout`
@@ -307,18 +319,18 @@ source: specifications.md
   - Expected: `with.fetch-depth: 1`
   - `yq: yq '.jobs.qa-actionlint.steps[] | select(.id == "config-checkout") | .with.fetch-depth' .github/workflows/ru-qa-actionlint.yml`
 
-- [x] **T-05-01-03**: `lint-execute` が `env.CONFIG_FILE` (`${{ inputs.config }}`) を使用して設定ファイルパスを参照すること
+- [x] **T-05-01-03**: `lint-execute` が `env.CONFIG_FILE` (`${{ steps.resolve-config.outputs.config-file }}`) を使用して設定ファイルパスを参照すること
   - Target: `ru-qa-actionlint.yml` step `lint-execute`
-  - Scenario: Given `config` 入力が指定された状態で呼び出す、When `lint-execute` の `run` を検査する
-  - Expected: `env.CONFIG_FILE == '${{ inputs.config }}'` かつ `run` に `"${CONFIG_FILE}"` が含まれる
+  - Scenario: Given `resolve-config` が成功した状態で呼び出す、When `lint-execute` の `run` を検査する
+  - Expected: `env.CONFIG_FILE == '${{ steps.resolve-config.outputs.config-file }}'` かつ `run` に `"${CONFIG_FILE}"` が含まれる
   - `yq: yq '.jobs.qa-actionlint.steps[] | select(.id == "lint-execute") | {"env": .env, "run": .run}' .github/workflows/ru-qa-actionlint.yml`
 
 #### T-05-02: Report preparation and lint output
 
-- [x] **T-05-02-01**: `prepare-report` が `mkdir -p .github/report` を実行し、`if: steps.config-checkout.outcome == 'success'` でゲートされること
+- [x] **T-05-02-01**: `prepare-report` が `mkdir -p .github/report` を実行し、`if: steps.resolve-config.outcome == 'success'` でゲートされること
   - Target: `ru-qa-actionlint.yml` step `prepare-report`
   - Scenario: Given `ru-qa-actionlint.yml` が存在する、When `prepare-report` ステップを検査する
-  - Expected: `run: mkdir -p .github/report`、`if: steps.config-checkout.outcome == 'success'`
+  - Expected: `run: mkdir -p .github/report`、`if: steps.resolve-config.outcome == 'success'`
   - `yq: yq '.jobs.qa-actionlint.steps[] | select(.id == "prepare-report")' .github/workflows/ru-qa-actionlint.yml`
 
 - [x] **T-05-02-02**: `lint-execute` の `run` が `tee .github/report/jactionlint-report.txt` を含むこと
@@ -364,3 +376,29 @@ source: specifications.md
   - Scenario: Given `lint-execute` が exit code 0 で成功する、When `report-upload` の条件を評価する
   - Expected: `if` 条件が `failure()` を含むため、成功時は `report-upload` が実行されない
   - `yq: yq '.jobs.qa-actionlint.steps[] | select(.id == "report-upload") | .if' .github/workflows/ru-qa-actionlint.yml`
+
+#### T-05-05: resolve-config precedence and failure (via `_ca-resolve-config`)
+
+- [x] **T-05-05-01**: `config` が空でローカル `configs/jactionlint.yaml` が存在するとき、ローカルが選択されること (`source=local`)
+  - Target: `_ca-resolve-config` 経由の `resolve-config` ステップ (R-023)
+  - Scenario: Given `config` が空でローカルとグローバルの両方の設定が存在する、When `resolve-config` を実行する
+  - Expected: `config-file` がローカルファイルの絶対パス、`source == local`
+  - 検証: `_ca-resolve-config` のテスト (`resolve-config.unit.spec.sh`) および CI の `test-resolve-config` ジョブ
+
+- [x] **T-05-05-02**: ローカル設定が無いとき、グローバル `global/configs/jactionlint.yaml` が選択されること (`source=global`)
+  - Target: `_ca-resolve-config` 経由の `resolve-config` ステップ (R-023)
+  - Scenario: Given `config` が空でローカル設定が存在しない、When `resolve-config` を実行する
+  - Expected: `config-file` がグローバルファイルの絶対パス、`source == global`
+  - 検証: 同上
+
+- [x] **T-05-05-03**: `config` に存在しないパスが指定されたとき、フォールバックせずに失敗すること
+  - Target: `_ca-resolve-config` 経由の `resolve-config` ステップ (R-024)
+  - Scenario: Given `config` が存在しないファイルを指し、ローカル・グローバルの設定は存在する、When `resolve-config` を実行する
+  - Expected: ステップが失敗し、`prepare-report` 以降がスキップされる
+  - 検証: 同上
+
+- [x] **T-05-05-04**: `config` に `..` を含むパスやワークスペース外のパスが指定されたとき、拒否されること
+  - Target: `_ca-resolve-config` 経由の `resolve-config` ステップ (R-025)
+  - Scenario: Given `config` が `../outside.yaml` を指す、When `resolve-config` を実行する
+  - Expected: ステップが失敗し、`lint-execute` は実行されない
+  - 検証: 同上

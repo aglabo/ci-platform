@@ -3,7 +3,7 @@ title: "Implementation Tasks"
 module: "composite-action/resolve-sha"
 status: Active
 created: "2026-10-25 19:30:00"
-source: specifications-index.md v2.1.1, implementation.md v1.1.3
+source: specifications-index.md v2.1.3, implementation.md v1.1.5
 ---
 
 <!-- cspell:words promisorx -->
