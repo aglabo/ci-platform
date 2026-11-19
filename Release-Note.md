@@ -28,8 +28,12 @@ Composite Action が利用する外部 Action をコミット SHA に固定し�
 
 ### 再利用可能ワークフローの参照を更新
 
-- `ru-lint-documents.yml`、`ru-qa-actionlint.yml`、`ru-qa-actions-lock.yml`、`ru-qa-ghalint.yml`、`ru-scan-secrets.yml` が呼び出す
-  Composite Action の参照を v0.7.0 から v0.7.1 に更新しました。
+- 次の再利用可能ワークフローが呼び出す Composite Action の参照を、v0.7.0 から v0.7.1 に更新しました。
+  - `ru-lint-documents.yml`
+  - `ru-qa-actionlint.yml`
+  - `ru-qa-actions-lock.yml`
+  - `ru-qa-ghalint.yml`
+  - `ru-scan-secrets.yml`
 - 上記ワークフローの `# @version` ヘッダーを 0.7.1 に更新しました。
 - `ci-publish-docs.yml` が呼び出す `ca-validate-environment` を v0.7.1 に更新しました。
 
