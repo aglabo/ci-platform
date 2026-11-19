@@ -15,30 +15,30 @@ workflows:
         - 'actions/deploy-pages@v5.0.1'
         - 'actions/setup-node@v7.1.0'
         - 'actions/upload-pages-artifact@v5.0.0'
-        - 'aglabo/ci-platform@v0.6.1'
+        - 'aglabo/ci-platform@v0.7.0'
         - 'pnpm/action-setup@v6.1.1'
     '.github/workflows/ci-scan-secrets.yml': []
     '.github/workflows/ci-workflows-qa.yml': []
     '.github/workflows/ru-lint-documents.yml':
         - 'actions/checkout@v7.0.1'
         - 'actions/upload-artifact@v7.0.2'
-        - 'aglabo/ci-platform@v0.6.1'
+        - 'aglabo/ci-platform@v0.7.0'
     '.github/workflows/ru-qa-actionlint.yml':
         - 'actions/checkout@v7.0.1'
         - 'actions/upload-artifact@v7.0.2'
-        - 'aglabo/ci-platform@v0.6.1'
+        - 'aglabo/ci-platform@v0.7.0'
     '.github/workflows/ru-qa-actions-lock.yml':
         - 'actions/checkout@v7.0.1'
         - 'actions/upload-artifact@v7.0.2'
-        - 'aglabo/ci-platform@v0.6.1'
+        - 'aglabo/ci-platform@v0.7.0'
     '.github/workflows/ru-qa-ghalint.yml':
         - 'actions/checkout@v7.0.1'
         - 'actions/upload-artifact@v7.0.2'
-        - 'aglabo/ci-platform@v0.6.1'
+        - 'aglabo/ci-platform@v0.7.0'
     '.github/workflows/ru-scan-secrets.yml':
         - 'actions/checkout@v7.0.1'
         - 'actions/upload-artifact@v7.0.2'
-        - 'aglabo/ci-platform@v0.6.1'
+        - 'aglabo/ci-platform@v0.7.0'
 dependencies:
     'actions/cache@v6.1.0':
         ref: 'v6.1.0'
@@ -77,9 +77,9 @@ dependencies:
         repo_id: 496012378
         uses:
             - 'actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f'
-    'aglabo/ci-platform@v0.6.1':
-        ref: 'v0.6.1'
-        commit: 'sha1-76bf81b8f8ef67234ab5d3361ba5f30e0646a284'
+    'aglabo/ci-platform@v0.7.0':
+        ref: 'v0.7.0'
+        commit: 'sha1-4136db08e3f36b8b5a6c165483bd896f300846c5'
         owner_id: 211574028
         repo_id: 1154660752
         uses:
