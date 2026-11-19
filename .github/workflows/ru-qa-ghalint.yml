@@ -1,7 +1,7 @@
 # src: ./.github/workflows/ru-qa-ghalint.yml
 # @(#) : Reusable workflow for GitHub Actions workflow linting with ghalint
 #
-# @version : 0.7.1
+# @version : 0.7.0
 #
 # Copyright (c) 2026- atsushifx <https://github.com/atsushifx>
 #
@@ -48,14 +48,14 @@ jobs:
       - name: Validate environment
         id: env-validation
         if: steps.target-checkout.outcome == 'success'
-        uses: aglabo/ci-platform/.github/actions/ca-validate-environment@v0.7.1
+        uses: aglabo/ci-platform/.github/actions/ca-validate-environment@v0.7.0
         with:
           actions-type: read
 
       - name: Install ghalint
         id: tool-install
         if: steps.env-validation.outcome == 'success'
-        uses: aglabo/ci-platform/.github/actions/ca-setup-tool@v0.7.1
+        uses: aglabo/ci-platform/.github/actions/ca-setup-tool@v0.7.0
         with:
           repo: suzuki-shunsuke/ghalint
           tool-version: ${{ inputs.version }}
