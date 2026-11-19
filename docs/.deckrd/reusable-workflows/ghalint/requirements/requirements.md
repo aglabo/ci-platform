@@ -2,7 +2,7 @@
 title: "Requirements: Ghalint Reusable Workflow"
 module: "reusable-workflows/ghalint"
 status: Draft
-version: 1.1.1
+version: 1.2.0
 created: "2026-06-13"
 ---
 
@@ -26,8 +26,8 @@ reusable workflow (`ru-qa-ghalint.yml`) を ci-platform リポジトリ内に作
 
 - `ru-qa-ghalint.yml`: `workflow_call` トリガーをもつ ghalint 専用 reusable workflow の作成
 - `ci-workflows-qa.yml`: 外部 ghalint workflow 呼び出しをローカル呼び出しに置き換え
-- 設定ファイルは `aglabo/global-configs` リポジトリから `./global/configs/` にチェックアウトして使用
-- 入力パラメータ: `version`（バージョン固定、既定値 `1.6.0`）、`config`（設定パス指定、既定値 `./global/configs/ghalint.yaml`）
+- 設定ファイルは `_ca-resolve-config` で解決する（`config` 入力 → ローカル `configs/ghalint.yaml` → `aglabo/global-configs` を `./global/configs/` にチェックアウトした `global/configs/ghalint.yaml`）
+- 入力パラメータ: `version`（バージョン固定、既定値 `1.6.0`）、`config`（設定パス指定、既定値は空文字で、ローカル・グローバルの順に解決）
 - 失敗時のみレポートをアーティファクトとしてアップロード
 
 **Out of Scope**:
@@ -40,7 +40,7 @@ reusable workflow (`ru-qa-ghalint.yml`) を ci-platform リポジトリ内に作
 ## 2. Context
 
 - Target Environment: GitHub Actions (ubuntu-slim GitHub ホストランナー)
-- Related Components: `ci-workflows-qa.yml`, `aglabo/ci-platform/.github/actions/ca-validate-environment@v0.6.0`, `aglabo/ci-platform/.github/actions/ca-setup-tool@v0.6.0`, `aglabo/global-configs`（設定リポジトリ）, `configs/ghalint.yaml`
+- Related Components: `ci-workflows-qa.yml`, `aglabo/ci-platform/.github/actions/ca-validate-environment@v0.8.0-pre`, `aglabo/ci-platform/.github/actions/ca-setup-tool@v0.8.0-pre`, `aglabo/ci-platform/.github/actions/_ca-resolve-config@v0.8.0-pre`, `aglabo/global-configs`（設定リポジトリ）, `configs/ghalint.yaml`
 - Assumptions: `ca-setup-tool` composite action が `suzuki-shunsuke/ghalint` の GitHub Releases からバイナリを取得できる
 
 ### System Context Diagram
@@ -51,7 +51,9 @@ reusable workflow (`ru-qa-ghalint.yml`) を ci-platform リポジトリ内に作
 [aglabo/global-configs] --> |   (reusable workflow)       |  -->  [.github/report/]
                             +-----------------------------+
                                          |
-                            [./global/configs/ghalint.yaml]
+                            [_ca-resolve-config]
+                            (input -> configs/ghalint.yaml
+                             -> global/configs/ghalint.yaml)
 ```
 
 ## 3. Design Decisions (Summary)
@@ -92,8 +94,8 @@ THEN the system SHALL accept the invocation and execute the ghalint job.
 GIVEN the workflow is invoked via workflow_call
   WHEN input parameters are provided or omitted
 THEN the system SHALL resolve version to the provided value or the default version,
-     and SHALL resolve config to the provided path or the default path
-     (./global/configs/ghalint.yaml).
+     and SHALL accept config as the provided path or an empty string
+     (empty: resolved by the resolve-config step, local first, then global).
 ```
 
 **Rationale**: バージョンと設定パスを呼び出し側から上書き可能にし、デフォルト値で運用できるようにする。
@@ -172,7 +174,7 @@ THEN the system SHALL checkout aglabo/global-configs repository into ./global/co
      with fetch-depth: 1 and persist-credentials: false.
 ```
 
-**Rationale**: 設定を一元管理用の設定リポジトリ `aglabo/global-configs` で管理し、ローカルの `config` 入力で上書き可能にする。
+**Rationale**: 設定を一元管理用の設定リポジトリ `aglabo/global-configs` で管理し、ローカル設定や `config` 入力で上書き可能にする。
 
 **Acceptance Criteria**:
 
@@ -180,14 +182,39 @@ THEN the system SHALL checkout aglabo/global-configs repository into ./global/co
 | ------ | ------------------------------------------------ |
 | AC-007 | `./global/configs/ghalint.yaml` が配置されること |
 
-### REQ-F-007: Lint Execution
+### REQ-F-010: Config Resolution
 
 - EARS Type: event-driven (WHEN)
 
 ```text
 GIVEN the config repository checkout succeeds
+  WHEN the resolve-config step is reached
+THEN the system SHALL resolve the config file with the _ca-resolve-config composite action
+     in the order: the config input (if non-empty; a missing file is an error with no fallback),
+     configs/ghalint.yaml (local), global/configs/ghalint.yaml (global),
+     SHALL reject paths containing ".." or whitespace and paths outside GITHUB_WORKSPACE,
+     SHALL expose config-file (absolute path) and source (input / local / global),
+     and SHALL block subsequent steps if resolution fails.
+```
+
+**Rationale**: リポジトリ固有の設定を優先しつつ、無ければ組織共通の設定を使い、明示指定の誤りを黙って別設定で補わない。
+
+**Acceptance Criteria**:
+
+| AC ID  | Scenario                                                       |
+| ------ | -------------------------------------------------------------- |
+| AC-013 | `config` が空でローカル設定があればローカルが使われること      |
+| AC-014 | ローカル設定が無ければグローバル設定が使われること             |
+| AC-015 | 存在しない `config` を指定するとフォールバックせず失敗すること |
+
+### REQ-F-007: Lint Execution
+
+- EARS Type: event-driven (WHEN)
+
+```text
+GIVEN the config resolution succeeds
   WHEN the lint-execute step is reached
-THEN the system SHALL execute ghalint with the resolved config path,
+THEN the system SHALL execute ghalint with the resolved config-file output,
      SHALL output results to .github/report/ghalint-report.txt,
      and SHALL exit with a non-zero code if any policy violation is detected.
 ```
@@ -233,7 +260,7 @@ THEN the system SHALL replace the external aglabo/.github ghalint workflow call
 ```
 
 **Rationale**: 外部リポジトリへの依存を排除し、ghalint workflow をリポジトリ内で完結して管理する。
-`ci-workflows-qa.yml` は `with:` を指定せず、global-configs の既定設定で呼び出す。
+`ci-workflows-qa.yml` は `with:` を指定せず、既定の解決順（ローカル、次にグローバル）で呼び出す。
 
 **Acceptance Criteria**:
 
@@ -250,18 +277,18 @@ Implementation MUST set `permissions: contents: read` at both workflow and job l
 
 ### REQ-NF-002: Consistency
 
-The implementation SHOULD follow the same 7-step pattern as `ru-qa-actionlint.yml`
-(target-checkout → env-validation → tool-install → config-checkout → prepare-report → lint-execute → report-upload).
+The implementation SHOULD follow the same 8-step pattern as `ru-qa-actionlint.yml`
+(target-checkout → env-validation → tool-install → config-checkout → resolve-config → prepare-report → lint-execute → report-upload).
 
 ### REQ-NF-003: Maintainability
 
-The workflow SHOULD use explicit version tags (e.g. `@v7.0.1`, `@v0.6.0`) for all `uses:` references.
+The workflow SHOULD use explicit version tags (e.g. `@v7.0.1`, `@v0.8.0-pre`) for all `uses:` references.
 The `timeout-minutes: 10` MUST be set at job level.
 
 ### REQ-NF-004: Traceability
 
 Step IDs MUST follow the naming convention established in `ru-qa-actionlint.yml`:
-`target-checkout`, `env-validation`, `tool-install`, `config-checkout`, `prepare-report`, `lint-execute`, `report-upload`.
+`target-checkout`, `env-validation`, `tool-install`, `config-checkout`, `resolve-config`, `prepare-report`, `lint-execute`, `report-upload`.
 
 ## 6. Constraints
 
@@ -281,8 +308,10 @@ The workflow MUST support `workflow_call` trigger only.
 
 ### REQ-C-004: ghalint Config Source
 
-The default configuration MUST be sourced from `aglabo/global-configs` repository,
-checked out into `./global/configs/`. The `config` input MAY override the path.
+The configuration MUST be resolved by `_ca-resolve-config` in the order: `config` input, local `configs/ghalint.yaml`,
+then the `aglabo/global-configs` copy checked out into `./global/configs/`. The `config` input MAY override the path.
+The ci-platform composite actions used by the workflow are limited to `ca-validate-environment`, `ca-setup-tool` and `_ca-resolve-config`.
+The `# @version` header of the workflow follows the release version of the composite actions.
 
 ## 7. User Stories
 
@@ -300,7 +329,28 @@ checked out into `./global/configs/`. The `config` input MAY override the path.
 Scenario: Normal invocation from caller workflow
   Given ci-workflows-qa.yml calls ru-qa-ghalint.yml via workflow_call
   When  the ghalint job executes
-  Then  all 7 steps complete in sequence without error
+  Then  all 8 steps complete in sequence without error
+
+# AC-013: Local config takes precedence
+# Requirement: REQ-F-010
+Scenario: Local config takes precedence
+  Given the config input is empty and configs/ghalint.yaml exists
+  When  the resolve-config step runs
+  Then  config-file is the local file and source is local
+
+# AC-014: Global config is the fallback
+# Requirement: REQ-F-010
+Scenario: Global config is the fallback
+  Given the config input is empty and configs/ghalint.yaml does not exist
+  When  the resolve-config step runs
+  Then  config-file is global/configs/ghalint.yaml and source is global
+
+# AC-015: Missing explicit config fails without fallback
+# Requirement: REQ-F-010
+Scenario: Missing explicit config fails without fallback
+  Given the config input names a file that does not exist
+  When  the resolve-config step runs
+  Then  the step fails and lint-execute is skipped
 
 # AC-008: Lint passes when no policy violations exist
 # Requirement: REQ-F-007
@@ -333,25 +383,26 @@ Scenario: Report artifact not uploaded on success
 
 ## 9. Traceability
 
-| REQ ID     | AC IDs         | Type           |
-| ---------- | -------------- | -------------- |
-| REQ-F-001  | AC-001         | Functional     |
-| REQ-F-002  | AC-002, AC-003 | Functional     |
-| REQ-F-003  | AC-004         | Functional     |
-| REQ-F-004  | AC-005         | Functional     |
-| REQ-F-005  | AC-006         | Functional     |
-| REQ-F-006  | AC-007         | Functional     |
-| REQ-F-007  | AC-008, AC-009 | Functional     |
-| REQ-F-008  | AC-010, AC-011 | Functional     |
-| REQ-F-009  | AC-012         | Functional     |
-| REQ-NF-001 | —              | Non-Functional |
-| REQ-NF-002 | —              | Non-Functional |
-| REQ-NF-003 | —              | Non-Functional |
-| REQ-NF-004 | —              | Non-Functional |
-| REQ-C-001  | —              | Constraint     |
-| REQ-C-002  | —              | Constraint     |
-| REQ-C-003  | —              | Constraint     |
-| REQ-C-004  | —              | Constraint     |
+| REQ ID     | AC IDs                 | Type           |
+| ---------- | ---------------------- | -------------- |
+| REQ-F-001  | AC-001                 | Functional     |
+| REQ-F-002  | AC-002, AC-003         | Functional     |
+| REQ-F-003  | AC-004                 | Functional     |
+| REQ-F-004  | AC-005                 | Functional     |
+| REQ-F-005  | AC-006                 | Functional     |
+| REQ-F-006  | AC-007                 | Functional     |
+| REQ-F-007  | AC-008, AC-009         | Functional     |
+| REQ-F-008  | AC-010, AC-011         | Functional     |
+| REQ-F-009  | AC-012                 | Functional     |
+| REQ-F-010  | AC-013, AC-014, AC-015 | Functional     |
+| REQ-NF-001 | —                      | Non-Functional |
+| REQ-NF-002 | —                      | Non-Functional |
+| REQ-NF-003 | —                      | Non-Functional |
+| REQ-NF-004 | —                      | Non-Functional |
+| REQ-C-001  | —                      | Constraint     |
+| REQ-C-002  | —                      | Constraint     |
+| REQ-C-003  | —                      | Constraint     |
+| REQ-C-004  | —                      | Constraint     |
 
 ## 10. Open Questions
 
@@ -364,6 +415,7 @@ Scenario: Report artifact not uploaded on success
 
 | Date       | Version | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | ---------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-11-19 | 1.2.0   | `_ca-resolve-config` による設定解決 (REQ-F-010、AC-013..015) を追加、config 既定値を空文字に変更 (ローカル優先)、8 ステップ構成に更新、composite action 参照を @v0.8.0-pre に更新                                                                                                                                                                                                                                                                                    |
 | 2026-11-03 | 1.1.1   | ca-* Composite Action の参照を @v0.5.0 から @v0.6.0 に更新                                                                                                                                                                                                                                                                                                                                                                                                           |
 | 2026-11-03 | 1.1.0   | 設定リポジトリを aglabo/global-configs に変更 (チェックアウト先 global/configs、config 既定値 ./global/configs/ghalint.yaml)、実装に合わせて参照を更新 (ru-qa-ghalint.yml、入力 version / config、ca-* Composite Action @v0.5.0、バージョンタグ固定)、frontmatter の版番号を 3 部構成に修正、ubuntu-slim を GitHub ホストランナーに訂正、Open Questions (既定版 1.6.0、ghalint.yaml の存在) を解決済みに更新、caller は with: なしで global-configs の既定設定を使用 |
 | 2026-06-13 | 1.0.0   | Initial release                                                                                                                                                                                                                                                                                                                                                                                                                                                      |

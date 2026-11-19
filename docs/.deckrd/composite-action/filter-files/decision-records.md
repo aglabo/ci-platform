@@ -1,9 +1,9 @@
 ---
 title: "Decision Records: _ca-filter-files"
-based-on: requirements.md v1.5.0
+based-on: requirements.md v1.6.0
 module: "composite-action/filter-files"
 status: approved
-version: 2.1.2
+version: 2.1.3
 created: "2026-10-27"
 ---
 
@@ -241,7 +241,7 @@ Issue #136 は `ca-get-changed-files` から pathspec を外し `_ca-filter-file
 
 ### Context
 
-複数行出力関数 `write_multiline_output` は `ca-get-changed-files/scripts/_libs/filter.lib.sh` のローカル実装しかない。
+起票時、複数行出力関数 `write_multiline_output` は `ca-get-changed-files/scripts/_libs/filter.lib.sh` のローカル実装しかなかった。
 区切り文字が固定の `EOF` であり、パスが `EOF` だと出力が壊れる。
 
 ### Decision
@@ -262,9 +262,9 @@ Issue #136 は `ca-get-changed-files` から pathspec を外し `_ca-filter-file
 - Positive:
   - 他の Action から同じ実装を再利用できる
 - Negative:
-  - `filter.lib.sh` のローカル実装と同名の関数が一時的に並存する
-  - `ca-get-changed-files` は、後続の get-changed-files の要件改訂で、共有ライブラリの `write_multiline_output` に切り替える。
-    ローカル実装は廃止する (DR-06)
+  - `filter.lib.sh` のローカル実装と同名の関数が一時的に並存した
+    - #134 で `ca-get-changed-files` は共有ライブラリの `write_multiline_output` に切り替わった
+    - ローカル実装は廃止済みである (DR-06)
 
 ### Related
 
@@ -862,3 +862,4 @@ CP は検査だけを担い、FF は入力と同じ形のパターン一覧を�
 | 2026-10-29 | 2.1.0   | Lower the patterns line limit of DR-16 from 1000 to 100 based on the measured matching time, refresh based-on                                                                                      |
 | 2026-10-29 | 2.1.1   | Align DR-17 with the code: filter_files runs in a subshell and sets LC_ALL=C.UTF-8 there instead of local                                                                                          |
 | 2026-10-31 | 2.1.2   | DR-16: assign the shared constants of _libs/constants.lib.sh to the files and byte limits                                                                                                          |
+| 2026-11-19 | 2.1.3   | DR-07: record that the local write_multiline_output was removed in #134, refresh based-on                                                                                                          |

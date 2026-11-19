@@ -3,7 +3,7 @@ title: "Implementation Tasks"
 module: "composite-action/filter-files"
 status: Active
 created: "2026-10-27 17:18:46"
-source: specifications-index.md v1.6.1, implementation.md v1.7.1
+source: specifications-index.md v1.6.1, implementation.md v1.7.3
 ---
 
 <!-- textlint-disable ja-technical-writing/sentence-length -->
@@ -29,7 +29,7 @@ source: specifications-index.md v1.6.1, implementation.md v1.7.1
   - PR-A の最後 (Phase 1 の後) と PR-B の最後 (Phase 6 の後) のテスト ID 機械検査 A / C
   - Phase 5 Commit 2 の上限入力での実行時間の計測と PR への記録
   - Phase 6 Commit 2 の CI ジョブ (`test-filter-files`) の追加
-- 旧 `write_multiline_output` (`ca-get-changed-files/scripts/_libs/filter.lib.sh`) と新 WMO の読み込み順のテストは、#134 で `ca-get-changed-files` へ組み込む際に追加する。本書では Test ID を割り当てない。
+- 旧 `write_multiline_output` (`ca-get-changed-files/scripts/_libs/filter.lib.sh`) は #134 で削除済みであり、新 WMO との読み込み順のテストは不要である。
 
 **関数ごとの実装上の詳細** (関数間の受け渡し形式、GTR の変換順、FF のサブシェル、EO のエラー対応、MAIN の呼び出し順) は、implementation.md §1.3 に従う。
 

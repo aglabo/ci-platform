@@ -1,7 +1,7 @@
 {
   // Markdown
   "files.associations": {
-    "*.mdx": "markdown"
+    "*.mdx": "markdown",
   },
   "[markdown]": {
     "editor.defaultFormatter": "dprint.dprint"
@@ -34,5 +34,6 @@
   // trusted Domain for JSON
   "json.schemaDownload.trustedDomains": {
     "https://raw.githubusercontent.com/streetsidesoftware/cspell/main/packages/cspell-types/cspell.schema.json": true
-  }
+  },
+  "markdown.validate.enabled": true
 }

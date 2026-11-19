@@ -16,9 +16,9 @@ spec / impl / tasks を新しい requirements から作り直す際に解消す�
 
 ## コードの問題 (#134 の実装で書き直す際に解消する)
 
-- [ ] `action.yml` の `run` の中で `${{ github.action_path }}` を使っている (requirements REQ-C-001 で禁止)
-- [ ] `action.yml` の `# src:` ヘッダーが `./.github/actions/validate-environment/action.yml` を指している
-- [ ] `get-changed-files.sh` の `@(#)` 行が、push イベント専用の説明のまま (pull_request・その他イベントに触れていない)
+- [x] `action.yml` の `run` の中で `${{ github.action_path }}` を使っている (requirements REQ-C-001 で禁止)
+- [x] `action.yml` の `# src:` ヘッダーが `./.github/actions/validate-environment/action.yml` を指している
+- [x] `get-changed-files.sh` の `@(#)` 行が、push イベント専用の説明のまま (pull_request・その他イベントに触れていない)
 
 ## モジュール外の作業
 

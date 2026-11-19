@@ -1,8 +1,8 @@
 ---
-title: "Design Specification: setup-tool-repo Composite Action"
-based-on: requirements.md v1.0.6
+title: "Design Specification: setup-tool-repo Composite Action (ca-setup-repo)"
+based-on: requirements.md v1.0.7
 status: Draft
-version: 1.2.0
+version: 1.3.0
 created: "2026-06-18"
 ---
 
@@ -18,7 +18,7 @@ created: "2026-06-18"
 
 ### 1.1 Purpose
 
-`setup-tool-repo` コンポジットアクションの外部動作契約を定義する。
+`setup-tool-repo` コンポジットアクション（実装: `.github/actions/ca-setup-repo/`）の外部動作契約を定義する。
 GitHub Actions ワークフローが Node.js ベースのツール管理リポジトリを
 チェックアウト・インストールし、後続ステップからツールを実行可能にするまでの
 各ユニットの事前条件・事後条件・エラー規則を規定する。
@@ -36,8 +36,8 @@ GitHub Actions ワークフローが Node.js ベースのツール管理リポ�
 ### 2.1 Design Philosophy
 
 - Fail-fast: 各ユニットは事前条件が満たされない場合、後続処理を実行せず即座に失敗する
-- 順序保証: 6 ユニットは定義された順序で実行され、前ユニットの成功が次ユニットの事前条件となる
-- 最小副作用: 副作用（GITHUB_PATH への書き込み）は最終ユニット（add-path）のみに集約する
+- 順序保証: 8 ユニットは定義された順序で実行され、前ユニットの成功が次ユニットの事前条件となる
+- 最小副作用: 副作用（GITHUB_PATH への書き込み）は最終ユニット（add-path）のみに集約する（check-existing-repo のロックと `REPO_LOCK_DIR` を除く）
 - 公式アクション委譲: Node.js/pnpm のセットアップとリポジトリチェックアウトは公式アクションに委譲する
 
 ### 2.2 Design Assumptions
@@ -54,16 +54,16 @@ GitHub Actions ワークフローが Node.js ベースのツール管理リポ�
 
 #### Feature Decomposition
 
-| Unit                | Responsibility                                                  | REQ Coverage             |
-| ------------------- | --------------------------------------------------------------- | ------------------------ |
-| validate-inputs     | repo / path / ref の入力検証                                    | REQ-F-001, REQ-C-005/006 |
-| check-existing-repo | path の既存チェックアウト確認（.repo ファイルによる同一性検証） | REQ-F-001                |
-| setup-environment   | Node.js / pnpm のセットアップ                                   | REQ-F-005                |
-| checkout-repo       | 外部リポジトリのチェックアウトと .repo ファイルの作成           | REQ-F-001                |
-| validate-env        | Linux/GitHub-hosted runner の確認、checkout 後の repo 構造検証  | REQ-C-001, REQ-C-003/004 |
-| install-packages    | pnpm install --frozen-lockfile                                  | REQ-F-002                |
-| verify-install      | bin/ + node_modules/.bin/ 存在・実行権限検証                    | REQ-F-003, REQ-C-003     |
-| add-path            | bin/ を GITHUB_PATH に追加                                      | REQ-F-004                |
+| Unit                | Responsibility                                                       | REQ Coverage             |
+| ------------------- | -------------------------------------------------------------------- | ------------------------ |
+| validate-inputs     | repo / path / ref の入力検証                                         | REQ-F-001, REQ-C-005/006 |
+| check-existing-repo | path の既存チェックアウト確認（.repo ファイルによる同一性検証）      | REQ-F-001                |
+| checkout-repo       | 外部リポジトリのチェックアウト                                       | REQ-F-001                |
+| setup-environment   | pnpm / Node.js のセットアップ（pnpm → Node.js、pnpm キャッシュ有効） | REQ-F-005                |
+| validate-env        | checkout 後の repo 構造検証（pnpm-lock.yaml / bin/）                 | REQ-C-003/004            |
+| install-packages    | pnpm install --frozen-lockfile                                       | REQ-F-002                |
+| verify-install      | bin/ + node_modules/.bin/ 存在・実行権限検証                         | REQ-F-003, REQ-C-003     |
+| add-path            | bin/ を GITHUB_PATH に追加                                           | REQ-F-004                |
 
 #### Unit Interaction Map
 
@@ -77,14 +77,14 @@ GitHub Actions ワークフローが Node.js ベースのツール管理リポ�
                             |             v
                             |          [exit 1]
                             v
-                   +-------------------+
-                   | setup-environment |
-                   +-------------------+
-                            |
-                            v
                    +----------------+     (skip flag set)
                    | checkout-repo  | --> [skip: write .repo skipped]
                    +----------------+
+                            |
+                            v
+                   +-------------------+
+                   | setup-environment |
+                   +-------------------+
                             |
                             v
                    +------------------+
@@ -131,14 +131,15 @@ GitHub Actions ワークフローが Node.js ベースのツール管理リポ�
   different repo --> [exit 1: repo conflict]
            |
            v (skip flag = false, or new)
-[setup-environment: setup-node + pnpm/action-setup]
+[checkout-repo: actions/checkout] --fail--> [exit propagated]
+  (skip flag に関わらず常に実行)
            |
            v
-[checkout-repo: actions/checkout + write .repo] --fail--> [exit propagated]
-  (skipped if skip flag = true)
+[setup-environment: pnpm/action-setup -> actions/setup-node (cache: pnpm)]
            |
            v
-[validate-env: runner OS + pnpm-lock.yaml + bin/ 存在確認]
+[validate-env: pnpm-lock.yaml + bin/ 存在確認]
+  (skip flag = true の場合は validate-env / install-packages をスキップ)
   |                   |
   | fail              | success
   v                   v
@@ -152,7 +153,7 @@ GitHub Actions ワークフローが Node.js ベースのツール管理リポ�
                        v         v
                     [exit 1]  [add-path]
                               1. echo >> GITHUB_PATH
-                              2. write .repo (skip if skip flag = true)
+                              2. write .repo = <repo>@<ref> (skip if skip flag = true)
                            --> exit 0
 ```
 
@@ -164,7 +165,7 @@ GitHub Actions ワークフローが Node.js ベースのツール管理リポ�
 - macOS/Windows ランナーのサポート ← REQ-C-001
 - チェックサム検証やセキュリティスキャン（呼び出し元責務）
 - npm/yarn など pnpm 以外のパッケージマネージャーのサポート
-- インストールキャッシュの提供（呼び出し元責務）
+- 独自のキャッシュ機構の提供（pnpm ストアのキャッシュは `actions/setup-node` の `cache: "pnpm"` に委譲）
 
 ### 2.5 Behavioral Design Decisions
 
@@ -176,7 +177,7 @@ GitHub Actions ワークフローが Node.js ベースのツール管理リポ�
 | DD-04 | PATH 追加は `bin/` のみ（`node_modules/.bin` は追加しない）       | `bin/` が内部解決するため二重追加は不要（DR-04）                                                                                                                                                               | R-013          | Active |
 | DD-05 | `path` はセグメント単位で `..` を検出（部分文字列マッチは不可）   | パストラバーサル防止・誤検知回避                                                                                                                                                                               | R-002          | Active |
 | DD-06 | `path` は `./` 始まりの相対パスのみ（絶対パス不可）               | actions/checkout との整合性確保                                                                                                                                                                                | R-002          | Active |
-| DD-07 | Linux/GitHub-hosted runner の確認は validate-env ユニットで実施   | 既存 validate-environment アクションと責務を統一                                                                                                                                                               | R-010          | Active |
+| DD-07 | ランナー環境の検証は行わない（`ca-validate-environment` に委譲）  | 責務を既存アクションに統一し、validate-env ユニットはリポジトリ構造の検証のみとする（旧 R-010 は欠番）                                                                                                         | R-011, R-012   | Active |
 
 ### 2.6 Related Decision Records
 
@@ -224,8 +225,9 @@ DD-01〜DD-05 は本仕様ローカルな決定であり、現状 DR 昇格の�
 
 **成功時（exit 0）:**
 
-- `<path>/bin/` の絶対パスが `GITHUB_PATH` ファイルに追記されている
-- 後続ステップの `PATH` に `<path>/bin/` が含まれる
+- `<path>/bin`（`path` 入力のまま。`./` 始まりの相対パス）が `GITHUB_PATH` ファイルに追記されている
+- 後続ステップの `PATH` に `<path>/bin` が含まれる
+- 新規チェックアウト時は `<path>/.repo` に `<repo>@<ref>` が書き込まれ、`<path>/.repo.lock` は解放される
 
 **失敗時（exit 非ゼロ）:**
 
@@ -251,6 +253,7 @@ DD-01〜DD-05 は本仕様ローカルな決定であり、現状 DR 昇格の�
 ### Unit 2: check-existing-repo
 
 `<path>` ディレクトリの存在と `.repo` ファイルを確認し、同一リポジトリの再利用またはコンフリクトを検出する。
+`<path>/.repo.lock` をアトミックな `mkdir` で取得し（既に存在すれば exit 1）、`REPO_LOCK_DIR` を `GITHUB_ENV` に書き込む。ロックは Unit 8 の成功時に解放される。
 
 | Rule ID | Step | Condition                                         | Outcome                         |
 | ------- | ---: | ------------------------------------------------- | ------------------------------- |
@@ -259,66 +262,67 @@ DD-01〜DD-05 は本仕様ローカルな決定であり、現状 DR 昇格の�
 | R-007   |    3 | `<path>/.repo` の内容が入力 `repo` と一致する     | skip フラグ = true → Unit 3 へ  |
 | R-008   |    4 | `<path>/.repo` の内容が入力 `repo` と異なる       | エラー出力 → exit 1             |
 
-### Unit 3: setup-environment
+### Unit 3: checkout-repo
 
-| Rule ID | Step | Condition                   | Outcome                                       |
-| ------- | ---: | --------------------------- | --------------------------------------------- |
-| R-009   |    1 | `node-version` 未指定       | 空文字を渡し、バージョンを明示しない          |
-| R-010   |    2 | `pnpm-version` 未指定       | 空文字を渡し、`packageManager` の解決に委ねる |
-| R-011   |    3 | `actions/setup-node` が成功 | 次ステップへ進む                              |
-| R-011E  |    3 | `actions/setup-node` が失敗 | エラー伝播 → exit 非ゼロ                      |
-| R-012   |    4 | `pnpm/action-setup` が成功  | Unit 4 へ進む                                 |
-| R-012E  |    4 | `pnpm/action-setup` が失敗  | エラー伝播 → exit 非ゼロ                      |
-
-### Unit 4: checkout-repo
-
-skip フラグが true の場合、このユニット全体をスキップする。
+`actions/checkout` は skip フラグに関わらず実行される（`persist-credentials: false`）。
 
 | Rule ID | Step | Condition                                  | Outcome                  |
 | ------- | ---: | ------------------------------------------ | ------------------------ |
-| R-013   |    1 | skip フラグ = true                         | Unit 5 へスキップ        |
-| R-014   |    2 | `actions/checkout` が成功                  | Unit 5 へ進む            |
-| R-014E  |    2 | `actions/checkout` が失敗（repo 不存在等） | エラー伝播 → exit 非ゼロ |
+| R-021   |    1 | `actions/checkout` が成功                  | Unit 4 へ進む            |
+| R-021E  |    1 | `actions/checkout` が失敗（repo 不存在等） | エラー伝播 → exit 非ゼロ |
+
+### Unit 4: setup-environment
+
+| Rule ID | Step | Condition                   | Outcome                                       |
+| ------- | ---: | --------------------------- | --------------------------------------------- |
+| R-022   |    1 | `pnpm-version` 未指定       | 空文字を渡し、`packageManager` の解決に委ねる |
+| R-023   |    2 | `pnpm/action-setup` が成功  | 次ステップへ進む                              |
+| R-023E  |    2 | `pnpm/action-setup` が失敗  | エラー伝播 → exit 非ゼロ                      |
+| R-024   |    3 | `node-version` 未指定       | 空文字を渡し、バージョンを明示しない          |
+| R-025   |    4 | `actions/setup-node` が成功 | Unit 5 へ進む（`cache: "pnpm"` を有効化）     |
+| R-025E  |    4 | `actions/setup-node` が失敗 | エラー伝播 → exit 非ゼロ                      |
 
 ### Unit 5: validate-env
 
-checkout 完了後、ランナー環境とリポジトリ構造を検証する。
+checkout 完了後にリポジトリ構造を検証する。skip フラグ = true の場合、Unit 5 と Unit 6 はスキップされる。
+ランナー OS の確認は行わない（DD-07。R-010 は欠番）。
 
-| Rule ID | Step | Condition                                    | Outcome             |
-| ------- | ---: | -------------------------------------------- | ------------------- |
-| R-010   |    1 | ランナーが Linux/GitHub-hosted runner でない | エラー出力 → exit 1 |
-| R-011   |    2 | `<path>/pnpm-lock.yaml` が存在しない         | エラー出力 → exit 1 |
-| R-012   |    3 | `<path>/bin/` ディレクトリが存在しない       | エラー出力 → exit 1 |
-| R-013   |    4 | 全環境検証通過                               | Unit 5 へ進む       |
+| Rule ID | Step | Condition                              | Outcome             |
+| ------- | ---: | -------------------------------------- | ------------------- |
+| R-011   |    1 | `<path>/pnpm-lock.yaml` が存在しない   | エラー出力 → exit 1 |
+| R-012   |    2 | `<path>/bin/` ディレクトリが存在しない | エラー出力 → exit 1 |
+| R-013   |    3 | 全構造検証通過                         | Unit 6 へ進む       |
 
-### Unit 5: install-packages
+### Unit 6: install-packages
 
 | Rule ID | Step | Condition                               | Outcome                  |
 | ------- | ---: | --------------------------------------- | ------------------------ |
-| R-014   |    1 | `pnpm install --frozen-lockfile` が成功 | Unit 6 へ進む            |
+| R-014   |    1 | `pnpm install --frozen-lockfile` が成功 | Unit 7 へ進む            |
 | R-014E  |    1 | `pnpm install --frozen-lockfile` が失敗 | エラー伝播 → exit 非ゼロ |
 
-### Unit 6: verify-install
+### Unit 7: verify-install
 
-| Rule ID | Step | Condition                                                 | Outcome                       |
-| ------- | ---: | --------------------------------------------------------- | ----------------------------- |
-| R-015   |    1 | `<path>/node_modules/.bin/` が存在しない                  | エラー出力 → exit 1           |
-| R-016   |    2 | `<path>/bin/` 配下にファイルが存在しない                  | エラー出力 → exit 1           |
-| R-017   |    3 | `<path>/bin/` 配下のファイルに shebang あり・実行権限なし | `chmod +x` を自動適用して続行 |
-| R-017   |    3 | `<path>/bin/` 配下のファイルに shebang なし・実行権限なし | エラー出力 → exit 1           |
-| R-018   |    4 | 全検証通過                                                | Unit 7 へ進む                 |
+候補ファイルは `<path>/bin/` 直下の通常ファイルのうち、拡張子なしまたは `.sh` のもの（シンボリックリンクは辿る）。
 
-### Unit 7: add-path
+| Rule ID | Step | Condition                                    | Outcome                       |
+| ------- | ---: | -------------------------------------------- | ----------------------------- |
+| R-015   |    1 | `<path>/node_modules/.bin/` が存在しない     | エラー出力 → exit 1           |
+| R-016   |    2 | `<path>/bin/` 配下に候補ファイルが存在しない | エラー出力 → exit 1           |
+| R-017   |    3 | 候補ファイルに shebang あり・実行権限なし    | `chmod +x` を自動適用して続行 |
+| R-017E  |    3 | 候補ファイルに shebang なし・実行権限なし    | エラー出力 → exit 1           |
+| R-018   |    4 | 全検証通過                                   | Unit 8 へ進む                 |
 
-全ステップが成功した後、PATH を追加し `.repo` ファイルを作成する。
+### Unit 8: add-path
 
-| Rule ID | Step | Condition                                                    | Outcome             |
-| ------- | ---: | ------------------------------------------------------------ | ------------------- |
-| R-019   |    1 | `<path>/bin/` の絶対パスを `GITHUB_PATH` に追記              | 次ステップへ進む    |
-| R-019E  |    1 | `GITHUB_PATH` への追記が失敗                                 | エラー出力 → exit 1 |
-| R-020   |    2 | skip フラグ = false: `<path>/.repo` に `repo` の値を書き込む | exit 0（成功）      |
-| R-020S  |    2 | skip フラグ = true: `.repo` の書き込みをスキップ             | exit 0（成功）      |
-| R-020E  |    2 | `.repo` ファイルの書き込みが失敗                             | エラー出力 → exit 1 |
+全ステップが成功した後、PATH を追加し `.repo` ファイルを作成して、ロックを解放する。
+
+| Rule ID | Step | Condition                                                        | Outcome             |
+| ------- | ---: | ---------------------------------------------------------------- | ------------------- |
+| R-019   |    1 | `<path>/bin`（`path` 入力のまま）を `GITHUB_PATH` に追記         | 次ステップへ進む    |
+| R-019E  |    1 | `GITHUB_PATH` への追記が失敗                                     | エラー出力 → exit 1 |
+| R-020   |    2 | skip フラグ = false: `<path>/.repo` に `<repo>@<ref>` を書き込む | ロック解放 → exit 0 |
+| R-020S  |    2 | skip フラグ = true: `.repo` の書き込みをスキップ                 | ロック解放 → exit 0 |
+| R-020E  |    2 | `.repo` ファイルの書き込みが失敗                                 | エラー出力 → exit 1 |
 
 ---
 
@@ -335,12 +339,12 @@ checkout 完了後、ランナー環境とリポジトリ構造を検証する�
 | `path="../outside"`（`..` 始まり）             | exit 1             | R-002 | `./` で始まらない形式                                      |
 | `ref=""`（空文字列）                           | exit 1             | R-003 | ref は必須                                                 |
 | `ref="  "`（空白のみ）                         | exit 1             | R-003 | 空白のみは空文字列と同等                                   |
-| Linux 以外の runner で実行                     | exit 1             | R-010 | validate-env でランナー OS を確認                          |
 | `pnpm-lock.yaml` が存在しない                  | exit 1             | R-011 | pnpm リポジトリのみ対応                                    |
 | checkout 後に `bin/` が存在しない              | exit 1             | R-012 | validate-env でリポジトリ構造を確認                        |
 | `node_modules/.bin/` が空ディレクトリ          | 続行               | R-015 | ディレクトリ存在のみ確認（内容は verify-install の責務外） |
 | `bin/` が空ディレクトリ                        | exit 1             | R-016 | 実行可能ファイルが存在しない                               |
 | `bin/` 配下にシンボリックリンクのみ存在        | 続行（条件付き）   | R-017 | リンク先の shebang を確認し、あれば `chmod +x` を自動適用  |
+| `bin/` 配下が `.sh` 以外の拡張子付きのみ       | exit 1             | R-016 | 候補は拡張子なしまたは `.sh` のファイルのみ                |
 | `path` が存在し `.repo` がない                 | exit 1             | R-006 | 管理外ディレクトリとみなして失敗                           |
 | `path` が存在し `.repo` が同一 repo            | スキップ（exit 0） | R-007 | 再チェックアウト不要                                       |
 | `path` が存在し `.repo` が別 repo              | exit 1             | R-008 | repo コンフリクト                                          |
@@ -352,16 +356,16 @@ checkout 完了後、ランナー環境とリポジトリ構造を検証する�
 
 | Requirement ID | Spec Rule(s)                             | Notes                                              |
 | -------------- | ---------------------------------------- | -------------------------------------------------- |
-| REQ-F-001      | R-001, R-002, R-003, R-005〜R-008, R-014 | バリデーション・既存チェック・チェックアウトを含む |
+| REQ-F-001      | R-001, R-002, R-003, R-005〜R-008, R-021 | バリデーション・既存チェック・チェックアウトを含む |
 | REQ-F-002      | R-014                                    | pnpm install --frozen-lockfile                     |
 | REQ-F-003      | R-015, R-016, R-017, R-018               | post-install 3項目検証                             |
 | REQ-F-004      | R-019, R-020                             | bin/ を GITHUB_PATH に追記、.repo ファイル作成     |
-| REQ-F-005      | R-005, R-006, R-007, R-008               | Node.js / pnpm セットアップ                        |
+| REQ-F-005      | R-022〜R-025                             | Node.js / pnpm セットアップ                        |
 | REQ-NF-001     | R-014（--frozen-lockfile）               | 再現性のあるインストール                           |
 | REQ-NF-002     | —                                        | action.yml の permissions 定義で対応               |
 | REQ-NF-003     | 全 E 系ルール                            | 各ユニット失敗時の即時終了                         |
-| REQ-NF-004     | —                                        | 実装フェーズで既存ライブラリ規約に準拠             |
-| REQ-C-001      | R-010                                    | validate-env でランナー OS を確認                  |
+| REQ-NF-004     | —                                        | double-source guard・戻り値規約に準拠              |
+| REQ-C-001      | —                                        | ランナー検証は ca-validate-environment に委譲      |
 | REQ-C-002      | —                                        | token 入力パラメータを持たない                     |
 | REQ-C-003      | R-012                                    | validate-env で bin/存在を確認                     |
 | REQ-C-004      | R-011                                    | validate-env で pnpm-lock.yaml 存在を確認          |
@@ -376,20 +380,21 @@ checkout 完了後、ランナー環境とリポジトリ構造を検証する�
 
 ## 7. Open Questions
 
-> **Status**: INCOMPLETE
+> **Status**: COMPLETE
 
-| # | Question                                                                  | Source     | Impact                                                  |
-| - | ------------------------------------------------------------------------- | ---------- | ------------------------------------------------------- |
-| 1 | OQ-004: インストールキャッシュ（actions/cache）をアクション内で提供するか | REQ OQ-004 | 提供する場合は setup-environment ユニットに step を追加 |
+| # | Question                                                                          | Source     | Impact                                                    |
+| - | --------------------------------------------------------------------------------- | ---------- | --------------------------------------------------------- |
+| 1 | OQ-004: pnpm ストアのキャッシュ提供 → **Closed**（setup-node の `cache: "pnpm"`） | REQ OQ-004 | setup-environment ユニットで `cache: "pnpm"` を有効化済み |
 
 ---
 
 ## 8. Change History
 
-| Date       | Version | Description                                                                                |
-| ---------- | ------- | ------------------------------------------------------------------------------------------ |
-| 2026-06-18 | 1.0.0   | Initial specification                                                                      |
-| 2026-06-18 | 1.0.1   | Codex review 反映: validate-env ユニット追加、path を相対パス限定、.. セグメント判定明確化 |
-| 2026-06-18 | 1.0.2   | check-existing-repo ユニット追加、.repo ファイル作成を add-path の最終ステップに追加       |
-| 2026-10-27 | 1.1.0   | DD-03 変更: 既定値を Node.js `"24"`・pnpm `"12.15.0"` に更新 (packageManager と一致)       |
-| 2026-11-18 | 1.2.0   | DD-03 変更: Node.js・pnpm の既定値を廃止 (空文字 = 未指定)。R-009/R-010・入力表を更新      |
+| Date       | Version | Description                                                                                                                                                                |
+| ---------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-06-18 | 1.0.0   | Initial specification                                                                                                                                                      |
+| 2026-06-18 | 1.0.1   | Codex review 反映: validate-env ユニット追加、path を相対パス限定、.. セグメント判定明確化                                                                                 |
+| 2026-06-18 | 1.0.2   | check-existing-repo ユニット追加、.repo ファイル作成を add-path の最終ステップに追加                                                                                       |
+| 2026-10-27 | 1.1.0   | DD-03 変更: 既定値を Node.js `"24"`・pnpm `"12.15.0"` に更新 (packageManager と一致)                                                                                       |
+| 2026-11-18 | 1.2.0   | DD-03 変更: Node.js・pnpm の既定値を廃止 (空文字 = 未指定)。R-009/R-010・入力表を更新                                                                                      |
+| 2026-11-19 | 1.3.0   | ca-setup-repo の現行実装に整合: 実行順 checkout→pnpm→node、ルール ID 重複解消（R-021〜R-025 新設、R-010 欠番）、R-017E 追加、bin/PATH・.repo の書式を修正、OQ-004 クローズ |

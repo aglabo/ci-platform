@@ -1,8 +1,8 @@
 ---
 title: "Implementation Plan: _ca-resolve-sha"
-based-on: specifications-index.md v2.1.1
+based-on: specifications-index.md v2.1.3
 status: Draft
-version: 1.1.4
+version: 1.1.5
 created: "2026-10-25"
 ---
 
@@ -41,14 +41,15 @@ created: "2026-10-25"
 ### 1.2 Reference
 
 - Prior Art / Reference PR: PoC なし。
-  既存実装 `ca-get-changed-files/scripts/_libs/filter.lib.sh` を参照する。
-  対象の関数は `resolve_sha_for_event`、`resolve_before_sha` である。
+  切り出し元は `ca-get-changed-files/scripts/_libs/filter.lib.sh` の関数である。
+  対象は `resolve_sha_for_event`、`resolve_before_sha` だった。
+  #134 で `ca-get-changed-files` が本 Action を呼ぶ形に置き換わり、`filter.lib.sh` は削除済みである。
   計画の構成は `setup-tool` の implementation.md に倣う。
 - Specifications:
-  - specifications-index.md v2.1.1
+  - specifications-index.md v2.1.3
   - specifications-input.md v1.1.2
-  - specifications-resolution.md v2.1.0
-  - specifications-output.md v1.2.0
+  - specifications-resolution.md v2.2.3
+  - specifications-output.md v1.2.1
 - Decision Records: DR-26、DR-27 (本計画で確定した判断)
 
 ### 1.3 Design Decisions
@@ -217,7 +218,7 @@ specifications-index.md §3.5 の impl-note を補う。tasks.md はこの記述
 #### Commit 2: feat(ca/resolve-sha): add resolve-sha.sh entry point
 
 - MAIN (`scripts/resolve-sha.sh`) を追加する。環境変数 (`$GITHUB_OUTPUT` を含む) を読む唯一の箇所とし、NCC → VOV → RSH → EO の順に呼ぶ
-- `set -euo pipefail`、ライブラリの読み込み、`BASH_SOURCE` ガードは、
+- `set -euo pipefail`、ライブラリの読み込み、`(return 0)` ガード (`if ! (return 0 2> /dev/null)`) は、
   `ca-get-changed-files/scripts/get-changed-files.sh` の書き方に合わせる
 - T-RS-MAINF-* (functional): specifications-index.md §4 の評価順序、AC-022 の組み合わせ、成功時の 3 出力
 - T-RS-MAINF-*: partial clone のフィクスチャで、`git fetch` の子プロセスが起動されないことを確かめる (AC-018。`GIT_TRACE` の出力で確認する)
@@ -254,3 +255,4 @@ specifications-index.md §3.5 の impl-note を補う。tasks.md はこの記述
 | 2026-10-25 | 1.1.2   | Apply codex review: action.yml wiring checks, no-fetch and partial-write tests, file:// shallow fixture, env and exit-code handling    |
 | 2026-10-25 | 1.1.3   | Add per-function implementation details (IPC exit codes, NCC stdout, RE forms, RSH override detection, EO error target, error wording) |
 | 2026-10-31 | 1.1.4   | Note that error.lib.sh / constants.lib.sh / check_byte_limit came later from get-changed-files and rs_error now wraps gha_error        |
+| 2026-11-19 | 1.1.5   | Refresh references (specifications v2.1.3 / v2.2.3 / v1.2.1), (return 0) guard, filter.lib.sh removed in #134                          |

@@ -1,15 +1,17 @@
 ---
-title: "Implementation Tasks: setup-tool-repo Composite Action"
+title: "Implementation Tasks: setup-tool-repo Composite Action (ca-setup-repo)"
 module: composite-action/setup-tool-repo
 status: Active
 created: "2026-06-18"
-source: specifications.md v1.0.2 / implementation.md v1.0.5
+source: specifications.md v1.3.0 / implementation.md v1.2.1
 ---
 
 <!-- textlint-disable
   ja-technical-writing/sentence-length,
   ja-technical-writing/max-comma,
    -->
+
+**Note**: 実装ディレクトリは `.github/actions/ca-setup-repo/`（旧称 `setup-tool-repo`）。
 
 ## Task Summary
 
@@ -203,7 +205,7 @@ source: specifications.md v1.0.2 / implementation.md v1.0.5
   - Target: `verify-and-add-path.lib.sh`
   - Scenario: Given `node_modules/.bin/`・`bin/` が存在し実行権限あり・`SKIP_REPO=false`・`REPO_LOCK_DIR` に `.repo.lock` パスが設定済み,
     When verify-and-add-path を実行する
-  - Expected: Then `<path>/bin/` を `GITHUB_PATH` に追記し、`<path>/.repo` に `owner/repo@<sha>` を書き込み、
+  - Expected: Then `<path>/bin`（path 入力のまま）を `GITHUB_PATH` に追記し、`<path>/.repo` に `owner/repo@<ref>` を書き込み、
     **`<path>/.repo.lock` ディレクトリが存在しない** ことを確認する（R-019, R-020）
 
 #### T-04-02: skip=true（既存チェックアウト再利用）
@@ -259,22 +261,22 @@ source: specifications.md v1.0.2 / implementation.md v1.0.5
 
 ## T-05: action.yml integration
 
-> Target: `.github/actions/setup-tool-repo/action.yml`
-> Spec: R-001〜R-020（全ユニット統合）
+> Target: `.github/actions/ca-setup-repo/action.yml`
+> Spec: R-001〜R-025（全ユニット統合）
 
 ### [正常] Normal Cases
 
 #### T-05-01: 正常系統合フロー
 
 - [x] **T-05-01-01**: 全スクリプトが連続して pass する（モック環境）
-  - Target: `setup-tool-repo.integration.spec.sh`
+  - Target: `setup-repo.integration.spec.sh`
   - Scenario: Given 有効な入力・pnpm-lock.yaml、bin/、node_modules/.bin/が存在, When 全スクリプトを順に実行する
   - Expected: Then 各スクリプトが exit 0 で終了し GITHUB_PATH に bin/が追記される
 
 - [x] **T-05-01-02**: actionlint と ghalint による action.yml 検証が pass する
-  - Target: `.github/actions/setup-tool-repo/action.yml`
-  - Scenario: Given action.yml が完成した状態, When `actionlint -config-file ./configs/actionlint.yaml` および
-    `ghalint run --config ./configs/ghalint.yaml` をコマンドラインで実行する
+  - Target: `.github/actions/ca-setup-repo/action.yml`
+  - Scenario: Given action.yml が完成した状態, When `pnpm run lint:gha:actions .github/actions/ca-setup-repo/action.yml`（jactionlint）および
+    `pnpm run lint:gha:workflows`（ghalint）をコマンドラインで実行する
   - Expected: Then 検証エラーなしで exit 0 で終了する（ShellSpec 外のコマンド検証 — Commit 12 で手動確認）
 
 ### [異常] Error Cases
@@ -282,11 +284,11 @@ source: specifications.md v1.0.2 / implementation.md v1.0.5
 #### T-05-02: 異常系統合フロー
 
 - [x] **T-05-02-01**: validate-inputs 失敗時に後続スクリプトが呼ばれない
-  - Target: `setup-tool-repo.integration.spec.sh`
+  - Target: `setup-repo.integration.spec.sh`
   - Scenario: Given 不正な `repo` 形式, When validate-inputs スクリプトを実行する
   - Expected: Then exit 1 で終了し check-existing 以降のスクリプトが実行されない
 
 - [x] **T-05-02-02**: check-existing で repo コンフリクト時、exit 1 となる
-  - Target: `setup-tool-repo.integration.spec.sh`
+  - Target: `setup-repo.integration.spec.sh`
   - Scenario: Given `<path>/.repo` に別 repo が記録されている, When check-existing スクリプトを実行する
   - Expected: Then `::error::` を stderr に出力し exit 1 で終了する

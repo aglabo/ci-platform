@@ -3,7 +3,7 @@ title: "Implementation Tasks"
 module: "composite-action/setup-tool"
 status: Active
 created: "2026-06-07 00:00:00"
-source: specifications.md
+source: specifications.md v1.4.0, implementation.md v1.8.0
 ---
 
 <!-- cspell:words rhysd rwxr invalidrepo fta fcu nrm vld rep ver dir arc url res dwn vfy ext cln sts act -->
@@ -26,44 +26,47 @@ source: specifications.md
 
 ## Scope 一覧
 
-| scope | 対象関数/対象        | ライブラリ                                 |
-| ----- | -------------------- | ------------------------------------------ |
-| nrm   | normalize_version    | `.github/actions/_libs/version.lib.sh`     |
-| vld   | validate_symbol      | `.github/actions/_libs/validation.lib.sh`  |
-| rep   | validate_repo        | `.github/actions/_libs/validation.lib.sh`  |
-| ver   | validate_version     | `.github/actions/_libs/validation.lib.sh`  |
-| dir   | setup_dirs           | `setup-tool/scripts/_libs/dirs.lib.sh`     |
-| arc   | detect_arch          | `setup-tool/scripts/_libs/arch.lib.sh`     |
-| url   | build_url            | `setup-tool/scripts/_libs/download.lib.sh` |
-| fta   | _fetch_assets        | `setup-tool/scripts/_libs/download.lib.sh` |
-| fcu   | _find_checksum_url   | `setup-tool/scripts/_libs/download.lib.sh` |
-| res   | resolve_assets       | `setup-tool/scripts/_libs/download.lib.sh` |
-| dwn   | download_tool        | `setup-tool/scripts/_libs/download.lib.sh` |
-| vfy   | verify_checksum      | `setup-tool/scripts/_libs/download.lib.sh` |
-| ext   | extract_install      | `setup-tool/scripts/_libs/install.lib.sh`  |
-| cln   | cleanup              | `setup-tool/scripts/_libs/install.lib.sh`  |
-| sts   | setup-tool.sh (main) | `setup-tool/scripts/setup-tool.sh`         |
-| act   | action.yml           | `.github/actions/setup-tool/action.yml`    |
+| scope | 対象関数/対象        | ライブラリ                                                    |
+| ----- | -------------------- | ------------------------------------------------------------- |
+| nrm   | normalize_version    | `.github/actions/_libs/version.lib.sh`                        |
+| vld   | validate_symbol      | `.github/actions/_libs/validation.lib.sh`                     |
+| rep   | validate_repo        | `.github/actions/_libs/validation.lib.sh`                     |
+| ver   | validate_version     | `.github/actions/_libs/validation.lib.sh`                     |
+| dir   | setup_dirs           | `.github/actions/ca-setup-tool/scripts/_libs/dirs.lib.sh`     |
+| arc   | detect_arch          | `.github/actions/ca-setup-tool/scripts/_libs/arch.lib.sh`     |
+| url   | build_url            | `.github/actions/ca-setup-tool/scripts/_libs/download.lib.sh` |
+| fta   | _fetch_assets        | `.github/actions/ca-setup-tool/scripts/_libs/download.lib.sh` |
+| fcu   | _find_checksum_url   | `.github/actions/ca-setup-tool/scripts/_libs/download.lib.sh` |
+| res   | resolve_assets       | `.github/actions/ca-setup-tool/scripts/_libs/download.lib.sh` |
+| dwn   | download_tool        | `.github/actions/ca-setup-tool/scripts/_libs/download.lib.sh` |
+| vfy   | verify_checksum      | `.github/actions/ca-setup-tool/scripts/_libs/download.lib.sh` |
+| ext   | extract_install      | `.github/actions/ca-setup-tool/scripts/_libs/install.lib.sh`  |
+| cln   | cleanup              | `.github/actions/ca-setup-tool/scripts/_libs/install.lib.sh`  |
+| sts   | setup-tool.sh (main) | `.github/actions/ca-setup-tool/scripts/setup-tool.sh`         |
+| act   | action.yml           | `.github/actions/ca-setup-tool/action.yml`                    |
 
 ---
 
 ## Task Summary
 
-| #  | Test Target                             | Scenarios | Cases | Status  |
-| -- | --------------------------------------- | --------- | ----- | ------- |
-| 1  | T-01: normalize_version                 | 2         | 5     | done    |
-| 2  | T-02: validate_symbol                   | 2         | 4     | done    |
-| 3  | T-03: validate-environment 移行検証     | 1         | 2     | done    |
-| 4  | T-04: setup-tool 共通ライブラリ移行検証 | 1         | 2     | done    |
-| 5  | T-05: setup_dirs                        | 4         | 6     | pending |
-| 6  | T-06: detect_arch                       | 3         | 4     | pending |
-| 7  | T-07: build_url                         | 2         | 2     | pending |
-| 8  | T-08: resolve_assets                    | 3         | 7     | pending |
-| 9  | T-09: download_tool                     | 2         | 4     | pending |
-| 10 | T-10: verify_checksum                   | 3         | 5     | pending |
-| 11 | T-11: extract_install                   | 3         | 5     | pending |
-| 12 | T-12: cleanup                           | 2         | 3     | pending |
-| 13 | T-13: setup-tool.sh                     | 4         | 7     | pending |
+| #  | Test Target (scope)      | Categories | Cases | Status            |
+| -- | ------------------------ | ---------- | ----- | ----------------- |
+| 1  | normalize_version (nrm)  | 2          | 14    | done              |
+| 2  | validate_symbol (vld)    | 3          | 21    | done              |
+| 3  | validate_repo (rep)      | 3          | 16    | done              |
+| 4  | validate_version (ver)   | 3          | 15    | done              |
+| 5  | setup_dirs (dir)         | 3          | 6     | done              |
+| 6  | detect_arch (arc)        | 2          | 4     | done              |
+| 7  | build_url (url)          | 2          | 2     | done              |
+| 8  | _fetch_assets (fta)      | 2          | 3     | done              |
+| 9  | _find_checksum_url (fcu) | 1          | 1     | done              |
+| 10 | resolve_assets (res)     | 3          | 10    | done              |
+| 11 | download_tool (dwn)      | 2          | 4     | done              |
+| 12 | verify_checksum (vfy)    | 3          | 7     | done              |
+| 13 | extract_install (ext)    | 3          | 5     | done              |
+| 14 | cleanup (cln)            | 2          | 3     | done              |
+| 15 | setup-tool.sh (sts)      | 8          | 34    | done (+4 backlog) |
+| 16 | action.yml (act)         | 1          | 7     | done              |
 
 > **注**: sts-err-08〜11 はバックログ（tasks.md に定義済み・spec 未実装）。
 
@@ -381,7 +384,7 @@ source: specifications.md
 
 ## setup_dirs (scope: dir)
 
-> テストファイル: `setup-tool/scripts/_libs/__tests__/unit/dirs.unit.spec.sh`
+> テストファイル: `.github/actions/ca-setup-tool/scripts/_libs/__tests__/unit/dirs.unit.spec.sh`
 
 ### [正常] Normal Cases
 
@@ -417,7 +420,7 @@ source: specifications.md
 
 ## detect_arch (scope: arc)
 
-> テストファイル: `setup-tool/scripts/_libs/__tests__/unit/arch.unit.spec.sh`
+> テストファイル: `.github/actions/ca-setup-tool/scripts/_libs/__tests__/unit/arch.unit.spec.sh`
 
 ### [正常] Normal Cases
 
@@ -443,7 +446,7 @@ source: specifications.md
 
 ## build_url (scope: url)
 
-> テストファイル: `setup-tool/scripts/_libs/__tests__/unit/download.unit.spec.sh`
+> テストファイル: `.github/actions/ca-setup-tool/scripts/_libs/__tests__/unit/download.unit.spec.sh`
 
 ### [正常] Normal Cases
 
@@ -461,7 +464,7 @@ source: specifications.md
 
 ## _fetch_assets (scope: fta)
 
-> テストファイル: `setup-tool/scripts/_libs/__tests__/unit/download.unit.spec.sh`
+> テストファイル: `.github/actions/ca-setup-tool/scripts/_libs/__tests__/unit/download.unit.spec.sh`
 
 ### [正常] Normal Cases
 
@@ -483,7 +486,7 @@ source: specifications.md
 
 ## _find_checksum_url (scope: fcu)
 
-> テストファイル: `setup-tool/scripts/_libs/__tests__/unit/download.unit.spec.sh`
+> テストファイル: `.github/actions/ca-setup-tool/scripts/_libs/__tests__/unit/download.unit.spec.sh`
 
 ### [正常] Normal Cases
 
@@ -495,7 +498,7 @@ source: specifications.md
 
 ## resolve_assets (scope: res)
 
-> テストファイル: `setup-tool/scripts/_libs/__tests__/unit/download.unit.spec.sh`
+> テストファイル: `.github/actions/ca-setup-tool/scripts/_libs/__tests__/unit/download.unit.spec.sh`
 
 ### [正常] Normal Cases
 
@@ -548,7 +551,7 @@ source: specifications.md
 
 ## download_tool (scope: dwn)
 
-> テストファイル: `setup-tool/scripts/_libs/__tests__/unit/download.unit.spec.sh`
+> テストファイル: `.github/actions/ca-setup-tool/scripts/_libs/__tests__/unit/download.unit.spec.sh`
 
 ### [正常] Normal Cases
 
@@ -574,7 +577,7 @@ source: specifications.md
 
 ## verify_checksum (scope: vfy)
 
-> テストファイル: `setup-tool/scripts/_libs/__tests__/unit/download.unit.spec.sh`
+> テストファイル: `.github/actions/ca-setup-tool/scripts/_libs/__tests__/unit/download.unit.spec.sh`
 
 ### [正常] Normal Cases
 
@@ -614,7 +617,7 @@ source: specifications.md
 
 ## extract_install (scope: ext)
 
-> テストファイル: `setup-tool/scripts/_libs/__tests__/unit/install.unit.spec.sh`
+> テストファイル: `.github/actions/ca-setup-tool/scripts/_libs/__tests__/unit/install.unit.spec.sh`
 
 ### [正常] Normal Cases
 
@@ -646,7 +649,7 @@ source: specifications.md
 
 ## cleanup (scope: cln)
 
-> テストファイル: `setup-tool/scripts/_libs/__tests__/unit/install.unit.spec.sh`
+> テストファイル: `.github/actions/ca-setup-tool/scripts/_libs/__tests__/unit/install.unit.spec.sh`
 
 ### [正常] Normal Cases
 
@@ -668,9 +671,9 @@ source: specifications.md
 
 ## setup-tool.sh (scope: sts)
 
-> テストファイル（Unit）: `setup-tool/scripts/__tests__/unit/setup-tool.unit.spec.sh`
-> テストファイル（Functional）: `setup-tool/scripts/__tests__/functional/setup-tool.functional.spec.sh`
-> テストファイル（System）: `setup-tool/scripts/__tests__/system/setup-tool.system.spec.sh`
+> テストファイル（Unit）: `.github/actions/ca-setup-tool/scripts/__tests__/unit/setup-tool.unit.spec.sh`
+> テストファイル（Functional）: `.github/actions/ca-setup-tool/scripts/__tests__/functional/setup-tool.functional.spec.sh`
+> テストファイル（System）: `.github/actions/ca-setup-tool/scripts/__tests__/system/setup-tool.system.spec.sh`
 
 ### [正常] Normal Cases — Unit
 
@@ -828,7 +831,7 @@ source: specifications.md
 
 ## action.yml (scope: act)
 
-> テストファイル: `setup-tool/scripts/__tests__/integration/action.integration.spec.sh`
+> テストファイル: `.github/actions/ca-setup-tool/scripts/__tests__/integration/action.integration.spec.sh`
 
 ### [正常] Normal Cases
 

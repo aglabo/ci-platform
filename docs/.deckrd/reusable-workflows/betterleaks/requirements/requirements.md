@@ -2,7 +2,7 @@
 title: "Requirements: Betterleaks Reusable Workflow"
 module: "reusable-workflows/betterleaks"
 status: Draft
-version: 1.6.1
+version: 2.0.0
 created: "2026-06-12"
 ---
 
@@ -23,7 +23,9 @@ created: "2026-06-12"
 
 This document defines the requirements for a standalone reusable GitHub Actions workflow that scans for secrets with betterleaks. The workflow does not depend on the external `aglabo/.github` reusable workflow `r1.1.2`.
 
-Callers invoke the workflow through `workflow_call`. The workflow validates the runner environment, then installs the configured betterleaks version with this repository's `ca-setup-tool` composite action. It checks out a configurable configuration repository (default: `aglabo/global-configs`) to obtain the scan configuration. When the scan detects a secret, the workflow fails immediately.
+The workflow lives in `.github/workflows/ru-scan-secrets.yml`, which holds two independent jobs: `scan-betterleaks` (this module) and `scan-secretlint` (see `reusable-workflows/secretlint`).
+
+Callers invoke the workflow through `workflow_call`. The `scan-betterleaks` job validates the runner environment, then installs the configured betterleaks version with this repository's `ca-setup-tool` composite action. It checks out a configurable configuration repository (default: `aglabo/global-configs`) and resolves the scan configuration with the `_ca-resolve-config` composite action (explicit input, then the repository's own `configs/betterleaks.toml`, then the checked-out global configuration). When the scan detects a secret, the job fails immediately.
 
 ### 1.2 Scope
 
@@ -34,8 +36,10 @@ Callers invoke the workflow through `workflow_call`. The workflow validates the 
 - Take the betterleaks version from an input parameter that has a default value.
 - Take the configuration repository from an input parameter (default: `aglabo/global-configs`).
 - Take the git fetch depth from an input parameter (default: 50, latest 50 commits).
-- Check out the specified configuration repository to read the betterleaks configuration.
-- Run betterleaks with `global/configs/betterleaks.toml` from that checkout.
+- Take an optional betterleaks configuration path from the `config` input parameter (default: empty).
+- Check out the specified configuration repository into `global/configs/`.
+- Resolve the betterleaks configuration with `_ca-resolve-config` (input, then local `configs/betterleaks.toml`, then `global/configs/betterleaks.toml`).
+- Run betterleaks with the resolved configuration file.
 - Write the scan result to a JSON report file.
 - Upload the report as a workflow artifact when the scan finds a violation.
 - Fail the workflow as soon as betterleaks returns a non-zero exit code.
@@ -47,7 +51,8 @@ Callers invoke the workflow through `workflow_call`. The workflow validates the 
 - Changing the `ca-setup-tool` composite action.
 - Managing findings suppression policy.
 - Supporting runners other than Ubuntu.
-- Using the local `configs/betterleaks.toml` as the scan configuration.
+- The `scan-secretlint` job in the same workflow file (documented in `reusable-workflows/secretlint`).
+- Changing the `_ca-resolve-config` composite action.
 - Letting callers configure the config-repo checkout directory or branch.
 
 ## 2. Context
@@ -55,10 +60,12 @@ Callers invoke the workflow through `workflow_call`. The workflow validates the 
 - Target Environment: GitHub Actions (ubuntu-slim runner)
 - Related Components:
   - `reusable-workflows/betterleaks`
-  - `ca-validate-environment` composite action (`aglabo/ci-platform/.github/actions/ca-validate-environment@v0.6.0`)
-  - `ca-setup-tool` composite action (`aglabo/ci-platform/.github/actions/ca-setup-tool@v0.6.0`)
+  - `ca-validate-environment` composite action (`aglabo/ci-platform/.github/actions/ca-validate-environment@v0.8.0-pre`)
+  - `ca-setup-tool` composite action (`aglabo/ci-platform/.github/actions/ca-setup-tool@v0.8.0-pre`)
+  - `_ca-resolve-config` composite action (`aglabo/ci-platform/.github/actions/_ca-resolve-config@v0.8.0-pre`)
   - `aglabo/global-configs` repository
-  - `global/configs/betterleaks.toml`
+  - `configs/betterleaks.toml` (repository-local configuration)
+  - `global/configs/betterleaks.toml` (global fallback configuration)
   - betterleaks CLI
   - Caller workflows using `workflow_call`
 - Assumptions:
@@ -88,13 +95,13 @@ Callers invoke the workflow through `workflow_call`. The workflow validates the 
                          |
                          v
      +---------------------------------------+
-     | ca-validate-environment action v0.6.0 |
+     | ca-validate-environment action        |
      | validates runner, permissions, apps   |
      +-------------------+-------------------+
                          |
                          v
      +---------------------------------------+
-     | ca-setup-tool action v0.6.0           |
+     | ca-setup-tool action                  |
      | installs configured betterleaks       |
      +-------------------+-------------------+
                          |
@@ -107,9 +114,15 @@ Callers invoke the workflow through `workflow_call`. The workflow validates the 
                          |
                          v
      +---------------------------------------+
+     | _ca-resolve-config action             |
+     | input > configs/betterleaks.toml      |
+     | > global/configs/betterleaks.toml     |
+     +-------------------+-------------------+
+                         |
+                         v
+     +---------------------------------------+
      | betterleaks git .                     |
-     | --config                              |
-     |   global/configs/betterleaks.toml     |
+     | --config <resolved config-file>       |
      +-------------------+-------------------+
                          |
            +-------------+-------------+
@@ -123,15 +136,16 @@ Callers invoke the workflow through `workflow_call`. The workflow validates the 
 
 ## 3. Design Decisions (Summary)
 
-| ID    | Decision                                                                                                                                                                                                                                                | Linked Record |
-| ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
-| DR-01 | The betterleaks workflow SHALL be implemented as an independent reusable workflow rather than delegating to the external `aglabo/.github` reusable workflow `r1.1.2`.                                                                                   | —             |
-| DR-02 | The workflow SHALL use this repository's `ca-validate-environment` composite action before installing or running betterleaks.                                                                                                                           | —             |
-| DR-03 | The workflow SHALL use this repository's `ca-setup-tool` composite action to install betterleaks.                                                                                                                                                       | —             |
-| DR-04 | The betterleaks version SHALL be configurable by workflow input and SHALL provide a default value.                                                                                                                                                      | —             |
-| DR-05 | The workflow SHALL checkout the configuration repository into the `global/configs/` directory (default branch) and use `global/configs/betterleaks.toml` instead of the local `configs/betterleaks.toml`.                                               | —             |
-| DR-06 | A non-zero betterleaks scan exit code SHALL immediately fail the workflow.                                                                                                                                                                              | —             |
-| DR-07 | The configuration repository SHALL be configurable via an input parameter with `aglabo/global-configs` as the default, because centrally managed tool configurations moved to that dedicated repository; users can still point to their own repository. | —             |
+| ID    | Decision                                                                                                                                                                                                                                                                         | Linked Record |
+| ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
+| DR-01 | The betterleaks workflow SHALL be implemented as an independent reusable workflow rather than delegating to the external `aglabo/.github` reusable workflow `r1.1.2`.                                                                                                            | —             |
+| DR-02 | The workflow SHALL use this repository's `ca-validate-environment` composite action before installing or running betterleaks.                                                                                                                                                    | —             |
+| DR-03 | The workflow SHALL use this repository's `ca-setup-tool` composite action to install betterleaks.                                                                                                                                                                                | —             |
+| DR-04 | The betterleaks version SHALL be configurable by workflow input and SHALL provide a default value.                                                                                                                                                                               | —             |
+| DR-05 | The workflow SHALL checkout the configuration repository into the `global/configs/` directory (default branch) as the fallback configuration source. (Superseded in part by DR-08: the local `configs/betterleaks.toml` now takes precedence.)                                   | —             |
+| DR-06 | A non-zero betterleaks scan exit code SHALL immediately fail the workflow.                                                                                                                                                                                                       | —             |
+| DR-07 | The configuration repository SHALL be configurable via an input parameter with `aglabo/global-configs` as the default, because centrally managed tool configurations moved to that dedicated repository; users can still point to their own repository.                          | —             |
+| DR-08 | The workflow SHALL resolve the scan configuration with the `_ca-resolve-config` composite action in the order: `config` input, local `configs/betterleaks.toml`, global `global/configs/betterleaks.toml`. This mirrors `runners/run-betterleaks.sh`, which is also local-first. | —             |
 
 ## 4. Functional Requirements
 
@@ -191,7 +205,7 @@ THEN the workflow MUST use the workflow-defined default betterleaks version.
 
 **Rationale**: Installing through setup-tool keeps the install logic in one place and verifies the checksum.
 
-### REQ-F-003: Config Checkout
+### REQ-F-003: Config Checkout and Resolution
 
 - EARS Type: event-driven
 
@@ -199,7 +213,10 @@ THEN the workflow MUST use the workflow-defined default betterleaks version.
 GIVEN the workflow needs the betterleaks scan configuration
   WHEN preparing scan inputs
 THEN the workflow MUST checkout the repository specified by the config-repo input parameter
-     into the global/configs/ directory and MUST use global/configs/betterleaks.toml from that checkout.
+     into the global/configs/ directory
+     and MUST then run the _ca-resolve-config composite action with
+     config=inputs.config, local-config=configs/betterleaks.toml,
+     global-config=global/configs/betterleaks.toml.
 ```
 
 ```text
@@ -209,24 +226,40 @@ THEN the workflow MUST use aglabo/global-configs as the default configuration re
 ```
 
 ```text
-GIVEN the local repository contains configs/betterleaks.toml
+GIVEN the config input is empty
+  AND the local repository contains configs/betterleaks.toml
   WHEN executing this workflow
-THEN the workflow MUST NOT use the local configs/betterleaks.toml
+THEN the workflow MUST use the local configs/betterleaks.toml
      as the scan configuration.
 ```
 
-**Rationale**: A configurable repository lets users fork or replace the central configuration, while `aglabo/global-configs`, the dedicated repository for centrally managed tool configurations, stays a sensible default.
+```text
+GIVEN the config input is empty
+  AND the local repository does not contain configs/betterleaks.toml
+  WHEN executing this workflow
+THEN the workflow MUST use global/configs/betterleaks.toml from the config-repo checkout.
+```
+
+```text
+GIVEN the config input is not empty
+  WHEN the configuration is resolved
+THEN the workflow MUST use only that file, and MUST fail when it does not exist
+     (no fallback to the local or global configuration).
+```
+
+**Rationale**: A configurable repository lets users fork or replace the central configuration, while `aglabo/global-configs`, the dedicated repository for centrally managed tool configurations, stays a sensible default. Local-first resolution lets a repository override the central policy and matches `runners/run-betterleaks.sh`. This reverses the earlier rule that forbade the local configuration (see DR-08).
 
 ### REQ-F-004: Secret Scan Execution
 
 - EARS Type: event-driven
 
 ```text
-GIVEN betterleaks has been installed and the central configuration has been checked out
+GIVEN betterleaks has been installed and the configuration has been resolved
   WHEN executing the secret scan
 THEN the workflow MUST run betterleaks against the target repository
-     using the checked-out global/configs/betterleaks.toml configuration,
-     equivalent to: betterleaks git . --config global/configs/betterleaks.toml.
+     using the resolved configuration file (steps.resolve-config.outputs.config-file),
+     equivalent to: betterleaks git . --config "${CONFIG_FILE}"
+     --report-path=.github/report/betterleaks-report.json --exit-code=1 --verbose.
 ```
 
 **Rationale**: A central configuration gives every repository the same secret detection rules.
@@ -301,6 +334,12 @@ GIVEN workflow_call is used
 THEN the workflow MUST use the supplied value as the configuration repository to checkout.
 ```
 
+```text
+GIVEN workflow_call is used
+  WHEN a config input is supplied
+THEN the workflow MUST pass the supplied value to _ca-resolve-config as the explicit configuration path.
+```
+
 **Rationale**: A reusable trigger with configurable inputs lets caller workflows run the scan across different configurations.
 
 ## 5. Non-Functional Requirements
@@ -315,7 +354,7 @@ The workflow MUST request only the permissions it needs and MUST include `conten
 
 ### REQ-NF-003: Security — No Hard-coded Tokens
 
-The workflow MUST take `github-token` from a GitHub Actions secret or context value and MUST NOT hard-code any token.
+The workflow does not use a token of its own (`persist-credentials: false` on every checkout) and MUST NOT hard-code any token.
 
 ### REQ-NF-004: Reproducibility — Version Pinning
 
@@ -323,7 +362,7 @@ The workflow MUST take the betterleaks version from the workflow input, or from 
 
 ### REQ-NF-005: Reproducibility — Config Path
 
-The workflow MUST point to the same configuration path on every run, relative to the configuration repository checkout (`global/configs/`).
+The workflow MUST resolve the configuration with the same candidate paths and precedence on every run (`config` input, `configs/betterleaks.toml`, `global/configs/betterleaks.toml`).
 
 ### REQ-NF-006: Observability
 
@@ -345,15 +384,20 @@ The betterleaks version input SHOULD use the `X.Y.Z` format.
 
 ### REQ-C-004: Minimum Compatible Versions
 
-The default betterleaks version SHALL be `1.9.0`. This version meets the central configuration's minimums of betterleaks `v1.0.0` and gitleaks `v8.25.0`.
+The default betterleaks version SHALL be `1.10.0`. This version meets the central configuration's minimums of betterleaks `v1.0.0` and gitleaks `v8.25.0`.
 
 ### REQ-C-005: Repository Actions Only
 
-For environment validation and tool installation, the workflow MUST use this repository's composite actions (`aglabo/ci-platform/.github/actions/ca-validate-environment@v0.6.0` and `aglabo/ci-platform/.github/actions/ca-setup-tool@v0.6.0`) instead of the external `aglabo/.github` reusable workflow `r1.1.2`.
+The workflow MUST NOT use the external `aglabo/.github` reusable workflow `r1.1.2`.
+It MUST use these composite actions of this repository instead:
+
+- `aglabo/ci-platform/.github/actions/ca-validate-environment@v0.8.0-pre` (environment validation)
+- `aglabo/ci-platform/.github/actions/ca-setup-tool@v0.8.0-pre` (tool installation)
+- `aglabo/ci-platform/.github/actions/_ca-resolve-config@v0.8.0-pre` (configuration resolution)
 
 ### REQ-C-006: Configuration Source
 
-The workflow MUST check out the configuration repository into the `global/configs/` directory and MUST use `global/configs/betterleaks.toml` as the scan configuration. When no `config-repo` input is given, the repository MUST default to `aglabo/global-configs`.
+The workflow MUST check out the configuration repository into the `global/configs/` directory, and MUST resolve the scan configuration by precedence (`config` input, `configs/betterleaks.toml`, `global/configs/betterleaks.toml`). When no `config-repo` input is given, the repository MUST default to `aglabo/global-configs`.
 
 ## 7. User Stories
 
@@ -375,7 +419,8 @@ Scenario: Reusable Workflow Runs Successfully
   Then the workflow validates the environment
   And installs the configured betterleaks version
   And checks out the default aglabo/global-configs configuration repository into global/configs/
-  And runs betterleaks using global/configs/betterleaks.toml from that checkout
+  And resolves the configuration with _ca-resolve-config
+  And runs betterleaks using the resolved configuration file
   And the workflow completes successfully
 
 # AC-002: Supplied Betterleaks Version Is Used
@@ -415,25 +460,50 @@ Scenario: Environment Validation Failure Blocks Scan
   When the validation step completes
   Then the workflow fails before ca-setup-tool runs
   And betterleaks is not executed
+
+# AC-006: Local Configuration Takes Precedence
+# Requirement: REQ-F-003, REQ-F-004
+Scenario: Local Configuration Takes Precedence
+  Given the config input is empty
+  And the repository contains configs/betterleaks.toml
+  When the configuration is resolved
+  Then the local configs/betterleaks.toml is passed to betterleaks
+
+# AC-007: Global Configuration Is the Fallback
+# Requirement: REQ-F-003
+Scenario: Global Configuration Is the Fallback
+  Given the config input is empty
+  And the repository does not contain configs/betterleaks.toml
+  When the configuration is resolved
+  Then global/configs/betterleaks.toml is passed to betterleaks
+
+# AC-008: Missing Explicit Configuration Fails
+# Requirement: REQ-F-003, REQ-F-006
+Scenario: Missing Explicit Configuration Fails
+  Given the caller supplies a config input naming a file that does not exist
+  When the configuration is resolved
+  Then the resolve-config step fails
+  And betterleaks is not executed
 ```
 
 ## 9. Open Questions
 
 | Question                                                                                                | Type      | Impact Area                                | Owner                                 |
 | ------------------------------------------------------------------------------------------------------- | --------- | ------------------------------------------ | ------------------------------------- |
-| ~~What exact default betterleaks version should the workflow use?~~                                     | Product   | Tool installation, reproducibility         | **Resolved: 1.9.0**                   |
+| ~~What exact default betterleaks version should the workflow use?~~                                     | Product   | Tool installation, reproducibility         | **Resolved: 1.10.0**                  |
 | ~~Should the configuration branch be hardcoded or made configurable in a future version?~~              | Technical | Configuration reproducibility, flexibility | **Resolved: default branch (no ref)** |
 | Should the workflow scan the entire repository by default or support path filtering in a later version? | Product   | Scan scope                                 | Security Team                         |
 
 ## 10. Change History
 
-| Date       | Version | Description                                                                                                                                                        |
-| ---------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 2026-11-03 | 1.6.1   | Update ca-* composite action references from @v0.5.0 to @v0.6.0                                                                                                    |
-| 2026-11-03 | 1.6.0   | Change config-repo default to aglabo/global-configs (checkout path global/configs); align version input, runner, trigger, and actions with ru-scan-betterleaks.yml |
-| 2026-06-12 | 1.5.0   | Add fetch-depth input (REQ-F-001b), scan report output (REQ-F-007), report upload on failure (REQ-F-008)                                                           |
-| 2026-06-12 | 1.4.0   | Change config-repo checkout: path=shared/ (default branch), config=shared/configs/betterleaks.toml                                                                 |
-| 2026-06-12 | 1.3.0   | Fix default betterleaks version to `1.4.1`                                                                                                                         |
-| 2026-06-12 | 1.2.0   | Fix config-repo checkout branch to `shared` (not default branch) — superseded by 1.4.0                                                                             |
-| 2026-06-12 | 1.1.0   | Add config-repo input parameter (user-configurable configuration repository, default: aglabo/.github)                                                              |
-| 2026-06-12 | 1.0.0   | Initial release                                                                                                                                                    |
+| Date       | Version | Description                                                                                                                                                                                                             |
+| ---------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-11-19 | 2.0.0   | Align with ru-scan-secrets.yml: resolve config via _ca-resolve-config (local-first; reverses the ban on configs/betterleaks.toml, DR-08), add config input and AC-006..008, default version 1.10.0, actions @v0.8.0-pre |
+| 2026-11-03 | 1.6.1   | Update ca-* composite action references from @v0.5.0 to @v0.6.0                                                                                                                                                         |
+| 2026-11-03 | 1.6.0   | Change config-repo default to aglabo/global-configs (checkout path global/configs); align version input, runner, trigger, and actions with ru-scan-betterleaks.yml                                                      |
+| 2026-06-12 | 1.5.0   | Add fetch-depth input (REQ-F-001b), scan report output (REQ-F-007), report upload on failure (REQ-F-008)                                                                                                                |
+| 2026-06-12 | 1.4.0   | Change config-repo checkout: path=shared/ (default branch), config=shared/configs/betterleaks.toml                                                                                                                      |
+| 2026-06-12 | 1.3.0   | Fix default betterleaks version to `1.4.1`                                                                                                                                                                              |
+| 2026-06-12 | 1.2.0   | Fix config-repo checkout branch to `shared` (not default branch) — superseded by 1.4.0                                                                                                                                  |
+| 2026-06-12 | 1.1.0   | Add config-repo input parameter (user-configurable configuration repository, default: aglabo/.github)                                                                                                                   |
+| 2026-06-12 | 1.0.0   | Initial release                                                                                                                                                                                                         |

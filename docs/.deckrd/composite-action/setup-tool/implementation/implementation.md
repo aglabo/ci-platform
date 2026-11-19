@@ -1,7 +1,8 @@
 ---
 title: "Implementation Plan: setup-tool composite action"
-based-on: specifications.md v1.3.0
+based-on: specifications.md v1.4.0
 status: Draft
+version: 1.8.0
 ---
 
 <!-- textlint-disable
@@ -26,8 +27,8 @@ GitHub Actions の composite action として、以下のアクションを実�
 主要な設計決定:
 
 - GitHub API (`api.github.com`) でアセット一覧を 1回取得し、tar.gz の arch 解決、および
-  checksums.txt の選択を同時に行う (`jq` は `validate-environment` で保証)
-- `repo` は `owner/repo` 形式のまま URL に直接埋め込む (分割不要)
+  checksums.txt の選択を同時に行う (`jq` は `ca-validate-environment` で保証)
+- `repo` は `owner/repo` 形式のまま URL に直接埋め込む (分割不要)。ツール名は `${repo##*/}` から導出し、`tool-name` 入力は持たない
 - checksums.txt の候補順: `checksums.txt` → `{tool-name}_{version}_checksums.txt`
 - ダウンロードした tar.gz は `${TOOL_NAME}.tar.gz` にリネームして後続処理で一貫参照
 - スクリプト間 I/F: パラメータ渡し・stdout 返却・`.` でライブラリ読み込み
@@ -38,15 +39,15 @@ GitHub Actions の composite action として、以下のアクションを実�
 以下を全コミットに適用する規範的制約とする (DR-08):
 
 - BDD サイクル: テストコミット後・実装コミット前に RED を確認し、実装完了条件は GREEN とする
-- `set -euo pipefail`: 全スクリプト・全ライブラリファイルの先頭に設定する (ライブラリは double-source guard の後)
-- double-source guard: 新規作成する全ライブラリファイルに付与する
+- `set -euo pipefail`: オーケストレーター `setup-tool.sh` の先頭に設定する (ライブラリは呼び出し元のシェルオプションを引き継ぐため設定しない)
+- double-source guard: `scripts/_libs/` の全ライブラリファイルに付与する
 - エラー出力: `::error::<message>` を stderr に出力し、フェーズ別固定 exit code で終了する
 
 ### 1.3 Reference
 
 - Prior Art: `.github-aglabo/.github/actions/scripts/` (aglabo 参考実装)
-- Prior Art: `.github/actions/setup-tool/scripts/_libs/` (既存 validation.lib.sh/common.lib.sh)
-- Specifications: `specifications/specifications.md` v1.3.0
+- 共有ライブラリ: `.github/actions/_libs/` (version.lib.sh / validation.lib.sh ほか)
+- Specifications: `specifications/specifications.md` v1.4.0
 
 ---
 
@@ -56,7 +57,7 @@ GitHub Actions の composite action として、以下のアクションを実�
 
 #### Commit 1: test(setup-tool/dirs): add ShellSpec tests for setup_dirs
 
-- `scripts/__tests__/dirs.unit.spec.sh` を作成
+- `scripts/_libs/__tests__/unit/dirs.unit.spec.sh` を作成
 - `setup_dirs()` の正常系: BIN_DIR・TEMP_DIR が作成されること
 - GITHUB_ENV/GITHUB_PATH への書き込み検証
 - テストが RED であることを確認
@@ -71,7 +72,7 @@ GitHub Actions の composite action として、以下のアクションを実�
 
 #### Commit 3: test(setup-tool/arch): add ShellSpec tests for detect_arch
 
-- `scripts/__tests__/arch.unit.spec.sh` を作成
+- `scripts/_libs/__tests__/unit/arch.unit.spec.sh` を作成
 - `detect_arch()` の正常系: `X64` → `amd64` (1行目) ・`x64` (2行目) を stdout 出力
 - `detect_arch()` の正常系: `ARM64` → `arm64` (1行目) を stdout 出力
 - `detect_arch()` の異常系: 未知の arch → `::error::` を stderr に出力して exit 1
@@ -84,7 +85,7 @@ GitHub Actions の composite action として、以下のアクションを実�
   - `X64` → `amd64` (1行目) ・`x64` (2行目)
   - `ARM64` → `arm64` (1行目)
   - 未知 → `::error::` を stderr に出力して exit 1
-- 呼び出し元は `mapfile -t ARCH_CANDIDATES < <(detect_arch)` でキャプチャ
+- 呼び出し元は `_arch_out=$(detect_arch)` の後に `mapfile -t _arch_candidates <<< "$_arch_out"` でキャプチャ (失敗を伝搬するため)
 - double-source guard 付き
 - `resolve_arch()` は実装しない (`resolve_assets()` に統合)
 - テストが GREEN であることを確認
@@ -95,7 +96,7 @@ GitHub Actions の composite action として、以下のアクションを実�
 
 #### Commit 5: test(setup-tool/download): add ShellSpec tests for build_url
 
-- `scripts/__tests__/download.unit.spec.sh` を作成
+- `scripts/_libs/__tests__/unit/download.unit.spec.sh` を作成
 - `build_url()` の正常系: `repo`・`tool-version` → GitHub API URL を stdout 出力
   - 期待値: `https://api.github.com/repos/{repo}/releases/tags/v{version}`
 - `tool-version` の `v` プレフィックスは `normalize_version()` で除去済みを前提
@@ -131,7 +132,7 @@ GitHub Actions の composite action として、以下のアクションを実�
   1. `checksums.txt`
   2. `{tool-name}_{version}_checksums.txt`
 - `DOWNLOAD_URL` (1行目) ・`CHECKSUM_URL` (2行目) ・`ARCH_SUFFIX` (3行目) を 1行1値で stdout に出力
-- 呼び出し元: `mapfile -t _assets < <(resolve_assets "${API_URL}" "${TOOL_NAME}" "${ARCH_CANDIDATES[@]}")`
+- 呼び出し元: `_assets_out=$(resolve_assets "$_api_url" "$_tool_name" "${_arch_candidates[@]}") || return $?` の後に `mapfile -t _assets <<< "$_assets_out"`
 - 候補なし・API 失敗時は `::error::` を stderr に出力して exit 2
 - テストが GREEN であることを確認
 
@@ -164,7 +165,7 @@ GitHub Actions の composite action として、以下のアクションを実�
 #### Commit 12: feat(setup-tool/download): implement verify_checksum in download.lib.sh
 
 - `verify_checksum()`: `tool-name`・`tool-version`・`ARCH_SUFFIX`・`TEMP_DIR` を受け取る
-- 元ファイル名 (`{tool-name}_{version}_linux_{arch}.tar.gz`) で `grep -w` 検索
+- 元ファイル名 (`{tool-name}_{version}_linux_{arch}.tar.gz`) と 2 列目が完全一致する行を `awk` で検索
 - sha256sum の対象は `TEMP_DIR/${TOOL_NAME}.tar.gz` (リネーム後)
 - エントリなし・ハッシュ不一致時は `::error::` を stderr に出力して exit 3
 - テストが GREEN であることを確認
@@ -175,7 +176,7 @@ GitHub Actions の composite action として、以下のアクションを実�
 
 #### Commit 13: test(setup-tool/install): add ShellSpec tests for extract_install
 
-- `scripts/__tests__/install.unit.spec.sh` を作成
+- `scripts/_libs/__tests__/unit/install.unit.spec.sh` を作成
 - `extract_install()` の正常系: tar.gz 展開・`tool-name` 一致バイナリを BIN_DIR に配置
 - パーミッション 755 の検証
 - `tool-name` 一致バイナリなし → exit 4 を検証
@@ -211,11 +212,11 @@ GitHub Actions の composite action として、以下のアクションを実�
 
 #### Commit 17: test(setup-tool): add ShellSpec tests for setup-tool.sh
 
-- `scripts/__tests__/setup-tool.unit.spec.sh` を作成
+- `scripts/__tests__/unit/setup-tool.unit.spec.sh` を作成 (結合テストは `functional/`・`integration/`・`system/` に置く)
 - 各ライブラリ関数をモック化して呼び出し順序を検証
 - 正常系: 全関数が順に呼び出されること
 - 異常系: 各フェーズ失敗時に、失敗にあった exit code で終了すること
-- `trap 'cleanup "${TEMP_DIR}"' EXIT` による cleanup の保証を検証
+- `trap 'cleanup "${TEMP_DIR:-}"' EXIT` による cleanup の保証を検証
   (TEMP_DIR を引数として渡すパターンであることを明示)
 - テストが RED であることを確認
 
@@ -223,17 +224,18 @@ GitHub Actions の composite action として、以下のアクションを実�
 
 - `scripts/setup-tool.sh` を新規作成
 - 各ライブラリを `.` で読み込み、処理の流れを制御:
-  1. `normalize_version()`: tool-version の v プレフィックスを除去 (`version.lib.sh`)
-  2. `validate_inputs()`: `repo`・`tool-name`・正規化済み `tool-version` の入力検証
-     (`validation.lib.sh` の `validate_symbol()` を使用・`setup-tool.sh` 内にインライン定義)
-  3. `setup_dirs()`: BIN_DIR・TEMP_DIR 作成・GITHUB_ENV/PATH 書き込み (`dirs.lib.sh`)
-  4. `mapfile -t ARCH_CANDIDATES < <(detect_arch)`: runner.arch → 候補配列にキャプチャ (`arch.lib.sh`)
-  5. `mapfile -t _assets < <(resolve_assets "${API_URL}" "${TOOL_NAME}" "${ARCH_CANDIDATES[@]}")`: DOWNLOAD_URL ([0]) ・CHECKSUM_URL ([1]) ・ARCH_SUFFIX ([2]) を配列にキャプチャ (`download.lib.sh`)
-  6. `download_tool`: tar.gz + checksums.txt を TEMP_DIR に取得・リネーム (`download.lib.sh`)
-  7. `verify_checksum`: sha256sum 検証 (`download.lib.sh`)
-  8. `extract_install`: tar.gz 展開・BIN_DIR にバイナリ配置 (`install.lib.sh`)
+  1. `validate_repo()`: `repo` の `owner/repo` 形式を検証 (`validation.lib.sh`)
+  2. `normalize_version()`・`validate_version()`: tool-version の v プレフィックス除去・`X.Y.Z` 正規化と検証
+     (`version.lib.sh`・`validation.lib.sh`)。ツール名は `${repo##*/}` から導出する
+  3. `trap 'cleanup "${TEMP_DIR:-}"' EXIT` を登録 (`setup_dirs` の前)
+  4. `setup_dirs()`: BIN_DIR・TEMP_DIR 作成・GITHUB_ENV/PATH 書き込み (`dirs.lib.sh`)
+  5. `detect_arch`: runner.arch → 候補配列にキャプチャ (`arch.lib.sh`)
+  6. `build_url`・`resolve_assets`: API URL を組み立て、DOWNLOAD_URL ([0]) ・CHECKSUM_URL ([1]) ・ARCH_SUFFIX ([2]) を配列にキャプチャ (`download.lib.sh`)
+  7. `download_tool`: tar.gz + checksums.txt を TEMP_DIR に取得・リネーム (`download.lib.sh`)
+  8. `verify_checksum`: sha256sum 検証 (`download.lib.sh`)
+  9. `extract_install`: tar.gz 展開・BIN_DIR にバイナリ配置 (`install.lib.sh`)
 - `TEMP_DIR` はスクリプトスコープのグローバル変数として保持
-- `trap 'cleanup "${TEMP_DIR}"' EXIT` で TEMP_DIR を引数として渡し、成功・失敗問わず削除
+- `trap` により TEMP_DIR を引数として渡し、成功・失敗問わず削除
 - テストが GREEN であることを確認
 
 #### Commit 19: chore(setup-tool): remove deprecated scripts
@@ -249,15 +251,14 @@ GitHub Actions の composite action として、以下のアクションを実�
 
 #### Commit 20: feat(setup-tool): implement action.yml
 
-- `.github/actions/setup-tool/action.yml` を新規作成 (廃止スクリプト削除後)
+- `.github/actions/ca-setup-tool/action.yml` を新規作成 (廃止スクリプト削除後)
 - `inputs` を定義:
   - `repo`: `owner/repo` 形式 (required: true)
-  - `tool-name`: ツール名 (required: true)
-  - `tool-version`: `X.Y.Z` 形式 (required: false・`default:` に固定バージョンを設定)
+  - `tool-version`: `X.Y.Z` 形式 (required: false・`default: "0.0.0"`)
 - `runs.using: "composite"` で `setup-tool.sh` を 1回呼び出すだけのシンプルな構成
 - `inputs` は `env:` 経由でスクリプトに渡す
-- `validate-environment` (`additional_apps: [jq]` 含む) が事前実行済みであることをコメントで明示
-- aglabo の `setup-actionlint/action.yml` 構造に準拠
+  (`TOOL_REPO`・`TOOL_VERSION`・`RUNNER_TEMP`・`RUNNER_ARCH`・`GITHUB_ENV`・`GITHUB_PATH`)
+- `ca-validate-environment` (`additional-apps` に `jq` を含む) が事前実行済みであることを前提とする
 
 ---
 
@@ -287,7 +288,10 @@ GitHub Actions の composite action として、以下のアクションを実�
 └── env.lib.sh          # check_env_var() (validate-environment から抽出)
 ```
 
-各 action からのパス解決: `. "${GITHUB_ACTION_PATH}/../_libs/<name>.lib.sh"`
+各 action からのパス解決: `setup-tool.sh` は `. "${SCRIPT_DIR}/../../_libs/<name>.lib.sh"` で読み込みます。
+
+現在の共有ライブラリには上記に加え、`error.lib.sh` (`gha_error`)・`constants.lib.sh`・`path.lib.sh` (`validate_path`) がある。
+`setup-tool` が使うのは `version.lib.sh` と `validation.lib.sh` のみ。
 
 #### 実施順序
 
@@ -326,13 +330,14 @@ Phase 1〜4 の新規ライブラリが最初から共通ライブラリを参�
 
 ## 4. Change History
 
-| Date       | Version | Description                                                                                                                   |
-| ---------- | ------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| 2026-06-07 | 1.0     | Initial implementation plan                                                                                                   |
-| 2026-06-07 | 1.1     | Phase 4 改訂: setup-tool.sh オーケストレーター追加・action.yml を1ステップに簡略化                                            |
-| 2026-06-07 | 1.2     | explore レビュー反映: 複数値返却規約 (1行1値・mapfile キャプチャ) ・normalize_version 呼び出し順序を明示                      |
-| 2026-06-07 | 1.3     | 付加タスク A 追加: 共通ライブラリ (.github/actions/_libs/) 新設・validate-environment 側リファクタリング                      |
-| 2026-06-07 | 1.4     | explore レビュー残件反映: validate_inputs 帰属明示・cleanup の trap 引数渡し・廃止スクリプト削除コミット追加                  |
-| 2026-06-07 | 1.5     | explore レビュー2回目反映: 付加タスク A 実施順序確定 (Phase 1 前) ・Commit 17 trap 記述修正・ARCH_CANDIDATES 配列渡し方法明示 |
-| 2026-06-07 | 1.6     | harden レビュー反映: 実装品質基準 (DR-08) 追記・Commit 3 出力形式修正・A-3/Commit 19 に WHEN 条件追加                         |
-| 2026-06-07 | 1.7     | fix レビュー反映: Section 順序修正・用語統一 (パラメータ→引数・正常系テスト→正常系) ・見出し階層統一・クォート修正            |
+| Date       | Version | Description                                                                                                                                                                                          |
+| ---------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-06-07 | 1.0.0   | Initial implementation plan                                                                                                                                                                          |
+| 2026-06-07 | 1.1.0   | Phase 4 改訂: setup-tool.sh オーケストレーター追加・action.yml を1ステップに簡略化                                                                                                                   |
+| 2026-06-07 | 1.2.0   | explore レビュー反映: 複数値返却規約 (1行1値・mapfile キャプチャ) ・normalize_version 呼び出し順序を明示                                                                                             |
+| 2026-06-07 | 1.3.0   | 付加タスク A 追加: 共通ライブラリ (.github/actions/_libs/) 新設・validate-environment 側リファクタリング                                                                                             |
+| 2026-06-07 | 1.4.0   | explore レビュー残件反映: validate_inputs 帰属明示・cleanup の trap 引数渡し・廃止スクリプト削除コミット追加                                                                                         |
+| 2026-06-07 | 1.5.0   | explore レビュー2回目反映: 付加タスク A 実施順序確定 (Phase 1 前) ・Commit 17 trap 記述修正・ARCH_CANDIDATES 配列渡し方法明示                                                                        |
+| 2026-06-07 | 1.6.0   | harden レビュー反映: 実装品質基準 (DR-08) 追記・Commit 3 出力形式修正・A-3/Commit 19 に WHEN 条件追加                                                                                                |
+| 2026-06-07 | 1.7.0   | fix レビュー反映: Section 順序修正・用語統一 (パラメータ→引数・正常系テスト→正常系) ・見出し階層統一・クォート修正                                                                                   |
+| 2026-11-19 | 1.8.0   | ca-setup-tool 実装に追従: パス・テスト配置・tool-name 入力削除・validate_repo/validate_version・EXIT trap・awk 完全一致・mapfile 手順・set -euo pipefail の適用範囲・バージョン表記を 3 部構成に統一 |

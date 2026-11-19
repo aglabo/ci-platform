@@ -3,7 +3,7 @@ id: REQ-001
 title: "Requirements: Actionlint Reusable Workflow"
 module: "reusable-workflows/actionlint"
 status: Draft
-version: 1.7.1
+version: 1.8.0
 created: "2026-06-12"
 ---
 
@@ -30,7 +30,7 @@ jactionlint ベースの GitHub Actions ワークフロー構文を検証する�
 - GitHub Actions 環境の検証 (`ca-validate-environment` action 使用)
 - `ca-setup-tool` action による jactionlint インストール
 - 設定リポジトリ `aglabo/global-configs` を `./global/configs/` にチェックアウト (固定)
-- `config` 入力パラメータで設定ファイルパスを指定 (デフォルト: `./global/configs/jactionlint.yaml`、上書き可能)
+- `_ca-resolve-config` action による設定ファイルの解決 (`config` 入力 → ローカル `configs/jactionlint.yaml` → グローバル `global/configs/jactionlint.yaml` の優先順位)
 - lint エラー検出時のレポートファイル生成とアーティファクトアップロード
 
 ### Out of Scope
@@ -51,18 +51,19 @@ jactionlint ベースの GitHub Actions ワークフロー構文を検証する�
 
 ### Related Components
 
-| コンポーネント          | パス                                                         | 役割                                                                                                   |
-| ----------------------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------ |
-| ca-validate-environment | `.github/actions/ca-validate-environment` (`@v0.6.0` で参照) | 環境検証 composite action                                                                              |
-| ca-setup-tool           | `.github/actions/ca-setup-tool` (`@v0.6.0` で参照)           | バイナリインストール composite action                                                                  |
-| jactionlint 設定        | `global/configs/jactionlint.yaml`                            | lint ルール設定 (`aglabo/global-configs` から `./global/configs/` にチェックアウト後、`config` で指定) |
-| 呼び出し元ワークフロー  | `.github/workflows/ci-workflows-qa.yml`                      | このワークフローを使用                                                                                 |
+| コンポーネント          | パス                                                             | 役割                                                                                                                     |
+| ----------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| ca-validate-environment | `.github/actions/ca-validate-environment` (`@v0.8.0-pre` で参照) | 環境検証 composite action                                                                                                |
+| ca-setup-tool           | `.github/actions/ca-setup-tool` (`@v0.8.0-pre` で参照)           | バイナリインストール composite action                                                                                    |
+| _ca-resolve-config      | `.github/actions/_ca-resolve-config` (`@v0.8.0-pre` で参照)      | 設定ファイル解決 composite action (入力 → ローカル → グローバル)                                                         |
+| jactionlint 設定        | `configs/jactionlint.yaml` / `global/configs/jactionlint.yaml`   | lint ルール設定 (ローカル優先。無ければ `aglabo/global-configs` から `./global/configs/` にチェックアウトしたものを使用) |
+| 呼び出し元ワークフロー  | `.github/workflows/ci-workflows-qa.yml`                          | このワークフローを使用                                                                                                   |
 
 ### Assumptions
 
 - `ubuntu-slim` ランナーが利用可能
 - `jdx/jactionlint` リポジトリに GitHub Releases が存在する
-- `aglabo/global-configs` リポジトリのルートに `jactionlint.yaml` が存在する
+- ローカルの `configs/jactionlint.yaml` が無い場合に備え、`aglabo/global-configs` リポジトリのルートに `jactionlint.yaml` が存在する
 - `ca-setup-tool` action が jactionlint バイナリを正常にインストールできる
 
 ### System Context Diagram
@@ -83,8 +84,11 @@ jactionlint ベースの GitHub Actions ワークフロー構文を検証する�
         +-- [actions/checkout] ─────── config-repo (aglabo/global-configs) を ./global/configs/ にチェックアウト
         |                              fetch-depth: 1, persist-credentials: false
         |
+        +-- [_ca-resolve-config] ───── 設定ファイルを解決
+        |                              config 入力 → configs/jactionlint.yaml → global/configs/jactionlint.yaml
+        |
         +-- [jactionlint 実行] ─────── デフォルト動作でワークフローファイルを検証
-        |                              設定: global/configs/jactionlint.yaml (既定値)
+        |                              設定: 解決された config-file
         |
         +-- [upload-artifact] ──────── エラー時のみ lint レポートをアップロード
 ```
@@ -93,16 +97,16 @@ jactionlint ベースの GitHub Actions ワークフロー構文を検証する�
 
 ## 3. Design Decisions
 
-| ID    | Decision                                                                                                                                                                                                    | Rationale                                                                                                                                                                                |
-| ----- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| DR-01 | 外部 `aglabo/.github` への依存を排除し、ローカル reusable workflow として実装する                                                                                                                           | 外部依存によるバージョン管理リスクと可用性問題を解消する                                                                                                                                 |
-| DR-02 | `workflow_call` トリガーのみをサポートする (`workflow_dispatch` は含めない)                                                                                                                                 | lint ワークフローは CI トリガーからのみ呼び出すことを明確にする                                                                                                                          |
-| DR-03 | ci-platform の `ca-validate-environment` および `ca-setup-tool` action をタグ参照 (`@v0.6.0`) で使用する                                                                                                    | 外部 action への依存を排除し、プラットフォーム内で完結させる                                                                                                                             |
-| DR-04 | jactionlint バイナリは `ca-setup-tool` action で GitHub Releases からインストールする                                                                                                                       | betterleaks と同一のツールインストールパターンを踏襲する                                                                                                                                 |
-| DR-05 | 設定リポジトリは `aglabo/global-configs` に固定して `./global/configs/` にチェックアウトする。設定ファイルパスは `config` 入力パラメータで指定し、デフォルト値は `./global/configs/jactionlint.yaml` とする | 共通設定を一元管理するリポジトリが `aglabo/global-configs` に移ったため、チェックアウト元をここに固定して設定の一元管理を保証しつつ、`config` の上書きで別の設定ファイルも指定可能にする |
-| DR-06 | lint エラー検出時はレポートファイルを生成してアーティファクトとしてアップロードする                                                                                                                         | エラー内容を CI 外でも確認できるようにする                                                                                                                                               |
-| DR-07 | ステップ間の条件は `steps.<id>.outcome == 'success'` パターンを使用する                                                                                                                                     | プロジェクト規約 (`outputs.status != 'error'` 禁止) に準拠する                                                                                                                           |
-| DR-08 | `timeout-minutes`、`persist-credentials: false`、`permissions: contents: read` を明示的に設定する                                                                                                           | ghalint の検証を通過し、セキュリティベストプラクティスに準拠する                                                                                                                         |
+| ID    | Decision                                                                                                                                                                                                                                                                              | Rationale                                                                                                                                                                                |
+| ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| DR-01 | 外部 `aglabo/.github` への依存を排除し、ローカル reusable workflow として実装する                                                                                                                                                                                                     | 外部依存によるバージョン管理リスクと可用性問題を解消する                                                                                                                                 |
+| DR-02 | `workflow_call` トリガーのみをサポートする (`workflow_dispatch` は含めない)                                                                                                                                                                                                           | lint ワークフローは CI トリガーからのみ呼び出すことを明確にする                                                                                                                          |
+| DR-03 | ci-platform の `ca-validate-environment`、`ca-setup-tool` および `_ca-resolve-config` action をタグ参照 (`@v0.8.0-pre`) で使用する                                                                                                                                                    | 外部 action への依存を排除し、プラットフォーム内で完結させる                                                                                                                             |
+| DR-04 | jactionlint バイナリは `ca-setup-tool` action で GitHub Releases からインストールする                                                                                                                                                                                                 | betterleaks と同一のツールインストールパターンを踏襲する                                                                                                                                 |
+| DR-05 | 設定リポジトリは `aglabo/global-configs` に固定して `./global/configs/` にチェックアウトする。設定ファイルは `_ca-resolve-config` で `config` 入力 → ローカル `configs/jactionlint.yaml` → グローバル `global/configs/jactionlint.yaml` の順に解決し、`config` の既定値は空文字とする | 共通設定を一元管理するリポジトリが `aglabo/global-configs` に移ったため、チェックアウト元をここに固定して設定の一元管理を保証しつつ、`config` の上書きで別の設定ファイルも指定可能にする |
+| DR-06 | lint エラー検出時はレポートファイルを生成してアーティファクトとしてアップロードする                                                                                                                                                                                                   | エラー内容を CI 外でも確認できるようにする                                                                                                                                               |
+| DR-07 | ステップ間の条件は `steps.<id>.outcome == 'success'` パターンを使用する                                                                                                                                                                                                               | プロジェクト規約 (`outputs.status != 'error'` 禁止) に準拠する                                                                                                                           |
+| DR-08 | `timeout-minutes`、`persist-credentials: false`、`permissions: contents: read` を明示的に設定する                                                                                                                                                                                     | ghalint の検証を通過し、セキュリティベストプラクティスに準拠する                                                                                                                         |
 
 ---
 
@@ -118,7 +122,7 @@ jactionlint ベースの GitHub Actions ワークフロー構文を検証する�
 
 **WHEN** 環境検証が成功したとき、
 **THE SYSTEM SHALL** `ca-setup-tool` action を使用して `jdx/jactionlint` の指定バージョンをインストールする。
-**THE SYSTEM SHALL** デフォルトバージョン `2.4.0` を使用する (入力で上書き可能) 。
+**THE SYSTEM SHALL** デフォルトバージョン `2.6.0` を使用する (入力で上書き可能) 。
 
 ### REQ-F-003: 設定リポジトリのチェックアウト
 
@@ -126,12 +130,25 @@ jactionlint ベースの GitHub Actions ワークフロー構文を検証する�
 **THE SYSTEM SHALL** `aglabo/global-configs` を `./global/configs/` にチェックアウトする (リポジトリ固定) 。
 チェックアウト時は `fetch-depth: 1`、`persist-credentials: false` を設定する。
 
-### REQ-F-003b: ワークフロー検証実行
+### REQ-F-003a: 設定ファイルの解決
 
 **WHEN** 設定リポジトリのチェックアウトが成功したとき、
+**THE SYSTEM SHALL** `_ca-resolve-config` action で設定ファイルを次の優先順位で解決する。
+
+1. `config` 入力が空でなければそれのみを候補とする。ファイルが存在しなければエラーとし、フォールバックしない
+2. `configs/jactionlint.yaml` (ローカル)
+3. `global/configs/jactionlint.yaml` (グローバル)
+
+**THE SYSTEM SHALL** `..` または空白を含むパス、および `GITHUB_WORKSPACE` の外を指すパスを拒否する。
+**THE SYSTEM SHALL** 解決結果を出力 `config-file` (絶対パス) と `source` (`input` / `local` / `global`) として公開する。
+解決に失敗した場合は後続ステップを実行しない。
+
+### REQ-F-003b: ワークフロー検証実行
+
+**WHEN** 設定ファイルの解決が成功したとき、
 **THE SYSTEM SHALL** jactionlint のデフォルト動作に従って対象ファイルを検証する。
-**THE SYSTEM SHALL** `config` 入力パラメータで指定されたパスの設定ファイルを使用する。
-デフォルト値は `./global/configs/jactionlint.yaml` とし、呼び出し元が別パスに上書き可能とする。
+**THE SYSTEM SHALL** 解決された `config-file` を設定ファイルとして使用する。
+`config` 入力の既定値は空文字とし、呼び出し元が別パスに上書き可能とする。
 
 ### REQ-F-004: lint 失敗時の即座の失敗
 
@@ -205,13 +222,13 @@ betterleaks reusable workflow と同一のステップ構造・命名規則・�
 
 ### REQ-C-004: ci-platform のアクションのみ使用
 
-ステップでは `ca-validate-environment`、`ca-setup-tool` の ci-platform composite action (`aglabo/ci-platform/.github/actions/<name>@v0.6.0`) のみを使用する。
+ステップでは `ca-validate-environment`、`ca-setup-tool`、`_ca-resolve-config` の ci-platform composite action (`aglabo/ci-platform/.github/actions/<name>@v0.8.0-pre`) のみを使用する。
 外部 GitHub Actions は `actions/checkout`、`actions/upload-artifact` のみ許可する。
 
 ### REQ-C-005: 設定ファイルパス
 
-`config` 入力パラメータのデフォルト値は `./global/configs/jactionlint.yaml` とする。
-呼び出し元が明示的に上書きすることで別パス (例: 呼び出し元リポジトリの `./configs/jactionlint.yaml`) を指定可能とする。
+`config` 入力パラメータのデフォルト値は空文字とし、空の場合はローカル `configs/jactionlint.yaml`、次にグローバル `global/configs/jactionlint.yaml` の順に解決する。
+呼び出し元が明示的に上書きすることで別パス (例: 呼び出し元リポジトリの `./configs/custom-actionlint.yaml`) を指定可能とする。
 チェックアウト元リポジトリ (`aglabo/global-configs`) は固定であり入力パラメータによる変更は不可とする。
 
 ### REQ-C-006: ステップ条件
@@ -262,7 +279,7 @@ betterleaks reusable workflow と同一のステップ構造・命名規則・�
 
 ```gherkin
 Given リポジトリに .github/workflows/*.yml が存在する
-And   configs/jactionlint.yaml が存在する
+And   configs/jactionlint.yaml (ローカル) またはグローバル設定が存在する
 When  workflow_call で ru-qa-actionlint.yml が呼び出される
 Then  jactionlint が .github/workflows/*.yml を検証する
 And   lint エラーがなければワークフローが成功する
@@ -273,7 +290,7 @@ And   lint エラーがなければワークフローが成功する
 ```gherkin
 Given version 入力が省略されている
 When  ワークフローが実行される
-Then  jactionlint 2.4.0 がインストールされる
+Then  jactionlint 2.6.0 がインストールされる
 ```
 
 ### AC-003: lint エラー時にワークフローが失敗する
@@ -301,6 +318,26 @@ When  ワークフローが実行される
 Then  jactionlint がカスタム設定ファイルを使用して実行される
 ```
 
+### AC-006: 設定ファイルの優先順位
+
+```gherkin
+Given config 入力が空である
+And   configs/jactionlint.yaml (ローカル) が存在する
+When  ワークフローが実行される
+Then  ローカルの設定が使用される (source=local)
+And   ローカルが無ければ global/configs/jactionlint.yaml が使用される (source=global)
+```
+
+### AC-007: 明示指定の設定ファイルが無い場合は失敗する
+
+```gherkin
+Given config 入力に存在しないパスが指定されている
+When  ワークフローが実行される
+Then  resolve-config ステップが失敗する
+And   ローカル・グローバル設定へのフォールバックは行われない
+And   jactionlint は実行されない
+```
+
 ---
 
 ## 9. Open Questions
@@ -316,6 +353,7 @@ Then  jactionlint がカスタム設定ファイルを使用して実行され�
 
 | Version | Date       | Description                                                                                                                                                                                                                                                   |
 | ------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1.8.0   | 2026-11-19 | `_ca-resolve-config` による設定解決 (REQ-F-003a、AC-006/007) を追加、config 既定値を空文字に変更 (ローカル優先)、jactionlint 既定バージョンを 2.6.0 に更新、composite action 参照を @v0.8.0-pre に更新                                                        |
 | 1.7.1   | 2026-11-03 | ca-* Composite Action の参照を @v0.5.0 から @v0.6.0 に更新                                                                                                                                                                                                    |
 | 1.7.0   | 2026-11-03 | 設定リポジトリを aglabo/global-configs に変更 (チェックアウト先 global/configs、config 既定値 ./global/configs/jactionlint.yaml) 、composite action 参照を ca-validate-environment / ca-setup-tool @v0.5.0 に更新、ubuntu-slim を GitHub ホストランナーに訂正 |
 | 1.6.0   | 2026-11-01 | jactionlint 移行に合わせて参照を更新 (jdx/jactionlint、入力 version / config、既定設定 ./shared/configs/jactionlint.yaml、レポート jactionlint-report) 、frontmatter と履歴の版番号を 3 部構成に修正                                                          |

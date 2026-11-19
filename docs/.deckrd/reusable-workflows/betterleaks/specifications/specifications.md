@@ -1,7 +1,7 @@
 ---
 title: "Design Specification: Betterleaks Reusable Workflow"
-version: 1.4.1
-based-on: requirements.md v1.6.1
+version: 2.0.0
+based-on: requirements.md v2.0.0
 status: Draft
 ---
 
@@ -25,10 +25,12 @@ and traceability to requirements.
 ### 1.2 Scope
 
 This specification covers the reusable workflow behavior from trigger input resolution through environment validation,
-tool installation, configuration checkout, and secret scan execution.
+tool installation, configuration checkout and resolution, and secret scan execution.
 
 It defines observable workflow behavior only. Implementation-specific action wiring, exact YAML syntax,
 and local file layout are implementation details unless carried in `impl-note` comments.
+
+The workflow file `ru-scan-secrets.yml` holds two independent jobs. This specification covers `scan-betterleaks` only; `scan-secretlint` belongs to `reusable-workflows/secretlint`.
 
 ## 2. Design Principles
 
@@ -44,18 +46,19 @@ Each unit SHALL have a single behavioral responsibility:
 | env-validation  | Verify the runner and workflow environment before downstream execution           |
 | tool-install    | Install the scanner tool into the executable search path                         |
 | config-checkout | Retrieve the central scanner configuration source                                |
+| resolve-config  | Select the scanner configuration file (input, local, then global)                |
 | scan-execute    | Execute the scan and fail immediately on detected violations or execution errors |
 
 ### 2.2 Design Assumptions
 
-| Assumption                    | Description                                                                                                      |
-| ----------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| Hosted runner compatibility   | The workflow runs on a Linux hosted runner compatible with the scanner and this repository's composite actions.  |
-| Read-only repository access   | The workflow requires repository read access only.                                                               |
-| External configuration source | Scanner configuration is obtained from the configured central repository source, not from the caller repository. |
-| Fixed checkout path           | The configuration source is always checked out into the `global/configs/` directory (default branch).            |
-| Scanner failure semantics     | A non-zero scanner exit status represents a workflow failure.                                                    |
-| No published outputs          | The workflow communicates success or failure through job status only.                                            |
+| Assumption                  | Description                                                                                                        |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| Hosted runner compatibility | The workflow runs on a Linux hosted runner compatible with the scanner and this repository's composite actions.    |
+| Read-only repository access | The workflow requires repository read access only.                                                                 |
+| Configuration precedence    | An explicit `config` input wins, then the caller repository's `configs/betterleaks.toml`, then the central source. |
+| Fixed checkout path         | The configuration source is always checked out into the `global/configs/` directory (default branch).              |
+| Scanner failure semantics   | A non-zero scanner exit status represents a workflow failure.                                                      |
+| No published outputs        | The workflow communicates success or failure through job status only.                                              |
 
 ### 2.3 External Design Summary
 
@@ -67,11 +70,13 @@ Each unit SHALL have a single behavioral responsibility:
 | env-validation  | Workflow has started             | Environment status is successful                                | SHALL block all downstream units on validation error   |
 | tool-install    | Environment validation succeeded | Scanner is available in the executable search path              | SHALL fail the job on installation error               |
 | config-checkout | Tool installation succeeded      | Central scanner configuration source is available locally       | SHALL fail the job when the source cannot be retrieved |
-| scan-execute    | Configuration checkout completed | Scanner exits successfully                                      | SHALL fail immediately on non-zero scanner exit        |
+| resolve-config  | Configuration checkout completed | One existing configuration file is selected                     | SHALL fail the job when no candidate file exists       |
+| scan-execute    | Configuration resolved           | Scanner exits successfully                                      | SHALL fail immediately on non-zero scanner exit        |
 
-<!-- impl-note: env-validation uses aglabo/ci-platform/.github/actions/ca-validate-environment@v0.6.0 with actions-type=read (architecture and require-github-hosted keep the action defaults amd64 and false). -->
-<!-- impl-note: tool-install uses aglabo/ci-platform/.github/actions/ca-setup-tool@v0.6.0, which installs betterleaks/betterleaks into ${RUNNER_TEMP}/bin and appends that directory to GITHUB_PATH. -->
-<!-- impl-note: Configuration checkout implementation path: global/configs. Required scanner config: global/configs/betterleaks.toml. -->
+<!-- impl-note: env-validation uses aglabo/ci-platform/.github/actions/ca-validate-environment@v0.8.0-pre with actions-type=read (architecture and require-github-hosted keep the action defaults amd64 and false). -->
+<!-- impl-note: tool-install uses aglabo/ci-platform/.github/actions/ca-setup-tool@v0.8.0-pre, which installs betterleaks/betterleaks into ${RUNNER_TEMP}/bin and appends that directory to GITHUB_PATH. -->
+<!-- impl-note: Configuration checkout implementation path: global/configs. Fallback scanner config: global/configs/betterleaks.toml. -->
+<!-- impl-note: resolve-config uses aglabo/ci-platform/.github/actions/_ca-resolve-config@v0.8.0-pre with config=inputs.config, local-config=configs/betterleaks.toml, global-config=global/configs/betterleaks.toml. It outputs config-file (absolute path) and source (input, local, or global). -->
 
 #### Unit Interaction Map
 
@@ -97,6 +102,11 @@ Each unit SHALL have a single behavioral responsibility:
         |
         v
 +----------------+
+| resolve-config |
++-------+--------+
+        |
+        v
++----------------+
 |  scan-execute  |
 +----------------+
 ```
@@ -107,6 +117,7 @@ Each unit SHALL have a single behavioral responsibility:
 Caller Inputs
   | version
   | config-repo
+  | config
   v
 +----------------+
 | trigger-inputs |
@@ -131,6 +142,11 @@ Caller Inputs
         | success
         v
 +----------------+
+| resolve-config |
++-------+--------+
+        | config-file
+        v
++----------------+
 |  scan-execute  |
 +----------------+
         |
@@ -140,14 +156,14 @@ Workflow Status: success or failed
 
 ### 2.4 Non-Goals
 
-| Non-Goal                                      | Reason                                                                                  |
-| --------------------------------------------- | --------------------------------------------------------------------------------------- |
-| Publishing workflow outputs                   | The workflow is fail-fast only and has no output contract.                              |
-| Supporting caller-local scanner configuration | The configuration source is deterministic and external to the caller repository.        |
-| Supporting a configuration source ref input   | The configuration source is checked out from its default branch into `global/configs/`. |
-| Requesting write permissions                  | The workflow requires read-only repository access.                                      |
-| Continuing after scanner failure              | Scanner failure SHALL fail the workflow immediately.                                    |
-| Delegating to an external reusable workflow   | The architecture uses this repository's composite actions only.                         |
+| Non-Goal                                     | Reason                                                                                  |
+| -------------------------------------------- | --------------------------------------------------------------------------------------- |
+| Publishing workflow outputs                  | The workflow is fail-fast only and has no output contract.                              |
+| Supporting a configuration source ref input  | The configuration source is checked out from its default branch into `global/configs/`. |
+| Requesting write permissions                 | The workflow requires read-only repository access.                                      |
+| Continuing after scanner failure             | Scanner failure SHALL fail the workflow immediately.                                    |
+| Delegating to an external reusable workflow  | The architecture uses this repository's composite actions only.                         |
+| Fallback after an explicit config is missing | An explicit `config` is the only candidate; a missing file is an error.                 |
 
 ### 2.5 Behavioral Design Decisions
 
@@ -161,6 +177,7 @@ Workflow Status: success or failed
 | DD-006 | Scan execution SHALL be gated by completed configuration checkout.                           | The scanner requires the central configuration source.                                      | R-009, R-010   | Accepted |
 | DD-007 | Scanner non-zero exit SHALL fail the workflow immediately.                                   | Secret detection and execution errors are blocking quality gate failures.                   | R-011          | Accepted |
 | DD-008 | Workflow permissions SHALL be limited to read-only repository content access.                | The workflow does not require mutation privileges.                                          | R-012          | Accepted |
+| DD-009 | Configuration SHALL be resolved by precedence: `config` input, local file, global file.      | Repositories can override central policy; matches `runners/run-betterleaks.sh`.             | R-022..R-025   | Accepted |
 
 ### 2.6 Related Decision Records
 
@@ -170,9 +187,10 @@ Workflow Status: success or failed
 | DR-02 | Validate environment before install and scan             | Environment validation SHALL be the first executable gate after input resolution.           |
 | DR-03 | Use local tool installer                                 | Tool installation SHALL be performed by the local installation unit.                        |
 | DR-04 | Scanner version configurable via input with default      | The scanner version SHALL be caller-configurable and defaulted when omitted.                |
-| DR-05 | Configuration from checked-out repository source         | Scanner configuration SHALL come from the configured external source.                       |
+| DR-05 | Configuration from checked-out repository source         | The checked-out source SHALL be the fallback configuration (superseded in part by DR-08).   |
 | DR-06 | Fail-fast on non-zero scanner exit                       | Scan failure SHALL fail the workflow immediately.                                           |
 | DR-07 | Configuration source configurable via input with default | The configuration source SHALL be caller-configurable and defaulted when omitted.           |
+| DR-08 | Resolve configuration with `_ca-resolve-config`          | Configuration SHALL be selected by input > local > global precedence.                       |
 
 ### 2.7 DD to DR Promotion Criteria
 
@@ -192,12 +210,14 @@ A design decision SHOULD be promoted to a decision record when any of the follow
 
 | Input       | Required | Default                 | Constraints                                                                                                    | Behavior                                     |
 | ----------- | -------- | ----------------------- | -------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
-| version     | No       | `1.9.0`                 | MUST be compatible with supported scanner releases; SHALL use semantic version format when explicitly supplied | Determines the scanner version to install    |
+| version     | No       | `1.10.0`                | MUST be compatible with supported scanner releases; SHALL use semantic version format when explicitly supplied | Determines the scanner version to install    |
 | config-repo | No       | `aglabo/global-configs` | MUST identify an accessible repository source                                                                  | Determines the external configuration source |
+| config      | No       | `""` (empty)            | MUST be a repository-relative path without `..` or whitespace when supplied                                    | Explicit configuration file; no fallback     |
 | fetch-depth | No       | `50`                    | MUST be a non-negative integer; `0` means full history                                                         | Controls git fetch depth for target checkout |
 
 <!-- impl-note: version maps to ca-setup-tool tool-version and must satisfy X.Y.Z format. -->
 <!-- impl-note: config-repo default is aglabo/global-configs. The configuration source is checked out into global/configs/ (default branch, no ref specified). -->
+<!-- impl-note: config is passed to _ca-resolve-config; an empty value means the local then global candidates are tried. -->
 <!-- impl-note: fetch-depth maps to actions/checkout with.fetch-depth. Default 50 fetches the latest 50 commits. -->
 
 ### 3.2 Output Semantics
@@ -206,10 +226,10 @@ The workflow SHALL publish no reusable workflow outputs.
 
 The observable result SHALL be one of:
 
-| Result  | Meaning                                                                                         |
-| ------- | ----------------------------------------------------------------------------------------------- |
-| Success | All units completed successfully and the scanner exited with status `0`.                        |
-| Failure | Environment validation, tool installation, configuration checkout, or scanner execution failed. |
+| Result  | Meaning                                                                                                                   |
+| ------- | ------------------------------------------------------------------------------------------------------------------------- |
+| Success | All units completed successfully and the scanner exited with status `0`.                                                  |
+| Failure | Environment validation, tool installation, configuration checkout, configuration resolution, or scanner execution failed. |
 
 On failure, the workflow SHALL produce a JSON report artifact named `betterleaks-report` at `.github/report/betterleaks-report.json`.
 
@@ -218,57 +238,63 @@ On failure, the workflow SHALL produce a JSON report artifact named `betterleaks
 The workflow SHALL execute units in this order:
 
 ```text
-trigger-inputs -> target-checkout -> env-validation -> tool-install -> config-checkout -> prepare-report -> scan-execute -> upload-report
+trigger-inputs -> target-checkout -> env-validation -> tool-install -> config-checkout -> resolve-config -> prepare-report -> scan-execute -> upload-report
 ```
 
-`target-checkout` and `env-validation` SHALL run without an explicit condition; a failure in either stops the job. Each later unit up to `scan-execute` SHALL be conditioned on the previous unit succeeding. `upload-report` SHALL run only after a scan failure.
+`target-checkout` SHALL run without an explicit condition. Each later unit up to `scan-execute` SHALL be conditioned on the previous unit succeeding (`env-validation` on `target-checkout`, and so on). `upload-report` SHALL run only after a scan failure.
 
 The scanner execution unit SHALL fail fast. It MUST NOT ignore a non-zero scanner exit status and MUST NOT continue on scan failure.
 
 <!-- impl-note: Step gating pattern: if: steps.<id>.outcome == 'success'. -->
-<!-- impl-note: Scanner command: betterleaks git . --config global/configs/betterleaks.toml --report-path=.github/report/betterleaks-report.json --exit-code=1 --verbose -->
+<!-- impl-note: Scanner command: betterleaks git . --config "${CONFIG_FILE}" (CONFIG_FILE = steps.resolve-config.outputs.config-file) --report-path=.github/report/betterleaks-report.json --exit-code=1 --verbose -->
 <!-- impl-note: upload-report step uses: actions/upload-artifact, if: failure() && steps.scan-execute.outputs.status != '0', name: betterleaks-report, path: .github/report/betterleaks-report.json -->
-<!-- impl-note: target-checkout is the first step (no step id) and uses fetch-depth: ${{ inputs.fetch-depth }} and persist-credentials: false -->
+<!-- impl-note: target-checkout is the first step (id: target-checkout) and uses fetch-depth: ${{ inputs.fetch-depth }} and persist-credentials: false -->
 <!-- impl-note: config-checkout also sets persist-credentials: false -->
 
 ## 4. Decision Rules
 
-| Rule ID | Step            | Condition                                                | Outcome                                                                                                                        |
-| ------- | --------------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| R-001   | trigger-inputs  | `version` is omitted                                     | The workflow SHALL resolve the default scanner version `1.9.0`.                                                                |
-| R-002   | trigger-inputs  | `config-repo` is omitted                                 | The workflow SHALL resolve the default central configuration source (`aglabo/global-configs`).                                 |
-| R-003   | env-validation  | Workflow execution has started                           | The workflow SHALL validate the runner and action environment before installation or scanning.                                 |
-| R-004   | env-validation  | Environment validation reports an error status           | The workflow SHALL block tool installation, configuration checkout, and scan execution.                                        |
-| R-005   | tool-install    | Environment validation succeeded                         | The workflow SHALL install the requested scanner version into the executable search path.                                      |
-| R-006   | tool-install    | Tool installation fails                                  | The workflow SHALL fail the job and SHALL NOT run configuration checkout or scan execution.                                    |
-| R-007   | config-checkout | Tool installation succeeded                              | The workflow SHALL checkout the configured central configuration source into the `global/configs/` directory (default branch). |
-| R-008   | config-checkout | The configured source is inaccessible                    | The workflow SHALL fail the job and SHALL NOT run scan execution.                                                              |
-| R-009   | scan-execute    | Configuration checkout completed                         | The workflow SHALL execute the scanner using the central scanner configuration.                                                |
-| R-010   | scan-execute    | Central scanner configuration is absent or unusable      | The scanner execution SHALL fail and the workflow SHALL fail immediately.                                                      |
-| R-011   | scan-execute    | Scanner exits with a non-zero status                     | The workflow MUST fail immediately and MUST NOT continue on error.                                                             |
-| R-012   | workflow        | Workflow permissions are evaluated                       | The workflow SHALL request read-only repository contents permission.                                                           |
-| R-013   | workflow        | Workflow is invoked by a caller workflow                 | The workflow SHALL be invokable through `workflow_call` and SHALL expose its behavioral inputs to the caller.                  |
-| R-014   | workflow        | A downstream unit is evaluated after an upstream failure | The downstream unit SHALL be skipped unless explicitly covered by fail-fast scan behavior.                                     |
-| R-015   | trigger-inputs  | `fetch-depth` is omitted                                 | The workflow SHALL resolve the default fetch depth `50`.                                                                       |
-| R-016   | target-checkout | fetch-depth is resolved                                  | The workflow SHALL pass the resolved fetch-depth to the target repository checkout.                                            |
-| R-017   | prepare-report  | scan-execute is about to run                             | The workflow SHALL create the `.github/report/` directory before executing the scanner.                                        |
-| R-018   | scan-execute    | Scanner runs                                             | The workflow SHALL write scan results to `.github/report/betterleaks-report.json`.                                             |
-| R-019   | scan-execute    | Scanner exits with non-zero status                       | The workflow SHALL expose the scanner exit code as a step output named `status`.                                               |
-| R-020   | upload-report   | Scan step exits with non-zero status                     | The workflow SHALL upload `.github/report/betterleaks-report.json` as artifact `betterleaks-report` on failure only.           |
-| R-021   | upload-report   | Scan step exits with status `0`                          | The workflow MUST NOT upload any artifact.                                                                                     |
+| Rule ID | Step            | Condition                                                                      | Outcome                                                                                                                        |
+| ------- | --------------- | ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
+| R-001   | trigger-inputs  | `version` is omitted                                                           | The workflow SHALL resolve the default scanner version `1.10.0`.                                                               |
+| R-002   | trigger-inputs  | `config-repo` is omitted                                                       | The workflow SHALL resolve the default central configuration source (`aglabo/global-configs`).                                 |
+| R-003   | env-validation  | Workflow execution has started                                                 | The workflow SHALL validate the runner and action environment before installation or scanning.                                 |
+| R-004   | env-validation  | Environment validation reports an error status                                 | The workflow SHALL block tool installation, configuration checkout, and scan execution.                                        |
+| R-005   | tool-install    | Environment validation succeeded                                               | The workflow SHALL install the requested scanner version into the executable search path.                                      |
+| R-006   | tool-install    | Tool installation fails                                                        | The workflow SHALL fail the job and SHALL NOT run configuration checkout or scan execution.                                    |
+| R-007   | config-checkout | Tool installation succeeded                                                    | The workflow SHALL checkout the configured central configuration source into the `global/configs/` directory (default branch). |
+| R-008   | config-checkout | The configured source is inaccessible                                          | The workflow SHALL fail the job and SHALL NOT run scan execution.                                                              |
+| R-009   | scan-execute    | Configuration resolved                                                         | The workflow SHALL execute the scanner using the resolved scanner configuration file.                                          |
+| R-010   | resolve-config  | No candidate configuration file exists                                         | The resolve-config step SHALL fail and scan execution SHALL NOT run.                                                           |
+| R-011   | scan-execute    | Scanner exits with a non-zero status                                           | The workflow MUST fail immediately and MUST NOT continue on error.                                                             |
+| R-012   | workflow        | Workflow permissions are evaluated                                             | The workflow SHALL request read-only repository contents permission.                                                           |
+| R-013   | workflow        | Workflow is invoked by a caller workflow                                       | The workflow SHALL be invocable through `workflow_call` and SHALL expose its behavioral inputs to the caller.                  |
+| R-014   | workflow        | A downstream unit is evaluated after an upstream failure                       | The downstream unit SHALL be skipped unless explicitly covered by fail-fast scan behavior.                                     |
+| R-015   | trigger-inputs  | `fetch-depth` is omitted                                                       | The workflow SHALL resolve the default fetch depth `50`.                                                                       |
+| R-016   | target-checkout | fetch-depth is resolved                                                        | The workflow SHALL pass the resolved fetch-depth to the target repository checkout.                                            |
+| R-017   | prepare-report  | scan-execute is about to run                                                   | The workflow SHALL create the `.github/report/` directory before executing the scanner.                                        |
+| R-018   | scan-execute    | Scanner runs                                                                   | The workflow SHALL write scan results to `.github/report/betterleaks-report.json`.                                             |
+| R-019   | scan-execute    | Scanner exits with non-zero status                                             | The workflow SHALL expose the scanner exit code as a step output named `status`.                                               |
+| R-020   | upload-report   | Scan step exits with non-zero status                                           | The workflow SHALL upload `.github/report/betterleaks-report.json` as artifact `betterleaks-report` on failure only.           |
+| R-021   | upload-report   | Scan step exits with status `0`                                                | The workflow MUST NOT upload any artifact.                                                                                     |
+| R-022   | resolve-config  | `config` input is non-empty                                                    | The workflow SHALL use only that file and SHALL fail when it does not exist (no fallback).                                     |
+| R-023   | resolve-config  | `config` is empty and `configs/betterleaks.toml` exists                        | The workflow SHALL use the local configuration (`source=local`).                                                               |
+| R-024   | resolve-config  | `config` is empty and no local file exists                                     | The workflow SHALL use `global/configs/betterleaks.toml` (`source=global`).                                                    |
+| R-025   | resolve-config  | A candidate path contains `..`, whitespace, or lies outside `GITHUB_WORKSPACE` | The workflow SHALL reject it and fail the step.                                                                                |
 
 ## 5. Edge Cases
 
 | Input                                      | Behavior                                                            | REQ                   | Rationale                                                             |
 | ------------------------------------------ | ------------------------------------------------------------------- | --------------------- | --------------------------------------------------------------------- |
-| `version` omitted                          | The workflow SHALL use the default scanner version `1.9.0`.         | REQ-F-002, REQ-NF-004 | Callers should not need to know the current approved version.         |
+| `version` omitted                          | The workflow SHALL use the default scanner version `1.10.0`.        | REQ-F-002, REQ-NF-004 | Callers should not need to know the current approved version.         |
 | `config-repo` omitted                      | The workflow SHALL use the default central configuration source.    | REQ-F-003, REQ-C-006  | Organization-wide policy should apply by default.                     |
 | Explicit scanner version is not acceptable | Tool installation SHALL fail the job.                               | REQ-C-003, REQ-C-004  | Invalid or unsupported versions cannot produce reliable scan results. |
 | Configuration source is inaccessible       | Configuration checkout SHALL fail the job.                          | REQ-F-003, REQ-F-005  | A scan without policy configuration is not valid.                     |
-| Central scanner configuration is absent    | Scanner execution SHALL fail fast.                                  | REQ-F-004, REQ-F-005  | Missing configuration is a blocking scan setup error.                 |
+| No configuration file exists               | The resolve-config step SHALL fail; no scan runs.                   | REQ-F-003, REQ-F-005  | Missing configuration is a blocking scan setup error.                 |
 | Scanner detects a violation                | Scanner execution SHALL fail fast.                                  | REQ-F-005             | Secret findings are blocking quality gate failures.                   |
 | Environment validation reports an error    | All downstream units SHALL be blocked.                              | REQ-F-001             | Invalid execution environments should stop before install or scan.    |
 | Caller expects workflow outputs            | No outputs SHALL be produced.                                       | Function Decisions    | The workflow communicates only by job status.                         |
+| `config` names a missing file              | The resolve-config step SHALL fail without falling back.            | REQ-F-003             | An explicit choice must not be silently replaced.                     |
+| Local `configs/betterleaks.toml` exists    | The local file SHALL be used instead of the global one.             | REQ-F-003             | Repositories can override central policy.                             |
 | `fetch-depth` omitted                      | The workflow SHALL use fetch-depth `50`.                            | REQ-F-001b            | Default fetches the latest 50 commits for efficiency.                 |
 | `fetch-depth: 0` supplied                  | The workflow SHALL fetch full git history for the target repo.      | REQ-F-001b            | Full history scanning when required by the caller.                    |
 | Scanner detects violation (report upload)  | The scan report SHALL be uploaded as artifact `betterleaks-report`. | REQ-F-008             | Preserves evidence for audit when secrets are found.                  |
@@ -276,43 +302,44 @@ The scanner execution unit SHALL fail fast. It MUST NOT ignore a non-zero scanne
 
 ## 6. Requirements Traceability
 
-| REQ ID     | Rule IDs                          | Notes                                                                                    |
-| ---------- | --------------------------------- | ---------------------------------------------------------------------------------------- |
-| REQ-F-001  | R-003, R-004, R-014               | Environment validation runs before install and scan and blocks downstream failure paths. |
-| REQ-F-002  | R-001, R-005, R-006               | Scanner installation uses the resolved version and fails the job on installation error.  |
-| REQ-F-003  | R-002, R-007, R-008, R-010        | Configuration comes from the configured central source and is required for scanning.     |
-| REQ-F-004  | R-009, R-010, R-011               | Scanner execution uses the central configuration and fails on execution error.           |
-| REQ-F-005  | R-010, R-011                      | Scan setup errors and non-zero scanner exits are fail-fast failures.                     |
-| REQ-F-006  | R-013                             | Reusable invocation through `workflow_call` exposes the behavioral inputs.               |
-| REQ-NF-001 | R-003, R-005, R-007, R-009        | Each unit is represented by a separate named workflow step.                              |
-| REQ-NF-002 | R-012                             | Permissions are limited to read-only repository contents access.                         |
-| REQ-NF-003 | R-012                             | No hard-coded tokens are required by the behavioral contract.                            |
-| REQ-NF-004 | R-001, R-005                      | Scanner version comes from input resolution.                                             |
-| REQ-NF-005 | R-007, R-009, R-010               | Configuration location and source are deterministic.                                     |
-| REQ-NF-006 | R-004, R-006, R-008, R-010, R-011 | Failure occurs in the named unit responsible for the failed behavior.                    |
-| REQ-C-001  | R-003                             | Runner compatibility is validated before downstream execution.                           |
-| REQ-C-002  | R-012                             | Read-only contents permission is required.                                               |
-| REQ-C-003  | R-005, R-006                      | Explicit scanner versions must satisfy installer constraints.                            |
-| REQ-C-004  | R-001, R-005                      | Default version must remain compatible with supported scanner releases.                  |
-| REQ-C-005  | R-003, R-005                      | This repository's composite actions provide validation and installation behavior.        |
-| REQ-C-006  | R-002, R-007, R-009               | Central configuration source and default are part of the workflow contract.              |
-| REQ-F-001b | R-015, R-016                      | fetch-depth input controls target checkout depth; default 50.                            |
-| REQ-F-007  | R-017, R-018                      | Report directory is created before scan; report written to .github/report/.              |
-| REQ-F-008  | R-019, R-020, R-021               | Report uploaded as artifact on failure only; exit code exposed as step output.           |
+| REQ ID     | Rule IDs                                 | Notes                                                                                         |
+| ---------- | ---------------------------------------- | --------------------------------------------------------------------------------------------- |
+| REQ-F-001  | R-003, R-004, R-014                      | Environment validation runs before install and scan and blocks downstream failure paths.      |
+| REQ-F-002  | R-001, R-005, R-006                      | Scanner installation uses the resolved version and fails the job on installation error.       |
+| REQ-F-003  | R-002, R-007, R-008, R-010, R-022..R-025 | Configuration is resolved by input > local > global precedence and is required for scanning.  |
+| REQ-F-004  | R-009, R-011                             | Scanner execution uses the resolved configuration and fails on execution error.               |
+| REQ-F-005  | R-010, R-011                             | Scan setup errors and non-zero scanner exits are fail-fast failures.                          |
+| REQ-F-006  | R-013, R-022                             | Reusable invocation through `workflow_call` exposes the behavioral inputs (including config). |
+| REQ-NF-001 | R-003, R-005, R-007, R-009               | Each unit is represented by a separate named workflow step.                                   |
+| REQ-NF-002 | R-012                                    | Permissions are limited to read-only repository contents access.                              |
+| REQ-NF-003 | R-012                                    | No hard-coded tokens are required by the behavioral contract.                                 |
+| REQ-NF-004 | R-001, R-005                             | Scanner version comes from input resolution.                                                  |
+| REQ-NF-005 | R-022, R-023, R-024                      | Configuration candidates and precedence are deterministic.                                    |
+| REQ-NF-006 | R-004, R-006, R-008, R-010, R-011        | Failure occurs in the named unit responsible for the failed behavior.                         |
+| REQ-C-001  | R-003                                    | Runner compatibility is validated before downstream execution.                                |
+| REQ-C-002  | R-012                                    | Read-only contents permission is required.                                                    |
+| REQ-C-003  | R-005, R-006                             | Explicit scanner versions must satisfy installer constraints.                                 |
+| REQ-C-004  | R-001, R-005                             | Default version must remain compatible with supported scanner releases.                       |
+| REQ-C-005  | R-003, R-005                             | This repository's composite actions provide validation and installation behavior.             |
+| REQ-C-006  | R-002, R-007, R-022..R-024               | Configuration source, default, and precedence are part of the workflow contract.              |
+| REQ-F-001b | R-015, R-016                             | fetch-depth input controls target checkout depth; default 50.                                 |
+| REQ-F-007  | R-017, R-018                             | Report directory is created before scan; report written to .github/report/.                   |
+| REQ-F-008  | R-019, R-020, R-021                      | Report uploaded as artifact on failure only; exit code exposed as step output.                |
 
 ## 7. Open Questions
 
-| #     | Question                                                             | Source             | Impact                |
-| ----- | -------------------------------------------------------------------- | ------------------ | --------------------- |
-| ~~1~~ | ~~What exact scanner version is the default latest stable version?~~ | Function Decisions | **Resolved: `1.9.0`** |
+| #     | Question                                                             | Source             | Impact                 |
+| ----- | -------------------------------------------------------------------- | ------------------ | ---------------------- |
+| ~~1~~ | ~~What exact scanner version is the default latest stable version?~~ | Function Decisions | **Resolved: `1.10.0`** |
 
 ## 8. Change History
 
-| Date       | Version | Change                                                                                                                                                                 |
-| ---------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 2026-11-03 | 1.4.1   | Update ca-* composite action references from @v0.5.0 to @v0.6.0                                                                                                        |
-| 2026-11-03 | 1.4.0   | Change config-repo default to aglabo/global-configs (checkout path global/configs); align version input, step order, trigger, and actions with ru-scan-betterleaks.yml |
-| 2026-06-12 | 1.3.0   | Add fetch-depth input (R-015/R-016), report output (R-017/R-018), upload on failure (R-019/R-020/R-021)                                                                |
-| 2026-06-12 | 1.2.0   | Set default betterleaks version to `1.4.1`                                                                                                                             |
-| 2026-06-12 | 1.1.0   | Fix config-repo checkout branch to `shared` (not default branch)                                                                                                       |
-| 2026-06-12 | 1.0.0   | Initial specification                                                                                                                                                  |
+| Date       | Version | Change                                                                                                                                                                                                                       |
+| ---------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-11-19 | 2.0.0   | Add resolve-config unit (R-022..R-025, DD-009, DR-08) with local-first precedence; add config input; default version 1.10.0; actions @v0.8.0-pre; target-checkout id and env-validation gating; based-on requirements v2.0.0 |
+| 2026-11-03 | 1.4.1   | Update ca-* composite action references from @v0.5.0 to @v0.6.0                                                                                                                                                              |
+| 2026-11-03 | 1.4.0   | Change config-repo default to aglabo/global-configs (checkout path global/configs); align version input, step order, trigger, and actions with ru-scan-betterleaks.yml                                                       |
+| 2026-06-12 | 1.3.0   | Add fetch-depth input (R-015/R-016), report output (R-017/R-018), upload on failure (R-019/R-020/R-021)                                                                                                                      |
+| 2026-06-12 | 1.2.0   | Set default betterleaks version to `1.4.1`                                                                                                                                                                                   |
+| 2026-06-12 | 1.1.0   | Fix config-repo checkout branch to `shared` (not default branch)                                                                                                                                                             |
+| 2026-06-12 | 1.0.0   | Initial specification                                                                                                                                                                                                        |

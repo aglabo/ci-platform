@@ -2,7 +2,7 @@
 title: "Requirements: _ca-filter-files"
 module: "composite-action/filter-files"
 status: approved
-version: 1.6.0
+version: 1.6.1
 created: "2026-10-27"
 ---
 
@@ -49,7 +49,7 @@ created: "2026-10-27"
 - 親 Issue #134 の `pattern` に関する記述の更新
 - `ca-get-changed-files` を共有ライブラリの `write_multiline_output` (`_libs/output.lib.sh`) に切り替える。
   `filter.lib.sh` のローカル実装は廃止する。
-  get-changed-files の要件を改訂する際に追加する (DR-07)
+  #134 で完了済みである (DR-07)
 
 ## 2. Context
 
@@ -872,3 +872,4 @@ Owner が spec の項目は、spec で解決した。各行の括弧内に解決
 | 2026-10-29 | 1.4.0   | Change the keep rule to last match wins in input order, the first pattern decides unmatched files (REQ-F-002, REQ-F-003, REQ-F-004, AC-002, add AC-019, DR-19)                                                                                                                   |
 | 2026-10-29 | 1.5.0   | Lower the patterns line limit from 1000 to 100 to keep the matching time practical (REQ-F-018, AC-017, DR-16)                                                                                                                                                                    |
 | 2026-10-31 | 1.6.0   | Change the REQ-C-006 load guard policy: set the guard first, fail the action on a failed library load, drop the declare -F dependency check                                                                                                                                      |
+| 2026-11-19 | 1.6.1   | Mark the switch of ca-get-changed-files to the shared write_multiline_output as done in #134                                                                                                                                                                                     |

@@ -4,9 +4,10 @@
 version: 'v0.0.3'
 workflows:
     '.github/workflows/_tests_ca_composite-actions.yml':
+        - 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1'
         - 'actions/checkout@v7.0.1'
-        - 'actions/setup-node@v7.1.0'
-        - 'pnpm/action-setup@v6.1.1'
+        - 'actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1'
+        - 'pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115'
     '.github/workflows/_tests_ru_reusable-workflows.yml': []
     '.github/workflows/ci-docs-qa.yml': []
     '.github/workflows/ci-publish-docs.yml':
@@ -15,36 +16,41 @@ workflows:
         - 'actions/deploy-pages@v5.0.1'
         - 'actions/setup-node@v7.1.0'
         - 'actions/upload-pages-artifact@v5.0.0'
-        - 'aglabo/ci-platform@v0.7.1-pre'
+        - 'aglabo/ci-platform@v0.8.0-pre'
         - 'pnpm/action-setup@v6.1.1'
     '.github/workflows/ci-scan-secrets.yml': []
     '.github/workflows/ci-workflows-qa.yml': []
     '.github/workflows/ru-lint-documents.yml':
         - 'actions/checkout@v7.0.1'
         - 'actions/upload-artifact@v7.0.2'
-        - 'aglabo/ci-platform@v0.7.1-pre'
+        - 'aglabo/ci-platform@v0.8.0-pre'
     '.github/workflows/ru-qa-actionlint.yml':
         - 'actions/checkout@v7.0.1'
         - 'actions/upload-artifact@v7.0.2'
-        - 'aglabo/ci-platform@v0.7.1-pre'
+        - 'aglabo/ci-platform@v0.8.0-pre'
     '.github/workflows/ru-qa-actions-lock.yml':
         - 'actions/checkout@v7.0.1'
         - 'actions/upload-artifact@v7.0.2'
-        - 'aglabo/ci-platform@v0.7.1-pre'
+        - 'aglabo/ci-platform@v0.8.0-pre'
     '.github/workflows/ru-qa-ghalint.yml':
         - 'actions/checkout@v7.0.1'
         - 'actions/upload-artifact@v7.0.2'
-        - 'aglabo/ci-platform@v0.7.1-pre'
+        - 'aglabo/ci-platform@v0.8.0-pre'
     '.github/workflows/ru-scan-secrets.yml':
         - 'actions/checkout@v7.0.1'
         - 'actions/upload-artifact@v7.0.2'
-        - 'aglabo/ci-platform@v0.7.1-pre'
+        - 'aglabo/ci-platform@v0.8.0-pre'
 dependencies:
     'actions/cache@v6.1.0':
         ref: 'v6.1.0'
         commit: 'sha1-55cc8345863c7cc4c66a329aec7e433d2d1c52a9'
         owner_id: 44036562
         repo_id: 215566462
+    'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1':
+        ref: 'v7.0.1'
+        commit: 'sha1-3d3c42e5aac5ba805825da76410c181273ba90b1'
+        owner_id: 44036562
+        repo_id: 197814629
     'actions/checkout@v7.0.1':
         ref: 'v7.0.1'
         commit: 'sha1-3d3c42e5aac5ba805825da76410c181273ba90b1'
@@ -55,6 +61,11 @@ dependencies:
         commit: 'sha1-368f82528645a54fb793d4d04e342629a3f51346'
         owner_id: 44036562
         repo_id: 438112499
+    'actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1':
+        ref: 'v7.1.0'
+        commit: 'sha1-949feb2413d6458794dcd2491c4babbbce0c15c1'
+        owner_id: 44036562
+        repo_id: 189476904
     'actions/setup-node@v7.1.0':
         ref: 'v7.1.0'
         commit: 'sha1-949feb2413d6458794dcd2491c4babbbce0c15c1'
@@ -77,16 +88,15 @@ dependencies:
         repo_id: 496012378
         uses:
             - 'actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f'
-    'aglabo/ci-platform@v0.7.1-pre':
-        ref: 'v0.7.1-pre'
-        commit: 'sha1-f9a18573f8d3d783eeb5304230113fabfbd2a37a'
+    'aglabo/ci-platform@v0.8.0-pre':
+        ref: 'v0.8.0-pre'
+        commit: 'sha1-ff195b0c113ac9e0cf7041d204183de3de8572d8'
         owner_id: 211574028
         repo_id: 1154660752
         uses:
-            - 'actions/checkout@v7.0.1'
-            - 'actions/setup-node@v7.1.0'
+            - 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1'
+            - 'actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1'
             - 'pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115'
-            - 'pnpm/action-setup@v6.1.1'
     'pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115':
         ref: 'v6.1.1'
         commit: 'sha1-73e46992e05b19abd31f2f3c20e0e7370d762115'

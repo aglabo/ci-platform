@@ -2,7 +2,7 @@
 title: "Requirements: _ca-resolve-sha"
 module: "composite-action/resolve-sha"
 status: Draft
-version: 2.1.1
+version: 2.1.2
 created: "2026-10-25"
 ---
 
@@ -65,14 +65,16 @@ pull_request では、base を含む履歴の取得 (`fetch-depth: 0` 等) を�
 - Target Environment: GitHub Actions (Composite Action)。checkout の `fetch-depth` 前提は REQ-C-003 に従う。
 - Related Components:
   - `.github/actions/ca-get-changed-files/action.yml` (resolve-sha ステップ)
-  - `.github/actions/ca-get-changed-files/scripts/_libs/filter.lib.sh`
+  - 切り出し元 (#134 で削除済み): `.github/actions/ca-get-changed-files/scripts/_libs/filter.lib.sh`
     - 関数: `resolve_sha_for_event` / `resolve_before_sha`
-  - `.github/actions/_libs/` (`output.lib.sh`, `validation.lib.sh`, `env.lib.sh`)
+  - `.github/actions/_libs/`
+    - `output.lib.sh`, `validation.lib.sh`, `env.lib.sh`
+    - `error.lib.sh`, `constants.lib.sh`, `version.lib.sh`, `path.lib.sh`
   - `.github/actions/ca-setup-repo`, `ca-setup-tool`, `ca-validate-environment` (`_libs/` の既存利用元)
 - Assumptions:
-  - 現行ロジックは、空または全ゼロの SHA を空ツリー SHA `4b825dc642cb6eb9a060e54bf8d69288fbee4904` に置換している。
-  - 現行実装では push と pull_request のみ対応し、その他イベントは `Unsupported event` エラーとなる。
-  - 現行実装は入力 `before-sha` / `after-sha` による明示オーバーライドを持つ。
+  - 切り出し元のロジックは、空または全ゼロの SHA を空ツリー SHA `4b825dc642cb6eb9a060e54bf8d69288fbee4904` に置換している。
+  - 切り出し元では push と pull_request のみ対応し、その他イベントは `Unsupported event` エラーとなる。
+  - 切り出し元は入力 `before-sha` / `after-sha` による明示オーバーライドを持つ。
   - ステークホルダーは、内部の呼び出し元 Action (`ca-get-changed-files`、将来の内部 Action) とリポジトリメンテナーである。
   - 対象リポジトリのオブジェクト形式は SHA-1 とする (DR-19)。
   - `GITHUB_EVENT_NAME` は、GitHub Actions ランナーが常に設定する既定の環境変数である。
@@ -651,7 +653,7 @@ Action 名は `_` プレフィックス (`_ca-resolve-sha`) とし、内部専�
 
 - `set -euo pipefail` を宣言する。
 - ライブラリのロードガードを持つ。
-- `BASH_SOURCE` ガード下で main を実行する。
+- `(return 0)` ガード (`if ! (return 0 2> /dev/null)`) 下で main を実行する。
 - エラーは `::error::` を stderr に出力して非ゼロで終了する。
 - 共有ライブラリ `.github/actions/_libs/` (`output.lib.sh`, `validation.lib.sh`, `env.lib.sh`) を利用する。
 - 汎用の key=value 出力と正整数検証は、`_libs/` に追加した関数を使う (スクリプト内では実装しない)。
@@ -1028,3 +1030,4 @@ Scenario: 複数の不正が同時にある場合はエラー終了する
 | 2026-10-25 | 2.0.0   | Apply DR-23: withdraw REQ-F-017, AC-015, AC-017; add REQ-F-019, AC-018; simplify REQ-F-004/005/006/013, REQ-NF-002, REQ-C-003                                             |
 | 2026-10-25 | 2.1.0   | Apply DR-24/25: reject empty tree override; add REQ-F-020, AC-019..022; revise REQ-F-002/003/011/013/019, REQ-C-003/006, AC-004/008/009/018; clarify empty-tree condition |
 | 2026-10-26 | 2.1.1   | Clarify REQ-F-019 partial clone detection by value (promisor true, partialclonefilter, local extensions.partialClone)                                                     |
+| 2026-11-19 | 2.1.2   | Align the main guard with the code ((return 0)), mark filter.lib.sh as removed in #134, refresh _libs list                                                                |

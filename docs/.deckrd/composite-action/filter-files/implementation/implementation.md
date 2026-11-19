@@ -2,7 +2,7 @@
 title: "Implementation Plan: _ca-filter-files"
 based-on: specifications-index.md v1.6.1
 status: approved
-version: 1.7.2
+version: 1.7.3
 created: "2026-10-27"
 ---
 
@@ -18,13 +18,13 @@ created: "2026-10-27"
 評価順序は specifications-index.md §3.4 に従う。
 入力の検査・正規化 → パターン行の検査 → 照合 → 出力先の検証 → files、count の書き出しの順とし、入力の検証をすべて終えてから出力先を検証する (DD-IDX-02)。
 
-本計画の範囲は、Composite Action の作成と CI ジョブの追加までとする。`ca-get-changed-files` への組み込みは #134 の別タスクとする。
+本計画の範囲は、Composite Action の作成と CI ジョブの追加までとする。`ca-get-changed-files` への組み込みは #134 で完了済みである (get-changed-files DR-09)。
 
 - 既存のワークフローとアクションは、`_tests_ca_composite-actions.yml` (REQ-C-008) を除いて変更しない。
 - 共有ライブラリ `.github/actions/_libs/` への変更は、REQ-C-007 の追加に限る。
   対象は `validate_output_file`、`write_multiline_output` とする。
 - 旧 `write_multiline_output` の置き換えはスコープ外とする (DR-06、DR-07)。
-  旧関数は `ca-get-changed-files/scripts/_libs/filter.lib.sh` にある。
+  旧関数は `ca-get-changed-files/scripts/_libs/filter.lib.sh` にあったが、#134 で削除済みである。
 - 完了条件は、次のすべてを満たすこととする。
   - actionlint / ghalint を通過する
   - ShellSpec の全テストに `not ok` が無い
@@ -264,11 +264,10 @@ Phase 1 の開始前、全テストを 1 回実行して結果をベースライ
 - `_libs/__tests__/unit/write-multiline-output.unit.spec.sh` (T-FF-WMO-*)
 - 既存の `_libs` と利用元のテストを全件実行し、ベースラインで PASS していたテストがすべて PASS することを確認する
 - PR-A のマージ前に、テスト ID の機械検査 A / C を実行する (impl explore review A-05)
-- 旧 `write_multiline_output` は、新 WMO (引数 2 つ以上の可変長) と同じ名前を持つ。
-  旧関数は `ca-get-changed-files/scripts/_libs/filter.lib.sh` にあり、引数は 2 つである。
-  現在、両方を読み込むスクリプトは無い。
-  #134 で `ca-get-changed-files` に組み込むときは、`output.lib.sh` を読み込む前に旧関数を新 WMO に置き換える。
-  読み込み順で一方が他方を上書きしないことをテストする (DR-06、DR-07、impl second opinion)
+- 旧 `write_multiline_output` は、新 WMO (引数 2 つ以上の可変長) と同じ名前を持っていた。
+  旧関数は `ca-get-changed-files/scripts/_libs/filter.lib.sh` にあり、引数は 2 つだった。
+  #134 で `ca-get-changed-files` は共有ライブラリの WMO (`_libs/output.lib.sh`) に切り替わり、`filter.lib.sh` は削除された。
+  同名関数が並存する状態は解消済みであり、読み込み順のテストは不要である (DR-06、DR-07)
 
 ### Phase 2: Module Library Foundation (PR-B)
 
@@ -425,3 +424,4 @@ Phase 1 の開始前、全テストを 1 回実行して結果をベースライ
 | 2026-10-31 | 1.7.0   | Follow specifications-index v1.6.0: set the load guard first, return 1 on a failed shared library load, drop the declare -F check                                                                                                                                                                                                                                                                          |
 | 2026-10-31 | 1.7.1   | Follow specifications-index v1.6.1 (CBL lives in the shared _libs/validation.lib.sh)                                                                                                                                                                                                                                                                                                                       |
 | 2026-10-31 | 1.7.2   | Assign the shared constants of _libs/constants.lib.sh to FF_MAX_FILES and the byte limits                                                                                                                                                                                                                                                                                                                  |
+| 2026-11-19 | 1.7.3   | Follow #134: ca-get-changed-files now uses the shared write_multiline_output and filter.lib.sh is removed                                                                                                                                                                                                                                                                                                  |

@@ -2,7 +2,7 @@
 title: "Requirements: setup-tool composite action"
 module: "composite-action/setup-tool"
 status: Draft
-version: 1.0
+version: 1.1.0
 created: "2026-06-07"
 ---
 
@@ -26,8 +26,9 @@ GitHub Actions の composite action として、以下を実行する。
 
 ### 1.2 Scope
 
-- 呼び出し元ワークフローから `repo`（`owner/repo` 形式）・`tool-name`・`tool-version` を受け取り、
-  GitHub Releases から tar.gz アーカイブをダウンロードする
+- 呼び出し元ワークフローから `repo`（`owner/repo` 形式）・`tool-version` を受け取り、
+  GitHub Releases API でアセット一覧を取得して tar.gz アーカイブをダウンロードする
+  （ツール名は `repo` の `/` 以降から導出する。`tool-name` 入力は持たない）
 - `runner.arch` から CPU アーキテクチャを自動検出する
 - sha256 チェックサム検証を必須で実施する
 - tar.gz を展開し、バイナリを `RUNNER_TEMP/bin` に配置して `PATH` に追加する
@@ -44,25 +45,27 @@ GitHub Actions の composite action として、以下を実行する。
 
 - Target Environment: GitHub Actions ubuntu runner（Linux x86_64/ARM64）
 - Related Components:
-  - `.github/actions/setup-tool/scripts/setup-directories.sh`
-  - `.github/actions/setup-tool/scripts/download-tool.sh`
-  - `.github/actions/setup-tool/scripts/verify-checksum.sh`
-  - `.github/actions/setup-tool/scripts/extract-install.sh`
-  - `.github/actions/setup-tool/scripts/cleanup.sh`
-  - `.github/actions/setup-tool/scripts/_libs/common.lib.sh`
-  - `.github/actions/setup-tool/scripts/_libs/validation.lib.sh`
+  - `.github/actions/ca-setup-tool/action.yml`
+  - `.github/actions/ca-setup-tool/scripts/setup-tool.sh`
+  - `.github/actions/ca-setup-tool/scripts/_libs/dirs.lib.sh`
+  - `.github/actions/ca-setup-tool/scripts/_libs/arch.lib.sh`
+  - `.github/actions/ca-setup-tool/scripts/_libs/download.lib.sh`
+  - `.github/actions/ca-setup-tool/scripts/_libs/install.lib.sh`
+  - `.github/actions/_libs/version.lib.sh`（共有）
+  - `.github/actions/_libs/validation.lib.sh`（共有）
 - Assumptions:
-  - GitHub Releases の URL パターンは `{owner}/{repo}/releases/download/v{version}/{tool-name}_{version}_linux_{arch}.tar.gz`
-  - checksums.txt が同じリリースに存在する
-  - runner は curl および sha256sum を利用可能
+  - GitHub Releases API（`https://api.github.com/repos/{owner}/{repo}/releases/tags/v{version}`）が
+    アセット名と `browser_download_url` を返す。アセット名は `*_linux_{arch}.tar.gz` の形式である
+  - `checksums.txt` または `*_checksums.txt` が同じリリースに存在する
+  - runner は curl・jq・sha256sum を利用可能（`ca-validate-environment` で保証する）
 
 ### System Context Diagram
 
 ```text
 [Workflow Caller] --> +----------------------------+ --> [GitHub Releases API]
   (repo,             |   setup-tool               |     (tar.gz + checksums.txt)
-   tool-name,        |   composite action         |
-   tool-version)     +----------------------------+ --> [Tool Binary]
+   tool-version)     |   composite action         |
+                     +----------------------------+ --> [Tool Binary]
                              |                              (RUNNER_TEMP/bin,
                       [runner.arch]                          added to PATH)
                       (auto-detected)
@@ -86,7 +89,7 @@ GitHub Actions の composite action として、以下を実行する。
 
 ```text
 GIVEN composite action が呼び出された
-  WHEN repo・tool-name・tool-version が渡された
+  WHEN repo・tool-version が渡された
 THEN the system SHALL 各パラメータが非空かつ有効な形式であることを検証し、
      不正な場合はエラーメッセージを出力してステップを失敗させる。
 ```
@@ -95,10 +98,10 @@ THEN the system SHALL 各パラメータが非空かつ有効な形式である�
 
 **Acceptance Criteria**:
 
-| AC ID  | Scenario                                        |
-| ------ | ----------------------------------------------- |
-| AC-001 | 有効なパラメータ → 検証通過                     |
-| AC-002 | tool-name が空文字 → エラー出力してステップ失敗 |
+| AC ID  | Scenario                                             |
+| ------ | ---------------------------------------------------- |
+| AC-001 | 有効なパラメータ → 検証通過                          |
+| AC-002 | repo が `owner/repo` 形式でない → エラー出力して失敗 |
 
 ### REQ-F-002: アーキテクチャ自動検出
 
@@ -127,8 +130,8 @@ THEN the system SHALL runner.arch の値から CPU アーキテクチャ文字�
 ```text
 GIVEN 入力パラメータが検証済みでアーキテクチャが決定されている
   WHEN ダウンロードステップが実行される
-THEN the system SHALL GitHub Releases から tar.gz アーカイブと checksums.txt を
-     一時ディレクトリにダウンロードする。
+THEN the system SHALL GitHub Releases API からアセット一覧を取得し、arch 候補に一致する
+     tar.gz アーカイブと checksums.txt を一時ディレクトリにダウンロードする。
 ```
 
 **Rationale**: 安定した再現可能なツール取得を実現する。
@@ -138,7 +141,7 @@ THEN the system SHALL GitHub Releases から tar.gz アーカイブと checksums
 | AC ID  | Scenario                                                            |
 | ------ | ------------------------------------------------------------------- |
 | AC-005 | 有効なリポジトリ・バージョン → ファイルが一時ディレクトリに存在する |
-| AC-006 | 存在しないバージョン → curl がエラーで失敗する                      |
+| AC-006 | 存在しないバージョン → リリース取得（HTTP 200 以外）で失敗する      |
 
 ### REQ-F-004: チェックサム検証
 
@@ -185,9 +188,9 @@ THEN the system SHALL tar.gz を展開し、ツールバイナリを RUNNER_TEMP
 - EARS Type: state-driven
 
 ```text
-GIVEN composite action のすべてのステップが完了した（成功・失敗問わず）
-  WHILE if: always() 条件が成立している
-THEN the system SHALL 一時ディレクトリ（TEMP_DIR）を削除する。
+GIVEN 一時ディレクトリ（TEMP_DIR）が作成されている
+  WHILE setup-tool.sh が終了する（成功・失敗問わず）
+THEN the system SHALL EXIT trap により一時ディレクトリを削除する。
 ```
 
 **Rationale**: ランナーのディスク容量を消費しないようにする。
@@ -213,7 +216,8 @@ THEN the system SHALL 一時ディレクトリ（TEMP_DIR）を削除する。
 ### REQ-NF-003: Maintainability
 
 各処理（ディレクトリ準備・ダウンロード・検証・展開・クリーンアップ）は
-独立したスクリプトに分離する。
+関数ライブラリ（`scripts/_libs/*.lib.sh`）に分離し、単一のオーケストレーター
+（`setup-tool.sh`）が呼び出す。
 
 ### REQ-NF-004: Testability
 
@@ -234,15 +238,16 @@ tar.gz 形式のみ対応する。zip など他の形式は対象外。
 
 チェックサム検証をスキップするオプションは提供しない。
 
-### REQ-C-004: GitHub Releases URL パターン
+### REQ-C-004: GitHub Releases アセット解決
 
-ダウンロード URL は以下のパターンに従う:
-`https://github.com/{owner}/{repo}/releases/download/v{version}/{tool-name}_{version}_linux_{arch}.tar.gz`
+ダウンロード元は GitHub Releases API
+`https://api.github.com/repos/{owner}/{repo}/releases/tags/v{version}` が返すアセットとする。
+tar.gz は名前が `*_linux_{arch}.tar.gz` に一致するアセット、
+チェックサムは `checksums.txt`（なければ `*_checksums.txt`）とする。
 
 ### REQ-C-005: 関数ライブラリ式の新規実装
 
-既存の個別スクリプト（`setup-directories.sh`, `download-tool.sh`, `verify-checksum.sh`,
-`extract-install.sh`, `cleanup.sh`）を参考実装として扱い、新規実装を作成する。
+旧来の個別スクリプト（`setup-directories.sh` 等）は廃止済みであり、関数ライブラリ式で実装する。
 各処理（ディレクトリ準備・URL 構築・ダウンロード・検証・展開・配置・クリーンアップ）は
 ファイル分割の有無に関わらず、関数として定義し関数呼び出しで構造化する。
 コードは読みやすさを優先し、処理の意図が関数名と呼び出し順から明確に読み取れる構成とする。
@@ -261,7 +266,7 @@ tar.gz 形式のみ対応する。zip など他の形式は対象外。
 # AC-001: 有効なパラメータで検証が通過する
 # Requirement: REQ-F-001
 Scenario: 有効なパラメータで検証が通過する
-  Given composite action が repo="rhysd/actionlint" tool-name="actionlint" tool-version="1.7.7" で呼び出された
+  Given composite action が repo="rhysd/actionlint" tool-version="1.7.7" で呼び出された
   When 入力検証ステップが実行される
   Then ステップが成功する
 
@@ -289,8 +294,8 @@ Scenario: ハッシュ不一致でステップが失敗する
 # AC-012: 中間ステップ失敗後でもクリーンアップが実行される
 # Requirement: REQ-F-006
 Scenario: 中間ステップ失敗後でもクリーンアップが実行される
-  Given ダウンロードステップが失敗した
-  When クリーンアップステップが if: always() で実行される
+  Given ダウンロードが失敗して setup-tool.sh が異常終了する
+  When EXIT trap の cleanup が実行される
   Then 一時ディレクトリが削除されている
 ```
 
@@ -324,6 +329,7 @@ Scenario: 中間ステップ失敗後でもクリーンアップが実行され�
 
 ## 11. Change History
 
-| Date       | Version | Description     |
-| ---------- | ------- | --------------- |
-| 2026-06-07 | 1.0.0   | Initial release |
+| Date       | Version | Description                                                                                                                                                                        |
+| ---------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-06-07 | 1.0.0   | Initial release                                                                                                                                                                    |
+| 2026-11-19 | 1.1.0   | Align with ca-setup-tool: remove tool-name input (derived from repo), switch to Releases API asset resolution, replace if: always() cleanup with EXIT trap, update component paths |
