@@ -2,7 +2,7 @@
 title: "Requirements: Betterleaks Reusable Workflow"
 module: "reusable-workflows/betterleaks"
 status: Draft
-version: 2.0.0
+version: 2.0.1
 created: "2026-06-12"
 ---
 
@@ -60,9 +60,9 @@ Callers invoke the workflow through `workflow_call`. The `scan-betterleaks` job 
 - Target Environment: GitHub Actions (ubuntu-slim runner)
 - Related Components:
   - `reusable-workflows/betterleaks`
-  - `ca-validate-environment` composite action (`aglabo/ci-platform/.github/actions/ca-validate-environment@v0.8.0-pre`)
-  - `ca-setup-tool` composite action (`aglabo/ci-platform/.github/actions/ca-setup-tool@v0.8.0-pre`)
-  - `_ca-resolve-config` composite action (`aglabo/ci-platform/.github/actions/_ca-resolve-config@v0.8.0-pre`)
+  - `ca-validate-environment` composite action (`aglabo/ci-platform/.github/actions/ca-validate-environment@v0.8.1`)
+  - `ca-setup-tool` composite action (`aglabo/ci-platform/.github/actions/ca-setup-tool@v0.8.1`)
+  - `_ca-resolve-config` composite action (`aglabo/ci-platform/.github/actions/_ca-resolve-config@v0.8.1`)
   - `aglabo/global-configs` repository
   - `configs/betterleaks.toml` (repository-local configuration)
   - `global/configs/betterleaks.toml` (global fallback configuration)
@@ -391,9 +391,9 @@ The default betterleaks version SHALL be `1.10.0`. This version meets the centra
 The workflow MUST NOT use the external `aglabo/.github` reusable workflow `r1.1.2`.
 It MUST use these composite actions of this repository instead:
 
-- `aglabo/ci-platform/.github/actions/ca-validate-environment@v0.8.0-pre` (environment validation)
-- `aglabo/ci-platform/.github/actions/ca-setup-tool@v0.8.0-pre` (tool installation)
-- `aglabo/ci-platform/.github/actions/_ca-resolve-config@v0.8.0-pre` (configuration resolution)
+- `aglabo/ci-platform/.github/actions/ca-validate-environment@v0.8.1` (environment validation)
+- `aglabo/ci-platform/.github/actions/ca-setup-tool@v0.8.1` (tool installation)
+- `aglabo/ci-platform/.github/actions/_ca-resolve-config@v0.8.1` (configuration resolution)
 
 ### REQ-C-006: Configuration Source
 
@@ -498,6 +498,7 @@ Scenario: Missing Explicit Configuration Fails
 
 | Date       | Version | Description                                                                                                                                                                                                             |
 | ---------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-11-20 | 2.0.1   | Update composite action references from @v0.8.0-pre to @v0.8.1                                                                                                                                                          |
 | 2026-11-19 | 2.0.0   | Align with ru-scan-secrets.yml: resolve config via _ca-resolve-config (local-first; reverses the ban on configs/betterleaks.toml, DR-08), add config input and AC-006..008, default version 1.10.0, actions @v0.8.0-pre |
 | 2026-11-03 | 1.6.1   | Update ca-* composite action references from @v0.5.0 to @v0.6.0                                                                                                                                                         |
 | 2026-11-03 | 1.6.0   | Change config-repo default to aglabo/global-configs (checkout path global/configs); align version input, runner, trigger, and actions with ru-scan-betterleaks.yml                                                      |

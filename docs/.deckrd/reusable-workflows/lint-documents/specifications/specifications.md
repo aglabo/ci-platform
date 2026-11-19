@@ -1,6 +1,6 @@
 ---
 title: "Design Specification: Lint Documents Reusable Workflow"
-version: 1.0.0
+version: 1.0.1
 based-on: requirements.md v1.0.0
 status: Draft
 ---
@@ -205,7 +205,7 @@ Each step after `target-checkout` is gated on the previous step id (`steps.<id>.
 | REQ-NF-003 | R-003               | `persist-credentials: false` on every checkout. |
 | REQ-NF-004 | R-002, R-012        | Named steps identify the failed unit.           |
 | REQ-C-001  | R-003               | Runner and timeout constraints.                 |
-| REQ-C-002  | R-002, R-007, R-009 | Repository composite actions at `@v0.8.0-pre`.  |
+| REQ-C-002  | R-002, R-007, R-009 | Repository composite actions at `@v0.8.1`.      |
 | REQ-C-003  | R-010               | Fixed global configuration repository.          |
 | REQ-C-004  | R-004               | Job outputs only.                               |
 
@@ -217,6 +217,7 @@ Each step after `target-checkout` is gated on the previous step id (`steps.<id>.
 
 ## 8. Change History
 
-| Date       | Version | Change                |
-| ---------- | ------- | --------------------- |
-| 2026-11-19 | 1.0.0   | Initial specification |
+| Date       | Version | Change                                                         |
+| ---------- | ------- | -------------------------------------------------------------- |
+| 2026-11-20 | 1.0.1   | Update composite action references from @v0.8.0-pre to @v0.8.1 |
+| 2026-11-19 | 1.0.0   | Initial specification                                          |

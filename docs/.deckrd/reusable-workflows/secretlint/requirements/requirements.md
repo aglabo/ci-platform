@@ -2,7 +2,7 @@
 title: "Requirements: Secretlint Scan Job (Reusable Workflow)"
 module: "reusable-workflows/secretlint"
 status: Draft
-version: 1.0.0
+version: 1.0.1
 created: "2026-11-19"
 ---
 
@@ -45,7 +45,7 @@ The same workflow file also holds the `scan-betterleaks` job (module `reusable-w
 
 - Target Environment: GitHub Actions (`ubuntu-slim`)
 - Related Components:
-  - `ca-run-secretlint` composite action (`aglabo/ci-platform/.github/actions/ca-run-secretlint@v0.8.0-pre`)
+  - `ca-run-secretlint` composite action (`aglabo/ci-platform/.github/actions/ca-run-secretlint@v0.8.1`)
   - `.github/workflows/ru-scan-secrets.yml` (shared with `scan-betterleaks`)
   - Caller: `.github/workflows/ci-scan-secrets.yml` (job `scan-secrets`, no `with:` block)
 - Assumptions:
@@ -160,7 +160,7 @@ The job MUST run on `ubuntu-slim` with a 10-minute timeout.
 
 ### REQ-C-002: Repository Action
 
-The scan MUST use `aglabo/ci-platform/.github/actions/ca-run-secretlint@v0.8.0-pre`.
+The scan MUST use `aglabo/ci-platform/.github/actions/ca-run-secretlint@v0.8.1`.
 
 ### REQ-C-003: Version Format
 
@@ -238,6 +238,7 @@ Scenario: Jobs Are Independent
 
 ## 11. Change History
 
-| Date       | Version | Description     |
-| ---------- | ------- | --------------- |
-| 2026-11-19 | 1.0.0   | Initial release |
+| Date       | Version | Description                                                    |
+| ---------- | ------- | -------------------------------------------------------------- |
+| 2026-11-20 | 1.0.1   | Update composite action references from @v0.8.0-pre to @v0.8.1 |
+| 2026-11-19 | 1.0.0   | Initial release                                                |

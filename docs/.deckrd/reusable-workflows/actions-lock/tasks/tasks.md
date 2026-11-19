@@ -21,12 +21,12 @@ source: specifications.md v1.0.0, implementation.md v1.0.0
 
 ## Task Summary
 
-| Test Target               | Scenario Groups            | Case Count |
-| ------------------------- | -------------------------- | ---------: |
-| T-01: Workflow structure  | Normal / Error / Edge case |          6 |
-| T-02: Step chain          | Normal / Error / Edge case |          8 |
-| T-03: Static validation   | Normal                     |          3 |
-| **Total**                 | 7 scenario groups          |     **17** |
+| Test Target              | Scenario Groups            | Case Count |
+| ------------------------ | -------------------------- | ---------- |
+| T-01: Workflow structure | Normal / Error / Edge case | 6          |
+| T-02: Step chain         | Normal / Error / Edge case | 8          |
+| T-03: Static validation  | Normal                     | 3          |
+| **Total**                | 7 scenario groups          | **17**     |
 
 ---
 
@@ -97,7 +97,7 @@ source: specifications.md v1.0.0, implementation.md v1.0.0
 - [ ] **T-02-01-02**: Verify `env-validation` uses the repository action with `actions-type: read`
   - Target: `steps.env-validation`
   - Scenario: Given the checkout completed
-  - Expected: Then `uses` is `aglabo/ci-platform/.github/actions/ca-validate-environment@v0.8.0-pre`, `with.actions-type: read`, `if: steps.target-checkout.outcome == 'success'`
+  - Expected: Then `uses` is `aglabo/ci-platform/.github/actions/ca-validate-environment@v0.8.1`, `with.actions-type: read`, `if: steps.target-checkout.outcome == 'success'`
   - `yq`: `(.jobs."qa-actions-lock".steps[] | select(.id=="env-validation")).with."actions-type" == "read"`
 
 - [ ] **T-02-01-03**: Verify `tool-install` pins the extension
@@ -163,8 +163,8 @@ source: specifications.md v1.0.0, implementation.md v1.0.0
   - Expected: Then the id list has no duplicates
   - `yq`: `[.jobs[].steps[].id] | (unique | length) == length`
 
-- [ ] **T-03-01-03**: Verify the repository action is pinned to `@v0.8.0-pre`
+- [ ] **T-03-01-03**: Verify the repository action is pinned to `@v0.8.1`
   - Target: `jobs.*.steps[*].uses`
   - Scenario: Given the workflow uses a repository composite action
-  - Expected: Then every `aglabo/ci-platform/` reference ends with `@v0.8.0-pre`
+  - Expected: Then every `aglabo/ci-platform/` reference ends with `@v0.8.1`
   - `yq`: `[.jobs[].steps[].uses | select(. != null and test("^aglabo/ci-platform/"))] | all(test("@v0\\.8\\.0-pre$"))`

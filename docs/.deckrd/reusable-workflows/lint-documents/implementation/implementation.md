@@ -1,6 +1,6 @@
 ---
 title: "Implementation Plan: Lint Documents Reusable Workflow"
-version: 1.0.0
+version: 1.0.1
 based-on: specifications.md v1.0.0
 status: Draft
 ---
@@ -39,15 +39,15 @@ Units: `workflow-skeleton`, `get-changed-files` job, `qa-textlint` job, `qa-mark
 - Job `get-changed-files` (`ubuntu-slim`, timeout 10, `permissions.contents: read`):
   - Job outputs: `files: ${{ steps.changed-files.outputs.files }}`, `count: ${{ steps.changed-files.outputs.count }}`.
   - `target-checkout` (`actions/checkout`, `fetch-depth: 0`, `persist-credentials: false`).
-  - `env-validation`: `ca-validate-environment@v0.8.0-pre`, `actions-type: read`, `if: steps.target-checkout.outcome == 'success'`.
-  - `changed-files`: `ca-get-changed-files@v0.8.0-pre` with `commit-count` and `pattern`, `if: steps.env-validation.outcome == 'success'`.
+  - `env-validation`: `ca-validate-environment@v0.8.1`, `actions-type: read`, `if: steps.target-checkout.outcome == 'success'`.
+  - `changed-files`: `ca-get-changed-files@v0.8.1` with `commit-count` and `pattern`, `if: steps.env-validation.outcome == 'success'`.
 
 - Jobs `qa-textlint` and `qa-markdownlint` (`ubuntu-latest`, timeout 15, `needs: get-changed-files`, `if: needs.get-changed-files.outputs.count != '0'`, `permissions.contents: read`). Shared steps, each gated on the previous step id:
   - `target-checkout` (`persist-credentials: false`).
-  - `env-validation` (`ca-validate-environment@v0.8.0-pre`, `actions-type: read`).
-  - `tool-install` (`ca-setup-repo@v0.8.0-pre`: `repo: aglabo/agla-doc-tools`, `path: ./.tools/agla-doc-tools`, `ref: ${{ inputs.doc-tools-version }}`, `pnpm-version: ${{ inputs.pnpm-version }}`).
+  - `env-validation` (`ca-validate-environment@v0.8.1`, `actions-type: read`).
+  - `tool-install` (`ca-setup-repo@v0.8.1`: `repo: aglabo/agla-doc-tools`, `path: ./.tools/agla-doc-tools`, `ref: ${{ inputs.doc-tools-version }}`, `pnpm-version: ${{ inputs.pnpm-version }}`).
   - `config-checkout` (`actions/checkout`: `repository: aglabo/global-configs`, `path: global/configs`, `fetch-depth: 1`, `persist-credentials: false`).
-  - `resolve-config` (`_ca-resolve-config@v0.8.0-pre`).
+  - `resolve-config` (`_ca-resolve-config@v0.8.1`).
   - `prepare-report` (`mkdir -p .github/report`).
   - `lint-execute` (env `CONFIG_FILE`, `CHANGED_FILES`; reads targets with `mapfile -t targets <<< "${CHANGED_FILES}"`; pipes through `tee`; `exit "${PIPESTATUS[0]}"`).
   - `report-upload` (`actions/upload-artifact`, `if: failure() && steps.lint-execute.outcome == 'failure'`, `retention-days: 30`).
@@ -69,6 +69,7 @@ Units: `workflow-skeleton`, `get-changed-files` job, `qa-textlint` job, `qa-mark
 
 ## 3. Change History
 
-| Date       | Version | Description                 |
-| ---------- | ------- | --------------------------- |
-| 2026-11-19 | 1.0.0   | Initial implementation plan |
+| Date       | Version | Description                                                    |
+| ---------- | ------- | -------------------------------------------------------------- |
+| 2026-11-20 | 1.0.1   | Update composite action references from @v0.8.0-pre to @v0.8.1 |
+| 2026-11-19 | 1.0.0   | Initial implementation plan                                    |

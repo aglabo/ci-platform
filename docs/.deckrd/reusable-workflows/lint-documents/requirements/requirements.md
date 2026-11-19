@@ -2,7 +2,7 @@
 title: "Requirements: Lint Documents Reusable Workflow"
 module: "reusable-workflows/lint-documents"
 status: Draft
-version: 1.0.0
+version: 1.0.1
 created: "2026-11-19"
 ---
 
@@ -49,7 +49,7 @@ The workflow has three jobs. `get-changed-files` lists the changed files that ma
 
 - Target Environment: GitHub Actions (`ubuntu-slim` for file listing, `ubuntu-latest` for linting)
 - Related Components:
-  - `ca-validate-environment`, `ca-get-changed-files`, `ca-setup-repo`, `_ca-resolve-config` composite actions (all `aglabo/ci-platform/.github/actions/...@v0.8.0-pre`)
+  - `ca-validate-environment`, `ca-get-changed-files`, `ca-setup-repo`, `_ca-resolve-config` composite actions (all `aglabo/ci-platform/.github/actions/...@v0.8.1`)
   - `aglabo/agla-doc-tools` repository (provides `textlint` and `markdownlint`)
   - `aglabo/global-configs` repository (global fallback configuration)
   - Caller: `.github/workflows/ci-docs-qa.yml` (passes `commit-count` and `pnpm-version`)
@@ -276,7 +276,7 @@ Step names and ids MUST identify the failed unit from the Actions log alone.
 
 ### REQ-C-002: Repository Actions
 
-The workflow MUST use this repository's composite actions at `@v0.8.0-pre` for validation, file listing, tool setup, and configuration resolution.
+The workflow MUST use this repository's composite actions at `@v0.8.1` for validation, file listing, tool setup, and configuration resolution.
 
 ### REQ-C-003: Configuration Repository
 
@@ -378,6 +378,7 @@ Scenario: Textlint Ignore File Fallback
 
 ## 11. Change History
 
-| Date       | Version | Description     |
-| ---------- | ------- | --------------- |
-| 2026-11-19 | 1.0.0   | Initial release |
+| Date       | Version | Description                                                    |
+| ---------- | ------- | -------------------------------------------------------------- |
+| 2026-11-20 | 1.0.1   | Update composite action references from @v0.8.0-pre to @v0.8.1 |
+| 2026-11-19 | 1.0.0   | Initial release                                                |

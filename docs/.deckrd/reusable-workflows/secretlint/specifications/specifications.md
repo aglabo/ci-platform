@@ -1,6 +1,6 @@
 ---
 title: "Design Specification: Secretlint Scan Job (Reusable Workflow)"
-version: 1.0.0
+version: 1.0.1
 based-on: requirements.md v1.0.0
 status: Draft
 ---
@@ -112,7 +112,7 @@ target-checkout -> secretlint-scan
 
 <!-- impl-note: runs-on ubuntu-slim, timeout-minutes 10, job permissions contents: read. -->
 <!-- impl-note: target-checkout: actions/checkout with fetch-depth ${{ inputs.fetch-depth }}, persist-credentials false. -->
-<!-- impl-note: secretlint-scan: aglabo/ci-platform/.github/actions/ca-run-secretlint@v0.8.0-pre with pnpm-version ${{ inputs.pnpm-version }} and secretlint-version ${{ inputs.secretlint-version }}. -->
+<!-- impl-note: secretlint-scan: aglabo/ci-platform/.github/actions/ca-run-secretlint@v0.8.1 with pnpm-version ${{ inputs.pnpm-version }} and secretlint-version ${{ inputs.secretlint-version }}. -->
 
 ## 4. Decision Rules
 
@@ -150,7 +150,7 @@ target-checkout -> secretlint-scan
 | REQ-NF-002 | R-002        | Credentials not persisted.             |
 | REQ-NF-003 | R-003        | Named steps.                           |
 | REQ-C-001  | R-002        | Runner and timeout.                    |
-| REQ-C-002  | R-003        | Repository action at `@v0.8.0-pre`.    |
+| REQ-C-002  | R-003        | Repository action at `@v0.8.1`.        |
 | REQ-C-003  | R-004        | Version format enforced by the action. |
 
 ## 7. Open Questions
@@ -162,6 +162,7 @@ target-checkout -> secretlint-scan
 
 ## 8. Change History
 
-| Date       | Version | Change                |
-| ---------- | ------- | --------------------- |
-| 2026-11-19 | 1.0.0   | Initial specification |
+| Date       | Version | Change                                                         |
+| ---------- | ------- | -------------------------------------------------------------- |
+| 2026-11-20 | 1.0.1   | Update composite action references from @v0.8.0-pre to @v0.8.1 |
+| 2026-11-19 | 1.0.0   | Initial specification                                          |

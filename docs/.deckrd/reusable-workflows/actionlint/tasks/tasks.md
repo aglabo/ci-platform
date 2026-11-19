@@ -133,16 +133,16 @@ source: specifications.md v1.4.0
   - Expected: `steps[0].id == 'target-checkout'`
   - `yq: yq '.jobs.qa-actionlint.steps[0].id' .github/workflows/ru-qa-actionlint.yml`
 
-- [x] **T-02-01-02**: `env-validation` が `aglabo/ci-platform/.github/actions/ca-validate-environment@v0.8.0-pre` を使用し、`if: steps.target-checkout.outcome == 'success'` でゲートされること
+- [x] **T-02-01-02**: `env-validation` が `aglabo/ci-platform/.github/actions/ca-validate-environment@v0.8.1` を使用し、`if: steps.target-checkout.outcome == 'success'` でゲートされること
   - Target: `ru-qa-actionlint.yml` step `env-validation`
   - Scenario: Given `ru-qa-actionlint.yml` が存在する、When `env-validation` ステップを検査する
-  - Expected: `uses: aglabo/ci-platform/.github/actions/ca-validate-environment@v0.8.0-pre`、`with.actions-type: read`、`if: steps.target-checkout.outcome == 'success'`
+  - Expected: `uses: aglabo/ci-platform/.github/actions/ca-validate-environment@v0.8.1`、`with.actions-type: read`、`if: steps.target-checkout.outcome == 'success'`
   - `yq: yq '.jobs.qa-actionlint.steps[] | select(.id == "env-validation")' .github/workflows/ru-qa-actionlint.yml`
 
-- [x] **T-02-01-03**: `tool-install` が `aglabo/ci-platform/.github/actions/ca-setup-tool@v0.8.0-pre` を使用し、`repo: jdx/jactionlint`、`if: steps.env-validation.outcome == 'success'` でゲートされること
+- [x] **T-02-01-03**: `tool-install` が `aglabo/ci-platform/.github/actions/ca-setup-tool@v0.8.1` を使用し、`repo: jdx/jactionlint`、`if: steps.env-validation.outcome == 'success'` でゲートされること
   - Target: `ru-qa-actionlint.yml` step `tool-install`
   - Scenario: Given `ru-qa-actionlint.yml` が存在する、When `tool-install` ステップを検査する
-  - Expected: `uses: aglabo/ci-platform/.github/actions/ca-setup-tool@v0.8.0-pre`、`with.repo: jdx/jactionlint`、`if: steps.env-validation.outcome == 'success'`
+  - Expected: `uses: aglabo/ci-platform/.github/actions/ca-setup-tool@v0.8.1`、`with.repo: jdx/jactionlint`、`if: steps.env-validation.outcome == 'success'`
   - `yq: yq '.jobs.qa-actionlint.steps[] | select(.id == "tool-install")' .github/workflows/ru-qa-actionlint.yml`
 
 - [x] **T-02-01-03b**: `tool-install` が `tool-version: ${{ inputs.version }}` を渡すこと
@@ -157,10 +157,10 @@ source: specifications.md v1.4.0
   - Expected: `with.repository: aglabo/global-configs`、`with.path: global/configs`、`with.fetch-depth: 1`、`with.persist-credentials: false`、`if: steps.tool-install.outcome == 'success'`
   - `yq: yq '.jobs.qa-actionlint.steps[] | select(.id == "config-checkout")' .github/workflows/ru-qa-actionlint.yml`
 
-- [x] **T-02-01-04b**: `resolve-config` が `aglabo/ci-platform/.github/actions/_ca-resolve-config@v0.8.0-pre` を使用し、`if: steps.config-checkout.outcome == 'success'` でゲートされること
+- [x] **T-02-01-04b**: `resolve-config` が `aglabo/ci-platform/.github/actions/_ca-resolve-config@v0.8.1` を使用し、`if: steps.config-checkout.outcome == 'success'` でゲートされること
   - Target: `ru-qa-actionlint.yml` step `resolve-config`
   - Scenario: Given `ru-qa-actionlint.yml` が存在する、When `resolve-config` ステップを検査する
-  - Expected: `uses: aglabo/ci-platform/.github/actions/_ca-resolve-config@v0.8.0-pre`、`with.config: ${{ inputs.config }}`、`with.local-config: configs/jactionlint.yaml`、`with.global-config: global/configs/jactionlint.yaml`、`if: steps.config-checkout.outcome == 'success'`
+  - Expected: `uses: aglabo/ci-platform/.github/actions/_ca-resolve-config@v0.8.1`、`with.config: ${{ inputs.config }}`、`with.local-config: configs/jactionlint.yaml`、`with.global-config: global/configs/jactionlint.yaml`、`if: steps.config-checkout.outcome == 'success'`
   - `yq: yq '.jobs.qa-actionlint.steps[] | select(.id == "resolve-config")' .github/workflows/ru-qa-actionlint.yml`
 
 - [x] **T-02-01-05**: `lint-execute` が `jactionlint --config-file` コマンドを実行し、`if: steps.prepare-report.outcome == 'success'` でゲートされること

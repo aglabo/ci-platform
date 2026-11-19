@@ -1,6 +1,6 @@
 ---
 title: "Implementation Plan: Betterleaks Reusable Workflow"
-version: 2.0.0
+version: 2.0.1
 based-on: specifications.md v2.0.0
 status: Draft
 ---
@@ -94,13 +94,13 @@ The workflow will enforce read-only repository access with `contents: read` at b
   - Do not add an `if` condition to this first step.
 
 - Add step ID `env-validation` after the target checkout:
-  - Use the composite action `aglabo/ci-platform/.github/actions/ca-validate-environment@v0.8.0-pre`.
+  - Use the composite action `aglabo/ci-platform/.github/actions/ca-validate-environment@v0.8.1`.
   - Set `with.actions-type: read`.
   - Add `if: steps.target-checkout.outcome == 'success'`.
   - Exposes `steps.env-validation.outputs.runner-status`.
 
 - Add step ID `tool-install` after `env-validation`:
-  - Use the composite action `aglabo/ci-platform/.github/actions/ca-setup-tool@v0.8.0-pre`.
+  - Use the composite action `aglabo/ci-platform/.github/actions/ca-setup-tool@v0.8.1`.
   - Set `with.repo: betterleaks/betterleaks`.
   - Set `with.tool-version: ${{ inputs.version }}`.
   - Add `if: steps.env-validation.outcome == 'success'`.
@@ -114,7 +114,7 @@ The workflow will enforce read-only repository access with `contents: read` at b
   - Add `if: steps.tool-install.outcome == 'success'`.
 
 - Add step ID `resolve-config` after `config-checkout`:
-  - Use the composite action `aglabo/ci-platform/.github/actions/_ca-resolve-config@v0.8.0-pre`.
+  - Use the composite action `aglabo/ci-platform/.github/actions/_ca-resolve-config@v0.8.1`.
   - Set `with.config: ${{ inputs.config }}`.
   - Set `with.local-config: configs/betterleaks.toml`.
   - Set `with.global-config: global/configs/betterleaks.toml`.
@@ -169,6 +169,7 @@ The workflow will enforce read-only repository access with `contents: read` at b
 
 | Date       | Version | Description                                                                                                                                                                                         |
 | ---------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-11-20 | 2.0.1   | Update composite action references from @v0.8.0-pre to @v0.8.1                                                                                                                                      |
 | 2026-11-19 | 2.0.0   | Align with ru-scan-secrets.yml: add resolve-config step and config input, default version 1.10.0, target-checkout id and env-validation gating, actions @v0.8.0-pre; based-on specifications v2.0.0 |
 | 2026-11-03 | 1.3.1   | Update ca-* composite action references from @v0.5.0 to @v0.6.0                                                                                                                                     |
 | 2026-11-03 | 1.3.0   | Change config-repo default to aglabo/global-configs (checkout path global/configs); align file name, version input, step order, trigger, and actions with ru-scan-betterleaks.yml                   |
