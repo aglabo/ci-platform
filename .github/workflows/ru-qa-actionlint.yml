@@ -1,7 +1,7 @@
 # src: ./.github/workflows/ru-qa-actionlint.yml
 # @(#) : Reusable workflow for GitHub Actions workflow linting with jactionlint
 #
-# @version : 0.7.0
+# @version : 0.7.1
 #
 # Copyright (c) 2026- atsushifx <https://github.com/atsushifx>
 #
@@ -50,14 +50,14 @@ jobs:
       - name: Validate environment
         id: env-validation
         if: steps.target-checkout.outcome == 'success'
-        uses: aglabo/ci-platform/.github/actions/ca-validate-environment@v0.7.0
+        uses: aglabo/ci-platform/.github/actions/ca-validate-environment@v0.7.1
         with:
           actions-type: read
 
       - name: Install jactionlint
         id: tool-install
         if: steps.env-validation.outcome == 'success'
-        uses: aglabo/ci-platform/.github/actions/ca-setup-tool@v0.7.0
+        uses: aglabo/ci-platform/.github/actions/ca-setup-tool@v0.7.1
         with:
           repo: jdx/jactionlint
           tool-version: ${{ inputs.version }}
