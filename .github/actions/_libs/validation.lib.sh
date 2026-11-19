@@ -42,20 +42,20 @@ validate_symbol() {
   local max_length="${4:-63}"
 
   # normalize pattern: add ^ at start and $ at end if not present
-  [[ "$pattern" != ^* ]] && pattern="^${pattern}"
-  [[ "$pattern" != *$ ]] && pattern="${pattern}$"
+  [[ $pattern != ^*   ]] && pattern="^${pattern}"
+  [[ $pattern != *$   ]] && pattern="${pattern}$"
 
   if [[ ${#value} -eq 0 ]]; then
     echo "::error::${field_name}: value must not be empty" >&2
     return 1
   fi
 
-  if [[ "$max_length" -gt 0 && ${#value} -gt "$max_length" ]]; then
+  if [[ $max_length -gt 0 && ${#value} -gt $max_length     ]]; then
     echo "::error::${field_name}: value too long (${#value} > ${max_length})" >&2
     return 1
   fi
 
-  if [[ ! "$value" =~ $pattern ]]; then
+  if [[ ! $value =~ $pattern   ]]; then
     echo "::error::${field_name}: invalid value '${value}'. Expected: ${pattern}" >&2
     return 1
   fi
@@ -110,8 +110,8 @@ validate_positive_int() {
   local max="$2"
   local LC_ALL=C
 
-  [[ "$max" =~ ^[1-9][0-9]{0,17}$ ]] || return 2
-  [[ "$value" =~ ^[1-9][0-9]*$ ]] || return 1
+  [[ $max =~ ^[1-9][0-9]{0,17}$   ]] || return 2
+  [[ $value =~ ^[1-9][0-9]*$   ]] || return 1
   ((${#value} <= ${#max})) || return 1
   ((value <= max))
 }

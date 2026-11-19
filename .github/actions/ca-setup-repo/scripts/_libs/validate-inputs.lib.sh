@@ -24,22 +24,22 @@ validate_inputs() {
 
   validate_repo "$_repo" "repo" || return 1
 
-  if [[ "$_path" != "./"* ]]; then
+  if [[ $_path != "./"*   ]]; then
     echo "::error::validate-inputs: path must start with './' (got: '${_path}')" >&2
     return 1
   fi
 
   local _segment
   local -a _segments
-  IFS='/' read -ra _segments <<<"$_path"
+  IFS='/' read -ra _segments <<< "$_path"
   for _segment in "${_segments[@]}"; do
-    if [[ "$_segment" == ".." ]]; then
+    if [[ $_segment == ".."   ]]; then
       echo "::error::validate-inputs: path must not contain '..' segments (got: '${_path}')" >&2
       return 1
     fi
   done
 
-  if [[ -z "${_ref// /}" ]]; then
+  if [[ -z ${_ref// /}   ]]; then
     echo "::error::validate-inputs: ref must not be empty" >&2
     return 1
   fi

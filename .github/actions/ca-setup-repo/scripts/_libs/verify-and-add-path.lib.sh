@@ -11,7 +11,7 @@ VERIFY_AND_ADD_PATH_LIB_LOADED=1
 # @stdout newline-separated file paths
 _list_bin_candidates() {
   local _bin_dir="$1"
-  find -L "${_bin_dir}" -maxdepth 1 -type f 2>/dev/null | grep -E '/[^./]+$|/[^/]+\.sh$'
+  find -L "${_bin_dir}" -maxdepth 1 -type f 2> /dev/null | grep -E '/[^./]+$|/[^/]+\.sh$'
 }
 
 # @description Filter to files that have a shebang line
@@ -19,7 +19,7 @@ _list_bin_candidates() {
 # @stdout newline-separated file paths with shebang
 _filter_shebang() {
   while IFS= read -r _f; do
-    head -c 2 "${_f}" 2>/dev/null | grep -q '^#!' && echo "${_f}"
+    head -c 2 "${_f}" 2> /dev/null | grep -q '^#!' && echo "${_f}"
   done
 }
 
@@ -46,7 +46,7 @@ verify_and_add_path() {
   # R-016: bin/ must contain at least one candidate (no extension or .sh)
   local _candidates
   _candidates=$(_list_bin_candidates "${_path}/bin")
-  if [[ -z "${_candidates}" ]]; then
+  if [[ -z ${_candidates}   ]]; then
     echo "::error::verify-and-add-path: no executable candidates found in ${_path}/bin/" >&2
     return 1
   fi
@@ -54,31 +54,31 @@ verify_and_add_path() {
   # R-017: chmod +x all shebang files, then verify execute permission
   local _shebang_files
   _shebang_files=$(echo "${_candidates}" | _filter_shebang)
-  if [[ -n "${_shebang_files}" ]]; then
+  if [[ -n ${_shebang_files}   ]]; then
     while IFS= read -r _f; do
       chmod +x "${_f}"
-    done <<<"${_shebang_files}"
+    done <<< "${_shebang_files}"
   fi
 
   local _failed=false
   while IFS= read -r _f; do
-    if [[ ! -x "${_f}" ]]; then
+    if [[ ! -x ${_f}   ]]; then
       echo "::error::verify-and-add-path: file not executable: ${_f}" >&2
       _failed=true
     fi
-  done <<<"${_candidates}"
-  [[ "${_failed}" == true ]] && return 1
+  done <<< "${_candidates}"
+  [[ ${_failed} == true   ]] && return 1
 
   # R-019: append bin/ to GITHUB_PATH
-  echo "${_path}/bin" >>"${GITHUB_PATH}"
+  echo "${_path}/bin" >> "${GITHUB_PATH}"
 
   # R-020 / R-020S: write .repo unless SKIP_REPO=true
-  if [[ "${SKIP_REPO}" != "true" ]]; then
-    printf '%s@%s' "${_repo}" "${_sha}" >"${_path}/.repo"
+  if [[ ${SKIP_REPO} != "true"   ]]; then
+    printf '%s@%s' "${_repo}" "${_sha}" > "${_path}/.repo"
   fi
 
   # Release lock
-  [[ -n "${REPO_LOCK_DIR:-}" ]] && rm -rf "${REPO_LOCK_DIR}"
+  [[ -n ${REPO_LOCK_DIR:-}   ]] && rm -rf "${REPO_LOCK_DIR}"
 
   return 0
 }

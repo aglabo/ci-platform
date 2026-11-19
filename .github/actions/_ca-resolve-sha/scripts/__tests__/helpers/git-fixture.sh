@@ -65,7 +65,7 @@ _gf_configure() {
     '[commit]' \
     '	gpgsign = false' \
     '[gc]' \
-    '	auto = 0' >>"${repo}/.git/config"
+    '	auto = 0' >> "${repo}/.git/config"
 }
 
 ##
@@ -73,7 +73,7 @@ _gf_configure() {
 # @stderr error message when the root is missing
 # @return 0 if GF_TMP_ROOT is a directory, 1 otherwise
 _gf_require_root() {
-  if [[ -z "${GF_TMP_ROOT:-}" || ! -d "$GF_TMP_ROOT" ]]; then
+  if [[ -z ${GF_TMP_ROOT:-} || ! -d $GF_TMP_ROOT     ]]; then
     echo "git-fixture: gf_setup has not been called" >&2
     return 1
   fi
@@ -87,7 +87,7 @@ _gf_require_root() {
 # @stderr error message when the path is empty
 # @return 0 if the path is non-empty, 1 otherwise
 _gf_require_path() {
-  if [[ -z "$2" ]]; then
+  if [[ -z $2   ]]; then
     echo "git-fixture: $1: empty repository path" >&2
     return 1
   fi
@@ -125,7 +125,7 @@ gf_setup() {
 #              Safe to call when gf_setup was not called.
 # @return 0
 gf_cleanup() {
-  if [[ -n "${GF_TMP_ROOT:-}" && -d "$GF_TMP_ROOT" ]]; then
+  if [[ -n ${GF_TMP_ROOT:-} && -d $GF_TMP_ROOT     ]]; then
     rm -rf "$GF_TMP_ROOT"
   fi
   unset GF_TMP_ROOT
@@ -171,7 +171,7 @@ gf_run_in() {
 
   _gf_require_path gf_run_in "$dir" || return 1
   shift
-  (
+  ( 
     cd "$dir" || exit 99
     export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1
     "$@"
@@ -198,25 +198,25 @@ gf_probe_setup_leak() {
   local _gf_record="${GF_TMP_ROOT}/gf-probe-root"
   local _gf_kind="$2"
   local _gf_name="$3"
-  (
+  ( 
     # shellcheck disable=SC2329 # invoked indirectly by the hook ("$1")
     mktemp() {
       local _gf_root
       _gf_root="$(command mktemp "$@")" || return 1
-      printf '%s\n' "$_gf_root" >"$_gf_record" || return 1
+      printf '%s\n' "$_gf_root" > "$_gf_record" || return 1
       case "$_gf_kind" in
-      file) : >"${_gf_root}/${_gf_name}" || return 1 ;;
-      dir) mkdir "${_gf_root}/${_gf_name}" || return 1 ;;
-      *) return 1 ;;
+        file) : > "${_gf_root}/${_gf_name}" || return 1 ;;
+        dir) mkdir "${_gf_root}/${_gf_name}" || return 1 ;;
+        *) return 1 ;;
       esac
       printf '%s\n' "$_gf_root"
     }
-    "$1" 2>/dev/null
+    "$1" 2> /dev/null
     _gf_rc=$?
-    _gf_root="$(cat "$_gf_record" 2>/dev/null)"
-    if [[ -z "$_gf_root" ]]; then
+    _gf_root="$(cat "$_gf_record" 2> /dev/null)"
+    if [[ -z $_gf_root   ]]; then
       _gf_leaked=unknown
-    elif [[ -e "$_gf_root" ]]; then
+    elif [[ -e $_gf_root   ]]; then
       _gf_leaked=yes
       rm -rf "$_gf_root"
     else
@@ -278,7 +278,7 @@ _gf_commit_seq() {
   local seq="$3"
   local date="@$((_GF_DATE_BASE + seq * 60)) +0000"
 
-  printf '%s\n' "$message" >"${repo}/file-${seq}.txt" || return 1
+  printf '%s\n' "$message" > "${repo}/file-${seq}.txt" || return 1
   _gf_git -C "$repo" add "file-${seq}.txt" || return 1
   GIT_AUTHOR_DATE="$date" GIT_COMMITTER_DATE="$date" \
     _gf_git -C "$repo" commit -q -m "$message" || return 1
@@ -396,9 +396,9 @@ gf_remove_object() {
 
   _gf_require_path gf_remove_object "$repo" || return 1
   objects="$(_gf_git -C "$repo" rev-parse --git-path objects)" || return 1
-  [[ "$objects" == /* ]] || objects="${repo}/${objects}"
+  [[ $objects == /*   ]] || objects="${repo}/${objects}"
   path="${objects}/${oid:0:2}/${oid:2}"
-  if [[ ! -f "$path" ]]; then
+  if [[ ! -f $path   ]]; then
     echo "git-fixture: not a loose object: ${oid}" >&2
     return 1
   fi
@@ -413,7 +413,7 @@ gf_remove_object() {
 gf_break_config() {
   local repo="$1"
 
-  printf '%s\n' '[git-fixture-broken' >>"${repo}/.git/config"
+  printf '%s\n' '[git-fixture-broken' >> "${repo}/.git/config"
 }
 
 ##
@@ -429,7 +429,7 @@ gf_non_git_dir() {
   _gf_require_root || return 1
   dir="${GF_TMP_ROOT}/${name}"
   mkdir -p "$dir" || return 1
-  if _gf_git -C "$dir" rev-parse --git-dir >/dev/null 2>&1; then
+  if _gf_git -C "$dir" rev-parse --git-dir > /dev/null 2>&1; then
     echo "git-fixture: ${dir} is inside a git repository" >&2
     return 1
   fi

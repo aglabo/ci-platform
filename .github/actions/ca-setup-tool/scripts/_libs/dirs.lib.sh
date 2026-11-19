@@ -23,7 +23,7 @@ setup_dirs() {
   _temp_dir=$(mktemp -d)
   TEMP_DIR="$_temp_dir"
 
-  echo "BIN_DIR=${BIN_DIR}" >>"${GITHUB_ENV:-/dev/null}"
-  echo "TEMP_DIR=${TEMP_DIR}" >>"${GITHUB_ENV:-/dev/null}"
-  echo "${BIN_DIR}" >>"${GITHUB_PATH:-/dev/null}"
+  echo "BIN_DIR=${BIN_DIR}" >> "${GITHUB_ENV:-/dev/null}"
+  echo "TEMP_DIR=${TEMP_DIR}" >> "${GITHUB_ENV:-/dev/null}"
+  echo "${BIN_DIR}" >> "${GITHUB_PATH:-/dev/null}"
 }

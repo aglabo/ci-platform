@@ -16,8 +16,8 @@ out_status() {
 }
 
 write_status() {
-  echo "status=$1" >>"${GITHUB_OUTPUT:-/dev/null}"
-  echo "message=$2" >>"${GITHUB_OUTPUT:-/dev/null}"
+  echo "status=$1" >> "${GITHUB_OUTPUT:-/dev/null}"
+  echo "message=$2" >> "${GITHUB_OUTPUT:-/dev/null}"
 }
 
 ##
@@ -37,11 +37,11 @@ write_output() {
   local key="$2"
   local value="$3"
 
-  [[ -n "$file" ]] || return 1
-  [[ "$value" != *[$'\r\n']* ]] || return 1
+  [[ -n $file   ]] || return 1
+  [[ $value != *[$'\r\n']*   ]] || return 1
 
   # the group redirect also silences the error raised by the >> redirection itself
-  { printf '%s=%s\n' "$key" "$value" >>"$file"; } 2>/dev/null || return 2
+  { printf '%s=%s\n' "$key" "$value" >> "$file"; } 2> /dev/null || return 2
 }
 
 ##
@@ -76,7 +76,7 @@ _has_line() {
 
   shift
   for line in "$@"; do
-    [[ "$line" != "$target" ]] || return 0
+    [[ $line != "$target"   ]] || return 0
   done
   return 1
 }
@@ -102,16 +102,16 @@ write_multiline_output() {
   local line
   local delimiter
 
-  [[ -n "$file" ]] || return 1
-  [[ "$key" =~ ^[A-Za-z_][A-Za-z0-9_-]*$ ]] || return 1
+  [[ -n $file   ]] || return 1
+  [[ $key =~ ^[A-Za-z_][A-Za-z0-9_-]*$   ]] || return 1
   shift 2
   for line in "$@"; do
-    [[ "$line" != *[$'\r\n']* ]] || return 1
+    [[ $line != *[$'\r\n']*   ]] || return 1
   done
   delimiter=$(_multiline_delimiter "$@")
 
   # the group redirect also silences the error raised by the >> redirection itself
-  { printf '%s\n' "${key}<<${delimiter}" "$@" "$delimiter" >>"$file"; } 2>/dev/null || return 2
+  { printf '%s\n' "${key}<<${delimiter}" "$@" "$delimiter" >> "$file"; } 2> /dev/null || return 2
 }
 
 ##
@@ -129,14 +129,14 @@ validate_output_file() {
   local file="$1"
   local parent
 
-  [[ -n "$file" ]] || return 1
+  [[ -n $file   ]] || return 1
 
-  if [[ -e "$file" ]]; then
-    [[ -f "$file" && -w "$file" ]] || return 2
+  if [[ -e $file   ]]; then
+    [[ -f $file && -w $file     ]] || return 2
   else
     # a trailing / names a directory, and a dangling link cannot be written as a file
-    [[ "$file" != */ && ! -L "$file" ]] || return 2
+    [[ $file != */ && ! -L $file     ]] || return 2
     parent="$(dirname -- "$file")/."
-    [[ -d "$parent" && -w "$parent" ]] || return 2
+    [[ -d $parent && -w $parent     ]] || return 2
   fi
 }

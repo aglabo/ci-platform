@@ -75,7 +75,7 @@ main() {
 # the script is executed. Unlike comparing ${BASH_SOURCE[0]} with $0, this does
 # not depend on how the path is spelled: when bash finds the script through
 # PATH, BASH_SOURCE[0] is the full path while $0 is the bare name.
-if ! (return 0 2>/dev/null); then
+if ! (return 0 2> /dev/null); then
   main "$@"
   exit $?
 fi
