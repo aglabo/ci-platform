@@ -1,7 +1,7 @@
 # src: ./.github/workflows/ru-qa-actionlint.yml
 # @(#) : Reusable workflow for GitHub Actions workflow linting with jactionlint
 #
-# @version : 0.7.0
+# @version : 0.8.0
 #
 # Copyright (c) 2026- atsushifx <https://github.com/atsushifx>
 #
