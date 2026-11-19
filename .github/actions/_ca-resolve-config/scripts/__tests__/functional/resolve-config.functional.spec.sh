@@ -180,4 +180,36 @@ source=local"
       The contents of file "$_RCF_OUTPUT" should equal ""
     End
   End
+
+  Context 'When: パスに空白を含む'
+    It '[Error] T-RC-05-01: INPUT_CONFIG に空白があると拒否する'
+      mkdir -p "${_RCF_WS}/conf dir" && : >"${_RCF_WS}/conf dir/a b.yml"
+      export INPUT_CONFIG="conf dir/a b.yml"
+      When call _rcf_run
+      The status should not equal 0
+      The stderr should match pattern "::error::*"
+      The lines of stderr should equal 1
+      The contents of file "$_RCF_OUTPUT" should equal ""
+    End
+
+    It '[Error] T-RC-05-02: INPUT_LOCAL_CONFIG に空白があると拒否する'
+      : >"${_RCF_WS}/l c.yml"
+      export INPUT_LOCAL_CONFIG="l c.yml"
+      When call _rcf_run
+      The status should not equal 0
+      The stderr should match pattern "::error::*"
+      The lines of stderr should equal 1
+      The contents of file "$_RCF_OUTPUT" should equal ""
+    End
+
+    It '[Error] T-RC-05-03: INPUT_GLOBAL_CONFIG に空白があると拒否する'
+      : >"${_RCF_WS}/g c.yml"
+      export INPUT_GLOBAL_CONFIG="g c.yml"
+      When call _rcf_run
+      The status should not equal 0
+      The stderr should match pattern "::error::*"
+      The lines of stderr should equal 1
+      The contents of file "$_RCF_OUTPUT" should equal ""
+    End
+  End
 End
