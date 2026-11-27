@@ -52,11 +52,11 @@ jobs:
 
 | 指定方法           | 例                | 特徴                                                                      |
 | ------------------ | ----------------- | ------------------------------------------------------------------------- |
-| バージョンタグ     | `@v0.8.1`         | リリース済みバージョンを固定する。ロックファイルと組み合わせて使う (推奨) |
-| SHA + タグコメント | `@<SHA> # v0.8.1` | コミットを直接固定する。参照の更新に手間がかかる                          |
+| バージョンタグ     | `@v0.9.0`         | リリース済みバージョンを固定する。ロックファイルと組み合わせて使う (推奨) |
+| SHA + タグコメント | `@<SHA> # v0.9.0` | コミットを直接固定する。参照の更新に手間がかかる                          |
 | ブランチ名         | `@main`           | 常に最新。破壊的変更の影響を受ける恐れがある                              |
 
-タグ (`@v0.8.1`) だけでは参照先のコミットを書き換えられるリスクを排除できません。
+タグ (`@v0.9.0`) だけでは参照先のコミットを書き換えられるリスクを排除できません。
 `gh actions-lock` でロックファイル `.github/workflows/actions.lock` を生成し、タグが指すコミットの SHA を記録してください。
 `ru-qa-actions-lock.yml` でロックファイルを検証すると、タグの書き換えを検出できます。
 
@@ -83,7 +83,7 @@ jobs:
 
     steps:
       - name: Validate environment
-        uses: aglabo/ci-platform/.github/actions/ca-validate-environment@v0.8.1
+        uses: aglabo/ci-platform/.github/actions/ca-validate-environment@v0.9.0
         with:
           actions-type: read
 
@@ -123,12 +123,12 @@ jobs:
   lint-workflow:
     permissions:
       contents: read
-    uses: aglabo/ci-platform/.github/workflows/ru-qa-actionlint.yml@v0.8.1
+    uses: aglabo/ci-platform/.github/workflows/ru-qa-actionlint.yml@v0.9.0
 
   scan-secrets:
     permissions:
       contents: read
-    uses: aglabo/ci-platform/.github/workflows/ru-scan-secrets.yml@v0.8.1
+    uses: aglabo/ci-platform/.github/workflows/ru-scan-secrets.yml@v0.9.0
 ```
 
 現在の実装状況の詳細は [ci-platform とは](./00-platform-overview.ja.mdx#️-現在の実装状況) を参照してください。
@@ -152,13 +152,13 @@ jobs:
   lint-workflow:
     permissions:
       contents: read
-    uses: aglabo/ci-platform/.github/workflows/ru-qa-actionlint.yml@v0.8.1
+    uses: aglabo/ci-platform/.github/workflows/ru-qa-actionlint.yml@v0.9.0
 
   # Reusable Workflow: シークレットスキャン
   scan-secrets:
     permissions:
       contents: read
-    uses: aglabo/ci-platform/.github/workflows/ru-scan-secrets.yml@v0.8.1
+    uses: aglabo/ci-platform/.github/workflows/ru-scan-secrets.yml@v0.9.0
 
   # Composite Action: 実行環境検証 + ビルド
   build:
@@ -167,7 +167,7 @@ jobs:
       contents: read
     steps:
       - name: Validate environment
-        uses: aglabo/ci-platform/.github/actions/ca-validate-environment@v0.8.1
+        uses: aglabo/ci-platform/.github/actions/ca-validate-environment@v0.9.0
         with:
           actions-type: read
 
@@ -186,7 +186,7 @@ jobs:
 
 | ミス                              | 症状                                                          | 対処                                               |
 | --------------------------------- | ------------------------------------------------------------- | -------------------------------------------------- |
-| ロックファイルを使わない          | `@v0.8.1` のみ指定 → タグ書き換えで別コードが動く可能性がある | `gh actions-lock` でロックファイルを生成・検証する |
+| ロックファイルを使わない          | `@v0.9.0` のみ指定 → タグ書き換えで別コードが動く可能性がある | `gh actions-lock` でロックファイルを生成・検証する |
 | `permissions:` を未設定のまま使う | validate-environment が権限不足を検出してジョブが即終了する   | `permissions: contents: read` を明示する           |
 | 非 Linux ランナーで実行する       | macOS・Windows ランナーでは最初のステップで失敗する           | `runs-on: ubuntu-latest` を指定する                |
 | `checkout` より後に配置する       | 不正コードをチェックアウト後に検証が走り意味が薄れる          | `validate-environment` を最初のステップに置く      |
