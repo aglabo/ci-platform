@@ -39,7 +39,7 @@
 ## 公開アクション / ワークフロー
 
 公開コンポーネントは、リリースタグを指定して参照します。
-例: `aglabo/ci-platform/.github/actions/<action>@v0.8.1`
+例: `aglabo/ci-platform/.github/actions/<action>@v0.9.0`
 
 ### Composite Actions
 
@@ -70,7 +70,7 @@ steps:
     with:
       fetch-depth: 0 # 必須
   - id: changed
-    uses: aglabo/ci-platform/.github/actions/ca-get-changed-files@v0.8.1
+    uses: aglabo/ci-platform/.github/actions/ca-get-changed-files@v0.9.0
     with:
       pattern: |
         **/*.md

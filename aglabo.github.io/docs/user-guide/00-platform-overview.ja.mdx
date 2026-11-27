@@ -32,7 +32,7 @@ CI 設定を各リポジトリへコピーして運用していると、次の�
 GitHub Actions の Composite Action と Reusable Workflow をバージョンタグで参照するだけで利用できます。
 
 ```yaml
-- uses: aglabo/ci-platform/.github/actions/ca-validate-environment@v0.8.1
+- uses: aglabo/ci-platform/.github/actions/ca-validate-environment@v0.9.0
 ```
 
 > **クイックスタートはこちら** → [最小構成で今すぐ導入](./11-quickstart.ja.mdx)
@@ -150,10 +150,10 @@ ci-platform では **バージョンタグ + ロックファイル** を標準�
 
 ```yaml
 # 推奨: バージョンタグで参照し、ロックファイルで SHA を固定する
-- uses: aglabo/ci-platform/.github/actions/ca-validate-environment@v0.8.1
+- uses: aglabo/ci-platform/.github/actions/ca-validate-environment@v0.9.0
 ```
 
-タグ (`@v0.8.1`) だけでは参照先のコミットが後から書き換えられるリスクを排除できません。
+タグ (`@v0.9.0`) だけでは参照先のコミットが後から書き換えられるリスクを排除できません。
 `gh actions-lock` でロックファイル `.github/workflows/actions.lock` を生成し、タグが指すコミットの SHA を記録します。
 `ru-qa-actions-lock.yml` でロックファイルを検証すると、タグの書き換えを検出できます。
 
@@ -176,7 +176,7 @@ ci-platform では **バージョンタグ + ロックファイル** を標準�
 
 | 原則                    | 内容                                                                                    | 具体例                                                                     |
 | ----------------------- | --------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| Immutable reference     | ロックファイルに記録した SHA により、参照先コミットが変わらない限り CI は影響を受けない | `@v0.8.1` で参照し、`actions.lock` で SHA を固定する                       |
+| Immutable reference     | ロックファイルに記録した SHA により、参照先コミットが変わらない限り CI は影響を受けない | `@v0.9.0` で参照し、`actions.lock` で SHA を固定する                       |
 | Centralized enforcement | セキュリティポリシーを単一リポジトリで一元管理し、各リポジトリ間の設定のずれを防ぎます  | `permissions:` ポリシーを ci-platform 側で定義し、全リポジトリから参照する |
 | Fail early, fail loudly | `validate-environment` がジョブ冒頭でポリシー違反を即検出・即終了する                   | ランナー OS が `ubuntu` でなければ最初のステップで即 `exit 1`              |
 
@@ -210,7 +210,7 @@ jobs:
   scan-secrets:
     permissions:
       contents: read
-    uses: aglabo/ci-platform/.github/workflows/ru-scan-secrets.yml@v0.8.1
+    uses: aglabo/ci-platform/.github/workflows/ru-scan-secrets.yml@v0.9.0
 ```
 
 **段階導入パターン**:
