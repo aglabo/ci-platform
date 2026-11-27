@@ -1,6 +1,6 @@
 # src: ./.github/actions/_ca-resolve-config/action.yml
 # @(#) : Composite (internal): resolve the configuration file path and its source
-# @version : 0.8.1
+# @version : 0.9.0
 #
 # Copyright (c) 2026- aglabo <https://github.com/aglabo>
 #
