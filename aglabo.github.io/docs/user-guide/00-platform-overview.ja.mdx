@@ -32,7 +32,7 @@ CI 設定を各リポジトリへコピーして運用していると、次の�
 GitHub Actions の Composite Action と Reusable Workflow をバージョンタグで参照するだけで利用できます。
 
 ```yaml
-- uses: aglabo/ci-platform/.github/actions/ca-validate-environment@v0.6.0
+- uses: aglabo/ci-platform/.github/actions/ca-validate-environment@v0.8.1
 ```
 
 > **クイックスタートはこちら** → [最小構成で今すぐ導入](./11-quickstart.ja.mdx)
@@ -46,7 +46,7 @@ GitHub Actions の Composite Action と Reusable Workflow をバージョンタ�
 | CI 設定を各リポジトリにコピーしていて管理が分散    | Actions/Workflows を外部リポジトリに集約して参照            |
 | パーミッション不足・ランナー不正が CI 実行後に判明 | `validate-environment` でジョブ冒頭に fail-fast             |
 | サプライチェーン攻撃への耐性が不明確               | バージョンタグ + ロックファイルを標準的な参照方式として採用 |
-| シークレット漏洩を CI で検知したい                 | betterleaks Reusable Workflow によるスキャン                |
+| シークレット漏洩を CI で検知したい                 | `ru-scan-secrets` Reusable Workflow によるスキャン          |
 
 > **典型的なリスクシナリオ**:
 >
@@ -70,18 +70,19 @@ Composite Action は `steps:` から参照します。ジョブ内で fail-fast 
 
 ### Reusable Workflow (`aglabo/ci-platform`)
 
-| コンポーネント            | 役割                                                  |
-| ------------------------- | ----------------------------------------------------- |
-| `ru-qa-actionlint.yml`    | jactionlint による GitHub Actions ワークフローの検証  |
-| `ru-qa-ghalint.yml`       | ghalint による GitHub Actions のポリシー違反検出      |
-| `ru-qa-actions-lock.yml`  | `gh actions-lock` による Action ロックファイルの検証  |
-| `ru-scan-betterleaks.yml` | betterleaks によるリポジトリの機密情報スキャン        |
-| `ru-lint-documents.yml`   | 変更された Markdown ファイルの textlint・markdownlint |
+| コンポーネント           | 役割                                                       |
+| ------------------------ | ---------------------------------------------------------- |
+| `ru-qa-actionlint.yml`   | jactionlint による GitHub Actions ワークフローの検証       |
+| `ru-qa-ghalint.yml`      | ghalint による GitHub Actions のポリシー違反検出           |
+| `ru-qa-actions-lock.yml` | `gh actions-lock` による Action ロックファイルの検証       |
+| `ru-scan-secrets.yml`    | betterleaks・secretlint によるリポジトリの機密情報スキャン |
+| `ru-lint-documents.yml`  | 変更された Markdown ファイルの textlint・markdownlint      |
 
 Reusable Workflow は `jobs:` から `aglabo/ci-platform/.github/workflows/<workflow-name>.yml` の形式で参照します。
 複数ジョブ・複数リポジトリにわたるポリシーを強制します。
 
-> lint とシークレットスキャンのワークフローは、既定で [aglabo/global-configs](https://github.com/aglabo/global-configs) の設定を使用します。
+> lint ワークフローとシークレットスキャンの betterleaks は、[aglabo/global-configs](https://github.com/aglabo/global-configs) の設定を利用します。
+> リポジトリ内に設定ファイルがある場合は、そちらを優先します。secretlint は同梱の既定設定を使用します。
 
 ### 二層防御モデル
 
@@ -132,7 +133,7 @@ graph TB
             al["ru-qa-actionlint"]
             gh["ru-qa-ghalint"]
             al2["ru-qa-actions-lock"]
-            bl["ru-scan-betterleaks"]
+            ss["ru-scan-secrets"]
             ld["ru-lint-documents"]
         end
     end
@@ -149,10 +150,10 @@ ci-platform では **バージョンタグ + ロックファイル** を標準�
 
 ```yaml
 # 推奨: バージョンタグで参照し、ロックファイルで SHA を固定する
-- uses: aglabo/ci-platform/.github/actions/ca-validate-environment@v0.6.0
+- uses: aglabo/ci-platform/.github/actions/ca-validate-environment@v0.8.1
 ```
 
-タグ (`@v0.6.0`) だけでは参照先のコミットが後から書き換えられるリスクを排除できません。
+タグ (`@v0.8.1`) だけでは参照先のコミットが後から書き換えられるリスクを排除できません。
 `gh actions-lock` でロックファイル `.github/workflows/actions.lock` を生成し、タグが指すコミットの SHA を記録します。
 `ru-qa-actions-lock.yml` でロックファイルを検証すると、タグの書き換えを検出できます。
 
@@ -175,7 +176,7 @@ ci-platform では **バージョンタグ + ロックファイル** を標準�
 
 | 原則                    | 内容                                                                                    | 具体例                                                                     |
 | ----------------------- | --------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| Immutable reference     | ロックファイルに記録した SHA により、参照先コミットが変わらない限り CI は影響を受けない | `@v0.6.0` で参照し、`actions.lock` で SHA を固定する                       |
+| Immutable reference     | ロックファイルに記録した SHA により、参照先コミットが変わらない限り CI は影響を受けない | `@v0.8.1` で参照し、`actions.lock` で SHA を固定する                       |
 | Centralized enforcement | セキュリティポリシーを単一リポジトリで一元管理し、各リポジトリ間の設定のずれを防ぎます  | `permissions:` ポリシーを ci-platform 側で定義し、全リポジトリから参照する |
 | Fail early, fail loudly | `validate-environment` がジョブ冒頭でポリシー違反を即検出・即終了する                   | ランナー OS が `ubuntu` でなければ最初のステップで即 `exit 1`              |
 
@@ -209,7 +210,7 @@ jobs:
   scan-secrets:
     permissions:
       contents: read
-    uses: aglabo/ci-platform/.github/workflows/ru-scan-betterleaks.yml@v0.6.0
+    uses: aglabo/ci-platform/.github/workflows/ru-scan-secrets.yml@v0.8.1
 ```
 
 **段階導入パターン**:

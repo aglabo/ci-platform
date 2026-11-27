@@ -51,9 +51,9 @@ Reusable Workflows および Composite Actions は次の方針で設計します
 **単一責任**: 1 つのコンポーネントは 1 つのツール・機能のみ担当する。
 
 ```bash
-ru-qa-actionlint.yml    → jactionlint のみ
-ru-qa-ghalint.yml       → ghalint のみ
-ru-scan-betterleaks.yml → betterleaks のみ
+ru-qa-actionlint.yml → jactionlint のみ
+ru-qa-ghalint.yml    → ghalint のみ
+ru-scan-secrets.yml  → シークレットスキャンのみ (betterleaks / secretlint)
 ```
 
 **入力の明示化**: すべての `inputs` にデフォルト値を設定し、利用者が最小設定で使えるようにする。
