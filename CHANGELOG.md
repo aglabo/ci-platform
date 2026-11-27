@@ -1,12 +1,14 @@
 ---
 title: "ci-platform Change Log"
-version: "0.8.1"
-date: 2026-11-19
+version: "0.9.0"
+date: 2026-11-28
 tags:
   - release
   - reusable-workflows
   - ci-platform
 summary: >
+  v0.9.0 adds a cspell document QA job to ru-lint-documents and documents the
+  ru-scan-secrets workflow on the documentation site.
   v0.8.1 updates gh actions-lock to 0.5.0 and makes actions.lock compatible with 0.5.0.
   v0.8.0 resolves tool configurations in the reusable workflows via _ca-resolve-config,
   adds validate_path for root-confined path validation, and aligns all composite
@@ -17,6 +19,68 @@ summary: >
   ja-technical-writing/sentence-length,
   ja-technical-writing/max-comma
   -->
+
+## 0.9.0 - 2026-11-28
+
+### Overview
+
+This release adds a cspell document QA job to the `ru-lint-documents` reusable
+workflow. The documentation site now describes secret scanning with
+`ru-scan-secrets`, which uses betterleaks and secretlint.
+
+### Added
+
+#### Reusable Workflows
+
+- `ru-lint-documents.yml`: Added the optional `cspell-config` input and the
+  `qa-cspell` job. The job resolves the local or global cspell configuration, runs
+  spell checks on the changed files, and uploads the cspell report as an artifact
+  on failure.
+
+#### Documentation
+
+- `reference/60-scan-secrets.ja.mdx`: Added the `ru-scan-secrets` workflow
+  reference, which covers the betterleaks and secretlint inputs, the parallel jobs,
+  configuration resolution, path constraints, and timeouts.
+
+### Changed
+
+#### Reusable Workflows
+
+- `ru-lint-documents.yml`: Updated the workflow and input descriptions.
+
+#### Documentation
+
+- `developer-guide/00-overview.ja.mdx`: Replaced the betterleaks workflow with
+  `ru-scan-secrets`.
+- `developer-guide/03-architecture.ja.mdx`: Updated the secret scanning diagrams
+  and documented the betterleaks and secretlint integration.
+- `developer-guide/04-design-principles.ja.mdx`: Updated the responsibilities of
+  the secret scanning workflow.
+- `developer-guide/05-security-model.ja.mdx`: Documented history scanning by
+  betterleaks and file scanning by secretlint, including the commit history depth
+  and the secret scanning coverage.
+- `reference/index.ja.mdx`: Updated the secret scanning workflow entries.
+- `user-guide/00-platform-overview.ja.mdx`: Updated the architecture diagrams and
+  documented `ru-scan-secrets` and the configuration precedence.
+- `user-guide/01-how-to-use.ja.mdx`: Documented secret scanning and the
+  configuration defaults.
+
+#### Development
+
+- `.vscode/cspell/dicts/project.dic`: Added `rhysd` and `Diátaxis`.
+- `configs/textlintrc.yaml`: Converted `no-mix-dearu-desumasu` to block-style YAML
+  and removed the quotes from the `preferInHeader`, `preferInBody`, and
+  `preferInList` keys.
+
+### Removed
+
+#### Documentation
+
+- `reference/60-scan-betterleaks.ja.mdx`: Removed the obsolete betterleaks workflow
+  reference.
+
+---
 
 ## 0.8.1 - 2026-11-19
 
