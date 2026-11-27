@@ -39,7 +39,7 @@ graph TB
         subgraph rw["Reusable Workflows"]
             al["ru-qa-actionlint"]
             gh["ru-qa-ghalint"]
-            bs["ru-scan-betterleaks"]
+            ss["ru-scan-secrets"]
         end
     end
 
@@ -104,8 +104,8 @@ sequenceDiagram
     gh->>sec: ワークフロー起動
     gh->>qa: ワークフロー起動
 
-    sec->>sec: betterleaks
-    Note right of sec: シークレットスキャン
+    sec->>sec: betterleaks / secretlint
+    Note right of sec: シークレットスキャン (ru-scan-secrets)
 
     qa->>qa: jactionlint
     Note right of qa: ワークフロー構文検証
@@ -182,7 +182,7 @@ ci-platform のリポジトリをフォークする必要はありません。
 ```yaml
 # 利用者のワークフロー例
 steps:
-  - uses: aglabo/ci-platform/.github/actions/ca-validate-environment@v0.6.0
+  - uses: aglabo/ci-platform/.github/actions/ca-validate-environment@v0.8.1
 ```
 
 ---

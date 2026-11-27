@@ -20,11 +20,10 @@ rules:
     max-kanji-continuous-len:
       max: 8
       allow: []
-    no-mix-dearu-desumasu: {
-      "preferInHeader": "である",
-      "preferInBody": "ですます",
-      "preferInList": "",
-    }
+    no-mix-dearu-desumasu:
+      preferInHeader: "である"
+      preferInBody: "ですます"
+      preferInList: ""
     no-exclamation-question-mark: false
     ja-no-mixed-period:
       allowPeriodMarks:

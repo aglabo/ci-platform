@@ -25,7 +25,7 @@ tags:
 ワークフローから以下のように参照します。
 
 ```yaml
-- uses: aglabo/ci-platform/.github/actions/ca-validate-environment@v0.6.0
+- uses: aglabo/ci-platform/.github/actions/ca-validate-environment@v0.8.1
 ```
 
 > 実際に使用する際には最新バージョンのタグを指定し、`gh actions-lock` でロックファイルを更新してください。
@@ -88,7 +88,7 @@ cmd|app_name|version_extractor|min_version
 - 複数アプリを検証する場合は YAML の multiline 文字列で記述します。
 
 ```yaml
-- uses: aglabo/ci-platform/.github/actions/ca-validate-environment@v0.6.0
+- uses: aglabo/ci-platform/.github/actions/ca-validate-environment@v0.8.1
   with:
     additional-apps: |
       gh|GitHub CLI|field:3|2.0
@@ -180,7 +180,7 @@ GitHub ホステッドランナーか否かを `RUNNER_ENVIRONMENT` 環境変数
 steps:
   - name: Validate environment
     id: validate
-    uses: aglabo/ci-platform/.github/actions/ca-validate-environment@v0.6.0
+    uses: aglabo/ci-platform/.github/actions/ca-validate-environment@v0.8.1
     with:
       actions-type: read
 

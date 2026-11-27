@@ -41,7 +41,7 @@ jobs:
 
     steps:
       - name: Validate environment
-        uses: aglabo/ci-platform/.github/actions/ca-validate-environment@v0.6.0
+        uses: aglabo/ci-platform/.github/actions/ca-validate-environment@v0.8.1
       # actions-type: read (default)
 
       - uses: actions/checkout@v7.0.1
@@ -66,7 +66,7 @@ jobs:
 
     steps:
       - name: Validate environment
-        uses: aglabo/ci-platform/.github/actions/ca-validate-environment@v0.6.0
+        uses: aglabo/ci-platform/.github/actions/ca-validate-environment@v0.8.1
         with:
           actions-type: commit
 
@@ -99,7 +99,7 @@ jobs:
 
     steps:
       - name: Validate environment
-        uses: aglabo/ci-platform/.github/actions/ca-validate-environment@v0.6.0
+        uses: aglabo/ci-platform/.github/actions/ca-validate-environment@v0.8.1
         with:
           actions-type: pr
           additional-apps: |
@@ -133,7 +133,7 @@ jobs:
 
     steps:
       - name: Validate environment
-        uses: aglabo/ci-platform/.github/actions/ca-validate-environment@v0.6.0
+        uses: aglabo/ci-platform/.github/actions/ca-validate-environment@v0.8.1
         with:
           actions-type: commit
           additional-apps: |
@@ -170,7 +170,7 @@ jobs:
 
     steps:
       - name: Validate environment
-        uses: aglabo/ci-platform/.github/actions/ca-validate-environment@v0.6.0
+        uses: aglabo/ci-platform/.github/actions/ca-validate-environment@v0.8.1
         with:
           actions-type: any
 ```

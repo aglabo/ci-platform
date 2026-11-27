@@ -52,9 +52,9 @@ Composite Actions は 10〜30番台、Reusable Workflows は 50番台以降で�
 
 ### シークレットスキャン (60番台)
 
-| 番号 | ワークフロー                                   | 内容                                        |
-| ---- | ---------------------------------------------- | ------------------------------------------- |
-| 60   | [scan-betterleaks](60-scan-betterleaks.ja.mdx) | betterleaks で Git 履歴の機密情報を検出する |
+| 番号 | ワークフロー                           | 内容                                                 |
+| ---- | -------------------------------------- | ---------------------------------------------------- |
+| 60   | [scan-secrets](60-scan-secrets.ja.mdx) | betterleaks と secretlint で機密情報の混入を検出する |
 
 ### ドキュメント QA (70番台)
 
@@ -67,7 +67,7 @@ Composite Actions は 10〜30番台、Reusable Workflows は 50番台以降で�
 公開アクションは、リリースタグを指定して `steps:` から参照します。
 
 ```yaml
-- uses: aglabo/ci-platform/.github/actions/<action>@v0.6.0
+- uses: aglabo/ci-platform/.github/actions/<action>@v0.8.1
 ```
 
 `<action>` には `ca-validate-environment`・`ca-setup-tool`・`ca-setup-repo`・`ca-get-changed-files` のいずれかを指定します。
@@ -79,7 +79,7 @@ jobs:
   <job-id>:
     permissions:
       contents: read
-    uses: aglabo/ci-platform/.github/workflows/<workflow>.yml@v0.6.0
+    uses: aglabo/ci-platform/.github/workflows/<workflow>.yml@v0.8.1
 ```
 
 `<workflow>` には、以下のいずれかを指定します。
@@ -87,5 +87,5 @@ jobs:
 - `ru-qa-actionlint`
 - `ru-qa-ghalint`
 - `ru-qa-actions-lock`
-- `ru-scan-betterleaks`
+- `ru-scan-secrets`
 - `ru-lint-documents`
