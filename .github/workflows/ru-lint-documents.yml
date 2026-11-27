@@ -1,5 +1,5 @@
 # src: ./.github/workflows/ru-lint-documents.yml
-# @(#) : Reusable workflow for linting changed Markdown files with textlint and markdownlint
+# @(#) : Reusable workflow for linting changed Markdown files with textlint, markdownlint, and cspell
 #
 # @version : 0.8.1
 #
@@ -33,7 +33,7 @@ on:
         default: "1"
         type: string
       doc-tools-version:
-        description: "Version (git ref) of aglabo/agla-doc-tools that provides textlint and markdownlint"
+        description: "Version (git ref) of aglabo/agla-doc-tools that provides textlint, markdownlint, and cspell"
         required: false
         default: "v0.3.0"
         type: string
@@ -49,6 +49,11 @@ on:
         type: string
       markdownlint-config:
         description: "Path to the markdownlint-cli2 configuration file"
+        required: false
+        default: ""
+        type: string
+      cspell-config:
+        description: "Path to the cspell configuration file"
         required: false
         default: ""
         type: string
@@ -241,4 +246,85 @@ jobs:
         with:
           name: markdownlint-report
           path: .github/report/markdownlint-report.txt
+          retention-days: 30
+
+  qa-cspell:
+    name: CSpell Document QA
+    needs: get-changed-files
+    if: needs.get-changed-files.outputs.count != '0'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout target repository
+        id: target-checkout
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Validate environment
+        id: env-validation
+        if: steps.target-checkout.outcome == 'success'
+        uses: aglabo/ci-platform/.github/actions/ca-validate-environment@v0.8.1
+        with:
+          actions-type: read
+
+      - name: Setup agla-doc-tools
+        id: tool-install
+        if: steps.env-validation.outcome == 'success'
+        uses: aglabo/ci-platform/.github/actions/ca-setup-repo@v0.8.1
+        with:
+          repo: aglabo/agla-doc-tools
+          path: ./.tools/agla-doc-tools
+          ref: ${{ inputs.doc-tools-version }}
+          pnpm-version: ${{ inputs.pnpm-version }}
+
+      # The directory name must stay `global-configs`: cspell configs import
+      # ${XDG_CONFIG_HOME}/global-configs/cspell.config.json
+      - name: Checkout cspell config
+        id: config-checkout
+        if: steps.tool-install.outcome == 'success'
+        uses: actions/checkout@v7.0.1
+        with:
+          repository: aglabo/global-configs
+          path: global-configs
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Resolve cspell config
+        id: resolve-config
+        if: steps.config-checkout.outcome == 'success'
+        uses: aglabo/ci-platform/.github/actions/_ca-resolve-config@v0.8.1
+        with:
+          config: ${{ inputs.cspell-config }}
+          local-config: .vscode/cspell.json
+          global-config: global-configs/cspell.config.json
+
+      - name: Prepare report directory
+        id: prepare-report
+        if: steps.resolve-config.outcome == 'success'
+        run: mkdir -p .github/report
+
+      - name: Run cspell
+        id: lint-execute
+        if: steps.prepare-report.outcome == 'success'
+        env:
+          CONFIG_FILE: ${{ steps.resolve-config.outputs.config-file }}
+          CHANGED_FILES: ${{ needs.get-changed-files.outputs.files }}
+          XDG_CONFIG_HOME: ${{ github.workspace }}
+        run: |
+          mapfile -t targets <<< "${CHANGED_FILES}"
+          cspell --version
+          cspell lint --config "${CONFIG_FILE}" --dot --no-progress --no-must-find-files -- "${targets[@]}" 2>&1 \
+            | tee .github/report/cspell-report.txt
+          exit "${PIPESTATUS[0]}"
+
+      - name: Upload cspell report
+        id: report-upload
+        if: failure() && steps.lint-execute.outcome == 'failure'
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: cspell-report
+          path: .github/report/cspell-report.txt
           retention-days: 30
