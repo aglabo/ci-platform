@@ -1,20 +1,19 @@
 # src: .gitignore
-# @(#) : main ignore settings: for CI Platform
+# @(#) : main ignore settings: template
 #
 # Copyright (c) 2026- atsushifx <https://github.com/atsushifx>
 #
 # This software is released under the MIT License.
 # https://opensource.org/licenses/MIT
 
-# default: ignore all files
+## ------------------------------------------------------------
+##   default: ignore all files
 *
 
-## Repository Specific
-# Allow Templates (for project-starter-template repo)
-!/templates/
-!/templates/**
+## ---------------------------------------------------------------
+##   General
 
-## General
+## Basic Documents
 # Allow README, LICENSE, CONTRIBUTING
 !**/README*
 !**/LICENSE*
@@ -23,13 +22,6 @@
 # Allow .github directories
 !.github/
 !.github/**
-
-# Allow profile (organization README)
-!/profile/
-!/profile/**
-
-# Allow other ignore
-!*ignore
 
 # Allow editorconfig
 !**/.editorconfig
@@ -70,19 +62,12 @@
 !/scripts/**/*.sh
 !/scripts/**/*.ts
 
+
 # Documents
 !/docs/
 !/docs/**/
 !/docs/**/*.md
 !/docs/**/*.mdx
-
-# Website (allowlist details: aglabo.github.io/.gitignore)
-!/aglabo.github.io/
-!/aglabo.github.io/**/
-!/aglabo.github.io/**/*.md
-!/aglabo.github.io/**/*.mdx
-!/aglabo.github.io/**/*.json
-!/aglabo.github.io/**/*.ts
 
 
 ## AI Agents
@@ -112,16 +97,24 @@
 !.vscode/cspell*
 !.vscode/cspell*/**
 
+## ---------------------------------------------------------------
+##  Project specific
 
-##  Git
-# allow all gitignore
-!**/.gitignore
+# Allow Document Site (allowlist details: aglabo.github.io/.gitignore)
+!aglabo.github.io/
+!aglabo.github.io/**/
+!aglabo.github.io/**/*.md
+!aglabo.github.io/**/*.mdx
+!aglabo.github.io/**/*.json
+!aglabo.github.io/**/*.ts
+!aglabo.github.io/*ignore
+
+# source (tests live in src/**/__tests__/{unit,functional,integration,e2e})
 
 
-# ------------------------------------------------------------ ##
-##  Re-exclude: secrets and generated files                      ##
-##  Must stay last: these rules undo the broad allow rules above ##
-## ------------------------------------------------------------ ##
+## ---------------------------------------------------------------
+##  Re-exclude: secrets and generated files
+##  Must stay last: these rules undo the broad allow rules above
 
 #   OS specific files
 .DS_Store
@@ -169,3 +162,22 @@ thumbs.db
 #   node
 **/node_modules/
 **/.pnpm-store/
+
+# Beads / Dolt files (added by bd init)
+!beads/
+!beads/**/SKILL.md
+
+.dolt/
+*.db
+.beads-credential-key
+.beads/proxieddb/
+*.gate.lock*
+
+
+
+## ---------------------------------------------------------------
+##   Allow ignore
+
+# allow all gitignore
+!**/.gitignore
+!**/*ignore
