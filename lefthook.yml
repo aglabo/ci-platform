@@ -6,6 +6,11 @@
 # This software is released under the MIT License.
 # https://opensource.org/licenses/MIT
 
+min_version: 2.2.4
+
+# fail the hook instead of silently passing when lefthook is not found
+assert_lefthook_installed: true
+
 pre-commit:
   parallel: true
   commands:
@@ -13,19 +18,59 @@ pre-commit:
       run: bash runners/run-betterleaks.sh --staged
 
     secretlint:
-      glob: "**/*"
-      run: secretlint {staged_files}
-      skip:
-        - empty
+      # --no-gitignore: also scan ignored files added by `git add -f`
+      # --no-glob: treat names such as `[id].ts` as literal paths
+      run: secretlint --no-gitignore --no-glob {staged_files}
 
-prepare-commit-msg:
+    actionslock:
+      glob:
+        - ".github/workflows/*.{yml,yaml}"
+        - ".github/workflows/actions.lock"
+        - ".github/actions/**/action.{yml,yaml}"
+      run: gh actions-lock --verify-local --no-interactive
+
+pre-push:
+  parallel: true
   commands:
+    # scan every unpushed commit: catches commits that skipped pre-commit
+    # (--no-verify, merge, rebase, cherry-pick) and secrets removed later.
+    # `files` + `{files}` keeps lefthook from skipping a push with no net file change.
+    # `files` must list an existing file: with an empty list the scan is silently skipped.
+    betterleaks:
+      files: echo configs/betterleaks.toml
+      run: >-
+        betterleaks git --config={files} --no-banner --redact --verbose
+        --log-opts="--diff-merges=first-parent HEAD --branches --tags --not --remotes={1}"
+
+    actionslock:
+      glob:
+        - ".github/workflows/*.{yml,yaml}"
+        - ".github/workflows/actions.lock"
+        - ".github/actions/**/action.{yml,yaml}"
+      run: gh actions-lock --verify --no-interactive
+
+# runs even with --no-verify: never send the staged diff to the AI before scanning it
+prepare-commit-msg:
+  piped: true
+  commands:
+    betterleaks:
+      priority: 1
+      run: bash runners/run-betterleaks.sh --staged
+
+    secretlint:
+      priority: 2
+      run: secretlint --no-gitignore --no-glob {staged_files}
+
     prepare-message-script:
+      priority: 3
       run: bash -c './scripts/prepare-commit-msg.sh --output "{1}"'
 
-# check commit message as Conventional Commit
+# check commit message as Conventional Commit and for secrets
 commit-msg:
   parallel: true
   commands:
     commitlint:
       run: commitlint --config ./configs/commitlint.config.mjs --edit
+
+    secretlint:
+      run: secretlint --stdinFileName=COMMIT_EDITMSG < {1}

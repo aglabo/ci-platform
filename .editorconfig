@@ -22,13 +22,16 @@ tab_width = 2
 # ─────────────────────────────
 # Exclude directories/files
 # ─────────────────────────────
+[**/temp/**]
+ignore = true
+
 [**/node_modules/*]
 ignore = true
 
 [**/.tools/*]
 ignore = true
 
-[.local/*]
+[**/.local/*]
 ignore = true
 
 [**/*.spec.sh]

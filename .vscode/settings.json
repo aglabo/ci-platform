@@ -6,7 +6,8 @@
   "[markdown]": {
     "editor.defaultFormatter": "dprint.dprint"
   },
-  "markdownlint.configFile": "configs/.markdownlint.yaml",
+  // Use the global config, as runners/run-markdownlint.sh does without a local config
+  "markdownlint.configFile": "${XDG_CONFIG_HOME}/global-configs/.markdownlint.yaml",
   // ShellCheck
   // Use the same rcfile as runners/run-shellcheck.sh; the relative path is
   // resolved from the workspace root.
