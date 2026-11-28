@@ -128,7 +128,8 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Test ca-setup-repo with explicit node-version and pnpm-version
+      # pnpm のバージョンは指定せず、package.json の "packageManager" から解決させる
+      - name: Test ca-setup-repo with explicit node-version
         id: test-setup-repo
         if: steps.checkout.outcome == 'success'
         uses: $/.github/actions/ca-setup-repo
@@ -137,7 +138,6 @@ jobs:
           path: ./tools/agla-dev-tools
           ref: a88f3bf1ecda478ad8ec2e907139bd058ce5ee56 # v0.1.0
           node-version: "24"
-          pnpm-version: "12.21.0"
 
       - name: Verify specified versions
         id: verify-versions
@@ -147,7 +147,8 @@ jobs:
           _pnpm=$(pnpm --version)
           echo "node: ${_node}, pnpm: ${_pnpm}"
           [[ "${_node}" == v24.* ]] || { echo "unexpected node version: ${_node}" >&2; exit 1; }
-          [[ "${_pnpm}" == "12.21.0" ]] || { echo "unexpected pnpm version: ${_pnpm}" >&2; exit 1; }
+          _expected=$(node -p 'require("./package.json").packageManager.replace(/^pnpm@/, "").split("+")[0]')
+          [[ "${_pnpm}" == "${_expected}" ]] || { echo "unexpected pnpm version: ${_pnpm} (expected: ${_expected})" >&2; exit 1; }
 
   test-get-changed-files:
     name: Test ca-get-changed-files
