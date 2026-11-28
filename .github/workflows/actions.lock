@@ -90,7 +90,7 @@ dependencies:
             - 'actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f'
     'aglabo/ci-platform@v0.9.0':
         ref: 'v0.9.0'
-        commit: 'sha1-24bdf5dbb926332358d9700435216d2b0382c653'
+        commit: 'sha1-82b65220d02c14e7a9d6564bf2b855c331908a61'
         owner_id: 211574028
         repo_id: 1154660752
         uses:
